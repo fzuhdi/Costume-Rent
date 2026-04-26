@@ -4,6 +4,10 @@ backend/*.db
 backend/uploads/
 backend/.env
 backend/go.sum
+.env.production
+
+# Project
+project-plan.md
 
 # Frontend
 frontend/node_modules/
