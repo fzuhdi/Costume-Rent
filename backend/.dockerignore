@@ -1,0 +1,4 @@
+uploads/
+busana_tari.db
+*.db
+.env*
