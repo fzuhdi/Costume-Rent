@@ -1,0 +1,288 @@
+package services
+
+import (
+	"errors"
+	"math"
+	"strconv"
+	"time"
+
+	"github.com/busana/backend/config"
+	"github.com/busana/backend/dto"
+	"github.com/busana/backend/models"
+	"gorm.io/gorm"
+)
+
+type CostumeService struct{}
+
+func NewCostumeService() *CostumeService {
+	return &CostumeService{}
+}
+
+func (s *CostumeService) List(filter dto.CostumeFilter) (*dto.PaginatedResponse, error) {
+	if filter.Page < 1 {
+		filter.Page = 1
+	}
+	if filter.Limit < 1 || filter.Limit > 100 {
+		filter.Limit = 10
+	}
+
+	query := config.DB.Model(&models.Costume{}).Preload("Region").Preload("Category")
+
+	if filter.Search != "" {
+		query = query.Where("name LIKE ?", "%"+filter.Search+"%")
+	}
+	if filter.RegionID != "" {
+		if id, err := strconv.ParseUint(filter.RegionID, 10, 32); err == nil {
+			query = query.Where("region_id = ?", id)
+		}
+	}
+	if filter.CategoryID != "" {
+		if id, err := strconv.ParseUint(filter.CategoryID, 10, 32); err == nil {
+			query = query.Where("category_id = ?", id)
+		}
+	}
+	if filter.Condition != "" {
+		query = query.Where("condition = ?", filter.Condition)
+	}
+
+	var total int64
+	query.Count(&total)
+
+	var costumes []models.Costume
+	offset := (filter.Page - 1) * filter.Limit
+	if err := query.Offset(offset).Limit(filter.Limit).Order("created_at DESC").Find(&costumes).Error; err != nil {
+		return nil, err
+	}
+
+	var response []dto.CostumeListResponse
+	for _, c := range costumes {
+		item := dto.CostumeListResponse{
+			ID:          c.ID,
+			Name:        c.Name,
+			Description: c.Description,
+			RegionID:    c.RegionID,
+			CategoryID:  c.CategoryID,
+			Condition:   c.Condition,
+			Quantity:    c.Quantity,
+			CoverImage:  c.CoverImage,
+		}
+		if c.RegionID != nil {
+			item.Region = c.Region.Name
+		}
+		if c.CategoryID != nil {
+			item.Category = c.Category.Name
+		}
+		if c.AcquiredAt != nil {
+			acquired := c.AcquiredAt.Format("2006-01-02")
+			item.AcquiredAt = &acquired
+		}
+		response = append(response, item)
+	}
+
+	totalPages := int(math.Ceil(float64(total) / float64(filter.Limit)))
+
+	return &dto.PaginatedResponse{
+		Data:       response,
+		Total:      total,
+		Page:       filter.Page,
+		Limit:      filter.Limit,
+		TotalPages: totalPages,
+	}, nil
+}
+
+func (s *CostumeService) GetByID(id uint) (*models.Costume, error) {
+	var costume models.Costume
+	if err := config.DB.Preload("Region").Preload("Category").Preload("Images").First(&costume, id).Error; err != nil {
+		return nil, err
+	}
+	return &costume, nil
+}
+
+func (s *CostumeService) Create(req dto.CreateCostumeRequest) (*models.Costume, error) {
+	costume := models.Costume{
+		Name:        req.Name,
+		Description: req.Description,
+		RegionID:    req.RegionID,
+		CategoryID:  req.CategoryID,
+		Condition:   req.Condition,
+		Quantity:    req.Quantity,
+	}
+
+	if costume.Condition == "" {
+		costume.Condition = "good"
+	}
+	if costume.Quantity < 1 {
+		costume.Quantity = 1
+	}
+
+	if req.AcquiredAt != nil {
+		if t, err := time.Parse("2006-01-02", *req.AcquiredAt); err == nil {
+			costume.AcquiredAt = &t
+		}
+	}
+
+	if err := config.DB.Create(&costume).Error; err != nil {
+		return nil, err
+	}
+
+	return s.GetByID(costume.ID)
+}
+
+func (s *CostumeService) Update(id uint, req dto.UpdateCostumeRequest) (*models.Costume, error) {
+	var costume models.Costume
+	if err := config.DB.First(&costume, id).Error; err != nil {
+		return nil, err
+	}
+
+	if req.Name != "" {
+		costume.Name = req.Name
+	}
+	if req.Description != "" {
+		costume.Description = req.Description
+	}
+	if req.RegionID != nil {
+		costume.RegionID = req.RegionID
+	}
+	if req.CategoryID != nil {
+		costume.CategoryID = req.CategoryID
+	}
+	if req.Condition != "" {
+		costume.Condition = req.Condition
+	}
+	if req.Quantity > 0 {
+		costume.Quantity = req.Quantity
+	}
+	if req.AcquiredAt != nil {
+		if t, err := time.Parse("2006-01-02", *req.AcquiredAt); err == nil {
+			costume.AcquiredAt = &t
+		}
+	}
+
+	if err := config.DB.Save(&costume).Error; err != nil {
+		return nil, err
+	}
+
+	return s.GetByID(costume.ID)
+}
+
+func (s *CostumeService) Delete(id uint) error {
+	return config.DB.Delete(&models.Costume{}, id).Error
+}
+
+func (s *CostumeService) AddImage(costumeID uint, path string) (*models.CostumeImage, error) {
+	var costume models.Costume
+	if err := config.DB.First(&costume, costumeID).Error; err != nil {
+		return nil, err
+	}
+
+	image := models.CostumeImage{
+		CostumeID: costumeID,
+		Path:      path,
+	}
+
+	if err := config.DB.Create(&image).Error; err != nil {
+		return nil, err
+	}
+
+	if costume.CoverImage == "" {
+		config.DB.Model(&costume).Update("cover_image", path)
+	}
+
+	return &image, nil
+}
+
+func (s *CostumeService) RemoveImage(costumeID, imageID uint) error {
+	var image models.CostumeImage
+	if err := config.DB.Where("id = ? AND costume_id = ?", imageID, costumeID).First(&image).Error; err != nil {
+		return err
+	}
+
+	if err := config.DB.Delete(&image).Error; err != nil {
+		return err
+	}
+
+	var costume models.Costume
+	if err := config.DB.First(&costume, costumeID).Error; err != nil {
+		return nil
+	}
+
+	if costume.CoverImage == image.Path {
+		var firstImage models.CostumeImage
+		if err := config.DB.Where("costume_id = ?", costumeID).First(&firstImage).Error; err == nil {
+			config.DB.Model(&costume).Update("cover_image", firstImage.Path)
+		} else {
+			config.DB.Model(&costume).Update("cover_image", "")
+		}
+	}
+
+	return nil
+}
+
+func (s *CostumeService) GetAvailableQuantity(costumeID uint) (int, error) {
+	var costume models.Costume
+	if err := config.DB.First(&costume, costumeID).Error; err != nil {
+		return 0, err
+	}
+
+	var rentedQty int64
+	config.DB.Model(&models.RentOrderItem{}).
+		Joins("JOIN rent_orders ON rent_orders.id = rent_order_items.rent_order_id").
+		Where("rent_order_items.costume_id = ? AND rent_orders.status = ? AND rent_orders.deleted_at IS NULL", costumeID, "active").
+		Select("COALESCE(SUM(rent_order_items.quantity), 0)").
+		Scan(&rentedQty)
+
+	return costume.Quantity - int(rentedQty), nil
+}
+
+func (s *CostumeService) Search(query string, limit int) ([]models.Costume, error) {
+	if limit < 1 {
+		limit = 10
+	}
+
+	var costumes []models.Costume
+	searchQuery := "%" + query + "%"
+	if err := config.DB.Where("name LIKE ?", searchQuery).
+		Limit(limit).
+		Find(&costumes).Error; err != nil {
+		return nil, err
+	}
+	return costumes, nil
+}
+
+func (s *CostumeService) GetRegions() ([]models.Region, error) {
+	var regions []models.Region
+	if err := config.DB.Find(&regions).Error; err != nil {
+		return nil, err
+	}
+	return regions, nil
+}
+
+func (s *CostumeService) CreateRegion(name string) (*models.Region, error) {
+	region := models.Region{Name: name}
+	if err := config.DB.Create(&region).Error; err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, errors.New("region already exists")
+		}
+		return nil, err
+	}
+	return &region, nil
+}
+
+func (s *CostumeService) GetCategories() ([]models.Category, error) {
+	var categories []models.Category
+	if err := config.DB.Find(&categories).Error; err != nil {
+		return nil, err
+	}
+	return categories, nil
+}
+
+func (s *CostumeService) CreateCategory(name string) (*models.Category, error) {
+	category := models.Category{Name: name}
+	if err := config.DB.Create(&category).Error; err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, errors.New("category already exists")
+		}
+		return nil, err
+	}
+	return &category, nil
+}
