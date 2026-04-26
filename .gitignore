@@ -7,7 +7,10 @@ backend/go.sum
 .env.production
 
 # Project
-project-plan.md
+.context/
+
+# Root
+.env.production
 
 # Frontend
 frontend/node_modules/
