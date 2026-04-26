@@ -1,16 +1,25 @@
-import { createContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useState, useEffect, useCallback, useContext } from 'react';
 import { getNotifications } from '../api/notificationApi';
+import { useAuth } from './AuthContext';
 
 export const NotificationContext = createContext(null);
 
-const POLL_INTERVAL = parseInt(import.meta.env.VITE_NOTIFICATION_POLL_MS || '60000', 10);
+export const useNotification = () => {
+  const context = useContext(NotificationContext);
+  if (!context) {
+    throw new Error('useNotification must be used within NotificationProvider');
+  }
+  return context;
+};
 
 export const NotificationProvider = ({ children }) => {
+  const { isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
+    if (!isAuthenticated) return;
     try {
       setLoading(true);
       const response = await getNotifications();
@@ -21,19 +30,13 @@ export const NotificationProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
-
-  useEffect(() => {
-    const handleFocus = () => fetchNotifications();
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [fetchNotifications]);
+    if (isAuthenticated) {
+      fetchNotifications();
+    }
+  }, [isAuthenticated, fetchNotifications]);
 
   return (
     <NotificationContext.Provider value={{ notifications, count, loading, fetchNotifications }}>

@@ -9,7 +9,7 @@ services:
     restart: unless-stopped
     env_file: .env.production
     volumes:
-      - busana_db:/app/busana_tari.db
+      - busana_db:/app
       - busana_uploads:/app/uploads
     networks:
       - busana_net

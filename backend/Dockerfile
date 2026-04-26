@@ -1,14 +1,14 @@
 # Stage 1: Build
 FROM golang:1.22-alpine AS builder
 
-RUN apk add --no-cache gcc musl-dev
+RUN apk add --no-cache git
 
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=1 GOOS=linux go build -o server ./main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o server ./main.go
 
 # Stage 2: Run
 FROM alpine:3.19

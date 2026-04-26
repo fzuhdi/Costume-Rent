@@ -1,7 +1,15 @@
-import { createContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useState, useEffect, useCallback, useContext } from 'react';
 import { getSettings, updateSettings as updateSettingsApi, uploadLogo as uploadLogoApi } from '../api/settingsApi';
 
 export const SettingsContext = createContext(null);
+
+export const useSettings = () => {
+  const context = useContext(SettingsContext);
+  if (!context) {
+    throw new Error('useSettings must be used within SettingsProvider');
+  }
+  return context;
+};
 
 export const SettingsProvider = ({ children }) => {
   const [settings, setSettings] = useState({
