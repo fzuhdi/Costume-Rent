@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { searchCostumes } from '../api/costumeApi';
 import { X, Search, Minus, Plus } from 'lucide-react';
 import './CostumeMultiSelect.css';
@@ -30,23 +30,55 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchCostumes = async () => {
+  const fetchCostumes = async (forceShow = false) => {
     try {
       const response = await searchCostumes(search, 10);
       const filtered = response.data.filter(c => 
         !value.some(v => v.costume_id === c.id)
       );
       setResults(filtered);
-      setShowDropdown(true);
+      if (filtered.length > 0 || forceShow) {
+        setShowDropdown(true);
+      }
     } catch (error) {
       console.error('Failed to search costumes:', error);
     }
   };
 
+  const handleFocus = () => {
+    if (search.length >= 2) {
+      setShowDropdown(true);
+    } else {
+      fetchCostumes(true);
+    }
+  };
+
   const handleSelect = (costume) => {
-    onChange([...value, { costume_id: costume.id, costume, quantity: 1 }]);
+    console.log('CostumeMultiSelect handleSelect:', costume);
+    const newItem = { 
+      costume_id: costume.id, 
+      costume: costume, 
+      quantity: 1 
+    };
+    console.log('Adding item:', newItem);
+    onChange([...value, newItem]);
     setSearch('');
     setShowDropdown(false);
+  };
+
+  const handleClearAndSearch = async () => {
+    setSearch('');
+    setShowDropdown(false);
+    try {
+      const response = await searchCostumes('', 10);
+      const filtered = response.data.filter(c => 
+        !value.some(v => v.costume_id === c.id)
+      );
+      setResults(filtered);
+      setShowDropdown(true);
+    } catch (error) {
+      console.error('Failed to fetch costumes:', error);
+    }
   };
 
   const handleQuantityChange = (costumeId, delta) => {
@@ -74,7 +106,8 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
           placeholder="Cari kostum..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onFocus={() => search.length >= 2 && setShowDropdown(true)}
+          onFocus={handleFocus}
+          onClick={handleClearAndSearch}
         />
       </div>
 

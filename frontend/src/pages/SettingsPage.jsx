@@ -7,7 +7,7 @@ const SettingsPage = () => {
   const { settings, updateSettings, uploadLogo } = useSettings();
   const [formData, setFormData] = useState({
     app_name: settings.app_name || '',
-    app_tagline: settings.app_tagline || '',
+    tagline: settings.app_tagline || '',
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -105,9 +105,9 @@ const SettingsPage = () => {
               <label className="form-label">Tagline</label>
               <input
                 type="text"
-                name="app_tagline"
+                name="tagline"
                 className="form-input"
-                value={formData.app_tagline}
+                value={formData.tagline}
                 onChange={handleChange}
                 placeholder="Inventory & Rental Management"
               />
@@ -137,7 +137,7 @@ const SettingsPage = () => {
             </div>
             <div className="preview-content">
               <h3>{formData.app_name || 'Costume Rental'}</h3>
-              <p>{formData.app_tagline || 'Inventory & Rental Management'}</p>
+              <p>{formData.tagline || 'Inventory & Rental Management'}</p>
             </div>
           </div>
         </div>

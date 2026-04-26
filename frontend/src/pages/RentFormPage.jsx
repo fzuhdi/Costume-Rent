@@ -56,6 +56,7 @@ const RentFormPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('handleSubmit - client:', formData.client, 'items:', JSON.stringify(items));
     if (!validate()) return;
 
     setSaving(true);
@@ -66,11 +67,15 @@ const RentFormPage = () => {
         rent_start: formData.rent_start,
         rent_end: formData.rent_end,
         notes: formData.notes,
-        items: items.map((item) => ({
-          costume_id: item.costume_id,
-          quantity: item.quantity,
-        })),
+        items: items.map((item) => {
+          console.log('Mapping item:', item);
+          return {
+            costume_id: item.costume_id,
+            quantity: item.quantity,
+          };
+        }),
       };
+      console.log('Payload:', JSON.stringify(payload));
 
       if (formData.client?.type === 'existing') {
         payload.client_id = formData.client.client.id;

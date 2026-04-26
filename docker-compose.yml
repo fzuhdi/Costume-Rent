@@ -9,10 +9,17 @@ services:
     restart: unless-stopped
     env_file: .env.production
     volumes:
-      - busana_db:/app
+      - busana_db:/app/data
       - busana_uploads:/app/uploads
     networks:
       - busana_net
+    develop:
+      watch:
+        - action: rebuild          # recompile Go binary on any source change
+          path: ./backend
+          ignore:
+            - uploads/
+            - "*.db"
 
   frontend:
     build:
@@ -26,6 +33,13 @@ services:
       - backend
     networks:
       - busana_net
+    develop:
+      watch:
+        - action: sync             # push changed files into container instantly
+          path: ./frontend/src
+          target: /usr/share/nginx/html/src
+        - action: rebuild          # full rebuild when deps change
+          path: ./frontend/package.json
 
 volumes:
   busana_db:
