@@ -21,12 +21,20 @@ import { useSettings } from './context/SettingsContext';
 import './styles/global.css';
 
 const AppRoutes = () => {
-  const { isAuthenticated } = useAuth();
-  const { settings } = useSettings();
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { settings, loading: settingsLoading } = useSettings();
 
   useEffect(() => {
     document.title = settings.app_name || 'Costume Rental';
   }, [settings]);
+
+  if (authLoading || settingsLoading) {
+    return (
+      <div className="loading">
+        <div className="spinner"></div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (

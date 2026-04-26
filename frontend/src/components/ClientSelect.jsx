@@ -34,13 +34,35 @@ const ClientSelect = ({ value, onChange, error }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchClients = async () => {
+  const fetchClients = async (forceShow = false) => {
     try {
       const response = await searchClients(search, 10);
       setResults(response.data || []);
-      setShowDropdown(true);
+      if (response.data?.length > 0 || forceShow) {
+        setShowDropdown(true);
+      }
     } catch (error) {
       console.error('Failed to search clients:', error);
+    }
+  };
+
+  const handleFocus = () => {
+    if (search.length >= 2) {
+      setShowDropdown(true);
+    } else {
+      fetchClients(true);
+    }
+  };
+
+  const handleClearAndSearch = async () => {
+    setSearch('');
+    setShowDropdown(false);
+    try {
+      const response = await searchClients('', 10);
+      setResults(response.data || []);
+      setShowDropdown(true);
+    } catch (error) {
+      console.error('Failed to fetch clients:', error);
     }
   };
 
@@ -53,8 +75,10 @@ const ClientSelect = ({ value, onChange, error }) => {
   };
 
   const handleCreateNew = () => {
+    console.log('handleCreateNew called, search:', search);
     setIsCreating(true);
     setSelectedClient(null);
+    setShowDropdown(false);
     onChange({ type: 'new', name: search });
   };
 
@@ -81,7 +105,8 @@ const ClientSelect = ({ value, onChange, error }) => {
             setSelectedClient(null);
             setIsCreating(false);
           }}
-          onFocus={() => search.length >= 2 && setShowDropdown(true)}
+          onFocus={handleFocus}
+          onClick={handleClearAndSearch}
         />
         {(selectedClient || isCreating) && (
           <button className="clear-btn" onClick={handleClear}>

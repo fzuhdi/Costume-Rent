@@ -82,6 +82,7 @@ const RentHistoryPage = () => {
         </div>
         <select
           className="form-select"
+          name="status"
           value={statusFilter}
           onChange={(e) => {
             setStatusFilter(e.target.value);
