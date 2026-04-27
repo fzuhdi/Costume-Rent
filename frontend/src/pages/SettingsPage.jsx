@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { Save, Upload, Image } from 'lucide-react';
-import './SettingsPage.css';
+import { Input, Button, Card, CardBody, Chip } from '@heroui/react';
 
 const SettingsPage = () => {
   const { settings, updateSettings, uploadLogo } = useSettings();
@@ -12,6 +12,8 @@ const SettingsPage = () => {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(settings.app_logo || '');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -23,9 +25,7 @@ const SettingsPage = () => {
       setPreview(URL.createObjectURL(file));
       setUploading(true);
       uploadLogo(file)
-        .then(() => {
-          setUploading(false);
-        })
+        .then(() => setUploading(false))
         .catch(() => {
           setUploading(false);
           setPreview(settings.app_logo || '');
@@ -36,112 +36,80 @@ const SettingsPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setSuccessMsg('');
+    setErrorMsg('');
     try {
       await updateSettings(formData);
-      alert('Pengaturan berhasil disimpan');
+      setSuccessMsg('Pengaturan berhasil disimpan');
+      setTimeout(() => setSuccessMsg(''), 3000);
     } catch (error) {
-      alert('Gagal menyimpan pengaturan');
+      setErrorMsg('Gagal menyimpan pengaturan');
+      setTimeout(() => setErrorMsg(''), 3000);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="settings-page">
-      <div className="page-header">
-        <h1 className="page-title">Pengaturan Aplikasi</h1>
-      </div>
+    <div className="flex flex-col gap-4">
+      <h1 className="text-2xl font-bold">Pengaturan Aplikasi</h1>
 
-      <div className="settings-grid">
-        <div className="card">
-          <div className="card-header">
-            <h2 className="card-title">Branding</h2>
-          </div>
-
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label className="form-label">Logo Aplikasi</label>
-              <div className="logo-upload">
-                <div className="logo-preview">
+      <Card>
+        <CardBody>
+          <h2 className="text-lg font-semibold mb-4">Branding</h2>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Logo Aplikasi</label>
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 bg-[var(--border)] rounded-lg flex items-center justify-center">
                   {preview ? (
-                    <img src={preview} alt="Logo" />
+                    <img src={preview} alt="Logo" className="w-full h-full object-contain" />
                   ) : (
-                    <div className="no-logo">
-                      <Image size={32} />
-                      <span>Belum ada logo</span>
-                    </div>
+                    <Image size={32} className="opacity-50" />
                   )}
                 </div>
-                <div className="logo-actions">
-                  <label className="btn btn-outline">
+                <div>
+                  <Button variant="bordered" size="sm" isLoading={uploading} as="label" className="cursor-pointer">
                     <Upload size={16} />
                     {uploading ? 'Mengupload...' : 'Pilih Logo'}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoChange}
-                      disabled={uploading}
-                      style={{ display: 'none' }}
-                    />
-                  </label>
-                  <p className="help-text">Format: PNG, JPG. Maksimal 2MB</p>
+                    <input type="file" accept="image/*" onChange={handleLogoChange} disabled={uploading} className="hidden" />
+                  </Button>
+                  <p className="text-xs text-[var(--muted)] mt-1">Format: PNG, JPG. Maksimal 2MB</p>
                 </div>
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Nama Aplikasi</label>
-              <input
-                type="text"
-                name="app_name"
-                className="form-input"
-                value={formData.app_name}
-                onChange={handleChange}
-                placeholder="Costume Rental"
-              />
-            </div>
+            <Input label="Nama Aplikasi" name="app_name" value={formData.app_name} onChange={handleChange} placeholder="Costume Rental" />
+            <Input label="Tagline" name="tagline" value={formData.tagline} onChange={handleChange} placeholder="Inventory & Rental Management" />
 
-            <div className="form-group">
-              <label className="form-label">Tagline</label>
-              <input
-                type="text"
-                name="tagline"
-                className="form-input"
-                value={formData.tagline}
-                onChange={handleChange}
-                placeholder="Inventory & Rental Management"
-              />
-            </div>
+            {successMsg && <Chip color="success">{successMsg}</Chip>}
+            {errorMsg && <Chip color="danger">{errorMsg}</Chip>}
 
-            <div className="form-actions">
-              <button type="submit" className="btn btn-primary" disabled={saving}>
-                <Save size={18} />
-                {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
-              </button>
-            </div>
+            <Button type="submit" color="primary" isLoading={saving} startContent={<Save size={18} />}>
+              {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+            </Button>
           </form>
-        </div>
+        </CardBody>
+      </Card>
 
-        <div className="card">
-          <div className="card-header">
-            <h2 className="card-title">Preview</h2>
-          </div>
-
-          <div className="preview-box">
-            <div className="preview-navbar">
+      <Card>
+        <CardBody>
+          <h2 className="text-lg font-semibold mb-4">Preview</h2>
+          <div className="bg-[var(--border)] rounded-lg p-4">
+            <div className="h-12 bg-[var(--surface)] rounded flex items-center px-3 mb-4">
               {preview ? (
-                <img src={preview} alt="Logo" className="preview-logo" />
+                <img src={preview} alt="Logo" className="h-8" />
               ) : (
-                <span className="preview-title">{formData.app_name || 'Costume Rental'}</span>
+                <span className="font-bold">{formData.app_name || 'Costume Rental'}</span>
               )}
             </div>
-            <div className="preview-content">
-              <h3>{formData.app_name || 'Costume Rental'}</h3>
-              <p>{formData.tagline || 'Inventory & Rental Management'}</p>
+            <div>
+              <h3 className="font-bold">{formData.app_name || 'Costume Rental'}</h3>
+              <p className="text-sm text-[var(--muted)]">{formData.tagline || 'Inventory & Rental Management'}</p>
             </div>
           </div>
-        </div>
-      </div>
+        </CardBody>
+      </Card>
     </div>
   );
 };

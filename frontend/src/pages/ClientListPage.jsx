@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getClients, deleteClient } from '../api/clientApi';
-import { Plus, Search, Trash2, AlertCircle } from 'lucide-react';
-import './ClientListPage.css';
+import { Search, Trash2 } from 'lucide-react';
+import {
+  Input, Button, Chip,
+  Table, TableHeader, TableColumn, TableBody, TableRow, TableCell,
+  Spinner, Pagination, Card, CardBody,
+  Modal, ModalContent, ModalHeader, ModalBody, ModalFooter
+} from '@heroui/react';
 
 const ClientListPage = () => {
   const [clients, setClients] = useState([]);
@@ -11,6 +16,9 @@ const ClientListPage = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     fetchClients();
@@ -30,127 +38,110 @@ const ClientListPage = () => {
     }
   };
 
-  const handleDelete = async (id, e) => {
-    e.preventDefault();
-    if (!window.confirm('Hapus klien ini?')) return;
+  const handleDelete = async () => {
+    setActionLoading(true);
     try {
-      await deleteClient(id);
+      await deleteClient(selectedClientId);
+      setIsDeleteOpen(false);
       fetchClients();
     } catch (error) {
-      alert('Gagal menghapus klien');
+      console.error('Failed to delete client:', error);
+    } finally {
+      setActionLoading(false);
     }
   };
 
   return (
-    <div className="client-list-page">
-      <div className="page-header">
-        <h1 className="page-title">Daftar Klien</h1>
-      </div>
+    <div className="flex flex-col gap-4">
+      <h1 className="text-2xl font-bold">Daftar Klien</h1>
 
-      <div className="filter-row">
-        <div className="search-input-wrapper">
-          <Search size={18} className="search-icon" />
-          <input
-            type="text"
-            className="form-input search-input"
-            placeholder="Cari nama klien..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-        </div>
-      </div>
+      <Input
+        placeholder="Cari nama klien..."
+        value={search}
+        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+        startContent={<Search size={18} />}
+        className="w-64"
+      />
 
-      <div className="results-info">
-        Ditemukan {total} klien
-      </div>
+      <p className="text-sm text-[var(--muted)]">Ditemukan {total} klien</p>
 
       {loading ? (
-        <div className="loading">
-          <div className="spinner"></div>
+        <div className="flex justify-center items-center h-48">
+          <Spinner />
         </div>
       ) : clients.length === 0 ? (
-        <div className="empty-state">
-          <h3>Tidak ada klien</h3>
-          <p>Klien akan muncul setelah membuat peminjaman</p>
-        </div>
+        <Card>
+          <CardBody className="text-center py-12">
+            <h3 className="text-lg font-semibold">Tidak ada klien</h3>
+            <p className="text-sm text-[var(--muted)]">Klien akan muncul setelah membuat peminjaman</p>
+          </CardBody>
+        </Card>
       ) : (
-        <div className="card">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Nama</th>
-                <th>Telepon</th>
-                <th>Alamat</th>
-                <th>Total Pinjaman</th>
-                <th>Status</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clients.map((client) => (
-                <tr key={client.id}>
-                  <td>
-                    <Link to={`/clients/${client.id}`} className="client-link">
-                      {client.name}
-                    </Link>
-                  </td>
-                  <td>{client.phone || '-'}</td>
-                  <td>{client.address || '-'}</td>
-                  <td>{client.total_rents}</td>
-                  <td>
-                    {client.has_overdue && (
-                      <span className="badge badge-danger">
-                        <AlertCircle size={12} />
-                        Ada Terlambat
-                      </span>
-                    )}
-                    {client.active_rents > 0 && !client.has_overdue && (
-                      <span className="badge badge-active">
-                        {client.active_rents} Aktif
-                      </span>
-                    )}
-                    {client.active_rents === 0 && (
-                      <span className="badge badge-success">
-                        Tidak Ada Aktif
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <Link to={`/clients/${client.id}`} className="btn btn-outline btn-sm">
-                        Detail
+        <Card>
+          <CardBody>
+            <Table>
+              <TableHeader>
+                <TableColumn>Nama</TableColumn>
+                <TableColumn>Telepon</TableColumn>
+                <TableColumn>Alamat</TableColumn>
+                <TableColumn>Total Pinjaman</TableColumn>
+                <TableColumn>Status</TableColumn>
+                <TableColumn>Aksi</TableColumn>
+              </TableHeader>
+              <TableBody>
+                {clients.map((client) => (
+                  <TableRow key={client.id}>
+                    <TableCell>
+                      <Link to={`/clients/${client.id}`} className="text-[var(--primary)] hover:underline">
+                        {client.name}
                       </Link>
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={(e) => handleDelete(client.id, e)}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </TableCell>
+                    <TableCell>{client.phone || '-'}</TableCell>
+                    <TableCell>{client.address || '-'}</TableCell>
+                    <TableCell>{client.total_rents}</TableCell>
+                    <TableCell>
+                      {client.has_overdue && (
+                        <Chip size="sm" color="danger">Ada Terlambat</Chip>
+                      )}
+                      {client.active_rents > 0 && !client.has_overdue && (
+                        <Chip size="sm" color="primary">{client.active_rents} Aktif</Chip>
+                      )}
+                      {client.active_rents === 0 && (
+                        <Chip size="sm" color="success">Tidak Ada Aktif</Chip>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button as={Link} to={`/clients/${client.id}`} variant="bordered" size="sm">Detail</Button>
+                        <Button color="danger" size="sm" isIconOnly onPress={() => { setSelectedClientId(client.id); setIsDeleteOpen(true); }}>
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardBody>
+        </Card>
       )}
 
       {totalPages > 1 && (
-        <div className="pagination">
-          <button onClick={() => setPage(page - 1)} disabled={page === 1}>
-            Previous
-          </button>
-          <span className="page-info">
-            Halaman {page} dari {totalPages}
-          </span>
-          <button onClick={() => setPage(page + 1)} disabled={page === totalPages}>
-            Next
-          </button>
+        <div className="flex justify-center">
+          <Pagination total={totalPages} page={page} onChange={setPage} />
         </div>
       )}
+
+      <Modal isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <ModalContent>
+          <ModalHeader>Konfirmasi</ModalHeader>
+          <ModalBody>Hapus klien ini?</ModalBody>
+          <ModalFooter>
+            <Button variant="bordered" onPress={() => setIsDeleteOpen(false)}>Batal</Button>
+            <Button color="danger" onPress={handleDelete} isLoading={actionLoading}>Hapus</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 };

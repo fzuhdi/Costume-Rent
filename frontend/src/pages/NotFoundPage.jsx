@@ -1,19 +1,20 @@
 import { Link } from 'react-router-dom';
-import { Home, Search } from 'lucide-react';
-import './NotFoundPage.css';
+import { Home } from 'lucide-react';
+import { Button, Card, CardBody } from '@heroui/react';
 
 const NotFoundPage = () => {
   return (
-    <div className="not-found-page">
-      <div className="not-found-content">
-        <h1>404</h1>
-        <h2>Halaman Tidak Ditemukan</h2>
-        <p>Halaman yang Anda cari tidak tersedia atau telah dipindahkan.</p>
-        <Link to="/catalogue" className="btn btn-primary">
-          <Home size={18} />
-          Kembali ke Beranda
-        </Link>
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+      <Card>
+        <CardBody className="text-center gap-4 py-12">
+          <h1 className="text-6xl font-bold text-[var(--primary)]">404</h1>
+          <h2 className="text-xl font-semibold">Halaman Tidak Ditemukan</h2>
+          <p className="text-[var(--muted)]">Halaman yang Anda cari tidak tersedia atau telah dipindahkan.</p>
+          <Button as={Link} to="/catalogue" color="primary" startContent={<Home size={18} />}>
+            Kembali ke Beranda
+          </Button>
+        </CardBody>
+      </Card>
     </div>
   );
 };

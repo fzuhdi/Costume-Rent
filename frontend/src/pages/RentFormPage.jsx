@@ -4,7 +4,7 @@ import { getRentById, createRent, updateRent } from '../api/rentApi';
 import ClientSelect from '../components/ClientSelect';
 import CostumeMultiSelect from '../components/CostumeMultiSelect';
 import { ArrowLeft, Save } from 'lucide-react';
-import './RentFormPage.css';
+import { Input, Textarea, Select, SelectItem, Button, Card, CardBody, Divider } from '@heroui/react';
 
 const GUARANTEE_TYPES = ['KTP', 'SIM', 'KK', 'Paspor', 'Lainnya'];
 
@@ -56,7 +56,6 @@ const RentFormPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('handleSubmit - client:', formData.client, 'items:', JSON.stringify(items));
     if (!validate()) return;
 
     setSaving(true);
@@ -67,15 +66,11 @@ const RentFormPage = () => {
         rent_start: formData.rent_start,
         rent_end: formData.rent_end,
         notes: formData.notes,
-        items: items.map((item) => {
-          console.log('Mapping item:', item);
-          return {
-            costume_id: item.costume_id,
-            quantity: item.quantity,
-          };
-        }),
+        items: items.map((item) => ({
+          costume_id: item.costume_id,
+          quantity: item.quantity,
+        })),
       };
-      console.log('Payload:', JSON.stringify(payload));
 
       if (formData.client?.type === 'existing') {
         payload.client_id = formData.client.client.id;
@@ -90,7 +85,7 @@ const RentFormPage = () => {
       }
       navigate('/rents');
     } catch (error) {
-      alert(error.response?.data?.error || 'Gagal menyimpan peminjaman');
+      console.error('Failed to save rent:', error);
     } finally {
       setSaving(false);
     }
@@ -98,130 +93,101 @@ const RentFormPage = () => {
 
   if (isEdit && loading) {
     return (
-      <div className="loading">
-        <div className="spinner"></div>
+      <div className="flex justify-center items-center h-48">
+        <div className="text-[var(--muted)]">Memuat...</div>
       </div>
     );
   }
 
   return (
-    <div className="rent-form-page">
-      <Link to="/rents" className="back-link">
+    <div className="flex flex-col gap-4">
+      <Link to="/rents" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
         <ArrowLeft size={18} />
         Kembali ke Riwayat Peminjaman
       </Link>
 
-      <div className="card">
-        <div className="card-header">
-          <h2 className="card-title">{isEdit ? 'Edit Peminjaman' : 'Form Peminjaman Baru'}</h2>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-section">
-            <h3>Data Klien</h3>
-            <div className="form-group">
-              <label className="form-label">Klien *</label>
-              <ClientSelect
-                value={formData.client}
-                onChange={handleClientChange}
-                error={errors.client}
-              />
+      <Card>
+        <CardBody>
+          <h2 className="text-lg font-semibold mb-4">{isEdit ? 'Edit Peminjaman' : 'Form Peminjaman Baru'}</h2>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+            <div>
+              <h3 className="text-base font-medium mb-3">Data Klien</h3>
+              <ClientSelect value={formData.client} onChange={handleClientChange} error={errors.client} />
             </div>
-          </div>
 
-          <div className="form-section">
-            <h3>Data Jaminan</h3>
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Tipe Jaminan</label>
-                <select
-                  name="guarantee_type"
-                  className="form-select"
-                  value={formData.guarantee_type}
-                  onChange={handleChange}
+            <Divider />
+
+            <div>
+              <h3 className="text-base font-medium mb-3">Data Jaminan</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <Select
+                  label="Tipe Jaminan"
+                  selectedKeys={[formData.guarantee_type]}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, guarantee_type: e.anchorKey }))}
                 >
                   {GUARANTEE_TYPES.map((type) => (
-                    <option key={type} value={type}>{type}</option>
+                    <SelectItem key={type}>{type}</SelectItem>
                   ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Nomor Jaminan</label>
-                <input
-                  type="text"
+                </Select>
+                <Input
+                  label="Nomor Jaminan"
                   name="guarantee_number"
-                  className="form-input"
                   value={formData.guarantee_number}
                   onChange={handleChange}
                 />
               </div>
             </div>
-          </div>
 
-          <div className="form-section">
-            <h3>Data Peminjaman</h3>
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Tanggal Mulai *</label>
-                <input
+            <Divider />
+
+            <div>
+              <h3 className="text-base font-medium mb-3">Data Peminjaman</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Tanggal Mulai *"
                   type="date"
                   name="rent_start"
-                  className="form-input"
                   value={formData.rent_start}
                   onChange={handleChange}
-                  required
+                  isInvalid={!!errors.rent_start}
+                  errorMessage={errors.rent_start}
                 />
-                {errors.rent_start && <span className="error-text">{errors.rent_start}</span>}
-              </div>
-              <div className="form-group">
-                <label className="form-label">Tanggal Selesai *</label>
-                <input
+                <Input
+                  label="Tanggal Selesai *"
                   type="date"
                   name="rent_end"
-                  className="form-input"
                   value={formData.rent_end}
                   onChange={handleChange}
-                  min={formData.rent_start}
-                  required
+                  isInvalid={!!errors.rent_end}
+                  errorMessage={errors.rent_end}
                 />
-                {errors.rent_end && <span className="error-text">{errors.rent_end}</span>}
               </div>
             </div>
-          </div>
 
-          <div className="form-section">
-            <h3>Daftar Kostum</h3>
-            <CostumeMultiSelect
-              value={items}
-              onChange={setItems}
-              error={errors.items}
-            />
-          </div>
+            <Divider />
 
-          <div className="form-section">
-            <div className="form-group">
-              <label className="form-label">Catatan</label>
-              <textarea
-                name="notes"
-                className="form-textarea"
-                value={formData.notes}
-                onChange={handleChange}
-                rows="3"
-              />
+            <div>
+              <h3 className="text-base font-medium mb-3">Daftar Kostum</h3>
+              <CostumeMultiSelect value={items} onChange={setItems} error={errors.items} />
             </div>
-          </div>
 
-          <div className="form-actions">
-            <Link to="/rents" className="btn btn-outline">
-              Batal
-            </Link>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              <Save size={18} />
-              {saving ? 'Menyimpan...' : 'Simpan'}
-            </button>
-          </div>
-        </form>
-      </div>
+            <Textarea
+              label="Catatan"
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              minRows={3}
+            />
+
+            <div className="flex gap-3 justify-end">
+              <Button variant="bordered" as={Link} to="/rents">Batal</Button>
+              <Button type="submit" color="primary" isLoading={saving} startContent={<Save size={18} />}>
+                {saving ? 'Menyimpan...' : 'Simpan'}
+              </Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
     </div>
   );
 };
