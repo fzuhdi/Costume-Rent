@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "skill": {
+      "sdet": "allow",
+      "engineer": "allow",
+      "orchestrator": "allow",
+      "*": "allow"
+    }
+  },
+  "context": {
+    "include": ["backend/", "frontend/src/", "test/", "docs/", ".opencode/skills/"],
+    "exclude": ["backend/server", "frontend/node_modules/", "test/test-results/", "*.db", "*.webm"]
+  },
+  "autoCompact": true
+}
