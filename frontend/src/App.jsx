@@ -18,6 +18,7 @@ import ClientDetailPage from './pages/ClientDetailPage';
 import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { useSettings } from './context/SettingsContext';
+import { Spinner } from '@heroui/react';
 import './styles/global.css';
 
 const AppRoutes = () => {
@@ -30,8 +31,8 @@ const AppRoutes = () => {
 
   if (authLoading || settingsLoading) {
     return (
-      <div className="loading">
-        <div className="spinner"></div>
+      <div className="flex justify-center items-center h-screen">
+        <Spinner />
       </div>
     );
   }
