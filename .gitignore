@@ -34,3 +34,6 @@ Thumbs.db
 test/test-log.txt
 nul
 temp/
+
+# OpenCode
+.opencode/state/
