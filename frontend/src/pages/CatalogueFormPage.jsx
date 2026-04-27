@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getCostumeById, createCostume, updateCostume, getRegions, getCategories, uploadCostumeImage } from '../api/costumeApi';
-import { ArrowLeft, Save, Upload, X } from 'lucide-react';
-import './CatalogueFormPage.css';
+import { ArrowLeft, Save } from 'lucide-react';
+import { Input, Textarea, Select, SelectItem, Button, Card, CardBody, Spinner } from '@heroui/react';
 
 const CatalogueFormPage = () => {
   const { id } = useParams();
@@ -23,7 +23,6 @@ const CatalogueFormPage = () => {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -86,163 +85,106 @@ const CatalogueFormPage = () => {
       }
       navigate('/catalogue');
     } catch (error) {
-      alert('Gagal menyimpan kostum');
+      console.error('Failed to save costume:', error);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-
-    setUploading(true);
-    try {
-      for (const file of files) {
-        const formDataUpload = new FormData();
-        formDataUpload.append('image', file);
-        const res = isEdit
-          ? await uploadCostumeImage(id, formDataUpload)
-          : null;
-        if (res) {
-          setImages((prev) => [...prev, res.data]);
-        }
-      }
-      if (!isEdit) {
-        alert('Simpan kostum terlebih dahulu untuk mengupload gambar');
-      }
-    } catch (error) {
-      console.error('Failed to upload image:', error);
-    } finally {
-      setUploading(false);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="loading">
-        <div className="spinner"></div>
+      <div className="flex justify-center items-center h-48">
+        <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="catalogue-form-page">
-      <Link to="/catalogue" className="back-link">
+    <div className="flex flex-col gap-4">
+      <Link to="/catalogue" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
         <ArrowLeft size={18} />
         Kembali ke Katalog
       </Link>
 
-      <div className="card">
-        <div className="card-header">
-          <h2 className="card-title">{isEdit ? 'Edit Kostum' : 'Tambah Kostum Baru'}</h2>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-grid">
-            <div className="form-group">
-              <label className="form-label">Nama Kostum *</label>
-              <input
-                type="text"
-                name="name"
-                className="form-input"
-                value={formData.name}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Wilayah</label>
-              <select
+      <Card>
+        <CardBody>
+          <h2 className="text-lg font-semibold mb-4">{isEdit ? 'Edit Kostum' : 'Tambah Kostum Baru'}</h2>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <Input
+              label="Nama Kostum *"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                label="Wilayah"
                 name="region_id"
-                className="form-select"
-                value={formData.region_id}
+                selectedKeys={formData.region_id ? [formData.region_id] : []}
                 onChange={handleChange}
               >
-                <option value="">Pilih Wilayah</option>
+                <SelectItem key="">Pilih Wilayah</SelectItem>
                 {regions.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
+                  <SelectItem key={String(r.id)}>{r.name}</SelectItem>
                 ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Kategori</label>
-              <select
+              </Select>
+              <Select
+                label="Kategori"
                 name="category_id"
-                className="form-select"
-                value={formData.category_id}
+                selectedKeys={formData.category_id ? [formData.category_id] : []}
                 onChange={handleChange}
               >
-                <option value="">Pilih Kategori</option>
+                <SelectItem key="">Pilih Kategori</SelectItem>
                 {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                  <SelectItem key={String(c.id)}>{c.name}</SelectItem>
                 ))}
-              </select>
+              </Select>
             </div>
-
-            <div className="form-group">
-              <label className="form-label">Kondisi</label>
-              <select
+            <div className="grid grid-cols-3 gap-4">
+              <Select
+                label="Kondisi"
                 name="condition"
-                className="form-select"
-                value={formData.condition}
-                onChange={handleChange}
+                selectedKeys={[formData.condition]}
+                onChange={(e) => setFormData((prev) => ({ ...prev, condition: e.anchorKey }))}
               >
-                <option value="excellent">Excellent</option>
-                <option value="good">Good</option>
-                <option value="fair">Fair</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Jumlah Stok *</label>
-              <input
+                <SelectItem key="excellent">Excellent</SelectItem>
+                <SelectItem key="good">Good</SelectItem>
+                <SelectItem key="fair">Fair</SelectItem>
+              </Select>
+              <Input
+                label="Jumlah Stok *"
                 type="number"
                 name="quantity"
-                className="form-input"
-                value={formData.quantity}
+                value={String(formData.quantity)}
                 onChange={handleChange}
                 min="1"
                 required
               />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Tanggal Perolehan</label>
-              <input
+              <Input
+                label="Tanggal Perolehan"
                 type="date"
                 name="acquired_at"
-                className="form-input"
                 value={formData.acquired_at}
                 onChange={handleChange}
               />
             </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Deskripsi</label>
-            <textarea
+            <Textarea
+              label="Deskripsi"
               name="description"
-              className="form-textarea"
               value={formData.description}
               onChange={handleChange}
-              rows="4"
+              minRows={4}
             />
-          </div>
-
-          <div className="form-actions">
-            <Link to="/catalogue" className="btn btn-outline">
-              Batal
-            </Link>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              <Save size={18} />
-              {saving ? 'Menyimpan...' : 'Simpan'}
-            </button>
-          </div>
-        </form>
-      </div>
+            <div className="flex gap-3 justify-end">
+              <Button variant="bordered" as={Link} to="/catalogue">Batal</Button>
+              <Button type="submit" color="primary" isLoading={saving} startContent={<Save size={18} />}>
+                {saving ? 'Menyimpan...' : 'Simpan'}
+              </Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
     </div>
   );
 };

@@ -2,7 +2,17 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getCostumes, getRegions, getCategories } from '../api/costumeApi';
 import { Plus, Search, Grid, List, Filter } from 'lucide-react';
-import './CataloguePage.css';
+import {
+  Input, Button, ButtonGroup, Select, SelectItem,
+  Table, TableHeader, TableColumn, TableBody, TableRow, TableCell,
+  Chip, Spinner, Pagination, Card, CardBody
+} from '@heroui/react';
+
+const conditionColors = {
+  baik: 'success',
+  sedang: 'warning',
+  rusak: 'danger',
+};
 
 const CataloguePage = () => {
   const [costumes, setCostumes] = useState([]);
@@ -59,172 +69,143 @@ const CataloguePage = () => {
   };
 
   return (
-    <div className="catalogue-page">
-      <div className="page-header">
-        <h1 className="page-title">Katalog Kostum</h1>
-        <Link to="/catalogue/new" className="btn btn-primary">
-          <Plus size={18} />
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Katalog Kostum</h1>
+        <Button as={Link} to="/catalogue/new" color="primary" startContent={<Plus size={18} />}>
           Tambah Kostum
-        </Link>
+        </Button>
       </div>
 
-      <div className="filter-row">
-        <div className="search-input-wrapper">
-          <Search size={18} className="search-icon" />
-          <input
-            type="text"
-            className="form-input search-input"
-            placeholder="Cari kostum..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-        </div>
-        <select
-          className="form-select"
-          value={regionFilter}
-          onChange={(e) => {
-            setRegionFilter(e.target.value);
-            setPage(1);
-          }}
+      <div className="flex flex-wrap gap-3">
+        <Input
+          placeholder="Cari kostum..."
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          startContent={<Search size={18} />}
+          className="w-64"
+        />
+        <Select
+          placeholder="Semua Wilayah"
+          selectedKeys={regionFilter ? [String(regionFilter)] : []}
+          onSelectionChange={(keys) => { setRegionFilter([...keys][0] ?? ''); setPage(1); }}
+          className="w-40"
         >
-          <option value="">Semua Wilayah</option>
+          <SelectItem key="">Semua Wilayah</SelectItem>
           {regions.map((r) => (
-            <option key={r.id} value={r.id}>{r.name}</option>
+            <SelectItem key={String(r.id)}>{r.name}</SelectItem>
           ))}
-        </select>
-        <select
-          className="form-select"
-          value={categoryFilter}
-          onChange={(e) => {
-            setCategoryFilter(e.target.value);
-            setPage(1);
-          }}
+        </Select>
+        <Select
+          placeholder="Semua Kategori"
+          selectedKeys={categoryFilter ? [String(categoryFilter)] : []}
+          onSelectionChange={(keys) => { setCategoryFilter([...keys][0] ?? ''); setPage(1); }}
+          className="w-40"
         >
-          <option value="">Semua Kategori</option>
+          <SelectItem key="">Semua Kategori</SelectItem>
           {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+            <SelectItem key={String(c.id)}>{c.name}</SelectItem>
           ))}
-        </select>
-        <div className="view-toggle">
-          <button
-            className={`view-btn ${view === 'table' ? 'active' : ''}`}
-            onClick={() => setView('table')}
-          >
+        </Select>
+        <ButtonGroup>
+          <Button isIconOnly variant={view === 'table' ? 'solid' : 'bordered'} onPress={() => setView('table')}>
             <List size={18} />
-          </button>
-          <button
-            className={`view-btn ${view === 'grid' ? 'active' : ''}`}
-            onClick={() => setView('grid')}
-          >
+          </Button>
+          <Button isIconOnly variant={view === 'grid' ? 'solid' : 'bordered'} onPress={() => setView('grid')}>
             <Grid size={18} />
-          </button>
-        </div>
+          </Button>
+        </ButtonGroup>
       </div>
 
-      <div className="results-info">
-        Ditemukan {total} kostum
-      </div>
+      <p className="text-sm text-[var(--muted)]">Ditemukan {total} kostum</p>
 
       {loading ? (
-        <div className="loading">
-          <div className="spinner"></div>
+        <div className="flex justify-center items-center h-48">
+          <Spinner />
         </div>
       ) : costumes.length === 0 ? (
-        <div className="empty-state">
-          <Filter size={64} />
-          <h3>Tidak ada kostum</h3>
-          <p>Coba ubah filter atau tambahkan kostum baru</p>
-        </div>
+        <Card>
+          <CardBody className="text-center py-12">
+            <Filter size={64} className="mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-semibold">Tidak ada kostum</h3>
+            <p className="text-sm text-[var(--muted)]">Coba ubah filter atau tambahkan kostum baru</p>
+          </CardBody>
+        </Card>
       ) : view === 'table' ? (
-        <div className="card">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Nama</th>
-                <th>Wilayah</th>
-                <th>Kategori</th>
-                <th>Kondisi</th>
-                <th>Stok</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {costumes.map((costume) => (
-                <tr key={costume.id}>
-                  <td>
-                    <div className="costume-name-cell">
-                      {costume.cover_image && (
-                        <img src={costume.cover_image} alt="" className="costume-thumb" />
-                      )}
-                      <span>{costume.name}</span>
-                    </div>
-                  </td>
-                  <td>{costume.region || '-'}</td>
-                  <td>{costume.category || '-'}</td>
-                  <td>
-                    <span className={`badge badge-${costume.condition}`}>
-                      {costume.condition}
-                    </span>
-                  </td>
-                  <td>{costume.quantity}</td>
-                  <td>
-                    <Link to={`/catalogue/${costume.id}`} className="btn btn-outline btn-sm">
-                      Detail
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Card>
+          <CardBody>
+            <Table>
+              <TableHeader>
+                <TableColumn>Nama</TableColumn>
+                <TableColumn>Wilayah</TableColumn>
+                <TableColumn>Kategori</TableColumn>
+                <TableColumn>Kondisi</TableColumn>
+                <TableColumn>Stok</TableColumn>
+                <TableColumn>Aksi</TableColumn>
+              </TableHeader>
+              <TableBody>
+                {costumes.map((costume) => (
+                  <TableRow key={costume.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {costume.cover_image && (
+                          <img src={costume.cover_image} alt="" className="w-10 h-10 object-cover rounded" />
+                        )}
+                        <span>{costume.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{costume.region || '-'}</TableCell>
+                    <TableCell>{costume.category || '-'}</TableCell>
+                    <TableCell>
+                      <Chip size="sm" color={conditionColors[costume.condition] ?? 'default'}>
+                        {costume.condition}
+                      </Chip>
+                    </TableCell>
+                    <TableCell>{costume.quantity}</TableCell>
+                    <TableCell>
+                      <Button as={Link} to={`/catalogue/${costume.id}`} variant="bordered" size="sm">
+                        Detail
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardBody>
+        </Card>
       ) : (
-        <div className="costume-grid">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {costumes.map((costume) => (
-            <Link to={`/catalogue/${costume.id}`} key={costume.id} className="costume-card">
-              <div className="costume-image">
-                {costume.cover_image ? (
-                  <img src={costume.cover_image} alt={costume.name} />
-                ) : (
-                  <div className="no-image">No Image</div>
-                )}
-                <span className={`costume-condition ${costume.condition}`}>
-                  {costume.condition}
-                </span>
-              </div>
-              <div className="costume-info">
-                <h3>{costume.name}</h3>
-                <p>{costume.region} {costume.category && `• ${costume.category}`}</p>
-                <div className="costume-stock">Stok: {costume.quantity}</div>
-              </div>
+            <Link to={`/catalogue/${costume.id}`} key={costume.id} className="block">
+              <Card isHoverable isPressable>
+                <CardBody className="p-0">
+                  <div className="aspect-square bg-[var(--border)] relative">
+                    {costume.cover_image ? (
+                      <img src={costume.cover_image} alt={costume.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-[var(--muted)]">No Image</div>
+                    )}
+                    <Chip size="sm" className="absolute top-2 right-2" color={conditionColors[costume.condition] ?? 'default'}>
+                      {costume.condition}
+                    </Chip>
+                  </div>
+                  <div className="p-3">
+                    <h3 className="text-sm font-medium truncate">{costume.name}</h3>
+                    <p className="text-xs text-[var(--muted)] truncate">
+                      {costume.region} {costume.category && `• ${costume.category}`}
+                    </p>
+                    <p className="text-xs text-[var(--muted)]">Stok: {costume.quantity}</p>
+                  </div>
+                </CardBody>
+              </Card>
             </Link>
           ))}
         </div>
       )}
 
       {totalPages > 1 && (
-        <div className="pagination">
-          <button onClick={() => setPage(page - 1)} disabled={page === 1}>
-            Previous
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
-            .map((p, idx, arr) => (
-              <span key={p}>
-                {idx > 0 && arr[idx - 1] !== p - 1 && <span>...</span>}
-                <button
-                  onClick={() => setPage(p)}
-                  className={page === p ? 'active' : ''}
-                >
-                  {p}
-                </button>
-              </span>
-            ))}
-          <button onClick={() => setPage(page + 1)} disabled={page === totalPages}>
-            Next
-          </button>
+        <div className="flex justify-center">
+          <Pagination total={totalPages} page={page} onChange={setPage} />
         </div>
       )}
     </div>

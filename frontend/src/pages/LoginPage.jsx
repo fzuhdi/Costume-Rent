@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { SettingsContext } from '../context/SettingsContext';
 import { LogIn, AlertCircle } from 'lucide-react';
-import './LoginPage.css';
+import { Input, Button, Card, CardBody, Chip } from '@heroui/react';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -30,65 +30,49 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-container">
-        <div className="login-header">
-          {settings.app_logo ? (
-            <img src={settings.app_logo} alt={settings.app_name} className="login-logo" />
-          ) : (
-            <h1 className="login-title">{settings.app_name}</h1>
-          )}
-          <p className="login-subtitle">{settings.app_tagline}</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+      <Card className="w-full max-w-md mx-4">
+        <CardBody className="gap-4">
+          <div className="text-center">
+            {settings.app_logo ? (
+              <img src={settings.app_logo} alt={settings.app_name} className="h-16 mx-auto mb-2" />
+            ) : (
+              <h1 className="text-2xl font-bold text-[var(--primary)]">{settings.app_name}</h1>
+            )}
+            <p className="text-sm text-[var(--muted)]">{settings.app_tagline}</p>
+          </div>
 
-        <form className="login-form" onSubmit={handleSubmit}>
           {error && (
-            <div className="login-error">
-              <AlertCircle size={18} />
-              <span>{error}</span>
-            </div>
+            <Chip color="danger" classNames={{ base: 'w-full' }} startContent={<AlertCircle size={18} />}>
+              {error}
+            </Chip>
           )}
 
-          <div className="form-group">
-            <label className="form-label">Email</label>
-            <input
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <Input
               type="email"
-              className="form-input"
+              label="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@busana.com"
               required
             />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Password</label>
-            <input
+            <Input
               type="password"
-              className="form-input"
+              label="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
               required
             />
-          </div>
+            <Button type="submit" color="primary" isLoading={loading} startContent={!loading && <LogIn size={18} />}>
+              Login
+            </Button>
+          </form>
 
-          <button type="submit" className="btn btn-primary login-btn" disabled={loading}>
-            {loading ? (
-              <div className="spinner-small"></div>
-            ) : (
-              <>
-                <LogIn size={18} />
-                Login
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="login-footer">
-          <p>Default: admin@busana.com / admin123</p>
-        </div>
-      </div>
+          <p className="text-center text-xs text-[var(--muted)]">Default: admin@busana.com / admin123</p>
+        </CardBody>
+      </Card>
     </div>
   );
 };
