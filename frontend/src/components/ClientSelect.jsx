@@ -1,17 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import { searchClients } from '../api/clientApi';
 import { X, User } from 'lucide-react';
-import './ClientSelect.css';
+import { Autocomplete, AutocompleteItem } from '@heroui/react';
 
 const ClientSelect = ({ value, onChange, error }) => {
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
-  const inputRef = useRef(null);
-  const dropdownRef = useRef(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -24,61 +21,30 @@ const ClientSelect = ({ value, onChange, error }) => {
     return () => clearTimeout(timer);
   }, [search]);
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   const fetchClients = async (forceShow = false) => {
     try {
       const response = await searchClients(search, 10);
       setResults(response.data || []);
       if (response.data?.length > 0 || forceShow) {
-        setShowDropdown(true);
+        setIsOpen(true);
       }
     } catch (error) {
       console.error('Failed to search clients:', error);
     }
   };
 
-  const handleFocus = () => {
-    if (search.length >= 2) {
-      setShowDropdown(true);
-    } else {
-      fetchClients(true);
-    }
-  };
-
-  const handleClearAndSearch = async () => {
-    setSearch('');
-    setShowDropdown(false);
-    try {
-      const response = await searchClients('', 10);
-      setResults(response.data || []);
-      setShowDropdown(true);
-    } catch (error) {
-      console.error('Failed to fetch clients:', error);
-    }
-  };
-
   const handleSelect = (client) => {
     setSelectedClient(client);
     setSearch(client.name);
-    setShowDropdown(false);
+    setIsOpen(false);
     setIsCreating(false);
     onChange({ type: 'existing', client });
   };
 
   const handleCreateNew = () => {
-    console.log('handleCreateNew called, search:', search);
     setIsCreating(true);
     setSelectedClient(null);
-    setShowDropdown(false);
+    setIsOpen(false);
     onChange({ type: 'new', name: search });
   };
 
@@ -91,71 +57,42 @@ const ClientSelect = ({ value, onChange, error }) => {
   };
 
   return (
-    <div className="client-select" ref={dropdownRef}>
-      <div className="client-select-input-wrapper">
-        <User size={18} className="input-icon" />
-        <input
-          ref={inputRef}
-          type="text"
-          className={`form-input ${error ? 'input-error' : ''}`}
-          placeholder="Cari atau ketik nama klien..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setSelectedClient(null);
-            setIsCreating(false);
-          }}
-          onFocus={handleFocus}
-          onClick={handleClearAndSearch}
-        />
-        {(selectedClient || isCreating) && (
-          <button className="clear-btn" onClick={handleClear}>
-            <X size={16} />
-          </button>
-        )}
-      </div>
-
-      {error && <span className="error-text">{error}</span>}
-
-      {showDropdown && results.length > 0 && (
-        <div className="client-dropdown">
-          {results.map((client) => (
-            <div
-              key={client.id}
-              className="client-option"
-              onClick={() => handleSelect(client)}
-            >
-              <div className="client-option-info">
-                <span className="client-name">{client.name}</span>
-                {client.phone && (
-                  <span className="client-phone">{client.phone}</span>
-                )}
-              </div>
-            </div>
-          ))}
-          {search.length >= 2 && !results.some(c => 
-            c.name.toLowerCase() === search.toLowerCase()
-          ) && (
-            <div
-              className="client-option create-option"
-              onClick={handleCreateNew}
-            >
-              <span className="create-icon">+</span>
-              <span>Buat klien baru: "{search}"</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {showDropdown && search.length >= 2 && results.length === 0 && (
-        <div className="client-dropdown">
-          <div
-            className="client-option create-option"
-            onClick={handleCreateNew}
+    <div>
+      <Autocomplete
+        inputValue={search}
+        onInputChange={setSearch}
+        isOpen={isOpen}
+        onOpenChange={setIsOpen}
+        items={results}
+        placeholder="Cari atau ketik nama klien..."
+        errorMessage={error}
+        classNames={{
+          trigger: 'group',
+        }}
+      >
+        {(item) => (
+          <AutocompleteItem
+            key={item.id}
+            onPress={() => handleSelect(item)}
           >
-            <span className="create-icon">+</span>
-            <span>Buat klien baru: "{search}"</span>
-          </div>
+            <div className="flex flex-col">
+              <span className="text-sm">{item.name}</span>
+              {item.phone && (
+                <span className="text-xs text-[var(--muted)]">{item.phone}</span>
+              )}
+            </div>
+          </AutocompleteItem>
+        )}
+      </Autocomplete>
+      {search.length >= 2 && !results.some(c =>
+        c.name.toLowerCase() === search.toLowerCase()
+      ) && (
+        <div
+          className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[var(--border)]"
+          onClick={handleCreateNew}
+        >
+          <span className="text-lg font-bold">+</span>
+          <span className="text-sm">Buat klien baru: "{search}"</span>
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { searchCostumes } from '../api/costumeApi';
 import { X, Search, Minus, Plus } from 'lucide-react';
-import './CostumeMultiSelect.css';
+import { Input, Button, Chip } from '@heroui/react';
 
 const CostumeMultiSelect = ({ value = [], onChange, error }) => {
   const [search, setSearch] = useState('');
@@ -33,7 +33,7 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
   const fetchCostumes = async (forceShow = false) => {
     try {
       const response = await searchCostumes(search, 10);
-      const filtered = response.data.filter(c => 
+      const filtered = response.data.filter(c =>
         !value.some(v => v.costume_id === c.id)
       );
       setResults(filtered);
@@ -54,13 +54,11 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
   };
 
   const handleSelect = (costume) => {
-    console.log('CostumeMultiSelect handleSelect:', costume);
-    const newItem = { 
-      costume_id: costume.id, 
-      costume: costume, 
-      quantity: 1 
+    const newItem = {
+      costume_id: costume.id,
+      costume: costume,
+      quantity: 1
     };
-    console.log('Adding item:', newItem);
     onChange([...value, newItem]);
     setSearch('');
     setShowDropdown(false);
@@ -71,7 +69,7 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
     setShowDropdown(false);
     try {
       const response = await searchCostumes('', 10);
-      const filtered = response.data.filter(c => 
+      const filtered = response.data.filter(c =>
         !value.some(v => v.costume_id === c.id)
       );
       setResults(filtered);
@@ -97,33 +95,31 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
   };
 
   return (
-    <div className="costume-multi-select" ref={dropdownRef}>
-      <div className="search-wrapper">
-        <Search size={18} className="search-icon" />
-        <input
-          type="text"
-          className="form-input"
-          placeholder="Cari kostum..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onFocus={handleFocus}
-          onClick={handleClearAndSearch}
-        />
-      </div>
+    <div ref={dropdownRef}>
+      <Input
+        type="text"
+        placeholder="Cari kostum..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        onFocus={handleFocus}
+        onClick={handleClearAndSearch}
+        startContent={<Search size={18} />}
+        className="mb-2"
+      />
 
-      {error && <span className="error-text">{error}</span>}
+      {error && <span className="text-danger text-sm">{error}</span>}
 
       {showDropdown && results.length > 0 && (
-        <div className="costume-dropdown">
+        <div className="border border-[var(--border)] rounded-lg shadow-lg p-1 max-h-48 overflow-y-auto mb-2">
           {results.map((costume) => (
             <div
               key={costume.id}
-              className="costume-option"
+              className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-[var(--border)]"
               onClick={() => handleSelect(costume)}
             >
-              <div className="costume-option-info">
-                <span className="costume-name">{costume.name}</span>
-                <span className="costume-stock">Stok: {costume.quantity}</span>
+              <div className="flex flex-col">
+                <span className="text-sm">{costume.name}</span>
+                <span className="text-xs text-[var(--muted)]">Stok: {costume.quantity}</span>
               </div>
             </div>
           ))}
@@ -131,37 +127,41 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
       )}
 
       {value.length > 0 && (
-        <div className="selected-costumes">
+        <div className="flex flex-col gap-2">
           {value.map((item) => (
-            <div key={item.costume_id} className="selected-item">
-              <div className="selected-info">
+            <div key={item.costume_id} className="flex items-center gap-3 p-2 border border-[var(--border)] rounded-lg">
+              <div className="flex items-center gap-2 flex-1">
                 {item.costume?.cover_image && (
-                  <img src={item.costume.cover_image} alt="" className="item-thumb" />
+                  <img src={item.costume.cover_image} alt="" className="w-10 h-10 object-cover rounded" />
                 )}
-                <span className="item-name">{item.costume?.name || `Costume #${item.costume_id}`}</span>
+                <span className="text-sm">{item.costume?.name || `Costume #${item.costume_id}`}</span>
               </div>
-              <div className="quantity-control">
-                <button
-                  type="button"
-                  onClick={() => handleQuantityChange(item.costume_id, -1)}
-                  disabled={item.quantity <= 1}
+              <div className="flex items-center gap-1">
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="bordered"
+                  onPress={() => handleQuantityChange(item.costume_id, -1)}
+                  isDisabled={item.quantity <= 1}
                 >
                   <Minus size={14} />
-                </button>
-                <span className="quantity-value">{item.quantity}</span>
-                <button
-                  type="button"
-                  onClick={() => handleQuantityChange(item.costume_id, 1)}
+                </Button>
+                <span className="w-8 text-center text-sm">{item.quantity}</span>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="bordered"
+                  onPress={() => handleQuantityChange(item.costume_id, 1)}
                 >
                   <Plus size={14} />
-                </button>
-                <button
-                  type="button"
-                  className="remove-btn"
-                  onClick={() => handleRemove(item.costume_id)}
+                </Button>
+                <Chip
+                  variant="flat"
+                  onClose={() => handleRemove(item.costume_id)}
+                  className="cursor-pointer"
                 >
-                  <X size={16} />
-                </button>
+                  <X size={14} />
+                </Chip>
               </div>
             </div>
           ))}

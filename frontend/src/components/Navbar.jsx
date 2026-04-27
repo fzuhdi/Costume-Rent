@@ -3,14 +3,15 @@ import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { useSettings } from '../context/SettingsContext';
 import NotificationBell from './NotificationBell';
-import { LogOut, User } from 'lucide-react';
-import './Navbar.css';
+import { LogOut, User, Sun, Moon } from 'lucide-react';
+import { Button, Navbar, useTheme } from '@heroui/react';
 
-const Navbar = () => {
+const NavbarComponent = () => {
   const { user, logout } = useAuth();
   const { count } = useNotification();
   const { settings } = useSettings();
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
 
   const handleLogout = async () => {
     await logout();
@@ -18,33 +19,45 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="navbar">
-      <div className="navbar-brand">
+    <Navbar isBordered className="bg-[var(--surface)] border-[var(--border)]" maxWidth="full">
+      <Navbar.Brand>
         <Link to="/catalogue">
           {settings.app_logo ? (
-            <img src={settings.app_logo} alt={settings.app_name} className="navbar-logo" />
+            <img src={settings.app_logo} alt={settings.app_name} className="h-10 w-auto" />
           ) : (
-            <span className="navbar-title">{settings.app_name}</span>
+            <span className="text-xl font-bold text-[var(--primary)]">{settings.app_name}</span>
           )}
         </Link>
-      </div>
-
-      <div className="navbar-actions">
-        <NotificationBell count={count} />
-
-        <div className="navbar-user">
-          <div className="user-info">
-            <User size={18} />
-            <span>{user?.name || 'Admin'}</span>
+      </Navbar.Brand>
+      <Navbar.Content justify="end">
+        <Navbar.Item>
+          <NotificationBell count={count} />
+        </Navbar.Item>
+        <Navbar.Item>
+          <Button
+            isIconOnly
+            variant="ghost"
+            onPress={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+            aria-label="Toggle theme"
+          >
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          </Button>
+        </Navbar.Item>
+        <Navbar.Item>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
+              <User size={18} />
+              <span>{user?.name || 'Admin'}</span>
+            </div>
+            <Button variant="bordered" size="sm" onPress={handleLogout}>
+              <LogOut size={16} />
+              Logout
+            </Button>
           </div>
-          <button className="btn btn-outline btn-sm" onClick={handleLogout}>
-            <LogOut size={16} />
-            Logout
-          </button>
-        </div>
-      </div>
-    </nav>
+        </Navbar.Item>
+      </Navbar.Content>
+    </Navbar>
   );
 };
 
-export default Navbar;
+export default NavbarComponent;
