@@ -1,6 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "@heroui/theme";
+
+@theme {
+  --color-primary: oklch(0.55 0.22 264);
+}
 
 :root {
   --sidebar-width: 250px;
