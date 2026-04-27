@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: busana_backend
+    restart: unless-stopped
+    env_file: .env.production
+    volumes:
+      - busana_db:/app/data
+      - busana_uploads:/app/uploads
+    networks:
+      - busana_net
+    develop:
+      watch:
+        - action: rebuild          # recompile Go binary on any source change
+          path: ./backend
+          ignore:
+            - uploads/
+            - "*.db"
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ./frontend:/app              # mount full source
+      - /app/node_modules            # keep container's node_modules isolated
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - busana_net
+    develop:
+      watch:
+        - action: sync               # Vite sees the file change → HMR in browser
+          path: ./frontend/src
+          target: /app/src
+        - action: rebuild            # reinstall when deps change
+          path: ./frontend/package.json
+
+volumes:
+  busana_db:
+    name: busana_db
+  busana_uploads:
+    name: busana_uploads
+
+networks:
+  busana_net:
+    driver: bridge

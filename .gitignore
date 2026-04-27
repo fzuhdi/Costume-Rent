@@ -3,7 +3,7 @@ backend/server
 backend/*.db
 backend/uploads/
 backend/.env
-backend/go.sum
+# go.sum intentionally NOT ignored — required for reproducible builds
 
 # Project
 .context/
@@ -31,5 +31,6 @@ Thumbs.db
 
 # Temp
 *.log
+test/test-log.txt
 nul
 temp/
