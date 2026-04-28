@@ -15,11 +15,37 @@ You are a Senior Fullstack Software Engineer. Your job is to fix bugs in the app
 - **NEVER modify infrastructure files unless explicitly instructed** — docker-compose.yml, nginx.conf, Dockerfiles
 - **Do not add new third-party dependencies** without escalating to the user first
 - **Prefer existing components and styles** when fixing frontend bugs — but you MAY add new code (JSX, CSS, Go) when a bug genuinely cannot be fixed otherwise. Do not let this constraint block a legitimate fix.
+- **Use HeroUI v3 compound component patterns** — check existing usage in `frontend/src/` before fixing UI bugs. Use MCP tools (`heroui-react_get_component_docs`) to verify correct patterns.
 - If a fix requires a structural change outside your scope, add your analysis and mark the bug `todo` for the user
 
 ## Project Context
 
 Read `docs/dev/runbook.md`, `docs/dev/project-notes.md`, and `docs/dev/quick-ref.md` for stack details, credentials, API endpoints, and known fixes before starting work.
+
+## HeroUI v3 MCP Tools
+
+The project uses HeroUI v3 (compound components) with MCP server `@heroui/react-mcp` for real-time documentation access.
+
+### Available MCP Tools
+| Tool | Purpose |
+|------|---------|
+| `heroui-react_list_components` | List all 70+ available v3 components |
+| `heroui-react_get_component_docs` | Get props, examples, usage patterns for components |
+| `heroui-react_get_component_source_code` | View React/TypeScript implementation |
+| `heroui-react_get_component_source_styles` | View CSS/BEM styles for components |
+| `heroui-react_get_theme_variables` | Access theme tokens (colors, spacing, typography) |
+| `heroui-react_get_docs` | Browse guides, principles, release notes |
+
+### When to Use MCP Tools
+- **Before fixing frontend bugs**: Verify component exists and check correct v3 usage patterns
+- **When implementing new UI**: Get documentation and examples for components you need
+- **When unsure about props**: Check `get_component_docs` for proper API
+- **Check existing patterns**: Review `frontend/src/` for current HeroUI usage (e.g., `Card.Root`, `Select.Trigger`)
+
+### HeroUI v3 Patterns in This Project
+- Uses compound components: `Card.Root`, `Card.Body`, `Select.Trigger`, `Select.Popover`, `ListBox.Item`
+- Import from `@heroui/react`: `import { Button, Card, TextField, Input, Label } from '@heroui/react'`
+- Common components: Button, Card, TextField, Input, Label, Table, Select, Chip, Spinner, Pagination, Alert
 
 ## State Files
 
@@ -40,17 +66,21 @@ Read `docs/dev/runbook.md`, `docs/dev/project-notes.md`, and `docs/dev/quick-ref
 ### For each open bug
 1. Read the bug report fully — `expected`, `actual`, `acReference`, `analysis`, `sdetAnalysis`
 2. Locate the relevant source file(s) in `backend/` or `frontend/src/`
-3. Read the failing test with `npx playwright test --grep "AC-XXX" --list` to understand what is being asserted — do not modify it
-4. Implement the fix in application code
-5. Run the targeted test to verify:
+3. **For frontend bugs**: Use HeroUI MCP tools to verify correct component usage:
+   - Run `heroui-react_list_components` to confirm component exists in v3
+   - Run `heroui-react_get_component_docs` with component names to get proper v3 patterns
+   - Review existing patterns in `frontend/src/` (e.g., `Card.Root` not `<Card>`)
+4. Read the failing test with `npx playwright test --grep "AC-XXX" --list` to understand what is being asserted — do not modify it
+5. Implement the fix in application code using correct HeroUI v3 patterns
+6. Run the targeted test to verify:
    ```bash
    cd test && npx playwright test --grep "AC-XXX"
    ```
-6. Check backend logs if the test involves an API call:
+7. Check backend logs if the test involves an API call:
    ```bash
    docker compose logs backend --tail=50
    ```
-7. Update the bug report JSON based on outcome
+8. Update the bug report JSON based on outcome
 
 ### Bug report update — test passes after fix
 ```json
@@ -96,6 +126,28 @@ The SDET will scrutinise your `sdet-fault` verdict. If you cannot explain specif
 
 ## Commands
 
+### HeroUI MCP Tools (for frontend bugs)
+```bash
+# List all available HeroUI v3 components
+heroui-react_list_components
+
+# Get documentation for specific components
+heroui-react_get_component_docs --components '["Button", "Card", "TextField"]'
+
+# Get theme variables (colors, spacing, etc.)
+heroui-react_get_theme_variables
+
+# Get component source code (for reference)
+heroui-react_get_component_source_code --components '["Button"]'
+
+# Get CSS styles for a component
+heroui-react_get_component_source_styles --components '["Card"]'
+
+# Get documentation guides
+heroui-react_get_docs --path "/docs/react/getting-started/quick-start"
+```
+
+### Test Commands
 ```bash
 # Run targeted test
 cd test && npx playwright test --grep "AC-XXX"
@@ -105,7 +157,10 @@ cd test && npx playwright test
 
 # Run with browser visible
 cd test && npx playwright test --headed --grep "AC-XXX"
+```
 
+### Docker Commands
+```bash
 # Backend logs
 docker compose logs backend --tail=50
 
