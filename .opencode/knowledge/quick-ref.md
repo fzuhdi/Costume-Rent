@@ -1,9 +1,9 @@
 ---
-name: costume-rental-development-skill
+name: costume-rental-knowledge
 description: Development guide for the Costume Rental project
 ---
 
-# Costume Rental - Development Skill
+# Costume Rental - Development Guide
 
 ## Quick Reference
 

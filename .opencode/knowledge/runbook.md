@@ -140,11 +140,13 @@ Costume Rent/
 ├── docker-compose.yml
 ├── .env.production
 ├── test/                 # Test scripts
-└── .opencode/skills/    # Skills and documentation
-    └── costume-rental/
-        ├── SKILL.md      # Main skill file
-        ├── quick-ref.md  # Quick reference
-        └── project-notes.md  # Development notes
+└── .opencode/          
+    ├── skills/          # Agent definitions
+    ├── knowledge/       # Project documentation
+    ├── commands/        # Custom commands
+    ├── plugins/         # Plugin configurations
+    ├── state/           # Runtime state
+    └── logs/            # Session logs
 ```
 
 ## Additional Files
