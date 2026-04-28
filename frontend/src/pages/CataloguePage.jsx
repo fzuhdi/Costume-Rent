@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { getCostumes, getRegions, getCategories } from '../api/costumeApi';
 import { Plus, Search, Grid, List, Filter } from 'lucide-react';
 import {
-  Input, Button, ButtonGroup, Select, SelectItem,
-  Table, TableHeader, TableColumn, TableBody, TableRow, TableCell,
-  Chip, Spinner, Pagination, Card, CardBody
+  Input, Button, ButtonGroup,
+  Label, ListBox, Select,
+  Table, Chip, Spinner, Pagination, Card
 } from '@heroui/react';
 
 const conditionColors = {
@@ -69,123 +69,180 @@ const CataloguePage = () => {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Katalog Kostum</h1>
-        <Button as={Link} to="/catalogue/new" color="primary" startContent={<Plus size={18} />}>
-          Tambah Kostum
-        </Button>
-      </div>
+      <Card>
+        <Card.Header className="flex flex-col gap-4">
+          <div className="flex flex-rowflex-wrap items-end justify-between gap-3">
+              <h1 className="text-2xl font-bold mr-4">Katalog Kostum</h1>
+          </div>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="flex flex-wrap items-end gap-3 flex-1">
+              <div className="min-w-[200px]">
+                <Input
+                  placeholder="Cari kostum..."
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                />
+              </div>
+              <div className="w-[180px]">
+                <Select
+                  placeholder="Semua Wilayah"
+                  selectedKeys={regionFilter ? [regionFilter] : []}
+                  onSelectionChange={(keys) => {
+                    setRegionFilter(keys.currentKey ?? '');
+                    setPage(1);
+                  }}
+                >
+                  <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      <ListBox.Item key="wilayah-all" id="">
+                        Semua Wilayah
+                      </ListBox.Item>
+                      {regions.map((r) => (
+                        <ListBox.Item key={"wilayah-" + r.id} id={String(r.id)}>
+                          {r.name}
+                        </ListBox.Item>
+                      ))}
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
+              </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Input
-          placeholder="Cari kostum..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          startContent={<Search size={18} />}
-          className="w-64"
-        />
-        <Select
-          placeholder="Semua Wilayah"
-          selectedKeys={regionFilter ? [String(regionFilter)] : []}
-          onSelectionChange={(keys) => { setRegionFilter([...keys][0] ?? ''); setPage(1); }}
-          className="w-40"
-        >
-          <SelectItem key="">Semua Wilayah</SelectItem>
-          {regions.map((r) => (
-            <SelectItem key={String(r.id)}>{r.name}</SelectItem>
-          ))}
-        </Select>
-        <Select
-          placeholder="Semua Kategori"
-          selectedKeys={categoryFilter ? [String(categoryFilter)] : []}
-          onSelectionChange={(keys) => { setCategoryFilter([...keys][0] ?? ''); setPage(1); }}
-          className="w-40"
-        >
-          <SelectItem key="">Semua Kategori</SelectItem>
-          {categories.map((c) => (
-            <SelectItem key={String(c.id)}>{c.name}</SelectItem>
-          ))}
-        </Select>
-        <ButtonGroup>
-          <Button isIconOnly variant={view === 'table' ? 'solid' : 'bordered'} onPress={() => setView('table')}>
-            <List size={18} />
-          </Button>
-          <Button isIconOnly variant={view === 'grid' ? 'solid' : 'bordered'} onPress={() => setView('grid')}>
-            <Grid size={18} />
-          </Button>
-        </ButtonGroup>
-      </div>
+              <div className="w-[180px]">
+                <Select
+                  placeholder="Semua Kategori"
+                  selectedKeys={categoryFilter ? [categoryFilter] : []}
+                  onSelectionChange={(keys) => {
+                    setCategoryFilter(keys.currentKey ?? '');
+                    setPage(1);
+                  }}
+                >
+                  <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      <ListBox.Item key="kategori-all" id="">
+                        Semua Kategori
+                      </ListBox.Item>
+                      {categories.map((c) => (
+                        <ListBox.Item key={"kategori-" + c.id} id={String(c.id)}>
+                          {c.name}
+                        </ListBox.Item>
+                      ))}
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
+              </div>
+            </div>
 
-      <p className="text-sm text-[var(--muted)]">Ditemukan {total} kostum</p>
+            <div className="flex items-center gap-2">
+              <ButtonGroup>
+                <Button
+                  isIconOnly
+                  variant={view === 'table' ? 'primary' : 'bordered'}
+                  onPress={() => setView('table')}
+                >
+                  <List size={18} />
+                </Button>
+                <Button
+                  isIconOnly
+                  variant={view === 'grid' ? 'primary' : 'bordered'}
+                  onPress={() => setView('grid')}
+                >
+                  <Grid size={18} />
+                </Button>
+              </ButtonGroup>
+              <Button
+                onPress={() => window.location.href = '/catalogue/new'}
+                variant="primary"
+                aria-label='Tambah Kostum'
+              >
+                Tambah Kostum
+              </Button>
+            </div>
+          </div>
+
+          {/* Bottom info */}
+          <p className="text-sm text-[var(--muted)]">
+            Ditemukan {total} kostum
+          </p>
+
+        </Card.Header>
 
       {loading ? (
         <div className="flex justify-center items-center h-48">
-          <Spinner />
+          <Spinner aria-label="Memuat data kostum" />
         </div>
       ) : costumes.length === 0 ? (
-        <Card>
-          <CardBody className="text-center py-12">
+          <Card.Content className="text-center py-12">
             <Filter size={64} className="mx-auto mb-4 opacity-50" />
             <h3 className="text-lg font-semibold">Tidak ada kostum</h3>
             <p className="text-sm text-[var(--muted)]">Coba ubah filter atau tambahkan kostum baru</p>
-          </CardBody>
-        </Card>
+          </Card.Content>
       ) : view === 'table' ? (
         <Card>
-          <CardBody>
-            <Table>
-              <TableHeader>
-                <TableColumn>Nama</TableColumn>
-                <TableColumn>Wilayah</TableColumn>
-                <TableColumn>Kategori</TableColumn>
-                <TableColumn>Kondisi</TableColumn>
-                <TableColumn>Stok</TableColumn>
-                <TableColumn>Aksi</TableColumn>
-              </TableHeader>
-              <TableBody>
-                {costumes.map((costume) => (
-                  <TableRow key={costume.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {costume.cover_image && (
-                          <img src={costume.cover_image} alt="" className="w-10 h-10 object-cover rounded" />
-                        )}
-                        <span>{costume.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{costume.region || '-'}</TableCell>
-                    <TableCell>{costume.category || '-'}</TableCell>
-                    <TableCell>
-                      <Chip size="sm" color={conditionColors[costume.condition] ?? 'default'}>
-                        {costume.condition}
-                      </Chip>
-                    </TableCell>
-                    <TableCell>{costume.quantity}</TableCell>
-                    <TableCell>
-                      <Button as={Link} to={`/catalogue/${costume.id}`} variant="bordered" size="sm">
-                        Detail
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
+          <Card.Content>
+            <Table aria-label="Katalog kostum">
+              <Table.ScrollContainer>
+                <Table.Content>
+                  <Table.Header>
+                    <Table.Column isRowHeader>Nama</Table.Column>
+                    <Table.Column>Wilayah</Table.Column>
+                    <Table.Column>Kategori</Table.Column>
+                    <Table.Column>Kondisi</Table.Column>
+                    <Table.Column>Stok</Table.Column>
+                    <Table.Column>Aksi</Table.Column>
+                  </Table.Header>
+                  <Table.Body>
+                    {costumes.map((costume) => (
+                      <Table.Row key={costume.id}>
+                        <Table.Cell>
+                          <div className="flex items-center gap-2">
+                            {costume.cover_image && (
+                              <img src={costume.cover_image} alt="" className="w-10 h-10 object-cover rounded" />
+                            )}
+                            <span>{costume.name}</span>
+                          </div>
+                        </Table.Cell>
+                        <Table.Cell>{costume.region || '-'}</Table.Cell>
+                        <Table.Cell>{costume.category || '-'}</Table.Cell>
+                        <Table.Cell>
+                          <Chip size="sm" variant={conditionColors[costume.condition] === 'success' ? 'secondary' : conditionColors[costume.condition] === 'warning' ? 'secondary' : 'danger-soft'}>
+                            {costume.condition}
+                          </Chip>
+                        </Table.Cell>
+                        <Table.Cell>{costume.quantity}</Table.Cell>
+                        <Table.Cell>
+                          <Button as={Link} to={`/catalogue/${costume.id}`} variant="bordered" size="sm" aria-label={`Detail ${costume.name}`}>
+                            Detail
+                          </Button>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Content>
+              </Table.ScrollContainer>
             </Table>
-          </CardBody>
+          </Card.Content>
         </Card>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {costumes.map((costume) => (
-            <Link to={`/catalogue/${costume.id}`} key={costume.id} className="block">
-              <Card isHoverable isPressable>
-                <CardBody className="p-0">
+            <Link to={`/catalogue/${costume.id}`} key={costume.id} className="block" aria-label={`Lihat detail ${costume.name}`}>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow" aria-label={`Kostum ${costume.name}`}>
+                <Card.Content className="p-0">
                   <div className="aspect-square bg-[var(--border)] relative">
                     {costume.cover_image ? (
                       <img src={costume.cover_image} alt={costume.name} className="w-full h-full object-cover" />
                     ) : (
                       <div className="flex items-center justify-center h-full text-[var(--muted)]">No Image</div>
                     )}
-                    <Chip size="sm" className="absolute top-2 right-2" color={conditionColors[costume.condition] ?? 'default'}>
+                    <Chip size="sm" className="absolute top-2 right-2" variant={conditionColors[costume.condition] === 'success' ? 'secondary' : conditionColors[costume.condition] === 'warning' ? 'secondary' : 'danger-soft'}>
                       {costume.condition}
                     </Chip>
                   </div>
@@ -196,7 +253,7 @@ const CataloguePage = () => {
                     </p>
                     <p className="text-xs text-[var(--muted)]">Stok: {costume.quantity}</p>
                   </div>
-                </CardBody>
+                </Card.Content>
               </Card>
             </Link>
           ))}
@@ -205,10 +262,11 @@ const CataloguePage = () => {
 
       {totalPages > 1 && (
         <div className="flex justify-center">
-          <Pagination total={totalPages} page={page} onChange={setPage} />
+          <Pagination aria-label="Navigasi halaman" total={totalPages} page={page} onChange={setPage} />
         </div>
       )}
-    </div>
+    
+    </Card>
   );
 };
 

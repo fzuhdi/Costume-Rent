@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@heroui/theme";
+@import "@heroui/styles";
 
 @theme {
   --color-primary: oklch(0.55 0.22 264);
@@ -38,12 +38,6 @@
     --muted: oklch(0.65 0.02 264);
     --border: oklch(0.28 0.01 264);
   }
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
 }
 
 body {

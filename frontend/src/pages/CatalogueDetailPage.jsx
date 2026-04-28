@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getCostumeById, deleteCostume } from '../api/costumeApi';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
-import { Button, Card, CardBody, Chip, Spinner, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@heroui/react';
+import { Button, Card, Chip, Spinner } from '@heroui/react';
 
 const conditionColors = {
   baik: 'success',
@@ -58,10 +58,10 @@ const CatalogueDetailPage = () => {
   if (!costume) {
     return (
       <Card>
-        <CardBody className="text-center py-12">
+        <CardContent className="text-center py-12">
           <h3 className="text-lg font-semibold mb-4">Kostum tidak ditemukan</h3>
-          <Button as={Link} to="/catalogue" color="primary">Kembali ke Katalog</Button>
-        </CardBody>
+          <Button as={Link} to="/catalogue" variant="primary">Kembali ke Katalog</Button>
+        </CardContent>
       </Card>
     );
   }
@@ -75,9 +75,9 @@ const CatalogueDetailPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
-          <CardBody>
+          <Card.Content className="p-0">
             {costume.images?.length > 0 ? (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 p-2">
                 {costume.images.map((img) => (
                   <img key={img.id} src={img.path} alt={costume.name} className="w-full aspect-square object-cover rounded-lg" />
                 ))}
@@ -89,19 +89,18 @@ const CatalogueDetailPage = () => {
                 Tidak Ada Gambar
               </div>
             )}
-          </CardBody>
+          </Card.Content>
         </Card>
 
         <Card>
-          <CardBody className="gap-4">
-            <div className="flex items-center justify-between">
+          <Card.Content>
+            <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">{costume.name}</h2>
               <div className="flex gap-2">
                 <Button as={Link} to={`/catalogue/${id}/edit`} variant="bordered" size="sm" startContent={<Edit size={16} />}>Edit</Button>
-                <Button color="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isLoading={deleting} startContent={<Trash2 size={16} />}>Hapus</Button>
+                <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={deleting} startContent={<Trash2 size={16} />}>Hapus</Button>
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-[var(--muted)]">Wilayah</span>
@@ -113,7 +112,9 @@ const CatalogueDetailPage = () => {
               </div>
               <div>
                 <span className="text-[var(--muted)]">Kondisi</span>
-                <Chip size="sm" color={conditionColors[costume.condition] ?? 'default'}>{costume.condition}</Chip>
+                <Chip size="sm" variant={conditionColors[costume.condition] === 'success' ? 'secondary' : conditionColors[costume.condition] === 'warning' ? 'secondary' : 'danger-soft'}>
+                  {costume.condition}
+                </Chip>
               </div>
               <div>
                 <span className="text-[var(--muted)]">Stok</span>
@@ -128,24 +129,30 @@ const CatalogueDetailPage = () => {
             </div>
 
             {costume.description && (
-              <div>
+              <div className="mt-4">
                 <h3 className="text-sm font-medium mb-1">Deskripsi</h3>
                 <p className="text-sm text-[var(--muted)]">{costume.description}</p>
               </div>
             )}
-          </CardBody>
+          </Card.Content>
         </Card>
       </div>
 
-      <Modal isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <ModalContent>
-          <ModalHeader>Konfirmasi</ModalHeader>
-          <ModalBody>Apakah Anda yakin ingin menghapus kostum ini?</ModalBody>
-          <ModalFooter>
-            <Button variant="bordered" onPress={() => setIsDeleteOpen(false)}>Batal</Button>
-            <Button color="danger" onPress={handleDelete} isLoading={deleting}>Hapus</Button>
-          </ModalFooter>
-        </ModalContent>
+      <Modal>
+        <Modal.Backdrop isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+          <Modal.Container>
+            <Modal.Dialog>
+              <Modal.Header>
+                <Modal.Heading>Konfirmasi</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body>Apakah Anda yakin ingin menghapus kostum ini?</Modal.Body>
+              <Modal.Footer>
+                <Button variant="bordered" onPress={() => setIsDeleteOpen(false)}>Batal</Button>
+                <Button variant="danger" onPress={handleDelete} isPending={deleting}>Hapus</Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
       </Modal>
     </div>
   );

@@ -4,7 +4,7 @@ import { getRentById, createRent, updateRent } from '../api/rentApi';
 import ClientSelect from '../components/ClientSelect';
 import CostumeMultiSelect from '../components/CostumeMultiSelect';
 import { ArrowLeft, Save } from 'lucide-react';
-import { Input, Textarea, Select, SelectItem, Button, Card, CardBody, Divider } from '@heroui/react';
+import { TextField, TextArea, Label, Select, ListBox, Button, Card, Separator, FieldError } from '@heroui/react';
 
 const GUARANTEE_TYPES = ['KTP', 'SIM', 'KK', 'Paspor', 'Lainnya'];
 
@@ -107,86 +107,88 @@ const RentFormPage = () => {
       </Link>
 
       <Card>
-        <CardBody>
-          <h2 className="text-lg font-semibold mb-4">{isEdit ? 'Edit Peminjaman' : 'Form Peminjaman Baru'}</h2>
+        <Card.Content>
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">{isEdit ? 'Edit Peminjaman' : 'Form Peminjaman Baru'}</h2>
+          </div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             <div>
               <h3 className="text-base font-medium mb-3">Data Klien</h3>
               <ClientSelect value={formData.client} onChange={handleClientChange} error={errors.client} />
             </div>
 
-            <Divider />
+            <Separator />
 
             <div>
               <h3 className="text-base font-medium mb-3">Data Jaminan</h3>
               <div className="grid grid-cols-2 gap-4">
                 <Select
-                  label="Tipe Jaminan"
-                  selectedKeys={[formData.guarantee_type]}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, guarantee_type: e.anchorKey }))}
+                  value={formData.guarantee_type}
+                  onChange={(v) => setFormData((prev) => ({ ...prev, guarantee_type: v }))}
                 >
-                  {GUARANTEE_TYPES.map((type) => (
-                    <SelectItem key={type}>{type}</SelectItem>
-                  ))}
+                  <Label>Tipe Jaminan</Label>
+                  <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      {GUARANTEE_TYPES.map((type) => (
+                        <ListBox.Item key={type} id={type} textValue={type}>{type}</ListBox.Item>
+                      ))}
+                    </ListBox>
+                  </Select.Popover>
                 </Select>
-                <Input
-                  label="Nomor Jaminan"
-                  name="guarantee_number"
-                  value={formData.guarantee_number}
-                  onChange={handleChange}
-                />
+                <TextField value={formData.guarantee_number} onChange={(e) => setFormData((prev) => ({...prev, guarantee_number: e.target.value}))}>
+                  <Label>Nomor Jaminan</Label>
+                  <Input />
+                </TextField>
               </div>
             </div>
 
-            <Divider />
+            <Separator />
 
             <div>
               <h3 className="text-base font-medium mb-3">Data Peminjaman</h3>
               <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Tanggal Mulai *"
-                  type="date"
-                  name="rent_start"
-                  value={formData.rent_start}
-                  onChange={handleChange}
-                  isInvalid={!!errors.rent_start}
-                  errorMessage={errors.rent_start}
-                />
-                <Input
-                  label="Tanggal Selesai *"
-                  type="date"
-                  name="rent_end"
-                  value={formData.rent_end}
-                  onChange={handleChange}
-                  isInvalid={!!errors.rent_end}
-                  errorMessage={errors.rent_end}
-                />
+                <TextField value={formData.rent_start} onChange={(e) => setFormData((prev) => ({...prev, rent_start: e.target.value}))} isRequired>
+                  <Label>Tanggal Mulai *</Label>
+                  <Input type="date" />
+                  <FieldError>{errors.rent_start}</FieldError>
+                </TextField>
+                <TextField value={formData.rent_end} onChange={(e) => setFormData((prev) => ({...prev, rent_end: e.target.value}))} isRequired>
+                  <Label>Tanggal Selesai *</Label>
+                  <Input type="date" />
+                  <FieldError>{errors.rent_end}</FieldError>
+                </TextField>
               </div>
             </div>
 
-            <Divider />
+            <Separator />
 
             <div>
               <h3 className="text-base font-medium mb-3">Daftar Kostum</h3>
               <CostumeMultiSelect value={items} onChange={setItems} error={errors.items} />
             </div>
 
-            <Textarea
-              label="Catatan"
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              minRows={3}
-            />
+            <TextField value={formData.notes} onChange={(e) => setFormData((prev) => ({...prev, notes: e.target.value}))}>
+              <Label>Catatan</Label>
+              <TextArea minRows={3} />
+            </TextField>
 
             <div className="flex gap-3 justify-end">
               <Button variant="bordered" as={Link} to="/rents">Batal</Button>
-              <Button type="submit" color="primary" isLoading={saving} startContent={<Save size={18} />}>
-                {saving ? 'Menyimpan...' : 'Simpan'}
+              <Button type="submit" variant="primary" isPending={saving}>
+                {({isPending}) => (
+                  <>
+                    {!isPending && <Save size={18} />}
+                    {isPending ? 'Menyimpan...' : 'Simpan'}
+                  </>
+                )}
               </Button>
             </div>
           </form>
-        </CardBody>
+        </Card.Content>
       </Card>
     </div>
   );

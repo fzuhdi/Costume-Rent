@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { Save, Upload, Image } from 'lucide-react';
-import { Input, Button, Card, CardBody, Chip } from '@heroui/react';
+import { TextField, Input, Button, Card, Chip, FieldError } from '@heroui/react';
 
 const SettingsPage = () => {
   const { settings, updateSettings, uploadLogo } = useSettings();
@@ -55,8 +55,10 @@ const SettingsPage = () => {
       <h1 className="text-2xl font-bold">Pengaturan Aplikasi</h1>
 
       <Card>
-        <CardBody>
-          <h2 className="text-lg font-semibold mb-4">Branding</h2>
+        <Card.Content>
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">Branding</h2>
+          </div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Logo Aplikasi</label>
@@ -69,7 +71,7 @@ const SettingsPage = () => {
                   )}
                 </div>
                 <div>
-                  <Button variant="bordered" size="sm" isLoading={uploading} as="label" className="cursor-pointer">
+                  <Button variant="bordered" size="sm" isPending={uploading} as="label" className="cursor-pointer">
                     <Upload size={16} />
                     {uploading ? 'Mengupload...' : 'Pilih Logo'}
                     <input type="file" accept="image/*" onChange={handleLogoChange} disabled={uploading} className="hidden" />
@@ -79,38 +81,51 @@ const SettingsPage = () => {
               </div>
             </div>
 
-            <Input label="Nama Aplikasi" name="app_name" value={formData.app_name} onChange={handleChange} placeholder="Costume Rental" />
-            <Input label="Tagline" name="tagline" value={formData.tagline} onChange={handleChange} placeholder="Inventory & Rental Management" />
+            <TextField value={formData.app_name} onChange={(e) => setFormData((prev) => ({...prev, app_name: e.target.value}))} isRequired>
+              <Label>Nama Aplikasi</Label>
+              <Input placeholder="Costume Rental" />
+              <FieldError />
+            </TextField>
+            <TextField value={formData.tagline} onChange={(e) => setFormData((prev) => ({...prev, tagline: e.target.value}))}>
+              <Label>Tagline</Label>
+              <Input placeholder="Inventory & Rental Management" />
+            </TextField>
 
-            {successMsg && <Chip color="success">{successMsg}</Chip>}
-            {errorMsg && <Chip color="danger">{errorMsg}</Chip>}
+            {successMsg && <Chip variant="secondary">{successMsg}</Chip>}
+            {errorMsg && <Chip variant="danger-soft">{errorMsg}</Chip>}
 
-            <Button type="submit" color="primary" isLoading={saving} startContent={<Save size={18} />}>
-              {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+            <Button type="submit" variant="primary" isPending={saving}>
+              {({isPending}) => (
+                <>
+                  {!isPending && <Save size={18} />}
+                  {isPending ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </>
+              )}
             </Button>
           </form>
-        </CardBody>
+        </Card.Content>
       </Card>
 
       <Card>
-        <CardBody>
-          <h2 className="text-lg font-semibold mb-4">Preview</h2>
-          <div className="bg-[var(--border)] rounded-lg p-4">
-            <div className="h-12 bg-[var(--surface)] rounded flex items-center px-3 mb-4">
-              {preview ? (
-                <img src={preview} alt="Logo" className="h-8" />
-              ) : (
-                <span className="font-bold">{formData.app_name || 'Costume Rental'}</span>
-              )}
-            </div>
-            <div>
-              <h3 className="font-bold">{formData.app_name || 'Costume Rental'}</h3>
-              <p className="text-sm text-[var(--muted)]">{formData.tagline || 'Inventory & Rental Management'}</p>
-            </div>
+        <Card.Content>
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">Preview</h2>
           </div>
-        </CardBody>
-      </Card>
-    </div>
+          <div className="h-12 bg-[var(--surface)] rounded flex items-center px-3 mb-4">
+            {preview ? (
+              <img src={preview} alt="Logo" className="h-8" />
+            ) : (
+              <span className="font-bold">{formData.app_name || 'Costume Rental'}</span>
+            )}
+          </div>
+
+          <div>
+            <h3 className="font-bold">{formData.app_name || 'Costume Rental'}</h3>
+            <p className="text-sm text-[var(--muted)]">{formData.tagline || 'Inventory & Rental Management'}</p>
+          </div>
+      </Card.Content>
+    </Card>
+  </div>
   );
 };
 

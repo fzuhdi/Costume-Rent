@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { searchClients } from '../api/clientApi';
 import { X, User } from 'lucide-react';
-import { Autocomplete, AutocompleteItem } from '@heroui/react';
+import { ComboBox, Label, ListBox, Input } from '@heroui/react';
 
 const ClientSelect = ({ value, onChange, error }) => {
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -34,7 +33,6 @@ const ClientSelect = ({ value, onChange, error }) => {
   };
 
   const handleSelect = (client) => {
-    setSelectedClient(client);
     setSearch(client.name);
     setIsOpen(false);
     setIsCreating(false);
@@ -43,13 +41,11 @@ const ClientSelect = ({ value, onChange, error }) => {
 
   const handleCreateNew = () => {
     setIsCreating(true);
-    setSelectedClient(null);
-    setIsOpen(false);
+    setResults([]);
     onChange({ type: 'new', name: search });
   };
 
   const handleClear = () => {
-    setSelectedClient(null);
     setSearch('');
     setResults([]);
     setIsCreating(false);
@@ -58,32 +54,41 @@ const ClientSelect = ({ value, onChange, error }) => {
 
   return (
     <div>
-      <Autocomplete
+      <ComboBox
         inputValue={search}
         onInputChange={setSearch}
         isOpen={isOpen}
         onOpenChange={setIsOpen}
-        items={results}
-        placeholder="Cari atau ketik nama klien..."
+        isInvalid={!!error}
         errorMessage={error}
-        classNames={{
-          trigger: 'group',
-        }}
+        selectedKey={value?.client?.id ? String(value.client.id) : null}
       >
-        {(item) => (
-          <AutocompleteItem
-            key={item.id}
-            onPress={() => handleSelect(item)}
-          >
-            <div className="flex flex-col">
-              <span className="text-sm">{item.name}</span>
-              {item.phone && (
-                <span className="text-xs text-[var(--muted)]">{item.phone}</span>
-              )}
-            </div>
-          </AutocompleteItem>
-        )}
-      </Autocomplete>
+        <Label>Cari atau ketik nama klien...</Label>
+        <ComboBox.InputGroup>
+          <Input placeholder="Cari atau ketik nama klien..." />
+          <ComboBox.Trigger />
+        </ComboBox.InputGroup>
+        <ComboBox.Popover>
+          <ListBox>
+            {results.map((item) => (
+              <ListBox.Item
+                key={item.id}
+                id={String(item.id)}
+                textValue={item.name}
+                onAction={() => handleSelect(item)}
+              >
+                <div className="flex flex-col">
+                  <span className="text-sm">{item.name}</span>
+                  {item.phone && (
+                    <span className="text-xs text-[var(--muted)]">{item.phone}</span>
+                  )}
+                </div>
+              </ListBox.Item>
+            ))}
+          </ListBox>
+        </ComboBox.Popover>
+      </ComboBox>
+
       {search.length >= 2 && !results.some(c =>
         c.name.toLowerCase() === search.toLowerCase()
       ) && (

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getCostumeById, createCostume, updateCostume, getRegions, getCategories, uploadCostumeImage } from '../api/costumeApi';
 import { ArrowLeft, Save } from 'lucide-react';
-import { Input, Textarea, Select, SelectItem, Button, Card, CardBody, Spinner } from '@heroui/react';
+import { TextField, TextArea, Label, Select, ListBox, Button, Card, Spinner, FieldError } from '@heroui/react';
 
 const CatalogueFormPage = () => {
   const { id } = useParams();
@@ -107,83 +107,101 @@ const CatalogueFormPage = () => {
       </Link>
 
       <Card>
-        <CardBody>
-          <h2 className="text-lg font-semibold mb-4">{isEdit ? 'Edit Kostum' : 'Tambah Kostum Baru'}</h2>
+        <Card.Content>
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">{isEdit ? 'Edit Kostum' : 'Tambah Kostum Baru'}</h2>
+          </div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <Input
-              label="Nama Kostum *"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
+            <TextField value={formData.name} onChange={(e) => setFormData((prev) => ({...prev, name: e.target.value}))} isRequired>
+              <Label>Nama Kostum *</Label>
+              <Input />
+              <FieldError />
+            </TextField>
             <div className="grid grid-cols-2 gap-4">
               <Select
-                label="Wilayah"
-                name="region_id"
-                selectedKeys={formData.region_id ? [formData.region_id] : []}
-                onChange={handleChange}
+                value={formData.region_id}
+                onChange={(v) => setFormData((prev) => ({...prev, region_id: v ?? ''}))}
               >
-                <SelectItem key="">Pilih Wilayah</SelectItem>
-                {regions.map((r) => (
-                  <SelectItem key={String(r.id)}>{r.name}</SelectItem>
-                ))}
+                <Label>Wilayah</Label>
+                <Select.Trigger>
+                  <Select.Value placeholder="Pilih Wilayah" />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    <ListBox.Item id="" textValue="Pilih Wilayah">Pilih Wilayah</ListBox.Item>
+                    {regions.map((r) => (
+                      <ListBox.Item key={r.id} id={String(r.id)} textValue={r.name}>{r.name}</ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
               </Select>
               <Select
-                label="Kategori"
-                name="category_id"
-                selectedKeys={formData.category_id ? [formData.category_id] : []}
-                onChange={handleChange}
+                value={formData.category_id}
+                onChange={(v) => setFormData((prev) => ({...prev, category_id: v ?? ''}))}
               >
-                <SelectItem key="">Pilih Kategori</SelectItem>
-                {categories.map((c) => (
-                  <SelectItem key={String(c.id)}>{c.name}</SelectItem>
-                ))}
+                <Label>Kategori</Label>
+                <Select.Trigger>
+                  <Select.Value placeholder="Pilih Kategori" />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    <ListBox.Item id="" textValue="Pilih Kategori">Pilih Kategori</ListBox.Item>
+                    {categories.map((c) => (
+                      <ListBox.Item key={c.id} id={String(c.id)} textValue={c.name}>{c.name}</ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
               </Select>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <Select
-                label="Kondisi"
-                name="condition"
-                selectedKeys={[formData.condition]}
-                onChange={(e) => setFormData((prev) => ({ ...prev, condition: e.anchorKey }))}
+                value={formData.condition}
+                onChange={(v) => setFormData((prev) => ({...prev, condition: v}))}
               >
-                <SelectItem key="excellent">Excellent</SelectItem>
-                <SelectItem key="good">Good</SelectItem>
-                <SelectItem key="fair">Fair</SelectItem>
+                <Label>Kondisi</Label>
+                <Select.Trigger>
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    <ListBox.Item id="excellent" textValue="Excellent">Excellent</ListBox.Item>
+                    <ListBox.Item id="good" textValue="Good">Good</ListBox.Item>
+                    <ListBox.Item id="fair" textValue="Fair">Fair</ListBox.Item>
+                  </ListBox>
+                </Select.Popover>
               </Select>
-              <Input
-                label="Jumlah Stok *"
-                type="number"
-                name="quantity"
-                value={String(formData.quantity)}
-                onChange={handleChange}
-                min="1"
-                required
-              />
-              <Input
-                label="Tanggal Perolehan"
-                type="date"
-                name="acquired_at"
-                value={formData.acquired_at}
-                onChange={handleChange}
-              />
+              <TextField value={String(formData.quantity)} onChange={(e) => setFormData((prev) => ({...prev, quantity: e.target.value}))} isRequired>
+                <Label>Jumlah Stok *</Label>
+                <Input type="number" min="1" />
+                <FieldError />
+              </TextField>
+              <TextField value={formData.acquired_at} onChange={(e) => setFormData((prev) => ({...prev, acquired_at: e.target.value}))}>
+                <Label>Tanggal Perolehan</Label>
+                <Input type="date" />
+              </TextField>
             </div>
-            <Textarea
-              label="Deskripsi"
-              name="description"
+            <TextArea
               value={formData.description}
-              onChange={handleChange}
+              onChange={(e) => setFormData((prev) => ({...prev, description: e.target.value}))}
+              placeholder="Deskripsi kostum..."
               minRows={4}
             />
             <div className="flex gap-3 justify-end">
               <Button variant="bordered" as={Link} to="/catalogue">Batal</Button>
-              <Button type="submit" color="primary" isLoading={saving} startContent={<Save size={18} />}>
-                {saving ? 'Menyimpan...' : 'Simpan'}
+              <Button type="submit" variant="primary" isPending={saving}>
+                {({isPending}) => (
+                  <>
+                    {!isPending && <Save size={18} />}
+                    {isPending ? 'Menyimpan...' : 'Simpan'}
+                  </>
+                )}
               </Button>
             </div>
           </form>
-        </CardBody>
+        </Card.Content>
       </Card>
     </div>
   );

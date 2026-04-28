@@ -75,7 +75,7 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
       setResults(filtered);
       setShowDropdown(true);
     } catch (error) {
-      console.error('Failed to fetch costumes:', error);
+      console.error('Failed to search costumes:', error);
     }
   };
 
@@ -156,7 +156,7 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
                   <Plus size={14} />
                 </Button>
                 <Chip
-                  variant="flat"
+                  variant="secondary"
                   onClose={() => handleRemove(item.costume_id)}
                   className="cursor-pointer"
                 >

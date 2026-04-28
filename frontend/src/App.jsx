@@ -19,7 +19,6 @@ import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { useSettings } from './context/SettingsContext';
 import { Spinner } from '@heroui/react';
-import './styles/global.css';
 
 const AppRoutes = () => {
   const { isAuthenticated, loading: authLoading } = useAuth();

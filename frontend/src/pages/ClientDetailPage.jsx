@@ -3,14 +3,13 @@ import { useParams, Link } from 'react-router-dom';
 import { getClientById, updateClient } from '../api/clientApi';
 import { ArrowLeft, Edit, Save, X, User, Phone, MapPin, ClipboardList, AlertTriangle } from 'lucide-react';
 import {
-  Input, Textarea, Button, Card, CardBody, Chip, Spinner,
-  Table, TableHeader, TableColumn, TableBody, TableRow, TableCell
+  TextField, TextArea, Label, Input, Button, Card, Chip, Spinner, Table, FieldError
 } from '@heroui/react';
 
 const statusColors = {
-  active: 'primary',
-  returned: 'success',
-  overdue: 'danger',
+  active: 'secondary',
+  returned: 'secondary',
+  overdue: 'danger-soft',
 };
 
 const statusLabels = {
@@ -84,10 +83,10 @@ const ClientDetailPage = () => {
   if (!client) {
     return (
       <Card>
-        <CardBody className="text-center py-12">
+        <CardContent className="text-center py-12">
           <h3 className="text-lg font-semibold mb-4">Klien tidak ditemukan</h3>
-          <Button as={Link} to="/clients" color="primary">Kembali ke Daftar</Button>
-        </CardBody>
+          <Button as={Link} to="/clients" variant="primary">Kembali ke Daftar</Button>
+        </CardContent>
       </Card>
     );
   }
@@ -103,23 +102,37 @@ const ClientDetailPage = () => {
       </Link>
 
       <Card>
-        <CardBody className="gap-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Informasi Klien</h2>
+        <Card.Content>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Informasi Klien</h2>
             {!editing && (
               <Button variant="bordered" size="sm" onPress={handleEdit} startContent={<Edit size={16} />}>Edit</Button>
             )}
           </div>
-
           {editing ? (
             <div className="flex flex-col gap-4">
-              <Input label="Nama" name="name" value={editData.name} onChange={handleChange} />
-              <Input label="Telepon" name="phone" value={editData.phone} onChange={handleChange} />
-              <Textarea label="Alamat" name="address" value={editData.address} onChange={handleChange} />
+              <TextField value={editData.name} onChange={(e) => setEditData((prev) => ({...prev, name: e.target.value}))}>
+                <Label>Nama</Label>
+                <Input />
+                <FieldError />
+              </TextField>
+              <TextField value={editData.phone} onChange={(e) => setEditData((prev) => ({...prev, phone: e.target.value}))}>
+                <Label>Telepon</Label>
+                <Input />
+              </TextField>
+              <TextField value={editData.address} onChange={(e) => setEditData((prev) => ({...prev, address: e.target.value}))}>
+                <Label>Alamat</Label>
+                <TextArea />
+              </TextField>
               <div className="flex gap-3 justify-end">
                 <Button variant="bordered" onPress={handleCancel} startContent={<X size={16} />}>Batal</Button>
-                <Button color="primary" onPress={handleSave} isLoading={saving} startContent={<Save size={16} />}>
-                  {saving ? 'Menyimpan...' : 'Simpan'}
+                <Button variant="primary" onPress={handleSave} isPending={saving}>
+                  {({isPending}) => (
+                    <>
+                      {!isPending && <Save size={16} />}
+                      {isPending ? 'Menyimpan...' : 'Simpan'}
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -148,48 +161,52 @@ const ClientDetailPage = () => {
               </div>
             </div>
           )}
-        </CardBody>
+        </Card.Content>
       </Card>
 
       <Card>
-        <CardBody>
-          <h3 className="text-base font-semibold mb-4">Riwayat Peminjaman</h3>
+        <Card.Content>
+          <h2 className="text-xl font-semibold mb-4">Riwayat Peminjaman</h2>
           {client.rent_orders?.length === 0 ? (
             <div className="text-center py-8 text-[var(--muted)]">
               <ClipboardList size={48} className="mx-auto mb-2 opacity-50" />
               <p>Belum ada riwayat peminjaman</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableColumn>ID</TableColumn>
-                <TableColumn>Tanggal</TableColumn>
-                <TableColumn>Status</TableColumn>
-                <TableColumn>Aksi</TableColumn>
-              </TableHeader>
-              <TableBody>
-                {client.rent_orders?.map((rent) => (
-                  <TableRow key={rent.id}>
-                    <TableCell>#{rent.id}</TableCell>
-                    <TableCell>{rent.rent_start} - {rent.rent_end}</TableCell>
-                    <TableCell>
-                      <Chip size="sm" color={statusColors[rent.status] ?? 'default'}>
-                        {statusLabels[rent.status] || rent.status}
-                      </Chip>
-                    </TableCell>
-                    <TableCell>
-                      <Button as={Link} to={`/rents/${rent.id}`} variant="bordered" size="sm">Detail</Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
+            <Table aria-label="Client rent history">
+              <Table.ScrollContainer>
+                <Table.Content>
+                  <Table.Header>
+                    <Table.Column isRowHeader>ID</Table.Column>
+                    <Table.Column>Tanggal</Table.Column>
+                    <Table.Column>Status</Table.Column>
+                    <Table.Column>Aksi</Table.Column>
+                  </Table.Header>
+                  <Table.Body>
+                    {client.rent_orders?.map((rent) => (
+                      <Table.Row key={rent.id}>
+                        <Table.Cell>#{rent.id}</Table.Cell>
+                        <Table.Cell>{rent.rent_start} - {rent.rent_end}</Table.Cell>
+                        <Table.Cell>
+                          <Chip size="sm" variant={statusColors[rent.status]}>
+                            {statusLabels[rent.status] || rent.status}
+                          </Chip>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <Button as={Link} to={`/rents/${rent.id}`} variant="bordered" size="sm">Detail</Button>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Content>
+              </Table.ScrollContainer>
             </Table>
           )}
-        </CardBody>
+        </Card.Content>
       </Card>
 
       <Card>
-        <CardBody>
+        <Card.Content>
           <h3 className="text-sm font-medium mb-2">Statistik</h3>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
@@ -197,20 +214,20 @@ const ClientDetailPage = () => {
               <p className="text-xs text-[var(--muted)]">Total Pinjaman</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-primary">{activeRents.length}</p>
+              <p className="text-2xl font-bold text-[var(--primary)]">{activeRents.length}</p>
               <p className="text-xs text-[var(--muted)]">Aktif</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-danger">{overdueRents.length}</p>
+              <p className="text-2xl font-bold text-[var(--danger)]">{overdueRents.length}</p>
               <p className="text-xs text-[var(--muted)]">Terlambat</p>
             </div>
           </div>
           {overdueRents.length > 0 && (
-            <Chip color="danger" className="mt-4" startContent={<AlertTriangle size={14} />}>
+            <Chip variant="danger-soft" className="mt-4" startContent={<AlertTriangle size={14} />}>
               {overdueRents.length} peminjaman terlambat
             </Chip>
           )}
-        </CardBody>
+        </Card.Content>
       </Card>
     </div>
   );

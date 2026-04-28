@@ -1,17 +1,16 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   server: {
-    host: '0.0.0.0',      // listen on all interfaces, not just localhost
+    host: '0.0.0.0',
     port: 5173,
-    watch: {
-      usePolling: true,    // fallback for Docker volume mounts on Windows/macOS
-    },
+    watch: { usePolling: true },
     proxy: {
       '/api': 'http://backend:8080',
       '/uploads': 'http://backend:8080',
     }
   },
-})
+});

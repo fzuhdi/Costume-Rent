@@ -3,15 +3,13 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getRentById, markReturned, deleteRent } from '../api/rentApi';
 import { ArrowLeft, Edit, Trash2, CheckCircle, User, Calendar, FileText, Shield } from 'lucide-react';
 import {
-  Button, Card, CardBody, Chip, Spinner,
-  Modal, ModalContent, ModalHeader, ModalBody, ModalFooter,
-  Table, TableHeader, TableColumn, TableBody, TableRow, TableCell
+  Button, Card, Chip, Spinner, Table
 } from '@heroui/react';
 
 const statusColors = {
-  active: 'primary',
-  returned: 'success',
-  overdue: 'danger',
+  active: 'secondary',
+  returned: 'secondary',
+  overdue: 'danger-soft',
 };
 
 const statusLabels = {
@@ -82,10 +80,10 @@ const RentDetailPage = () => {
   if (!rent) {
     return (
       <Card>
-        <CardBody className="text-center py-12">
+        <CardContent className="text-center py-12">
           <h3 className="text-lg font-semibold mb-4">Peminjaman tidak ditemukan</h3>
-          <Button as={Link} to="/rents" color="primary">Kembali ke Riwayat</Button>
-        </CardBody>
+          <Button as={Link} to="/rents" variant="primary">Kembali ke Riwayat</Button>
+        </CardContent>
       </Card>
     );
   }
@@ -98,23 +96,22 @@ const RentDetailPage = () => {
       </Link>
 
       <Card>
-        <CardBody className="gap-4">
-          <div className="flex items-center justify-between">
+        <Card.Content>
+          <div className="flex items-center justify-between mb-4">
             <div className="flex flex-col">
               <h2 className="text-xl font-semibold">Peminjaman #{rent.id}</h2>
-              <Chip className="mt-2" color={statusColors[rent.status] ?? 'default'}>
+              <Chip className="mt-2" variant={statusColors[rent.status] ?? 'secondary'}>
                 {statusLabels[rent.status] || rent.status}
               </Chip>
             </div>
             <div className="flex gap-2">
               {rent.status !== 'returned' && (
-                <Button color="success" size="sm" onPress={() => setIsReturnOpen(true)} isLoading={processing} startContent={<CheckCircle size={16} />}>Kembalikan</Button>
+                <Button variant="secondary" size="sm" onPress={() => setIsReturnOpen(true)} isPending={processing} startContent={<CheckCircle size={16} />}>Kembalikan</Button>
               )}
               <Button as={Link} to={`/rents/${id}/edit`} variant="bordered" size="sm" startContent={<Edit size={16} />}>Edit</Button>
-              <Button color="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isLoading={processing} startContent={<Trash2 size={16} />}>Hapus</Button>
+              <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={processing} startContent={<Trash2 size={16} />}>Hapus</Button>
             </div>
           </div>
-
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="flex items-center gap-3">
               <User size={20} className="text-[var(--muted)]" />
@@ -147,42 +144,46 @@ const RentDetailPage = () => {
               </div>
             )}
           </div>
-        </CardBody>
+        </Card.Content>
       </Card>
 
       <Card>
-        <CardBody>
+        <Card.Content>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold">Daftar Kostum</h3>
+            <h2 className="text-xl font-semibold">Daftar Kostum</h2>
             <span className="text-sm text-[var(--muted)]">{rent.items?.length || 0} item</span>
           </div>
-          <Table>
-            <TableHeader>
-              <TableColumn>Gambar</TableColumn>
-              <TableColumn>Nama Kostum</TableColumn>
-              <TableColumn>Jumlah</TableColumn>
-            </TableHeader>
-            <TableBody>
-              {rent.items?.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    {item.cover_image ? (
-                      <img src={item.cover_image} alt="" className="w-10 h-10 object-cover rounded" />
-                    ) : (
-                      <span className="text-[var(--muted)]">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>{item.costume_name}</TableCell>
-                  <TableCell>{item.quantity} unit</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
+          <Table aria-label="Rent items">
+            <Table.ScrollContainer>
+              <Table.Content>
+                <Table.Header>
+                  <Table.Column>Gambar</Table.Column>
+                  <Table.Column>Nama Kostum</Table.Column>
+                  <Table.Column>Jumlah</Table.Column>
+                </Table.Header>
+                <Table.Body>
+                  {rent.items?.map((item) => (
+                    <Table.Row key={item.id}>
+                      <Table.Cell>
+                        {item.cover_image ? (
+                          <img src={item.cover_image} alt="" className="w-10 h-10 object-cover rounded" />
+                        ) : (
+                          <span className="text-[var(--muted)]">-</span>
+                        )}
+                      </Table.Cell>
+                      <Table.Cell>{item.costume_name}</Table.Cell>
+                      <Table.Cell>{item.quantity} unit</Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table.Content>
+            </Table.ScrollContainer>
           </Table>
-        </CardBody>
+        </Card.Content>
       </Card>
 
       <Card>
-        <CardBody>
+        <Card.Content>
           <h3 className="text-sm font-medium mb-2">Informasi</h3>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="flex justify-between">
@@ -194,29 +195,41 @@ const RentDetailPage = () => {
               <span>{rent.updated_at}</span>
             </div>
           </div>
-        </CardBody>
+        </Card.Content>
       </Card>
 
-      <Modal isOpen={isReturnOpen} onOpenChange={setIsReturnOpen}>
-        <ModalContent>
-          <ModalHeader>Konfirmasi</ModalHeader>
-          <ModalBody>Tandai kostum sudah dikembalikan?</ModalBody>
-          <ModalFooter>
-            <Button variant="bordered" onPress={() => setIsReturnOpen(false)}>Batal</Button>
-            <Button color="success" onPress={handleMarkReturned} isLoading={processing}>Kembalikan</Button>
-          </ModalFooter>
-        </ModalContent>
+      <Modal>
+        <Modal.Backdrop isOpen={isReturnOpen} onOpenChange={setIsReturnOpen}>
+          <Modal.Container>
+            <Modal.Dialog>
+              <Modal.Header>
+                <Modal.Heading>Konfirmasi</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body>Tandai kostum sudah dikembalikan?</Modal.Body>
+              <Modal.Footer>
+                <Button variant="bordered" onPress={() => setIsReturnOpen(false)}>Batal</Button>
+                <Button variant="secondary" onPress={handleMarkReturned} isPending={processing}>Kembalikan</Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
       </Modal>
 
-      <Modal isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <ModalContent>
-          <ModalHeader>Konfirmasi</ModalHeader>
-          <ModalBody>Hapus peminjaman ini?</ModalBody>
-          <ModalFooter>
-            <Button variant="bordered" onPress={() => setIsDeleteOpen(false)}>Batal</Button>
-            <Button color="danger" onPress={handleDelete} isLoading={processing}>Hapus</Button>
-          </ModalFooter>
-        </ModalContent>
+      <Modal>
+        <Modal.Backdrop isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+          <Modal.Container>
+            <Modal.Dialog>
+              <Modal.Header>
+                <Modal.Heading>Konfirmasi</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body>Hapus peminjaman ini?</Modal.Body>
+              <Modal.Footer>
+                <Button variant="bordered" onPress={() => setIsDeleteOpen(false)}>Batal</Button>
+                <Button variant="danger" onPress={handleDelete} isPending={processing}>Hapus</Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
       </Modal>
     </div>
   );

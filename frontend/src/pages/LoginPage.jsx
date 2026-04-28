@@ -2,8 +2,8 @@ import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { SettingsContext } from '../context/SettingsContext';
-import { LogIn, AlertCircle } from 'lucide-react';
-import { Input, Button, Card, CardBody, Chip } from '@heroui/react';
+import { LogIn } from 'lucide-react';
+import { TextField, Label, Input, Button, Card, Alert } from '@heroui/react';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -18,7 +18,6 @@ const LoginPage = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       await login(email, password);
       navigate('/catalogue');
@@ -30,48 +29,75 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+    <div
+      className="min-h-screen flex items-center justify-center bg-gray-50"
+    >
       <Card className="w-full max-w-md mx-4">
-        <CardBody className="gap-4">
+        <Card.Content className="flex flex-col gap-6 py-8 px-6">
+
+          {/* Header */}
           <div className="text-center">
             {settings.app_logo ? (
               <img src={settings.app_logo} alt={settings.app_name} className="h-16 mx-auto mb-2" />
             ) : (
-              <h1 className="text-2xl font-bold text-[var(--primary)]">{settings.app_name}</h1>
+              <h1 className="text-2xl font-bold" style={{ color: 'var(--primary)' }}>
+                {settings.app_name}
+              </h1>
             )}
-            <p className="text-sm text-[var(--muted)]">{settings.app_tagline}</p>
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>{settings.app_tagline}</p>
           </div>
 
+          {/* Error */}
           {error && (
-            <Chip color="danger" classNames={{ base: 'w-full' }} startContent={<AlertCircle size={18} />}>
-              {error}
-            </Chip>
+            <Alert status="danger">
+              <Alert.Indicator />
+              <Alert.Content>
+                <Alert.Description>{error}</Alert.Description>
+              </Alert.Content>
+            </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <Input
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <TextField
+              name="email"
               type="email"
-              label="Email"
+              isRequired
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@busana.com"
-              required
-            />
-            <Input
+              onChange={setEmail}
+            >
+              <Label>Email</Label>
+              <Input placeholder="admin@busana.com" />
+            </TextField>
+
+            <TextField
+              name="password"
               type="password"
-              label="Password"
+              isRequired
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
-              required
-            />
-            <Button type="submit" color="primary" isLoading={loading} startContent={!loading && <LogIn size={18} />}>
+              onChange={setPassword}
+            >
+              <Label>Password</Label>
+              <Input placeholder="Enter password" />
+            </TextField>
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              isLoading={loading}
+              className="w-full mt-2"
+              startContent={!loading && <LogIn size={18} />}
+            >
               Login
             </Button>
           </form>
 
-          <p className="text-center text-xs text-[var(--muted)]">Default: admin@busana.com / admin123</p>
-        </CardBody>
+          <p className="text-center text-xs" style={{ color: 'var(--muted)' }}>
+            Default: admin@busana.com / admin123
+          </p>
+
+        </Card.Content>
       </Card>
     </div>
   );
