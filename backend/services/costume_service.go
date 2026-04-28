@@ -90,12 +90,46 @@ func (s *CostumeService) List(filter dto.CostumeFilter) (*dto.PaginatedResponse,
 	}, nil
 }
 
-func (s *CostumeService) GetByID(id uint) (*models.Costume, error) {
+func (s *CostumeService) GetByID(id uint) (*dto.CostumeDetailResponse, error) {
 	var costume models.Costume
 	if err := config.DB.Preload("Region").Preload("Category").Preload("Images").First(&costume, id).Error; err != nil {
 		return nil, err
 	}
-	return &costume, nil
+
+	response := &dto.CostumeDetailResponse{
+		ID:          costume.ID,
+		Name:        costume.Name,
+		Description: costume.Description,
+		RegionID:    costume.RegionID,
+		CategoryID:  costume.CategoryID,
+		Condition:   costume.Condition,
+		Quantity:    costume.Quantity,
+		CoverImage:  costume.CoverImage,
+	}
+
+	if costume.RegionID != nil {
+		response.Region = costume.Region.Name
+	}
+	if costume.CategoryID != nil {
+		response.Category = costume.Category.Name
+	}
+	if costume.AcquiredAt != nil {
+		acquired := costume.AcquiredAt.Format("2006-01-02")
+		response.AcquiredAt = &acquired
+	}
+
+	var images []dto.CostumeImageResponse
+	for _, img := range costume.Images {
+		images = append(images, dto.CostumeImageResponse{
+			ID:        img.ID,
+			CostumeID: img.CostumeID,
+			Path:      img.Path,
+			CreatedAt: img.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+	response.Images = images
+
+	return response, nil
 }
 
 func (s *CostumeService) Create(req dto.CreateCostumeRequest) (*models.Costume, error) {
@@ -249,15 +283,30 @@ func (s *CostumeService) Search(query string, limit int) ([]models.Costume, erro
 	return costumes, nil
 }
 
-func (s *CostumeService) GetRegions() ([]models.Region, error) {
+func (s *CostumeService) GetRegions() ([]dto.RegionResponse, error) {
 	var regions []models.Region
 	if err := config.DB.Find(&regions).Error; err != nil {
 		return nil, err
 	}
-	return regions, nil
+
+	var response []dto.RegionResponse
+	for _, r := range regions {
+		item := dto.RegionResponse{
+			ID:        r.ID,
+			Name:      r.Name,
+		}
+		if !r.CreatedAt.IsZero() {
+			item.CreatedAt = r.CreatedAt.Format("2006-01-02 15:04:05")
+		}
+		if !r.UpdatedAt.IsZero() {
+			item.UpdatedAt = r.UpdatedAt.Format("2006-01-02 15:04:05")
+		}
+		response = append(response, item)
+	}
+	return response, nil
 }
 
-func (s *CostumeService) CreateRegion(name string) (*models.Region, error) {
+func (s *CostumeService) CreateRegion(name string) (*dto.RegionResponse, error) {
 	region := models.Region{Name: name}
 	if err := config.DB.Create(&region).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
@@ -265,18 +314,39 @@ func (s *CostumeService) CreateRegion(name string) (*models.Region, error) {
 		}
 		return nil, err
 	}
-	return &region, nil
+
+	return &dto.RegionResponse{
+		ID:        region.ID,
+		Name:      region.Name,
+		CreatedAt: region.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt: region.UpdatedAt.Format("2006-01-02 15:04:05"),
+	}, nil
 }
 
-func (s *CostumeService) GetCategories() ([]models.Category, error) {
+func (s *CostumeService) GetCategories() ([]dto.CategoryResponse, error) {
 	var categories []models.Category
 	if err := config.DB.Find(&categories).Error; err != nil {
 		return nil, err
 	}
-	return categories, nil
+
+	var response []dto.CategoryResponse
+	for _, c := range categories {
+		item := dto.CategoryResponse{
+			ID:        c.ID,
+			Name:      c.Name,
+		}
+		if !c.CreatedAt.IsZero() {
+			item.CreatedAt = c.CreatedAt.Format("2006-01-02 15:04:05")
+		}
+		if !c.UpdatedAt.IsZero() {
+			item.UpdatedAt = c.UpdatedAt.Format("2006-01-02 15:04:05")
+		}
+		response = append(response, item)
+	}
+	return response, nil
 }
 
-func (s *CostumeService) CreateCategory(name string) (*models.Category, error) {
+func (s *CostumeService) CreateCategory(name string) (*dto.CategoryResponse, error) {
 	category := models.Category{Name: name}
 	if err := config.DB.Create(&category).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
@@ -284,5 +354,11 @@ func (s *CostumeService) CreateCategory(name string) (*models.Category, error) {
 		}
 		return nil, err
 	}
-	return &category, nil
+
+	return &dto.CategoryResponse{
+		ID:        category.ID,
+		Name:      category.Name,
+		CreatedAt: category.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt: category.UpdatedAt.Format("2006-01-02 15:04:05"),
+	}, nil
 }

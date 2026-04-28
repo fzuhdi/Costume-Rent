@@ -50,3 +50,39 @@ type PaginatedResponse struct {
 	Limit      int         `json:"limit"`
 	TotalPages int         `json:"total_pages"`
 }
+
+type CostumeDetailResponse struct {
+	ID          uint                    `json:"id"`
+	Name        string                  `json:"name"`
+	Description string                  `json:"description"`
+	RegionID    *uint                   `json:"region_id"`
+	Region      string                  `json:"region"`
+	CategoryID  *uint                   `json:"category_id"`
+	Category    string                  `json:"category"`
+	Condition   string                  `json:"condition"`
+	Quantity    int                     `json:"quantity"`
+	CoverImage  string                  `json:"cover_image"`
+	AcquiredAt  *string                 `json:"acquired_at"`
+	Images      []CostumeImageResponse `json:"images"`
+}
+
+type CostumeImageResponse struct {
+	ID        uint   `json:"id"`
+	CostumeID uint   `json:"costume_id"`
+	Path      string `json:"path"`
+	CreatedAt string `json:"created_at"`
+}
+
+type RegionResponse struct {
+	ID        uint   `json:"id"`
+	Name      string `json:"name"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+type CategoryResponse struct {
+	ID        uint   `json:"id"`
+	Name      string `json:"name"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
