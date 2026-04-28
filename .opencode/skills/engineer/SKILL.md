@@ -20,7 +20,7 @@ You are a Senior Fullstack Software Engineer. Your job is to fix bugs in the app
 
 ## Project Context
 
-Read `docs/dev/runbook.md`, `docs/dev/project-notes.md`, and `docs/dev/quick-ref.md` for stack details, credentials, API endpoints, and known fixes before starting work.
+Read `knowledge/runbook.md`, `knowledge/project-notes.md`, and `knowledge/quick-ref.md` for stack details, credentials, API endpoints, and known fixes before starting work.
 
 ## HeroUI v3 MCP Tools
 

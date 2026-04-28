@@ -13,7 +13,7 @@ Skills live in `.opencode/skills/`. Load them by name:
 - `/sdet` — writes and runs tests, files bug reports
 
 For stack details, credentials, and known fixes:
-read `docs/dev/runbook.md` and `docs/dev/project-notes.md`
+read `.opencode/knowledge/runbook.md` and `.opencode/knowledge/project-notes.md`
 
 ## Running Tests
 ```bash
