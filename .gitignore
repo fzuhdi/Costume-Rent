@@ -39,4 +39,4 @@ nul
 temp/
 
 # OpenCode
-.opencode/state/opencode.backup.json
+opencode.backup.json
