@@ -1,0 +1,13 @@
+{
+  "name": "costume-rental-tests",
+  "version": "1.0.0",
+  "description": "Playwright tests for Costume Rental API and frontend",
+  "scripts": {
+    "test": "playwright test",
+    "test:api": "playwright test api.test.js",
+    "test:frontend": "playwright test frontend.test.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
+}
