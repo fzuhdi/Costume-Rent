@@ -1,11 +1,14 @@
 {
   "name": "costume-rental-tests",
   "version": "1.0.0",
-  "description": "Playwright tests for Costume Rental API and frontend",
+  "description": "Playwright tests for Costume Rental with Page Object Model",
   "scripts": {
     "test": "playwright test",
-    "test:api": "playwright test api.test.js",
-    "test:frontend": "playwright test frontend.test.js"
+    "test:auth": "playwright test specs/auth.spec.js",
+    "test:catalogue": "playwright test specs/catalogue.spec.js",
+    "test:rental": "playwright test specs/rental.spec.js",
+    "test:report": "playwright show-report",
+    "test:ui": "playwright test --ui"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1"
