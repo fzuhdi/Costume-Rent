@@ -1,29 +1,19 @@
 package models
 
-import (
-	"time"
-
-	"gorm.io/gorm"
-)
+import "time"
 
 type Region struct {
-	gorm.Model
-	Name      string         `json:"name" gorm:"not null;uniqueIndex"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt  gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
+	BaseModel
+	Name string `json:"name" gorm:"not null;uniqueIndex"`
 }
 
 type Category struct {
-	gorm.Model
-	Name      string         `json:"name" gorm:"not null;uniqueIndex"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt  gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
+	BaseModel
+	Name string `json:"name" gorm:"not null;uniqueIndex"`
 }
 
 type Costume struct {
-	gorm.Model
+	BaseModel
 	Name        string          `json:"name" gorm:"not null" validate:"required"`
 	Description string          `json:"description"`
 	RegionID    *uint           `json:"region_id"`
@@ -35,14 +25,10 @@ type Costume struct {
 	AcquiredAt  *time.Time      `json:"acquired_at"`
 	CoverImage  string          `json:"cover_image"`
 	Images      []CostumeImage  `json:"images,omitempty" gorm:"foreignKey:CostumeID"`
-	CreatedAt   time.Time       `json:"created_at"`
-	UpdatedAt   time.Time       `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 }
 
 type CostumeImage struct {
-	gorm.Model
+	BaseModel
 	CostumeID uint      `json:"costume_id" gorm:"not null;index"`
 	Path      string    `json:"path" gorm:"not null"`
-	CreatedAt time.Time `json:"created_at"`
 }

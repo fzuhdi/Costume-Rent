@@ -1,13 +1,9 @@
 package models
 
-import (
-	"time"
-
-	"gorm.io/gorm"
-)
+import "time"
 
 type RentOrder struct {
-	gorm.Model
+	BaseModel
 	ClientID        uint            `json:"client_id" gorm:"not null" validate:"required"`
 	Client          Client          `json:"client,omitempty" gorm:"foreignKey:ClientID"`
 	GuaranteeType   string          `json:"guarantee_type" gorm:"not null" validate:"required"`
@@ -19,16 +15,12 @@ type RentOrder struct {
 	CreatedBy       uint            `json:"created_by"`
 	Creator         User            `json:"creator,omitempty" gorm:"foreignKey:CreatedBy"`
 	Items           []RentOrderItem `json:"items,omitempty" gorm:"foreignKey:RentOrderID"`
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at"`
-	DeletedAt       gorm.DeletedAt  `json:"deleted_at,omitempty" gorm:"index"`
 }
 
 type RentOrderItem struct {
-	gorm.Model
+	BaseModel
 	RentOrderID uint    `json:"rent_order_id" gorm:"not null;index" validate:"required"`
 	CostumeID uint    `json:"costume_id" gorm:"not null" validate:"required"`
 	Costume     Costume `json:"costume,omitempty" gorm:"foreignKey:CostumeID"`
 	Quantity    int     `json:"quantity" gorm:"not null;default:1" validate:"required,min=1"`
-	CreatedAt   time.Time `json:"created_at"`
 }

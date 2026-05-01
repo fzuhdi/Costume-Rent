@@ -132,7 +132,7 @@ func (s *CostumeService) GetByID(id uint) (*dto.CostumeDetailResponse, error) {
 	return response, nil
 }
 
-func (s *CostumeService) Create(req dto.CreateCostumeRequest) (*models.Costume, error) {
+func (s *CostumeService) Create(req dto.CreateCostumeRequest) (*dto.CostumeDetailResponse, error) {
 	costume := models.Costume{
 		Name:        req.Name,
 		Description: req.Description,
@@ -162,7 +162,7 @@ func (s *CostumeService) Create(req dto.CreateCostumeRequest) (*models.Costume, 
 	return s.GetByID(costume.ID)
 }
 
-func (s *CostumeService) Update(id uint, req dto.UpdateCostumeRequest) (*models.Costume, error) {
+func (s *CostumeService) Update(id uint, req dto.UpdateCostumeRequest) (*dto.CostumeDetailResponse, error) {
 	var costume models.Costume
 	if err := config.DB.First(&costume, id).Error; err != nil {
 		return nil, err
