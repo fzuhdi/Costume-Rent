@@ -54,7 +54,12 @@ This prevents false completion from previous sessions where a test was compromis
 For each feature in scope, check whether tests exist:
 
 ```bash
-cd test && npx playwright test --grep "feature-keyword" --list
+cd test && ls e2e-bdd/[feature].spec.js
+```
+
+Or check if tests exist for the feature:
+```bash
+cd test && npx playwright test --list | grep "[feature-name]"
 ```
 
 - **Tests exist** → go to Phase 2 (Engineer first)
@@ -62,7 +67,7 @@ cd test && npx playwright test --grep "feature-keyword" --list
 
 ### Phase 1b — Test generation (new features only)
 
-Invoke SDET with instruction: "Write tests for [feature-id] from docs/ACCEPTANCE_CRITERIA.md. Do not run them yet — write and report back."
+Invoke SDET with instruction: "Write BDD-style tests in `test/e2e-bdd/[feature].spec.js` for [feature-id] from docs/ACCEPTANCE_CRITERIA.md. Use Page Objects from `test/pages/`. Follow Given/When/Then structure. Do not run them yet — write and report back."
 
 After SDET confirms tests are written, continue to Phase 2.
 
@@ -77,10 +82,10 @@ If no open bugs exist for the feature, skip to Phase 3.
 
 ### Phase 3 — SDET phase
 
-Invoke SDET with instruction: "Run all tests for [feature-id]. File bug reports for any failures."
+Invoke SDET with instruction: "Run all BDD tests for [feature-id] in `test/e2e-bdd/[feature].spec.js`. File bug reports for any failures."
 
 SDET will:
-- Run the test suite for the feature
+- Run the BDD test suite for the feature: `npx playwright test e2e-bdd/[feature].spec.js`
 - File bug reports for failures
 - Confirm if all tests pass
 
@@ -247,12 +252,13 @@ cat .opencode/state/bug-reports/*.json | grep -A2 '"status": "open"'
 # Run all tests
 cd test && npx playwright test
 
-# Run feature-specific tests
-cd test && npx playwright test --grep "AC-00[1-2]"     # auth
-cd test && npx playwright test --grep "AC-00[3-9]"     # costume-management
-cd test && npx playwright test --grep "AC-01[0-3]"     # client-management
-cd test && npx playwright test --grep "AC-01[4-9]"     # rental-system (start)
-cd test && npx playwright test --grep "rental"          # rental-system (all)
+# Run feature-specific BDD tests
+cd test && npx playwright test e2e-bdd/auth.spec.js
+cd test && npx playwright test e2e-bdd/catalogue.spec.js
+cd test && npx playwright test e2e-bdd/rental.spec.js
+
+# List all tests
+cd test && npx playwright test --list
 
 # Reset state (start fresh for a feature)
 # Edit orchestrator-progress.json → set feature status to "pending", iteration to 0

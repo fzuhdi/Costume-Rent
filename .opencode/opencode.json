@@ -26,8 +26,16 @@
     "prune": true,
     "reserved": 10000
   },
-  "context": {
-    "include": ["backend/", "frontend/src/", "test/", "docs/", ".opencode/skills/", ".opencode/knowledge/"],
-    "exclude": ["backend/server", "frontend/node_modules/", "test/test-results/", "*.db", "*.webm"]
+  "mcp": {
+    "heroui-react": {
+      "type": "local",
+      "command": ["npx", "-y", "@heroui/react-mcp@latest"],
+      "enabled": true
+    },
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp@latest"],
+      "enabled": true
+    }
   }
 }

@@ -1,33 +1,40 @@
 # OpenCode Session Context Log
 
-## Last Updated: 2026-04-28
+## Last Updated: 2026-05-01
 
-## Recent Key Actions (Last 2 Hours)
-- Created `backup-phase-1` branch with commits up to `1aae54e`
-- Pushed 7 commits to `main`:
-  - Backend: costume DTO, model updates (9256caf)
-  - Frontend: React 19, HeroUI v3, Tailwind v4 migration (22fd80f, 2c91151)
-  - OpenCode: config update, engineer skill update (f820471)
-  - Test: Playwright e2e tests infrastructure (9e5f5e1)
-  - Docs: HeroUI migration guides (4a039f9)
-  - Chore: dev scripts, gitignore fixes (d3e14a6, 2dbeef1)
+## TODO List (Update after each step - for crash recovery)
+- [x] Step 1: Clean up playwright-bdd
+- [x] Step 2: Create test/specs/ directory
+- [x] Step 3: Create BDD-named test files
+- [x] Step 4: Update playwright.config.js
+- [x] Step 5: Update package.json
+- [x] Step 6: Update AGENTS.md + context-log.md
+**COMPLETE - All steps finished**
+
+## Recent Key Actions (Today)
+- **Reverted from playwright-bdd** to standard Playwright tests
+- **Refactored test structure**: `test/specs/` with BDD naming `[AC-XXX] - Description`
+- **Preserved Page Object Model**: `test/pages/` unchanged
+- **Configured reporting**: HTML + JSON reporters
+- **Enabled screenshot capture**: `screenshot: 'on'` (last screenshot before test ends)
 
 ## Current Project State
 - **Stack**: Go (Fiber), SQLite, React 19, HeroUI v3, Tailwind v4
 - **Agents**: engineer, sdet, orchestrator in `.opencode/skills/`
 - **Knowledge**: Project docs in `.opencode/knowledge/`
-- **Tests**: Playwright in `test/` (e2e/ and api/ subfolders)
+- **Tests**: Playwright in `test/specs/` (BDD naming + Page Objects)
 - **Bugs**: Reports in `.opencode/state/bug-reports/`
 
 ## Key Decisions
-- HeroUI v3 migration complete (compound components pattern)
-- Test structure: e2e/ and api/ subdirectories
-- Runtime state persisted in `.opencode/state/`
-- Backup branch preserves pre-HeroUI commits
-- Refactored `.opencode/` to industry standard structure
+- **BDD naming**: `[AC-XXX] - Description` format for test cases
+- **Page Object Model**: All UI interactions through Page classes
+- **Screenshot capture**: 1 screenshot per test, stored in `test-results/`
+- **No playwright-bdd**: Standard Playwright for simplicity
+- **TODO tracking**: Update context-log.md after each step for crash recovery
 
-## Structure Refactor (2026-04-28)
-- Moved `docs/dev/` → `.opencode/knowledge/`
-- Extracted MCP config → `.opencode/plugins/mcp.json`
-- Created `commands/`, `logs/`, `state/todos/` directories
-- Updated all path references in agents and AGENTS.md
+## Structure Refactor (2026-05-01)
+- Removed `playwright-bdd` dependency
+- Deleted `test/features/`, `test/steps/`, `test/fixtures.js`
+- Created `test/specs/` with BDD-style test naming
+- Updated `playwright.config.js` with reporters + screenshot config
+- Updated `package.json` scripts

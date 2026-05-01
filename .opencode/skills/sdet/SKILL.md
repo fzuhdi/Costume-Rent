@@ -17,6 +17,12 @@ A passing test with a weakened assertion is worse than a failing test. It lies.
 - **NEVER modify any application code** — .jsx, .js, .css, Go files, docker-compose, nginx.conf
 - Your only write access is `test/` and `.opencode/state/bug-reports/`
 
+### Test structure — BDD + Page Object Model
+- Tests are in `test/e2e-bdd/` with BDD-style naming (Given/When/Then)
+- Page Objects are in `test/pages/` — never modify Page Objects, only read them to understand test flow
+- Each test scenario follows: `test.describe('Feature: ...', () => { test.describe('Scenario: ...', () => { test('Given ...', ...) }) })`
+- Test naming pattern: `test('Given/When/Then: description', ...)`
+
 ### Assertion integrity — the most critical rule
 - **NEVER weaken an assertion to make a test pass**
 - **NEVER** change `expect(x).toHaveURL(...)` to `expect(x).toBeDefined()`
@@ -59,33 +65,56 @@ This check exists because a feature should never be marked complete while an unr
 When orchestrator assigns a feature with 0 test cases:
 
 1. Read `docs/ACCEPTANCE_CRITERIA.md` — identify every AC item for this feature
-2. Write one test per AC item in the appropriate `test/*.test.js` file
-3. Name each test: `test('AC-XXX: exact AC description', ...)`
-4. Use strict assertions — assert the outcome described in the AC, not a proxy for it
-5. Run the tests: `cd test && npx playwright test --grep "feature-name"`
-6. Report results to orchestrator — pass or bug report
+2. Write BDD-style tests in `test/e2e-bdd/[feature].spec.js` using Page Objects from `test/pages/`
+3. Follow BDD structure:
+   ```js
+   test.describe('Feature: Feature Name', () => {
+     test.beforeEach(async ({ page }) => { /* login */ });
+     
+     test.describe('Scenario: AC-XXX - Description', () => {
+       test('Given ...', async ({ page }) => { /* use Page Object */ });
+       test('When ...', async ({ page }) => { /* use Page Object */ });
+       test('Then ...', async ({ page }) => { /* assertion */ });
+     });
+   });
+   ```
+4. Name each test: `test('Given/When/Then: description', ...)`
+5. Use Page Objects for all UI interactions — never use raw page.locator() in tests
+6. Run the tests: `cd test && npx playwright test e2e-bdd/[feature].spec.js`
+7. Report results to orchestrator — pass or bug report
 
 ## Existing Feature Flow
 
-1. Run tests: `cd test && npx playwright test --grep "AC-XXX"`
+1. Run tests: `cd test && npx playwright test e2e-bdd/[feature].spec.js`
 2. If all pass → confirm to orchestrator ✅
 3. If any fail → file bug report → invoke Engineer
 
 ## Test Writing Standards
 
 Each test must:
-- Reference exactly one AC: `test('AC-015: Form submits with all required fields filled', ...)`
+- Follow BDD structure: Given/When/Then within a Scenario describe block
+- Reference exactly one AC: `test('When I submit the rental form', ...) // AC-015`
+- Use Page Objects from `test/pages/` for all UI interactions
 - Assert the specific outcome the AC describes — not a weaker proxy
 
 ```js
-// Good — asserts the AC outcome (redirect after submission)
-await page.click('button[type="submit"]');
-await expect(page).toHaveURL(/\/rents\/\d+/, { timeout: 10000 });
+// Good — BDD style with Page Object
+test('When I submit the rental form', async ({ page }) => {
+  const rentFormPage = new RentFormPage(page);
+  await rentFormPage.submit();
+});
 
-// Bad — only checks the button exists, tells nothing about whether submit works
-await expect(page.locator('button[type="submit"]')).toBeVisible();
+test('Then I should be redirected to the rental detail', async ({ page }) => {
+  await expect(page).toHaveURL(/\/rents\/\d+/, { timeout: 10000 });
+});
 
-// Good — specific text
+// Bad — not BDD style
+test('AC-015: Form submits', async ({ page }) => {
+  await page.click('button[type="submit"]');
+  await expect(page).toHaveURL(/\/rents\/\d+/);
+});
+
+// Good — specific text assertion
 await expect(page.locator('h1')).toContainText('Detail Peminjaman');
 
 // Bad — matches almost anything, always passes
@@ -190,11 +219,13 @@ Engineer responds:
 # Run all tests
 cd test && npx playwright test
 
-# Run specific AC
-cd test && npx playwright test --grep "AC-015"
+# Run specific feature tests
+cd test && npx playwright test e2e-bdd/auth.spec.js
+cd test && npx playwright test e2e-bdd/catalogue.spec.js
+cd test && npx playwright test e2e-bdd/rental.spec.js
 
 # Run with visible browser
-cd test && npx playwright test --headed --grep "AC-015"
+cd test && npx playwright test e2e-bdd/auth.spec.js --headed
 
 # List tests without running
 cd test && npx playwright test --list

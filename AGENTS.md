@@ -1,5 +1,16 @@
 # AGENTS.md — Costume Rental
 
+## Session Start Instruction
+**CRITICAL: At the start of EVERY session, read `.opencode/logs/context-log.md` FIRST**
+- Check "TODO List" section for incomplete steps (crash recovery)
+- Check "Last Updated" date to verify recency
+- Check "Recent Key Actions" for context
+
+```bash
+# Run this at session start:
+cat .opencode/logs/context-log.md
+```
+
 ## Stack
 - Backend: Go (Fiber), SQLite (CGO required — set CGO_ENABLED=1)
 - Frontend: React + Vite
@@ -14,6 +25,13 @@ Skills live in `.opencode/skills/`. Load them by name:
 
 For stack details, credentials, and known fixes:
 read `.opencode/knowledge/runbook.md` and `.opencode/knowledge/project-notes.md`
+
+## Context Recovery
+If session crashes or laptop dies:
+1. Read `.opencode/logs/context-log.md`
+2. Check "TODO List" - see what step was in progress
+3. Continue from where it left off
+4. Update TODO list after each step completion
 
 ## Running Tests
 ```bash

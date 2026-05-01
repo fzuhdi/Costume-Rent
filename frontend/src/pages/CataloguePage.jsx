@@ -98,11 +98,11 @@ const CataloguePage = () => {
                   </Select.Trigger>
                   <Select.Popover>
                     <ListBox>
-                      <ListBox.Item key="wilayah-all" id="">
+                      <ListBox.Item key="wilayah-all" id="" aria-label="Filter wilayah Semua Wilayah">
                         Semua Wilayah
                       </ListBox.Item>
                       {regions.map((r) => (
-                        <ListBox.Item key={"wilayah-" + r.id} id={String(r.id)}>
+                        <ListBox.Item key={"wilayah-" + r.id} id={String(r.id)} aria-label={`Filter wilayah ${r.name}`}>
                           {r.name}
                         </ListBox.Item>
                       ))}
@@ -126,11 +126,11 @@ const CataloguePage = () => {
                   </Select.Trigger>
                   <Select.Popover>
                     <ListBox>
-                      <ListBox.Item key="kategori-all" id="">
+                      <ListBox.Item key="kategori-all" id="" aria-label="Filter kategori Semua Kategori">
                         Semua Kategori
                       </ListBox.Item>
                       {categories.map((c) => (
-                        <ListBox.Item key={"kategori-" + c.id} id={String(c.id)}>
+                        <ListBox.Item key={"kategori-" + c.id} id={String(c.id)} aria-label={`Filter kategori ${c.name}`}>
                           {c.name}
                         </ListBox.Item>
                       ))}
@@ -194,7 +194,6 @@ const CataloguePage = () => {
                     <Table.Column isRowHeader>Nama</Table.Column>
                     <Table.Column>Wilayah</Table.Column>
                     <Table.Column>Kategori</Table.Column>
-                    <Table.Column>Kondisi</Table.Column>
                     <Table.Column>Stok</Table.Column>
                     <Table.Column>Aksi</Table.Column>
                   </Table.Header>
@@ -211,11 +210,6 @@ const CataloguePage = () => {
                         </Table.Cell>
                         <Table.Cell>{costume.region || '-'}</Table.Cell>
                         <Table.Cell>{costume.category || '-'}</Table.Cell>
-                        <Table.Cell>
-                          <Chip size="sm" variant={conditionColors[costume.condition] === 'success' ? 'secondary' : conditionColors[costume.condition] === 'warning' ? 'secondary' : 'danger-soft'}>
-                            {costume.condition}
-                          </Chip>
-                        </Table.Cell>
                         <Table.Cell>{costume.quantity}</Table.Cell>
                         <Table.Cell>
                           <Button as={Link} to={`/catalogue/${costume.id}`} variant="bordered" size="sm" aria-label={`Detail ${costume.name}`}>
