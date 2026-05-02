@@ -36,7 +36,7 @@ const Sidebar = () => {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all ${
                   isActive
-                    ? 'bg-[var(--primary)]/10 text-[var(--primary)] font-medium'
+                    ? 'bg-[var(--primary)]/20 text-[var(--primary)] font-medium'
                     : 'text-[var(--muted)] hover:bg-[var(--border)]'
                 }`
               }
@@ -55,7 +55,7 @@ const Sidebar = () => {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all ${
                   isActive
-                    ? 'bg-[var(--primary)]/10 text-[var(--primary)] font-medium'
+                    ? 'bg-[var(--primary)]/20 text-[var(--primary)] font-medium'
                     : 'text-[var(--muted)] hover:bg-[var(--border)]'
                 }`
               }

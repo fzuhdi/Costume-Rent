@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -18,6 +18,7 @@ import ClientDetailPage from './pages/ClientDetailPage';
 import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { useSettings } from './context/SettingsContext';
+import FullScreenSpinner from './components/FullScreenSpinner';
 import { Spinner } from '@heroui/react';
 
 const AppRoutes = () => {
@@ -29,42 +30,46 @@ const AppRoutes = () => {
   }, [settings]);
 
   if (authLoading || settingsLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Spinner />
-      </div>
-    );
+    return <FullScreenSpinner />;
   }
 
-  if (!isAuthenticated) {
-    return (
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    );
-  }
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
 
+      <Route
+        element={
+          <ProtectedRoute>
+            <AuthenticatedLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/catalogue" element={<CataloguePage />} />
+        <Route path="/catalogue/:id" element={<CatalogueDetailPage />} />
+        <Route path="/catalogue/new" element={<CatalogueFormPage />} />
+        <Route path="/catalogue/:id/edit" element={<CatalogueFormPage />} />
+        <Route path="/rents" element={<RentHistoryPage />} />
+        <Route path="/rents/new" element={<RentFormPage />} />
+        <Route path="/rents/:id" element={<RentDetailPage />} />
+        <Route path="/rents/:id/edit" element={<RentFormPage />} />
+        <Route path="/clients" element={<ClientListPage />} />
+        <Route path="/clients/:id" element={<ClientDetailPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Route>
+
+      <Route path="*" element={isAuthenticated ? <NotFoundPage /> : <Navigate to="/login" replace />} />
+    </Routes>
+  );
+};
+
+const AuthenticatedLayout = () => {
   return (
     <div className="app-layout">
       <Navbar />
       <div className="app-content">
         <Sidebar />
         <main className="main-content">
-          <Routes>
-            <Route path="/catalogue" element={<CataloguePage />} />
-            <Route path="/catalogue/:id" element={<CatalogueDetailPage />} />
-            <Route path="/catalogue/new" element={<CatalogueFormPage />} />
-            <Route path="/catalogue/:id/edit" element={<CatalogueFormPage />} />
-            <Route path="/rents" element={<RentHistoryPage />} />
-            <Route path="/rents/new" element={<RentFormPage />} />
-            <Route path="/rents/:id" element={<RentDetailPage />} />
-            <Route path="/rents/:id/edit" element={<RentFormPage />} />
-            <Route path="/clients" element={<ClientListPage />} />
-            <Route path="/clients/:id" element={<ClientDetailPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+          <Outlet />
         </main>
       </div>
     </div>

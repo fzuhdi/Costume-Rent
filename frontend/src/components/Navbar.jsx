@@ -21,7 +21,7 @@ const NavbarComponent = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-40 w-full border-b border-[var(--border)] bg-[var(--surface)]/70 backdrop-blur-lg">
+    <nav className="sticky top-0 z-40 w-full border-b border-[var(--border)] bg-[var(--surface)]/70 backdrop-blur-lg" aria-label="Main navigation">
       <header className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-4">
           <button
@@ -82,7 +82,7 @@ const NavbarComponent = () => {
             <User size={18} />
             <span>{user?.name || 'Admin'}</span>
           </div>
-          <Button variant="bordered" size="sm" onPress={handleLogout}>
+          <Button variant="bordered" size="sm" onPress={handleLogout} aria-label="Logout">
             <LogOut size={16} />
             Logout
           </Button>

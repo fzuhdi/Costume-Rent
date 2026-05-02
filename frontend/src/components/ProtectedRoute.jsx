@@ -3,21 +3,11 @@ import { useAuth } from '../context/AuthContext';
 import { Spinner } from '@heroui/react';
 
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Spinner />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return children;
+  return isAuthenticated
+    ? children
+    : <Navigate to="/login" replace />;
 };
 
 export default ProtectedRoute;

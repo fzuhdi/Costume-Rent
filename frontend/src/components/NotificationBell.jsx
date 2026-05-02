@@ -16,19 +16,21 @@ const NotificationBell = ({ count }) => {
 
   return (
     <Popover isOpen={isOpen} onOpenChange={setIsOpen}>
-      <Popover.Trigger>
-        <Badge content={count} isInvisible={count === 0}>
-          <Button isIconOnly variant="light" onPress={() => setIsOpen(!isOpen)}>
+      <Popover.Trigger aria-label="Buka notifikasi">
+        {count > 0 ? (
+          <Badge content={count}>
             <Bell size={20} />
-          </Button>
-        </Badge>
+          </Badge>
+        ) : (
+          <Bell size={20} />
+        )}
       </Popover.Trigger>
       <Popover.Content>
         <Popover.Dialog>
           <div className="px-2 py-2 max-w-xs">
             <div className="flex items-center justify-between px-2 py-1 border-b border-[var(--border)]">
               <h3 className="text-base font-semibold">Notifikasi</h3>
-              <Button isIconOnly size="sm" variant="light" onPress={() => setIsOpen(false)}>
+              <Button isIconOnly size="sm" variant="light" aria-label="Tutup notifikasi" onPress={() => setIsOpen(false)}>
                 <X size={18} />
               </Button>
             </div>

@@ -141,6 +141,7 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
                   isIconOnly
                   size="sm"
                   variant="bordered"
+                  aria-label="Kurangi jumlah kostum"
                   onPress={() => handleQuantityChange(item.costume_id, -1)}
                   isDisabled={item.quantity <= 1}
                 >
@@ -151,6 +152,7 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
                   isIconOnly
                   size="sm"
                   variant="bordered"
+                  aria-label="Tambah jumlah kostum"
                   onPress={() => handleQuantityChange(item.costume_id, 1)}
                 >
                   <Plus size={14} />
