@@ -21,6 +21,21 @@ services:
             - uploads/
             - "*.db"
 
+  sqlite-web:
+    image: coleifer/sqlite-web
+    container_name: busana_sqlite_web
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - busana_db:/data
+    environment:
+      SQLITE_DATABASE: busana_tari.db
+    depends_on:
+      - backend
+    networks:
+      - busana_net
+
   frontend:
     image: node:20-alpine
     working_dir: /app
