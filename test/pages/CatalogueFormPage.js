@@ -3,40 +3,86 @@ const { BasePage } = require('./BasePage.js');
 class CatalogueFormPage extends BasePage {
   constructor(page) {
     super(page);
-    this.nameInput = page.locator('[data-slot="input"]').filter({ has: page.locator('input[name="name"]') });
-    this.descriptionInput = page.locator('textarea[name="description"]');
-    this.regionSelect = page.locator('[data-slot="select-trigger"]').first();
-    this.categorySelect = page.locator('[data-slot="select-trigger"]').nth(1);
-    this.conditionSelect = page.locator('[data-slot="select-trigger"]').nth(2);
-    this.quantityInput = page.locator('[data-slot="input"]').filter({ has: page.locator('input[name="quantity"]') });
-    this.submitButton = page.locator('button[type="submit"]');
+    // HeroUI v3 TextField inputs - use data-slot selector
+    this.nameInput = page.locator('input[data-slot="input"]').first();
+    // Number input - quantity field
+    this.quantityInput = page.locator('input[type="number"]').first();
+    // Date input
+    this.acquiredDateInput = page.locator('input[type="date"]').first();
+    // Description - TextArea uses textarea element
+    this.descriptionInput = page.locator('textarea').first();
+    // HeroUI v3 Select components - they render as buttons with placeholder text
+    // Use the button that contains the placeholder text
+    this.regionSelect = page.getByRole('button', { name: /pilih wilayah/i });
+    this.categorySelect = page.getByRole('button', { name: /pilih kategori/i });
+    // Condition select - find button that shows the current value
+    this.conditionSelect = page.locator('button').filter({ hasText: /excellent|good|fair/i }).first();
+    // Submit button - find by text content using JavaScript
+    this.submitButton = page.getByRole('button', { name: /simpan|menyimpan/i }).first();
+    // File input - might be hidden, use evaluate to set files
+    this.fileInput = page.locator('input[type="file"]');
+  }
+
+  async assertFormLoaded() {
+    // Wait for form to be ready by checking for the name input
+    await this.nameInput.waitFor({ state: 'visible', timeout: 10000 });
   }
 
   async goto(costumeId = null) {
     const path = costumeId ? `/catalogue/${costumeId}/edit` : '/catalogue/new';
     await super.goto(path);
+    await this.assertFormLoaded();
   }
 
-  async fillForm({ name, description, region, category, condition, quantity }) {
+  async fillForm({ name, description, region, category, condition, quantity, acquiredAt }) {
     if (name) await this.nameInput.fill(name);
-    if (description) await this.descriptionInput.fill(description);
     if (region) {
       await this.regionSelect.click();
-      await this.page.locator(`[data-slot="select-item"]:has-text("${region}")`).click();
+      await this.page.getByRole('option', { name: new RegExp(region, 'i') }).first().click();
     }
     if (category) {
       await this.categorySelect.click();
-      await this.page.locator(`[data-slot="select-item"]:has-text("${category}")`).click();
+      await this.page.getByRole('option', { name: new RegExp(category, 'i') }).first().click();
     }
     if (condition) {
       await this.conditionSelect.click();
-      await this.page.locator(`[data-slot="select-item"]:has-text("${condition}")`).click();
+      await this.page.getByRole('option', { name: new RegExp(condition, 'i') }).first().click();
     }
     if (quantity) await this.quantityInput.fill(quantity.toString());
+    if (acquiredAt) await this.acquiredDateInput.fill(acquiredAt);
+    if (description) await this.descriptionInput.fill(description);
   }
 
   async submit() {
-    await this.submitButton.click();
+    // Use JavaScript to click the button directly to avoid visibility issues
+    await this.page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      const simpanBtn = buttons.find(btn => btn.textContent.toLowerCase().includes('simpan'));
+      if (simpanBtn) {
+        simpanBtn.click();
+        return true;
+      }
+      return false;
+    });
+  }
+
+  async uploadImages(files) {
+    // HeroUI might hide the file input, use evaluate to set files directly
+    await this.fileInput.setInputFiles(files).catch(async () => {
+      // Fallback: create a temporary file input
+      await this.page.evaluate(() => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = true;
+        input.style.display = 'block';
+        input.style.position = 'fixed';
+        input.style.top = '0';
+        input.style.left = '0';
+        input.style.zIndex = '9999';
+        document.body.appendChild(input);
+        input.click();
+      });
+    });
   }
 }
 

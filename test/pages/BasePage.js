@@ -1,5 +1,3 @@
-const { expect } = require('@playwright/test');
-
 class BasePage {
   constructor(page) {
     this.page = page;
@@ -7,11 +5,15 @@ class BasePage {
 
   async goto(path) {
     await this.page.goto(path);
-    await this.page.waitForLoadState('networkidle');
+    // Wait for page to load - use networkidle for SPA
+    await this.page.waitForLoadState('networkidle').catch(() => {});
+    // Extra wait for React to mount
+    await this.page.waitForTimeout(1000);
   }
 
   async login(email = 'admin@busana.com', password = 'admin123') {
     await this.goto('/login');
+    await this.page.waitForSelector('input[type="email"]', { timeout: 10000 });
     await this.page.fill('input[type="email"]', email);
     await this.page.fill('input[type="password"]', password);
     await this.page.click('button[type="submit"]');
@@ -25,7 +27,7 @@ class BasePage {
 
   async expectNotification(message) {
     const alert = this.page.locator('[data-slot="alert"]');
-    await expect(alert).toContainText(message);
+    await alert.toContainText(message);
   }
 
   async waitForNavigation(pathPattern) {

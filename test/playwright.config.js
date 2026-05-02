@@ -11,12 +11,12 @@ module.exports = defineConfig({
   reporter: [
     ['list'],                           // Console output
     ['html', { open: 'never' }],      // HTML report with screenshots
-    ['json', { outputFile: 'test-results.json' }]  // JSON for CI
+    ['json', { outputFile: 'test-results/results.json' }]  // JSON for CI
   ],
   
   timeout: 30000,
   use: {
-    baseURL: 'http://localhost',
+    baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
     video: 'on',
     

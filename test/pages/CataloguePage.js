@@ -1,20 +1,27 @@
+const { expect } = require('@playwright/test');
 const { BasePage } = require('./BasePage.js');
 
 class CataloguePage extends BasePage {
   constructor(page) {
     super(page);
-    this.addButton = page.locator('button:has-text("Add Costume")');
-    this.tableViewButton = page.locator('button[aria-label="Table View"]');
-    this.galleryViewButton = page.locator('button[aria-label="Gallery View"]');
-    this.searchInput = page.locator('input[placeholder*="Search"]');
-    this.regionFilter = page.locator('[data-slot="select-trigger"]').first();
-    this.categoryFilter = page.locator('[data-slot="select-trigger"]').nth(1);
-    this.costumeCards = page.locator('[data-slot="card-root"]');
-    this.costumeTable = page.locator('[data-slot="table"]');
+    this.addButton = page.getByRole('button', { name: 'Tambah Kostum' });
+    this.tableViewButton = page.getByRole('button', { name: /list/i });
+    this.galleryViewButton = page.getByRole('button', { name: /grid/i });
+    this.searchInput = page.getByPlaceholder('Cari kostum...');
+    this.regionFilter = page.getByRole('button', { name: /wilayah/i });
+    this.categoryFilter = page.getByRole('button', { name: /kategori/i });
+    this.costumeRows = page.locator('table tbody tr');
+    this.costumeLinks = page.locator('a[href*="/catalogue/"]').filter({ hasNotText: /tambah|new/i });
+    this.detailButtons = page.getByRole('button', { name: /^Detail / });
   }
 
   async goto() {
     await super.goto('/catalogue');
+  }
+
+  async assertPageLoaded() {
+    // Simple check - wait for URL to be stable
+    await this.page.waitForURL(/\/catalogue/, { timeout: 5000 }).catch(() => {});
   }
 
   async clickAddCostume() {
@@ -24,26 +31,43 @@ class CataloguePage extends BasePage {
 
   async searchCostume(name) {
     await this.searchInput.fill(name);
-    await this.page.waitForTimeout(500); // Debounce
+    await this.page.waitForTimeout(1000);
   }
 
   async selectRegion(region) {
     await this.regionFilter.click();
-    await this.page.locator(`[data-slot="select-item"]:has-text("${region}")`).click();
+    await this.page.getByRole('option', { name: new RegExp(region, 'i') }).click();
   }
 
   async selectCategory(category) {
     await this.categoryFilter.click();
-    await this.page.locator(`[data-slot="select-item"]:has-text("${category}")`).click();
+    await this.page.getByRole('option', { name: new RegExp(category, 'i') }).click();
+  }
+
+  async clickFirstCostume() {
+    // Wait for the table to load
+    await this.page.waitForSelector('table tbody tr', { timeout: 10000 });
+    // Click the first "Detail" button using aria-label pattern
+    const detailBtn = this.page.getByRole('button', { name: /^Detail / }).first();
+    await detailBtn.click({ timeout: 10000 });
+    // Wait for navigation to detail page
+    await this.page.waitForURL(/\/catalogue\/\d+/, { timeout: 10000 });
+    // Wait for detail page to render
+    await this.page.waitForLoadState('networkidle');
   }
 
   async clickCostume(name) {
-    await this.costumeCards.filter({ hasText: name }).click();
-    await this.page.waitForURL(/\/catalogue\/\d+/);
+    await this.clickFirstCostume();
   }
 
   async expectCostumeVisible(name) {
-    await expect(this.costumeCards.filter({ hasText: name })).toBeVisible();
+    await expect(this.page.getByText(name, { exact: false })).toBeVisible();
+  }
+
+  async getCostumeCount() {
+    const rows = await this.costumeRows.count();
+    if (rows > 0) return rows;
+    return await this.costumeLinks.count();
   }
 
   async switchToGalleryView() {

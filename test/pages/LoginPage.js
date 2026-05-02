@@ -4,8 +4,8 @@ const { BasePage } = require('./BasePage.js');
 class LoginPage extends BasePage {
   constructor(page) {
     super(page);
-    this.emailInput = page.locator('[data-slot="input"]').filter({ has: page.locator('input[type="email"]') });
-    this.passwordInput = page.locator('[data-slot="input"]').filter({ has: page.locator('input[type="password"]') });
+    this.emailInput = page.locator('input[type="email"]');
+    this.passwordInput = page.locator('input[type="password"]');
     this.submitButton = page.locator('button[type="submit"]');
     this.errorAlert = page.locator('[data-slot="alert"]');
     this.title = page.locator('h1, h2').first();
@@ -16,9 +16,7 @@ class LoginPage extends BasePage {
   }
 
   async login(email, password) {
-    await this.emailInput.fill(email);
-    await this.passwordInput.fill(password);
-    await this.submitButton.click();
+    await super.login(email, password);
   }
 
   async expectError(message) {
