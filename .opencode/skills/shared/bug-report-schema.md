@@ -11,13 +11,18 @@ Do NOT write bug reports manually — run `npm run test` in `test/` to auto-gene
 
 ## File Naming Convention
 ```
-.opencode/state/bug-reports/BUG-{FEATURE}-{AC###}-{HASH}.json
+.opencode/state/bug-reports/BUG-[FEATURE_ID]-[TEST_ID]-[HASH].json
 ```
+- `FEATURE_ID`: matches the Feature ID in `docs/ACCEPTANCE_CRITERIA.md` (e.g., `AUTH`, `CATALOGUE`, `RENT`)
+- `TEST_ID`: the test identifier in `AC###-###` format (no hyphen after AC, e.g., `AC001-001` for test 1 of AC-001)
+- `HASH`: 6-character MD5 hash for uniqueness
+
 Examples:
 ```
-BUG-RENT-AC014-A3F2B1.json
-BUG-CATALOGUE-AC003-9D1E4C.json
-BUG-AUTH-GEN-7F2A11.json     ← no AC match, generated from title hash
+BUG-AUTH-AC001-001-27526D.json          ← test 1 of AC-001 (Authentication)
+BUG-CATALOGUE-AC003-001-883D9D.json     ← test 1 of AC-003 (Costume Management)
+BUG-RENT-AC014-001-A3F2B1.json          ← test 1 of AC-014 (Rental System)
+BUG-SETTINGS-AC022-001-B4C8E2.json      ← test 1 of AC-022 (Settings)
 ```
 
 ---
@@ -27,10 +32,10 @@ BUG-AUTH-GEN-7F2A11.json     ← no AC match, generated from title hash
 ```json
 {
   // ── Identity ──────────────────────────────────────────────────────────────
-  "id":          "BUG-{FEATURE}-{AC###}-{HASH}",
-  "feature":     "RENT",                          // matches feature ID in ACCEPTANCE_CRITERIA.md
-  "ac":          "AC-014",                        // which acceptance criterion failed
-  "title":       "[AC-014] new rental saves to database",
+  "id":          "BUG-[FEATURE_ID]-[TEST_ID]-[HASH]",        // e.g. BUG-RENT-AC014-001-A3F2B1
+  "feature":     "RENT",                                     // matches feature ID in ACCEPTANCE_CRITERIA.md
+  "ac":          "AC-014",                                   // which acceptance criterion failed
+  "title":       "[AC-014-001] Delete rental removes from database",
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   "status":      "open",                          // see Status Values below
@@ -145,10 +150,10 @@ The AC explicitly requires 201, not 200. The assertion is checking the wrong sta
 
 ```json
 {
-  "id": "BUG-RENT-AC014-A3F2B1",
+  "id": "BUG-RENT-AC014-001-A3F2B1",
   "feature": "RENT",
   "ac": "AC-014",
-  "title": "[AC-014] new rental saves to database",
+  "title": "[AC-014-001] Delete rental removes from database",
   "status": "verified",
   "raisedBy": "sdet",
   "resolvedBy": "engineer",
