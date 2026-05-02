@@ -28,6 +28,11 @@ class ClientListPage extends BasePage {
     await this.page.waitForURL(/\/clients\/\d+/);
   }
 
+  async clickFirstClient() {
+    await this.clientRows.first().click();
+    await this.page.waitForURL(/\/clients\/\d+/);
+  }
+
   async expectClientVisible(name) {
     await expect(this.clientRows.filter({ hasText: name })).toBeVisible();
   }
