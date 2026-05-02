@@ -21,11 +21,15 @@ const CatalogueFormPage = () => {
   const [regions, setRegions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [images, setImages] = useState([]);
+  const [stagedFiles, setStagedFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchData();
+    return () => {
+      stagedFiles.forEach(s => URL.revokeObjectURL(s.previewUrl));
+    };
   }, [id]);
 
   const fetchData = async () => {
@@ -78,17 +82,50 @@ const CatalogueFormPage = () => {
         acquired_at: formData.acquired_at || null,
       };
 
+      let costumeId;
       if (isEdit) {
         await updateCostume(id, payload);
+        costumeId = id;
       } else {
-        await createCostume(payload);
+        const result = await createCostume(payload);
+        costumeId = result.data.id;
       }
+
+      for (const staged of stagedFiles) {
+        const fd = new FormData();
+        fd.append('image', staged.file);
+        try {
+          await uploadCostumeImage(costumeId, fd);
+        } catch (error) {
+          console.error('Failed to upload staged image:', error);
+        }
+      }
+
       navigate('/catalogue');
     } catch (error) {
       console.error('Failed to save costume:', error);
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    const newStaged = files.map(f => ({
+      id: Math.random().toString(36).slice(2, 9),
+      file: f,
+      previewUrl: URL.createObjectURL(f),
+    }));
+    setStagedFiles(prev => [...prev, ...newStaged]);
+    e.target.value = '';
+  };
+
+  const removeStaged = (id) => {
+    setStagedFiles(prev => {
+      const toRemove = prev.find(s => s.id === id);
+      if (toRemove) URL.revokeObjectURL(toRemove.previewUrl);
+      return prev.filter(s => s.id !== id);
+    });
   };
 
   if (loading) {
@@ -174,28 +211,27 @@ const CatalogueFormPage = () => {
                 type="file"
                 multiple
                 accept="image/*"
-                onChange={async (e) => {
-                  const files = Array.from(e.target.files);
-                  for (const file of files) {
-                    try {
-                      await uploadCostumeImage(file);
-                    } catch (error) {
-                      console.error('Failed to upload image:', error);
-                    }
-                  }
-                  // Refresh images state
-                  if (isEdit) {
-                    const costumeRes = await getCostumeById(id);
-                    setImages(costumeRes.data.images || []);
-                  }
-                }}
+                onChange={handleFileSelect}
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
               />
-              {images.length > 0 && (
+              {(images.length > 0 || stagedFiles.length > 0) && (
                 <div className="mt-2 flex gap-2 flex-wrap">
                   {images.map((img) => (
-                    <div key={img.id} className="relative w-20 h-20">
+                    <div key={`existing-${img.id}`} className="relative w-20 h-20">
                       <img src={img.path} alt="Costume" className="w-full h-full object-cover rounded" />
+                    </div>
+                  ))}
+                  {stagedFiles.map((staged) => (
+                    <div key={`staged-${staged.id}`} className="relative w-20 h-20 group">
+                      <img src={staged.previewUrl} alt="Staged" className="w-full h-full object-cover rounded" />
+                      <button
+                        type="button"
+                        onClick={() => removeStaged(staged.id)}
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-80 hover:opacity-100"
+                        aria-label="Remove image"
+                      >
+                        ×
+                      </button>
                     </div>
                   ))}
                 </div>
