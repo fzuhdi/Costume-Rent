@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getCostumeById, createCostume, updateCostume, getRegions, getCategories, uploadCostumeImage } from '../api/costumeApi';
 import { ArrowLeft, Save } from 'lucide-react';
-import { TextField, TextArea, Label, Select, ListBox, Button, Card, Spinner, FieldError } from '@heroui/react';
+import { TextField, Input, TextArea, Label, Select, ListBox, Button, Card, Spinner, FieldError } from '@heroui/react';
 
 const CatalogueFormPage = () => {
   const { id } = useParams();
@@ -112,9 +112,9 @@ const CatalogueFormPage = () => {
             <h2 className="text-xl font-semibold">{isEdit ? 'Edit Kostum' : 'Tambah Kostum Baru'}</h2>
           </div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <TextField value={formData.name} onChange={(e) => setFormData((prev) => ({...prev, name: e.target.value}))} isRequired>
+            <TextField value={formData.name} isRequired>
               <Label>Nama Kostum *</Label>
-              <Input />
+              <Input onChange={(e) => setFormData((prev) => ({...prev, name: e.target.value}))} />
               <FieldError />
             </TextField>
             <div className="grid grid-cols-2 gap-4">
@@ -154,43 +154,55 @@ const CatalogueFormPage = () => {
                   </ListBox>
                 </Select.Popover>
               </Select>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <Select
-                value={formData.condition}
-                onChange={(v) => setFormData((prev) => ({...prev, condition: v}))}
-              >
-                <Label>Kondisi</Label>
-                <Select.Trigger>
-                  <Select.Value />
-                  <Select.Indicator />
-                </Select.Trigger>
-                <Select.Popover>
-                  <ListBox>
-                    <ListBox.Item id="excellent" textValue="Excellent">Excellent</ListBox.Item>
-                    <ListBox.Item id="good" textValue="Good">Good</ListBox.Item>
-                    <ListBox.Item id="fair" textValue="Fair">Fair</ListBox.Item>
-                  </ListBox>
-                </Select.Popover>
-              </Select>
-              <TextField value={String(formData.quantity)} onChange={(e) => setFormData((prev) => ({...prev, quantity: e.target.value}))} isRequired>
+              <TextField value={String(formData.quantity)} isRequired>
                 <Label>Jumlah Stok *</Label>
-                <Input type="number" min="1" />
+                <Input type="number" min="1" onChange={(e) => setFormData((prev) => ({...prev, quantity: e.target.value}))} />
                 <FieldError />
               </TextField>
-              <TextField value={formData.acquired_at} onChange={(e) => setFormData((prev) => ({...prev, acquired_at: e.target.value}))}>
-                <Label>Tanggal Perolehan</Label>
-                <Input type="date" />
-              </TextField>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
             </div>
             <TextArea
               value={formData.description}
               onChange={(e) => setFormData((prev) => ({...prev, description: e.target.value}))}
               placeholder="Deskripsi kostum..."
-              minRows={4}
+              minrows={4}
             />
+            <div>
+              <Label>Gambar Kostum</Label>
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={async (e) => {
+                  const files = Array.from(e.target.files);
+                  for (const file of files) {
+                    try {
+                      await uploadCostumeImage(file);
+                    } catch (error) {
+                      console.error('Failed to upload image:', error);
+                    }
+                  }
+                  // Refresh images state
+                  if (isEdit) {
+                    const costumeRes = await getCostumeById(id);
+                    setImages(costumeRes.data.images || []);
+                  }
+                }}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              {images.length > 0 && (
+                <div className="mt-2 flex gap-2 flex-wrap">
+                  {images.map((img) => (
+                    <div key={img.id} className="relative w-20 h-20">
+                      <img src={img.path} alt="Costume" className="w-full h-full object-cover rounded" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="flex gap-3 justify-end">
-              <Button variant="bordered" as={Link} to="/catalogue">Batal</Button>
+              <Button variant="bordered" onPress={() => window.location.href = '/catalogue'}>Batal</Button>
               <Button type="submit" variant="primary" isPending={saving}>
                 {({isPending}) => (
                   <>

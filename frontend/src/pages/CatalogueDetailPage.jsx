@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getCostumeById, deleteCostume } from '../api/costumeApi';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
-import { Button, Card, Chip, Spinner } from '@heroui/react';
+import { Button, Card, Chip, Spinner, Modal, ModalDialog, ModalHeader, ModalBody, ModalFooter } from '@heroui/react';
 
 const conditionColors = {
   baik: 'success',
@@ -97,8 +97,8 @@ const CatalogueDetailPage = () => {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">{costume.name}</h2>
               <div className="flex gap-2">
-                <Button as={Link} to={`/catalogue/${id}/edit`} variant="bordered" size="sm" startContent={<Edit size={16} />}>Edit</Button>
-                <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={deleting} startContent={<Trash2 size={16} />}>Hapus</Button>
+                <Button variant="bordered" size="sm" onPress={() => window.location.href = `/catalogue/${id}/edit`} startContent={<Edit size={16} />}>Edit</Button>
+                 <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={deleting} startContent={<Trash2 size={16} />}>Hapus</Button>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -137,18 +137,36 @@ const CatalogueDetailPage = () => {
           </Card.Content>
         </Card>
       </div>
-
-      <Modal>
-        <Modal.Backdrop isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+{/* 
+      <Modal isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <ModalDialog>
+          <ModalHeader>
+            Konfirmasi
+          </ModalHeader>
+          <ModalBody>
+            Apakah Anda yakin ingin menghapus kostum ini?
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="bordered" onPress={() => setIsDeleteOpen(false)}>Batal</Button>
+            <Button variant="danger" onPress={handleDelete} isPending={deleting}>Hapus</Button>
+          </ModalFooter>
+        </ModalDialog>
+      </Modal> */}
+      <Modal isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <Modal.Backdrop>
           <Modal.Container>
             <Modal.Dialog>
+              <Modal.CloseTrigger /> {/* Optional: Close button */}
               <Modal.Header>
-                <Modal.Heading>Konfirmasi</Modal.Heading>
+                <Modal.Icon /> {/* Optional: Icon */}
+                <Modal.Heading />
               </Modal.Header>
-              <Modal.Body>Apakah Anda yakin ingin menghapus kostum ini?</Modal.Body>
+              <Modal.Body>
+                Apakah Anda yakin ingin menghapus kostum ini?
+              </Modal.Body>
               <Modal.Footer>
-                <Button variant="bordered" onPress={() => setIsDeleteOpen(false)}>Batal</Button>
-                <Button variant="danger" onPress={handleDelete} isPending={deleting}>Hapus</Button>
+                <Button variant="bordered" onPress={() => setIsDeleteOpen(false)} slot="close">Batal</Button>
+                <Button variant="danger" onPress={handleDelete} isPending={deleting} slot="close">Hapus</Button>
               </Modal.Footer>
             </Modal.Dialog>
           </Modal.Container>

@@ -113,7 +113,7 @@ const ClientListPage = () => {
                         <Table.Cell>
                           <div className="flex gap-2">
                             <Button as={Link} to={`/clients/${client.id}`} variant="bordered" size="sm">Detail</Button>
-                            <Button variant="danger" size="sm" isIconOnly onPress={() => { setSelectedClientId(client.id); setIsDeleteOpen(true); }}>
+                            <Button variant="danger" size="sm" isIconOnly aria-label="Hapus klien" onPress={() => { setSelectedClientId(client.id); setIsDeleteOpen(true); }}>
                               <Trash2 size={14} />
                             </Button>
                           </div>

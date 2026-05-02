@@ -31,8 +31,9 @@ const LoginPage = () => {
   return (
     <div
       className="min-h-screen flex items-center justify-center bg-gray-50"
+      aria-label="Login page"
     >
-      <Card className="w-full max-w-md mx-4">
+      <Card className="w-full max-w-md mx-4" aria-label="Login form">
         <Card.Content className="flex flex-col gap-6 py-8 px-6">
 
           {/* Header */}
@@ -65,9 +66,10 @@ const LoginPage = () => {
               isRequired
               value={email}
               onChange={setEmail}
+              aria-label="Email address"
             >
               <Label>Email</Label>
-              <Input placeholder="admin@busana.com" />
+              <Input placeholder="admin@busana.com" aria-label="Email address" />
             </TextField>
 
             <TextField
@@ -76,9 +78,10 @@ const LoginPage = () => {
               isRequired
               value={password}
               onChange={setPassword}
+              aria-label="Password"
             >
               <Label>Password</Label>
-              <Input placeholder="Enter password" />
+              <Input placeholder="Enter password" aria-label="Password" />
             </TextField>
 
             <Button
@@ -88,6 +91,7 @@ const LoginPage = () => {
               isLoading={loading}
               className="w-full mt-2"
               startContent={!loading && <LogIn size={18} />}
+              aria-label="Login to your account"
             >
               Login
             </Button>

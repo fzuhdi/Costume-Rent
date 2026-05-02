@@ -91,6 +91,7 @@ const CataloguePage = () => {
                     setRegionFilter(keys.currentKey ?? '');
                     setPage(1);
                   }}
+                  aria-label='Choose Region'
                 >
                   <Select.Trigger>
                     <Select.Value />
@@ -98,11 +99,11 @@ const CataloguePage = () => {
                   </Select.Trigger>
                   <Select.Popover>
                     <ListBox>
-                      <ListBox.Item key="wilayah-all" id="" aria-label="Filter wilayah Semua Wilayah">
+                      <ListBox.Item key="wilayah-all" id="" aria-label="Choose region Semua Wilayah">
                         Semua Wilayah
                       </ListBox.Item>
                       {regions.map((r) => (
-                        <ListBox.Item key={"wilayah-" + r.id} id={String(r.id)} aria-label={`Filter wilayah ${r.name}`}>
+                        <ListBox.Item key={"wilayah-" + r.id} id={String(r.id)} aria-label={`Choose region ${r.name}`}>
                           {r.name}
                         </ListBox.Item>
                       ))}
@@ -119,6 +120,7 @@ const CataloguePage = () => {
                     setCategoryFilter(keys.currentKey ?? '');
                     setPage(1);
                   }}
+                  aria-label='Choose Category'
                 >
                   <Select.Trigger>
                     <Select.Value />
@@ -126,11 +128,11 @@ const CataloguePage = () => {
                   </Select.Trigger>
                   <Select.Popover>
                     <ListBox>
-                      <ListBox.Item key="kategori-all" id="" aria-label="Filter kategori Semua Kategori">
+                      <ListBox.Item key="kategori-all" id="" aria-label="Choose category Semua Kategori">
                         Semua Kategori
                       </ListBox.Item>
                       {categories.map((c) => (
-                        <ListBox.Item key={"kategori-" + c.id} id={String(c.id)} aria-label={`Filter kategori ${c.name}`}>
+                        <ListBox.Item key={"kategori-" + c.id} id={String(c.id)} aria-label={`Choose category ${c.name}`}>
                           {c.name}
                         </ListBox.Item>
                       ))}
@@ -145,6 +147,7 @@ const CataloguePage = () => {
                 <Button
                   isIconOnly
                   variant={view === 'table' ? 'primary' : 'bordered'}
+                  aria-label="Tampilkan tampilan tabel"
                   onPress={() => setView('table')}
                 >
                   <List size={18} />
@@ -152,6 +155,7 @@ const CataloguePage = () => {
                 <Button
                   isIconOnly
                   variant={view === 'grid' ? 'primary' : 'bordered'}
+                  aria-label="Tampilkan tampilan grid"
                   onPress={() => setView('grid')}
                 >
                   <Grid size={18} />
@@ -187,9 +191,9 @@ const CataloguePage = () => {
       ) : view === 'table' ? (
         <Card>
           <Card.Content>
-            <Table aria-label="Katalog kostum">
+            <Table aria-label="Table of costumes">
               <Table.ScrollContainer>
-                <Table.Content>
+                <Table.Content aria-label="Table Content">
                   <Table.Header>
                     <Table.Column isRowHeader>Nama</Table.Column>
                     <Table.Column>Wilayah</Table.Column>
@@ -212,7 +216,7 @@ const CataloguePage = () => {
                         <Table.Cell>{costume.category || '-'}</Table.Cell>
                         <Table.Cell>{costume.quantity}</Table.Cell>
                         <Table.Cell>
-                          <Button as={Link} to={`/catalogue/${costume.id}`} variant="bordered" size="sm" aria-label={`Detail ${costume.name}`}>
+                          <Button variant="bordered" size="sm" aria-label={`Detail ${costume.name}`} onPress={() => window.location.href = `/catalogue/${costume.id}`}>
                             Detail
                           </Button>
                         </Table.Cell>
