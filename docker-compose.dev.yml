@@ -8,9 +8,11 @@ services:
     env_file: .env.production
     environment:
       - APP_ENV=development
+    ports:
+      - "8081:8080"
     volumes:
       - busana_db:/app/data
-      - busana_uploads:/app/uploads
+      - ./backend/uploads:/app/uploads
     networks:
       - busana_net
     develop:
@@ -60,8 +62,6 @@ services:
 volumes:
   busana_db:
     name: busana_db
-  busana_uploads:
-    name: busana_uploads
 
 networks:
   busana_net:

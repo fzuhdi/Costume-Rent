@@ -1,10 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -13,7 +10,6 @@ import (
 	"github.com/busana/backend/middleware"
 	"github.com/busana/backend/models"
 	"github.com/busana/backend/routes"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -170,43 +166,50 @@ func seedData() {
 			categoryID  *uint
 			condition   string
 			quantity    int
-			imageURL    string
+			imageFile   string
 		}
 
 		costumes := []costumeSeed{
 			{
 				name: "Kebaya Bali", description: "Kebaya Bali dengan motif songket tradisional",
 				regionID: &baliID, categoryID: &cat1ID, condition: "excellent", quantity: 5,
-				imageURL: "https://upload.wikimedia.org/wikipedia/commons/2/2b/Balinese_Hindus_dressed_for_traditional_dance_Indonesia.jpg",
+				imageFile: "kebaya_bali.jpg",
 			},
 			{
 				name: "Baju Joged", description: "Baju tari joged banteng untuk pertunjukan",
 				regionID: &baliID, categoryID: &cat1ID, condition: "good", quantity: 3,
-				imageURL: "https://upload.wikimedia.org/wikipedia/commons/c/cc/Legong_Dance_Indonesia_2.jpg",
+				imageFile: "baju_joged.jpg",
 			},
 			{
 				name: "Topeng Keras", description: "Topeng keras untuk tari topeng khas Bali",
 				regionID: &baliID, categoryID: &cat2ID, condition: "good", quantity: 10,
-				imageURL: "https://upload.wikimedia.org/wikipedia/commons/6/60/Topeng_Bali.jpg",
+				imageFile: "topeng_bali.jpg",
 			},
 			{
 				name: "Baju Batik", description: "Baju batik Jawa untuk acara formal",
 				regionID: &jawaID, categoryID: &cat1ID, condition: "excellent", quantity: 8,
-				imageURL: "https://upload.wikimedia.org/wikipedia/commons/7/74/Indonesian_Batik_Shirt_for_Men.jpg",
+				imageFile: "baju_batik.jpg",
 			},
 			{
 				name: "Baju Melayu", description: "Pakaian adat Melayu Sumatera",
 				regionID: &sumateraID, categoryID: &cat1ID, condition: "good", quantity: 4,
-				imageURL: "https://upload.wikimedia.org/wikipedia/commons/0/03/Pakaian_adat_jawa_2.jpg",
+				imageFile: "baju_melayu.jpg",
 			},
 			{
 				name: "Selendang Songket", description: "Selendang songket dengan benang emas",
 				regionID: &baliID, categoryID: &cat3ID, condition: "excellent", quantity: 15,
-				imageURL: "https://upload.wikimedia.org/wikipedia/commons/7/75/Kain_Samping_Songket_Lelaki.jpg",
+				imageFile: "selendang_songket.jpg",
 			},
 		}
 
 		for _, c := range costumes {
+			imagePath := ""
+			if c.imageFile != "" && imageExists(c.imageFile) {
+				imagePath = "/uploads/" + c.imageFile
+			} else if c.imageFile != "" {
+				log.Printf("Warning: image file %s not found in uploads folder", c.imageFile)
+			}
+
 			costume := models.Costume{
 				Name:        c.name,
 				Description: c.description,
@@ -215,16 +218,12 @@ func seedData() {
 				Condition:   c.condition,
 				Quantity:    c.quantity,
 				AcquiredAt:  &acquired,
+				CoverImage:  imagePath,
 			}
 			db.Create(&costume)
 
-			if c.imageURL != "" {
-				path, err := downloadImage(c.imageURL)
-				if err != nil {
-					log.Printf("Warning: failed to download image for %s: %v", c.name, err)
-				} else {
-					db.Create(&models.CostumeImage{CostumeID: costume.ID, Path: path})
-				}
+			if imagePath != "" {
+				db.Create(&models.CostumeImage{CostumeID: costume.ID, Path: imagePath})
 			}
 		}
 		log.Println("Sample costumes created")
@@ -233,49 +232,15 @@ func seedData() {
 	log.Println("Seed data check completed")
 }
 
-func downloadImage(url string) (string, error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return "", fmt.Errorf("create request: %w", err)
-	}
-	req.Header.Set("User-Agent", "BusanaCostumeRental/1.0 (https://github.com/busana)")
-
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("http get: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unexpected status: %s", resp.Status)
-	}
-
+func imageExists(filename string) bool {
 	uploadDir := os.Getenv("UPLOAD_DIR")
 	if uploadDir == "" {
 		uploadDir = "./uploads"
 	}
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		return "", fmt.Errorf("mkdir: %w", err)
-	}
-
-	ext := filepath.Ext(url)
-	if ext == "" {
-		ext = ".jpg"
-	}
-	filename := fmt.Sprintf("seed_%d_%s%s", time.Now().UnixNano(), uuid.New().String()[:8], ext)
-	filepath := filepath.Join(uploadDir, filename)
-
-	out, err := os.Create(filepath)
+	fullPath := filepath.Join(uploadDir, filename)
+	info, err := os.Stat(fullPath)
 	if err != nil {
-		return "", fmt.Errorf("create file: %w", err)
+		return false
 	}
-	defer out.Close()
-
-	if _, err := io.Copy(out, resp.Body); err != nil {
-		os.Remove(filepath)
-		return "", fmt.Errorf("copy: %w", err)
-	}
-
-	return "/uploads/" + filename, nil
+	return !info.IsDir()
 }

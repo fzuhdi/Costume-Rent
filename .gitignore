@@ -1,7 +1,8 @@
 # Backend
 backend/server
 backend/*.db
-backend/uploads/
+backend/uploads/*
+!backend/uploads/.gitkeep
 backend/.env
 # go.sum intentionally NOT ignored — required for reproducible builds
 
