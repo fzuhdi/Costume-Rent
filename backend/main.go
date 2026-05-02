@@ -234,7 +234,14 @@ func seedData() {
 }
 
 func downloadImage(url string) (string, error) {
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("User-Agent", "BusanaCostumeRental/1.0 (https://github.com/busana)")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("http get: %w", err)
 	}
