@@ -52,8 +52,9 @@ function dryLog(msg)      { if (DRY_RUN) console.log(`  [dry-run] ${msg}`); }
 
 /**
  * Extract feature ID and AC ID from test title.
- * Playwright test titles should follow the pattern:
- *   "AC-001-001 ..." or "RENT | AC-014-001 ..." or "Feature: RENT - AC-014-001 ..."
+ * Playwright test titles follow the pattern:
+ *   "[AC-001-001] Login with valid credentials"
+ *   "[AC-014-001] Delete rental"
  */
 // ── AC → Feature map (derived from docs/ACCEPTANCE_CRITERIA.md) ──────────────
 // Update this map when new AC ranges are added
@@ -69,8 +70,8 @@ const AC_FEATURE_MAP = [
 ];
 
 function featureFromAC(ac) {
-  // ac is like "AC-003-001" or "AC-003" — extract the main number
-  const num = parseInt(ac.replace(/AC-/i, '').split('-')[0]);
+  // ac is like "AC-003-001" or "AC-003" — extract the main AC number
+  const num = parseInt(ac.replace(/^AC-/, '').split('-')[0], 10);
   const entry = AC_FEATURE_MAP.find(e => num >= e.from && num <= e.to);
   return entry ? entry.feature : 'UNKNOWN';
 }
@@ -89,8 +90,9 @@ function parseTestTitle(title) {
 }
 
 /**
- * Generate a stable bug ID from feature + AC so re-runs don't create duplicates.
- * Format: BUG-{FEATURE}-{AC}-{hash}
+ * Generate a stable bug ID from feature + test ID.
+ * Format: BUG-{FEATURE_ID}-{TEST_ID}-{hash}
+ * Example: BUG-AUTH-AC001-001-27526D
  */
 function generateBugId(feature, ac, title) {
   const hash = crypto
@@ -99,8 +101,9 @@ function generateBugId(feature, ac, title) {
     .digest('hex')
     .slice(0, 6)
     .toUpperCase();
-  const acPart = ac ? ac.replace('-', '') : 'GEN';
-  return `BUG-${feature}-${acPart}-${hash}`;
+  // Convert AC-001-001 → AC001-001 (remove hyphen only after "AC")
+  const testId = ac ? ac.replace(/^AC-/, 'AC') : 'GEN';
+  return `BUG-${feature}-${testId}-${hash}`;
 }
 
 /**
