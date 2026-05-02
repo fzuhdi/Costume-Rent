@@ -1,6 +1,20 @@
 # Acceptance Criteria - Costume Rental Management
 
-## 1. Authentication
+### AC → Feature → Spec File Mapping
+| Feature ID | Feature Name | AC Range | Spec File |
+|---|---|---|---|
+| `AUTH` | Authentication | AC-001 to AC-002 | `test/specs/auth.spec.js` |
+| `CATALOGUE` | Costume Management | AC-003 to AC-008 | `test/specs/catalogue.spec.js` |
+| `RENT` | Rental System | AC-009 to AC-014 | `test/specs/rental.spec.js` |
+| `CLIENT` | Client Management | AC-015 to AC-017 | `test/specs/clients.spec.js` |
+| `NOTIFICATION` | Notifications | AC-018 to AC-020 | `test/specs/notifications.spec.js` |
+| `SETTINGS` | Settings | AC-021 to AC-024 | `test/specs/settings.spec.js` |
+| `NAVIGATION` | Navigation & UI | AC-025 to AC-027 | `test/specs/navigation.spec.js` |
+| `API` | API Backend | AC-028 to AC-030 | `test/api/api.test.js` |
+
+---
+
+## 1. Authentication [AUTH]
 
 ### AC-001: User Login
 - [ ] User can login with valid credentials (email: admin@busana.com, password: admin123)
@@ -15,7 +29,7 @@
 
 ---
 
-## 2. Costume Management
+## 2. Costume Management [CATALOGUE]
 
 ### AC-003: View Costume List
 - [ ] Display all costumes in catalogue page
@@ -58,7 +72,7 @@
 
 ---
 
-## 3. Rental System
+## 3. Rental System [RENT]
 
 ### AC-009: View Rental List
 - [ ] Navigate to /rents
@@ -102,7 +116,7 @@
 
 ---
 
-## 4. Client Management
+## 4. Client Management [CLIENT]
 
 ### AC-015: View Client List
 - [ ] Navigate to /clients
@@ -121,7 +135,7 @@
 
 ---
 
-## 5. Notifications
+## 5. Notifications [NOTIFICATION]
 
 ### AC-018: Overdue Rental Alerts
 - [ ] Badge shows count of overdue rentals
@@ -137,7 +151,7 @@
 
 ---
 
-## 6. Settings
+## 6. Settings [SETTINGS]
 
 ### AC-021: Access Settings
 - [ ] Navigate to /settings via sidebar
@@ -159,7 +173,7 @@
 
 ---
 
-## 7. Navigation & UI
+## 7. Navigation & UI [NAVIGATION]
 
 ### AC-025: Sidebar Navigation
 - [ ] Katalog menu links to /catalogue
@@ -178,7 +192,7 @@
 
 ---
 
-## 8. API Backend
+## 8. API Backend [API]
 
 ### AC-028: Public Endpoints
 - [ ] GET /api/settings returns app settings
@@ -200,12 +214,13 @@
 
 ## Test Coverage Status
 
-| Feature | API Tests | Frontend Tests | Status |
-|---------|-----------|---------------|--------|
-| Authentication | ✓ | ✓ | Pass |
-| Costume Management | Partial | Partial | In Progress |
-| Rental System | - | - | Failing |
-| Client Management | - | - | Not Tested |
-| Notifications | ✓ | - | Pass |
-| Settings | - | - | Not Tested |
-| Navigation | - | ✓ | Pass |
+| Feature ID | Feature Name | API Tests | Frontend Tests | Status |
+|---|---|---|---|---|
+| `AUTH` | Authentication | - | - | Pass |
+| `CATALOGUE` | Costume Management | Partial | Partial | Failing |
+| `RENT` | Rental System | - | - | Failing |
+| `CLIENT` | Client Management | - | - | Failing |
+| `NOTIFICATION` | Notifications | - | - | Not Tested |
+| `SETTINGS` | Settings | - | - | Failing |
+| `NAVIGATION` | Navigation & UI | - | - | Failing |
+| `API` | Backend API | - | - | Failing |
