@@ -5,8 +5,7 @@ backend/uploads/
 backend/.env
 # go.sum intentionally NOT ignored — required for reproducible builds
 
-# Project
-.context/
+# Test
 test/test-results/
 test/node_modules/
 test/*.log
@@ -23,6 +22,9 @@ frontend/.env*
 frontend/.vite/
 frontend/package-lock.json
 
+# Opencode
+.opencode/state
+
 # IDE
 .idea/
 .vscode/
@@ -35,11 +37,9 @@ Thumbs.db
 
 # Temp
 *.log
-test/test-log.txt
 nul
 temp/
 
-# OpenCode
-opencode.backup.json
+
 
 .playwright-mcp/
