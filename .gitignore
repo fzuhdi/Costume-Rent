@@ -11,6 +11,7 @@ test/test-results/
 test/node_modules/
 test/*.log
 test/package-lock.json
+test/playwright-report/
 
 # Root
 .env.production
@@ -40,3 +41,5 @@ temp/
 
 # OpenCode
 opencode.backup.json
+
+.playwright-mcp/

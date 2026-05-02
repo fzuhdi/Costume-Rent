@@ -24,9 +24,11 @@
 - **Knowledge**: Project docs in `.opencode/knowledge/`
 - **Tests**: Playwright in `test/specs/` (BDD naming + Page Objects)
 - **Bugs**: Reports in `.opencode/state/bug-reports/`
+- **Feature naming**: "Costume Management" = `catalogue` (AC-003–008)
+- **Test ID format**: `[AC-003-001]`, `[AC-003-002]`, etc. (unique per test case)
 
 ## Key Decisions
-- **BDD naming**: `[AC-XXX] - Description` format for test cases
+- **BDD naming**: `[AC-XXX-YYY] - Description` format for test cases (YYY = 001, 002, etc. for unique IDs)
 - **Page Object Model**: All UI interactions through Page classes
 - **Screenshot capture**: 1 screenshot per test, stored in `test-results/`
 - **No playwright-bdd**: Standard Playwright for simplicity
@@ -38,3 +40,15 @@
 - Created `test/specs/` with BDD-style test naming
 - Updated `playwright.config.js` with reporters + screenshot config
 - Updated `package.json` scripts
+
+## Bug Report File Format (2026-05-01)
+- **Pattern**: `BUG-UNKNOWN-AC{###}-{YYY}-{HASH}.json`
+  - Status is NOT in filename (all show "UNKNOWN" as feature currently)
+  - YYY = test unique ID (001, 002, etc.)
+  - HASH = 6-char hexadecimal
+- **Checking bug reports**: Use `bash ls .opencode/state/bug-reports/` or `bash grep` commands
+  - **DO NOT use glob tool** - it returns false negatives on Windows paths
+  - Use `bash grep -h '"status"' .opencode/state/bug-reports/*.json` to extract statuses
+
+## Reference Cleanup (2026-05-01)
+- Replaced all `test/e2e-bdd/` references with `test/specs/` in AGENTS.md, orchestrator SKILL.md, sdet SKILL.md, and engineer SKILL.md
