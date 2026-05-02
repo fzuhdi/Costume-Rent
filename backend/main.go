@@ -1,14 +1,19 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/busana/backend/config"
 	"github.com/busana/backend/middleware"
 	"github.com/busana/backend/models"
 	"github.com/busana/backend/routes"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -58,6 +63,10 @@ func migrateDB() {
 }
 
 func seedData() {
+	if os.Getenv("APP_ENV") != "development" {
+		return
+	}
+
 	db := config.GetDB()
 
 	var userCount int64
@@ -154,20 +163,112 @@ func seedData() {
 		cat2ID := category2.ID
 		cat3ID := category3.ID
 
-		costumes := []models.Costume{
-			{Name: "Kebaya Bali", Description: "Kebaya Bali dengan motif songket tradisional", RegionID: &baliID, CategoryID: &cat1ID, Condition: "excellent", Quantity: 5, AcquiredAt: &acquired},
-			{Name: "Baju Joged", Description: "Baju tari joged banteng untuk pertunjukan", RegionID: &baliID, CategoryID: &cat1ID, Condition: "good", Quantity: 3, AcquiredAt: &acquired},
-			{Name: "Topeng Keras", Description: "Topeng keras untuk tari topeng khas Bali", RegionID: &baliID, CategoryID: &cat2ID, Condition: "good", Quantity: 10, AcquiredAt: &acquired},
-			{Name: "Baju Batik", Description: "Baju batik Jawa untuk acara formal", RegionID: &jawaID, CategoryID: &cat1ID, Condition: "excellent", Quantity: 8, AcquiredAt: &acquired},
-			{Name: "Baju Melayu", Description: "Pakaian adat Melayu Sumatera", RegionID: &sumateraID, CategoryID: &cat1ID, Condition: "good", Quantity: 4, AcquiredAt: &acquired},
-			{Name: "Selendang Songket", Description: "Selendang songket dengan benang emas", RegionID: &baliID, CategoryID: &cat3ID, Condition: "excellent", Quantity: 15, AcquiredAt: &acquired},
+		type costumeSeed struct {
+			name        string
+			description string
+			regionID    *uint
+			categoryID  *uint
+			condition   string
+			quantity    int
+			imageURL    string
+		}
+
+		costumes := []costumeSeed{
+			{
+				name: "Kebaya Bali", description: "Kebaya Bali dengan motif songket tradisional",
+				regionID: &baliID, categoryID: &cat1ID, condition: "excellent", quantity: 5,
+				imageURL: "https://upload.wikimedia.org/wikipedia/commons/2/2b/Balinese_Hindus_dressed_for_traditional_dance_Indonesia.jpg",
+			},
+			{
+				name: "Baju Joged", description: "Baju tari joged banteng untuk pertunjukan",
+				regionID: &baliID, categoryID: &cat1ID, condition: "good", quantity: 3,
+				imageURL: "https://upload.wikimedia.org/wikipedia/commons/c/cc/Legong_Dance_Indonesia_2.jpg",
+			},
+			{
+				name: "Topeng Keras", description: "Topeng keras untuk tari topeng khas Bali",
+				regionID: &baliID, categoryID: &cat2ID, condition: "good", quantity: 10,
+				imageURL: "https://upload.wikimedia.org/wikipedia/commons/6/60/Topeng_Bali.jpg",
+			},
+			{
+				name: "Baju Batik", description: "Baju batik Jawa untuk acara formal",
+				regionID: &jawaID, categoryID: &cat1ID, condition: "excellent", quantity: 8,
+				imageURL: "https://upload.wikimedia.org/wikipedia/commons/7/74/Indonesian_Batik_Shirt_for_Men.jpg",
+			},
+			{
+				name: "Baju Melayu", description: "Pakaian adat Melayu Sumatera",
+				regionID: &sumateraID, categoryID: &cat1ID, condition: "good", quantity: 4,
+				imageURL: "https://upload.wikimedia.org/wikipedia/commons/0/03/Pakaian_adat_jawa_2.jpg",
+			},
+			{
+				name: "Selendang Songket", description: "Selendang songket dengan benang emas",
+				regionID: &baliID, categoryID: &cat3ID, condition: "excellent", quantity: 15,
+				imageURL: "https://upload.wikimedia.org/wikipedia/commons/7/75/Kain_Samping_Songket_Lelaki.jpg",
+			},
 		}
 
 		for _, c := range costumes {
-			db.Create(&c)
+			costume := models.Costume{
+				Name:        c.name,
+				Description: c.description,
+				RegionID:    c.regionID,
+				CategoryID:  c.categoryID,
+				Condition:   c.condition,
+				Quantity:    c.quantity,
+				AcquiredAt:  &acquired,
+			}
+			db.Create(&costume)
+
+			if c.imageURL != "" {
+				path, err := downloadImage(c.imageURL)
+				if err != nil {
+					log.Printf("Warning: failed to download image for %s: %v", c.name, err)
+				} else {
+					db.Create(&models.CostumeImage{CostumeID: costume.ID, Path: path})
+				}
+			}
 		}
 		log.Println("Sample costumes created")
 	}
 
 	log.Println("Seed data check completed")
+}
+
+func downloadImage(url string) (string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("http get: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status: %s", resp.Status)
+	}
+
+	uploadDir := os.Getenv("UPLOAD_DIR")
+	if uploadDir == "" {
+		uploadDir = "./uploads"
+	}
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		return "", fmt.Errorf("mkdir: %w", err)
+	}
+
+	ext := filepath.Ext(url)
+	if ext == "" {
+		ext = ".jpg"
+	}
+	filename := fmt.Sprintf("seed_%d_%s%s", time.Now().UnixNano(), uuid.New().String()[:8], ext)
+	filepath := filepath.Join(uploadDir, filename)
+
+	out, err := os.Create(filepath)
+	if err != nil {
+		return "", fmt.Errorf("create file: %w", err)
+	}
+	defer out.Close()
+
+	if _, err := io.Copy(out, resp.Body); err != nil {
+		os.Remove(filepath)
+		return "", fmt.Errorf("copy: %w", err)
+	}
+
+	return "/uploads/" + filename, nil
 }

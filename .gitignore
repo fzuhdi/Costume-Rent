@@ -13,6 +13,7 @@ test/package-lock.json
 test/playwright-report/
 
 # Root
+.env
 .env.production
 
 # Frontend
