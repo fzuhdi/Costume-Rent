@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('../fixtures');
 const { LoginPage } = require('../pages/LoginPage');
 const { RentHistoryPage } = require('../pages/RentHistoryPage');
 const { RentFormPage } = require('../pages/RentFormPage');
@@ -13,13 +13,16 @@ function addDays(days) {
 }
 
 test.describe('Rental Management', () => {
-  test.beforeEach(async ({ page }) => {
-    const loginPage = new LoginPage(page);
-    await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-    await expect(page).toHaveURL(/\/catalogue/);
-  });
+test.beforeEach(async ({ page }) => {
+  const loginPage = new LoginPage(page);
+  await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+  await expect(page).toHaveURL(/\/catalogue/);
+  // Assert page is not blank
+  await expect(page.locator('body')).not.toBeEmpty();
+  await expect(page.locator('h1, h2').first()).toBeVisible();
+});
 
-  test('[AC-014] - Create new rental order', async ({ page }) => {
+  test('[AC-014-001] - Create new rental order', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     await rentHistoryPage.clickNewRent();
@@ -36,7 +39,7 @@ test.describe('Rental Management', () => {
     expect(count).toBeGreaterThan(0);
   });
 
-  test('[AC-015] - View rental details', async ({ page }) => {
+  test('[AC-015-001] - View rental details', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     await rentHistoryPage.clickFirstRental();
@@ -47,7 +50,7 @@ test.describe('Rental Management', () => {
     expect(content).toMatch(/Kostum|Costume|Item/i);
   });
 
-  test('[AC-016] - Mark rental as returned', async ({ page }) => {
+  test('[AC-016-001] - Mark rental as returned', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     await rentHistoryPage.clickFirstRental();
