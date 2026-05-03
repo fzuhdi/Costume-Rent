@@ -100,8 +100,9 @@ const CataloguePage = () => {
           <h1 className="text-2xl font-bold">Katalog Kostum</h1>
           <Button
             onPress={() => navigate('/catalogue/new')}
-            variant="primary"
-          >
+             variant="primary"
+             aria-label="Tambah Kostum"
+           >
             Tambah Kostum
           </Button>
         </div>

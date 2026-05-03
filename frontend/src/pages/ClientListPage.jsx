@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getClients, deleteClient } from '../api/clientApi';
 import { Search, Trash2 } from 'lucide-react';
 import {
@@ -9,6 +9,7 @@ import {
 import CustomPagination from '../components/CustomPagination';
 
 const ClientListPage = () => {
+  const navigate = useNavigate();
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -65,14 +66,20 @@ const ClientListPage = () => {
 
         <Separator />
 
-        {/* Search */}
-        <Input
-          placeholder="Cari nama klien..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          aria-label="Cari klien"
-          className="w-full sm:w-64"
-        />
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+          {/* Search */}
+          <Input
+            placeholder="Cari nama klien..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            aria-label="Cari klien"
+            className="w-full sm:w-64"
+          />
+
+          <Button onPress={() => navigate('/clients/new')} variant="primary" size="sm">
+            <span className="whitespace-nowrap">Tambah Klien</span>
+          </Button>
+        </div>
 
         <Separator />
       </Card.Header>
@@ -112,7 +119,7 @@ const ClientListPage = () => {
                       <Table.Cell>{client.total_rents}</Table.Cell>
                       <Table.Cell>
                         {client.has_overdue && (
-                          <Chip size="sm" variant="danger-soft">Ada Terlambat</Chip>
+                           <Chip size="sm" variant="soft" color="danger">Ada Terlambat</Chip>
                         )}
                         {client.active_rents > 0 && !client.has_overdue && (
                           <Chip size="sm" variant="secondary">{client.active_rents} Aktif</Chip>
@@ -123,7 +130,7 @@ const ClientListPage = () => {
                       </Table.Cell>
                       <Table.Cell>
                         <div className="flex flex-col sm:flex-row gap-2">
-                          <Button as={Link} to={`/clients/${client.id}`} variant="bordered" size="sm">Detail</Button>
+                           <Button onPress={() => navigate(`/clients/${client.id}`)} variant="bordered" size="sm" aria-label={`Detail klien ${client.name}`}>Detail</Button>
                           <Button variant="danger" size="sm" isIconOnly aria-label="Hapus klien" onPress={() => { setSelectedClientId(client.id); setIsDeleteOpen(true); }}>
                             <Trash2 size={14} />
                           </Button>
@@ -156,8 +163,8 @@ const ClientListPage = () => {
             </Modal.Header>
             <Modal.Body>Hapus klien ini?</Modal.Body>
             <Modal.Footer>
-              <Button variant="bordered" onPress={() => setIsDeleteOpen(false)}>Batal</Button>
-              <Button variant="danger" onPress={handleDelete} isPending={actionLoading}>Hapus</Button>
+              <Button variant="bordered" onPress={() => setIsDeleteOpen(false)} aria-label="Batal">Batal</Button>
+              <Button variant="danger" onPress={handleDelete} isPending={actionLoading} aria-label="Hapus klien">Hapus</Button>
             </Modal.Footer>
           </Modal.Dialog>
         </Modal.Container>

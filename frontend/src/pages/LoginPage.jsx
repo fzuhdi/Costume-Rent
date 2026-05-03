@@ -70,14 +70,14 @@ const LoginPage = () => {
               <Input type="password" placeholder="Enter password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </TextField>
 
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              isLoading={loading}
-              className="w-full mt-2"
-              aria-label="Login to your account"
-            >
+             <Button
+               type="submit"
+               variant="primary"
+               size="lg"
+               isLoading={loading}
+               className="w-full mt-2"
+               aria-label="Login"
+             >
               {!loading && <LogIn size={18} />}
               Login
             </Button>

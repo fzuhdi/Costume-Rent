@@ -71,7 +71,7 @@ const SettingsPage = () => {
                   )}
                 </div>
                 <div>
-                  <Button variant="bordered" size="sm" isPending={uploading} as="label" className="cursor-pointer">
+                   <Button variant="bordered" size="sm" isPending={uploading} as="label" className="cursor-pointer" aria-label="Pilih Logo">
                     <Upload size={16} />
                     {uploading ? 'Mengupload...' : 'Pilih Logo'}
                     <input type="file" accept="image/*" onChange={handleLogoChange} disabled={uploading} className="hidden" />
@@ -92,9 +92,9 @@ const SettingsPage = () => {
             </TextField>
 
             {successMsg && <Chip variant="secondary">{successMsg}</Chip>}
-            {errorMsg && <Chip variant="danger-soft">{errorMsg}</Chip>}
+             {errorMsg && <Chip variant="soft" color="danger">{errorMsg}</Chip>}
 
-            <Button type="submit" variant="primary" isPending={saving}>
+             <Button type="submit" variant="primary" isPending={saving} aria-label="Simpan Perubahan">
               {({isPending}) => (
                 <>
                   {!isPending && <Save size={18} />}
