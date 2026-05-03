@@ -61,16 +61,16 @@ const CostumeListView = ({ costumes, expandedKeys, onExpandedChange }) => {
               </div>
 
               {/* Price + Stock */}
-              <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                <span className={`text-sm font-bold ${costume.quantity > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                  {formatPrice(costume.price)}
-                </span>
-                {costume.quantity === 0 ? (
-                  <Chip size="sm" variant="danger-soft" className="h-5 text-[10px]">Habis</Chip>
-                ) : (
-                  <span className="text-[10px] text-[var(--muted)]">{costume.quantity} unit</span>
-                )}
-              </div>
+               <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                 <span className={`text-sm font-bold ${costume.available_quantity > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                   {formatPrice(costume.price)}
+                 </span>
+                  {costume.available_quantity === 0 ? (
+                    <Chip size="sm" variant="soft" color="danger" className="h-5 text-[10px]">Habis</Chip>
+                  ) : (
+                   <span className="text-[10px] text-[var(--muted)]">{costume.available_quantity} unit tersedia</span>
+                 )}
+               </div>
 
               {/* Action dropdown */}
               <div onClick={(e) => e.stopPropagation()}>
@@ -128,9 +128,9 @@ const CostumeListView = ({ costumes, expandedKeys, onExpandedChange }) => {
                       <p className="text-sm text-[var(--foreground)]">{detail.category || '-'}</p>
                     </div>
                     <div>
-                      <span className="text-[var(--muted)] text-[10px] uppercase tracking-wide">Stok</span>
-                      <p className="text-sm text-[var(--foreground)]">{detail.quantity} unit</p>
-                    </div>
+                       <span className="text-[var(--muted)] text-[10px] uppercase tracking-wide">Stok Tersedia</span>
+                       <p className="text-sm text-[var(--foreground)]">{detail.available_quantity} unit</p>
+                     </div>
                     {detail.acquired_at && (
                       <div>
                         <span className="text-[var(--muted)] text-[10px] uppercase tracking-wide">Tanggal Perolehan</span>

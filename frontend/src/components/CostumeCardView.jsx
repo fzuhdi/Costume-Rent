@@ -25,7 +25,7 @@ const CostumeCardView = ({ costumes }) => {
                   {costume.region} {costume.category && `• ${costume.category}`}
                 </p>
                 <p className="text-xs font-semibold mt-1">{formatPrice(costume.price)}/hari</p>
-                <p className="text-xs text-[var(--muted)]">Stok: {costume.quantity}</p>
+                 <p className="text-xs text-[var(--muted)]">Tersedia: {costume.available_quantity ?? costume.quantity}</p>
               </div>
             </Card.Content>
           </Card>

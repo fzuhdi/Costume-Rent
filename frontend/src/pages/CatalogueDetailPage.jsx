@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link} from 'react-router-dom';
 import { getCostumeById, deleteCostume } from '../api/costumeApi';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
 import { Button, Card, Chip, Spinner, Modal } from '@heroui/react';
@@ -54,7 +54,7 @@ const CatalogueDetailPage = () => {
       <Card>
         <Card.Content className="text-center py-12">
           <h3 className="text-lg font-semibold mb-4">Kostum tidak ditemukan</h3>
-          <Button as={Link} to="/catalogue" variant="primary">Kembali ke Katalog</Button>
+           <Button onPress={() => navigate('/catalogue')} variant="primary">Kembali ke Katalog</Button>
         </Card.Content>
       </Card>
     );
@@ -62,10 +62,10 @@ const CatalogueDetailPage = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link to="/catalogue" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
-        <ArrowLeft size={18} />
-        Kembali ke Katalog
-      </Link>
+       <Link to="/catalogue" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]" aria-label="Kembali ke Katalog">
+         <ArrowLeft size={18} />
+         Kembali ke Katalog
+       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
@@ -91,8 +91,8 @@ const CatalogueDetailPage = () => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <h2 className="text-xl font-semibold">{costume.name}</h2>
               <div className="flex gap-2 flex-shrink-0">
-                <Button variant="bordered" size="sm" onPress={() => navigate(`/catalogue/${id}/edit`)}><Edit size={16} />Edit</Button>
-                <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={deleting}><Trash2 size={16} />Hapus</Button>
+               <Button variant="bordered" size="sm" onPress={() => navigate(`/catalogue/${id}/edit`)} aria-label="Edit kostum"><Edit size={16} />Edit</Button>
+                 <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={deleting} aria-label="Hapus kostum"><Trash2 size={16} />Hapus</Button>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
@@ -109,9 +109,13 @@ const CatalogueDetailPage = () => {
                 <p>{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(costume.price)}</p>
               </div>
               <div>
-                <span className="text-[var(--muted)]">Stok</span>
-                <p>{costume.quantity} unit</p>
-              </div>
+                 <span className="text-[var(--muted)]">Total Stok</span>
+                 <p>{costume.quantity} unit</p>
+               </div>
+               <div>
+                 <span className="text-[var(--muted)]">Stok Tersedia</span>
+                 <p>{costume.available_quantity} unit</p>
+               </div>
               {costume.acquired_at && (
                 <div>
                   <span className="text-[var(--muted)]">Tanggal Perolehan</span>

@@ -9,6 +9,7 @@ const CatalogueFormPage = () => {
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
+  const [costume, setCostume] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -44,17 +45,18 @@ const CatalogueFormPage = () => {
 
       if (isEdit) {
         const costumeRes = await getCostumeById(id);
-        const costume = costumeRes.data;
+        const costumeData = costumeRes.data;
+        setCostume(costumeData);
         setFormData({
-          name: costume.name || '',
-          description: costume.description || '',
-          region_id: costume.region_id?.toString() || '',
-          category_id: costume.category_id?.toString() || '',
-          price: costume.price?.toString() || '',
-          quantity: costume.quantity || 1,
-          acquired_at: costume.acquired_at || '',
+          name: costumeData.name || '',
+          description: costumeData.description || '',
+          region_id: costumeData.region_id?.toString() || '',
+          category_id: costumeData.category_id?.toString() || '',
+          price: costumeData.price?.toString() || '',
+          quantity: costumeData.quantity || 1,
+          acquired_at: costumeData.acquired_at || '',
         });
-        setImages(costume.images || []);
+        setImages(costumeData.images || []);
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -138,19 +140,20 @@ const CatalogueFormPage = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link to="/catalogue" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
-        <ArrowLeft size={18} />
-        Kembali ke Katalog
-      </Link>
+       <Link to="/catalogue" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]" aria-label="Kembali ke Katalog">
+         <ArrowLeft size={18} />
+         Kembali ke Katalog
+       </Link>
 
       <Card>
         <Card.Content>
           <div className="mb-4">
             <h2 className="text-xl font-semibold">{isEdit ? 'Edit Kostum' : 'Tambah Kostum Baru'}</h2>
           </div>
+
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <TextField isRequired>
-              <Label>Nama Kostum *</Label>
+              <Label>Nama Kostum</Label>
               <Input value={formData.name} onChange={(e) => setFormData((prev) => ({...prev, name: e.target.value}))} />
               <FieldError />
             </TextField>
@@ -192,15 +195,18 @@ const CatalogueFormPage = () => {
                 </Select.Popover>
               </Select>
               <TextField isRequired>
-                <Label>Harga Sewa per Set (Rp) *</Label>
+                <Label>Harga Sewa per Set (Rp)</Label>
                 <Input type="number" min="0" value={formData.price} onChange={(e) => setFormData((prev) => ({...prev, price: e.target.value}))} />
                 <FieldError />
               </TextField>
               <TextField isRequired>
-                <Label>Jumlah Stok *</Label>
-                <Input type="number" min="1" value={formData.quantity} onChange={(e) => setFormData((prev) => ({...prev, quantity: parseInt(e.target.value, 10) || 0}))} />
-                <FieldError />
-              </TextField>
+                 <Label>Jumlah Stok *</Label>
+                 <Input type="number" min="1" value={formData.quantity} onChange={(e) => setFormData((prev) => ({...prev, quantity: parseInt(e.target.value, 10) || 0}))} />
+                 {isEdit && costume && costume.available_quantity !== undefined && (
+                   <span className="text-xs text-[var(--muted)]">Tersedia: {costume.available_quantity}</span>
+                 )}
+                 <FieldError />
+               </TextField>
             </div>
             <TextArea
               value={formData.description}
@@ -243,8 +249,8 @@ const CatalogueFormPage = () => {
               )}
             </div>
             <div className="flex gap-3 justify-end">
-              <Button variant="bordered" onPress={() => navigate('/catalogue')}>Batal</Button>
-              <Button type="submit" variant="primary" isPending={saving}>
+              <Button variant="bordered" onPress={() => navigate('/catalogue')} aria-label="Batal">Batal</Button>
+               <Button type="submit" variant="primary" isPending={saving} aria-label="Simpan">
                 {({isPending}) => (
                   <>
                     {!isPending && <Save size={18} />}

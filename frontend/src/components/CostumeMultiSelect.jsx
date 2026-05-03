@@ -56,7 +56,10 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
   const handleSelect = (costume) => {
     const newItem = {
       costume_id: costume.id,
-      costume: costume,
+      costume: {
+        ...costume,
+        available_quantity: costume.available_quantity ?? costume.quantity,
+      },
       quantity: 1
     };
     onChange([...value, newItem]);
@@ -82,7 +85,8 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
   const handleQuantityChange = (costumeId, delta) => {
     const updated = value.map(item => {
       if (item.costume_id === costumeId) {
-        const newQty = Math.max(1, item.quantity + delta);
+        const maxQty = item.costume?.available_quantity ?? item.costume?.quantity ?? 99;
+        const newQty = Math.max(1, Math.min(item.quantity + delta, maxQty));
         return { ...item, quantity: newQty };
       }
       return item;
@@ -119,7 +123,9 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
             >
               <div className="flex flex-col">
                 <span className="text-sm">{costume.name}</span>
-                <span className="text-xs text-[var(--muted)]">Stok: {costume.quantity}</span>
+                <span className="text-xs text-[var(--muted)]">
+                  Total: {costume.quantity} | Tersedia: {costume.available_quantity ?? costume.quantity}
+                </span>
               </div>
             </div>
           ))}
@@ -128,45 +134,55 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
 
       {value.length > 0 && (
         <div className="flex flex-col gap-2">
-          {value.map((item) => (
-            <div key={item.costume_id} className="flex items-center gap-3 p-2 border border-[var(--border)] rounded-lg">
-              <div className="flex items-center gap-2 flex-1">
-                {item.costume?.cover_image && (
-                  <img src={item.costume.cover_image} alt="" className="w-10 h-10 object-cover rounded" />
-                )}
-                <span className="text-sm">{item.costume?.name || `Costume #${item.costume_id}`}</span>
+          {value.map((item) => {
+            const available = item.costume?.available_quantity ?? item.costume?.quantity ?? 0;
+            return (
+              <div key={item.costume_id} className="flex items-center gap-3 p-2 border border-[var(--border)] rounded-lg">
+                <div className="flex items-center gap-2 flex-1">
+                  {item.costume?.cover_image && (
+                    <img src={item.costume.cover_image} alt="" className="w-10 h-10 object-cover rounded" />
+                  )}
+                  <div className="flex flex-col">
+                    <span className="text-sm">{item.costume?.name || `Costume #${item.costume_id}`}</span>
+                    <span className="text-xs text-[var(--muted)]">Tersedia: {available}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="bordered"
+                    aria-label="Kurangi jumlah kostum"
+                    onPress={() => handleQuantityChange(item.costume_id, -1)}
+                    isDisabled={item.quantity <= 1}
+                  >
+                    <Minus size={14} />
+                  </Button>
+                  <span className="w-8 text-center text-sm">{item.quantity}</span>
+               <Button
+                   isIconOnly
+                   size="sm"
+                   variant="bordered"
+                   aria-label="Tambah jumlah kostum"
+                   onPress={() => handleQuantityChange(item.costume_id, 1)}
+                   isDisabled={item.quantity >= available}
+                 >
+                   <Plus size={14} />
+                 </Button>
+                 <Button
+                   isIconOnly
+                   size="sm"
+                   variant="bordered"
+                   color="danger"
+                   aria-label="Hapus kostum"
+                   onPress={() => handleRemove(item.costume_id)}
+                 >
+                   <X size={14} />
+                 </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="bordered"
-                  aria-label="Kurangi jumlah kostum"
-                  onPress={() => handleQuantityChange(item.costume_id, -1)}
-                  isDisabled={item.quantity <= 1}
-                >
-                  <Minus size={14} />
-                </Button>
-                <span className="w-8 text-center text-sm">{item.quantity}</span>
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="bordered"
-                  aria-label="Tambah jumlah kostum"
-                  onPress={() => handleQuantityChange(item.costume_id, 1)}
-                >
-                  <Plus size={14} />
-                </Button>
-                <Chip
-                  variant="secondary"
-                  onClose={() => handleRemove(item.costume_id)}
-                  className="cursor-pointer"
-                >
-                  <X size={14} />
-                </Chip>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -38,10 +38,10 @@ const CostumeTableView = ({ costumes, expandedKeys, onExpandedChange }) => {
                 </Table.Cell>
                 <Table.Cell>{costume.region || '-'}</Table.Cell>
                 <Table.Cell>{costume.category || '-'}</Table.Cell>
-                <Table.Cell>{costume.quantity}</Table.Cell>
+                 <Table.Cell>{costume.available_quantity ?? costume.quantity} unit</Table.Cell>
                 <Table.Cell>{formatPrice(costume.price)}</Table.Cell>
                 <Table.Cell>
-                  <Button isIconOnly variant="bordered" size="sm" as={Link} to={`/catalogue/${costume.id}/edit`}>
+                   <Button isIconOnly variant="bordered" size="sm" onPress={() => navigate(`/catalogue/${costume.id}/edit`)}>
                     <Pencil size={16} />
                   </Button>
                 </Table.Cell>
@@ -71,9 +71,9 @@ const CostumeTableView = ({ costumes, expandedKeys, onExpandedChange }) => {
                               <p className="text-xs">{detail.category || '-'}</p>
                             </div>
                             <div>
-                              <span className="text-[var(--muted)] text-xs">Stok</span>
-                              <p className="text-xs">{detail.quantity} unit</p>
-                            </div>
+                               <span className="text-[var(--muted)] text-xs">Stok Tersedia</span>
+                               <p className="text-xs">{detail.available_quantity ?? detail.quantity} unit</p>
+                             </div>
                             {detail.acquired_at && (
                               <div>
                                 <span className="text-[var(--muted)] text-xs">Tanggal Perolehan</span>
