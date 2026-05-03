@@ -21,17 +21,18 @@ type UpdateCostumeRequest struct {
 }
 
 type CostumeListResponse struct {
-	ID          uint    `json:"id"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	RegionID    *uint   `json:"region_id"`
-	Region      string  `json:"region"`
-	CategoryID  *uint   `json:"category_id"`
-	Category    string  `json:"category"`
-	Price       int     `json:"price"`
-	Quantity    int     `json:"quantity"`
-	CoverImage  string  `json:"cover_image"`
-	AcquiredAt  *string `json:"acquired_at"`
+	ID               uint    `json:"id"`
+	Name             string  `json:"name"`
+	Description      string  `json:"description"`
+	RegionID         *uint   `json:"region_id"`
+	Region           string  `json:"region"`
+	CategoryID       *uint   `json:"category_id"`
+	Category         string  `json:"category"`
+	Price            int     `json:"price"`
+	Quantity         int     `json:"quantity"`
+	AvailableQuantity int     `json:"available_quantity"`
+	CoverImage       string  `json:"cover_image"`
+	AcquiredAt       *string `json:"acquired_at"`
 }
 
 type CostumeFilter struct {
@@ -51,18 +52,19 @@ type PaginatedResponse struct {
 }
 
 type CostumeDetailResponse struct {
-	ID          uint                    `json:"id"`
-	Name        string                  `json:"name"`
-	Description string                  `json:"description"`
-	RegionID    *uint                   `json:"region_id"`
-	Region      string                  `json:"region"`
-	CategoryID  *uint                   `json:"category_id"`
-	Category    string                  `json:"category"`
-	Price       int                     `json:"price"`
-	Quantity    int                     `json:"quantity"`
-	CoverImage  string                  `json:"cover_image"`
-	AcquiredAt  *string                 `json:"acquired_at"`
-	Images      []CostumeImageResponse `json:"images"`
+	ID               uint                    `json:"id"`
+	Name             string                  `json:"name"`
+	Description      string                  `json:"description"`
+	RegionID         *uint                   `json:"region_id"`
+	Region           string                  `json:"region"`
+	CategoryID       *uint                   `json:"category_id"`
+	Category         string                  `json:"category"`
+	Price            int                     `json:"price"`
+	Quantity         int                     `json:"quantity"`
+	AvailableQuantity int                     `json:"available_quantity"`
+	CoverImage       string                  `json:"cover_image"`
+	AcquiredAt       *string                 `json:"acquired_at"`
+	Images           []CostumeImageResponse `json:"images"`
 }
 
 type CostumeImageResponse struct {

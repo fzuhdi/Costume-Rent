@@ -76,6 +76,31 @@ func (s *CostumeService) List(filter dto.CostumeFilter) (*dto.PaginatedResponse,
 		response = append(response, item)
 	}
 
+	// Batch compute available quantity for all costumes in the list
+	costumeIDs := make([]uint, len(costumes))
+	for i, c := range costumes {
+		costumeIDs[i] = c.ID
+	}
+	type qtyResult struct {
+		CostumeID uint
+		RentedQty int64
+	}
+	var rentedResults []qtyResult
+	config.DB.Model(&models.RentOrderItem{}).
+		Select("rent_order_items.costume_id as costume_id, COALESCE(SUM(rent_order_items.quantity), 0) as rented_qty").
+		Joins("JOIN rent_orders ON rent_orders.id = rent_order_items.rent_order_id").
+		Where("rent_order_items.costume_id IN ? AND rent_orders.status = ? AND rent_orders.deleted_at IS NULL", costumeIDs, "active").
+		Group("rent_order_items.costume_id").
+		Scan(&rentedResults)
+	rentedMap := make(map[uint]int64)
+	for _, r := range rentedResults {
+		rentedMap[r.CostumeID] = r.RentedQty
+	}
+	for i := range response {
+		rented := rentedMap[response[i].ID]
+		response[i].AvailableQuantity = response[i].Quantity - int(rented)
+	}
+
 	totalPages := int(math.Ceil(float64(total) / float64(filter.Limit)))
 
 	return &dto.PaginatedResponse{
@@ -93,15 +118,18 @@ func (s *CostumeService) GetByID(id uint) (*dto.CostumeDetailResponse, error) {
 		return nil, err
 	}
 
+	availableQty, _ := s.GetAvailableQuantity(costume.ID)
+
 	response := &dto.CostumeDetailResponse{
-		ID:          costume.ID,
-		Name:        costume.Name,
-		Description: costume.Description,
-		RegionID:    costume.RegionID,
-		CategoryID:  costume.CategoryID,
-		Price:       costume.Price,
-		Quantity:    costume.Quantity,
-		CoverImage:  costume.CoverImage,
+		ID:                costume.ID,
+		Name:              costume.Name,
+		Description:       costume.Description,
+		RegionID:          costume.RegionID,
+		CategoryID:        costume.CategoryID,
+		Price:             costume.Price,
+		Quantity:          costume.Quantity,
+		AvailableQuantity: availableQty,
+		CoverImage:        costume.CoverImage,
 	}
 
 	if costume.RegionID != nil {
@@ -262,7 +290,16 @@ func (s *CostumeService) GetAvailableQuantity(costumeID uint) (int, error) {
 	return costume.Quantity - int(rentedQty), nil
 }
 
-func (s *CostumeService) Search(query string, limit int) ([]models.Costume, error) {
+type CostumeSearchResponse struct {
+	ID                uint   `json:"id"`
+	Name              string `json:"name"`
+	Price             int    `json:"price"`
+	Quantity          int    `json:"quantity"`
+	AvailableQuantity int    `json:"available_quantity"`
+	CoverImage        string `json:"cover_image"`
+}
+
+func (s *CostumeService) Search(query string, limit int) ([]CostumeSearchResponse, error) {
 	if limit < 1 {
 		limit = 10
 	}
@@ -274,7 +311,20 @@ func (s *CostumeService) Search(query string, limit int) ([]models.Costume, erro
 		Find(&costumes).Error; err != nil {
 		return nil, err
 	}
-	return costumes, nil
+
+	var response []CostumeSearchResponse
+	for _, c := range costumes {
+		avail, _ := s.GetAvailableQuantity(c.ID)
+		response = append(response, CostumeSearchResponse{
+			ID:                c.ID,
+			Name:              c.Name,
+			Price:             c.Price,
+			Quantity:          c.Quantity,
+			AvailableQuantity: avail,
+			CoverImage:        c.CoverImage,
+		})
+	}
+	return response, nil
 }
 
 func (s *CostumeService) GetRegions() ([]dto.RegionResponse, error) {
