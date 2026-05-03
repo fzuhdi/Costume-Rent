@@ -16,6 +16,7 @@ import RentHistoryPage from './pages/RentHistoryPage';
 import RentDetailPage from './pages/RentDetailPage';
 import ClientListPage from './pages/ClientListPage';
 import ClientDetailPage from './pages/ClientDetailPage';
+import ClientFormPage from './pages/ClientFormPage';
 import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { useSettings } from './context/SettingsContext';
@@ -55,6 +56,7 @@ const AppRoutes = () => {
         <Route path="/rents/:id" element={<RentDetailPage />} />
         <Route path="/rents/:id/edit" element={<RentFormPage />} />
         <Route path="/clients" element={<ClientListPage />} />
+        <Route path="/clients/new" element={<ClientFormPage />} />
         <Route path="/clients/:id" element={<ClientDetailPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

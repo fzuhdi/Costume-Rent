@@ -9,9 +9,9 @@ import {
 import CustomPagination from '../components/CustomPagination';
 
 const statusColors = {
-  active: 'secondary',
-  returned: 'secondary',
-  overdue: 'danger-soft',
+  active: { variant: 'secondary' },
+  returned: { variant: 'soft', color: 'success' },
+  overdue: { variant: 'soft', color: 'danger' },
 };
 
 const statusLabels = {
@@ -99,6 +99,7 @@ const RentHistoryPage = () => {
           <Button
             onPress={() => navigate('/rents/new')}
             variant="primary"
+            aria-label="Tambah Peminjaman Baru"
           >
             Peminjaman Baru
           </Button>
@@ -154,9 +155,9 @@ const RentHistoryPage = () => {
             <p className="text-sm text-[var(--muted)]">Belum ada data peminjaman</p>
           </div>
         ) : (
-          <Table aria-label="Rent history">
+          <Table>
             <Table.ScrollContainer>
-              <Table.Content>
+              <Table.Content aria-label="Rent history">
                 <Table.Header>
                   <Table.Column isRowHeader>ID</Table.Column>
                   <Table.Column>Klien</Table.Column>
@@ -167,22 +168,22 @@ const RentHistoryPage = () => {
                 </Table.Header>
                 <Table.Body>
                   {rents.map((rent) => (
-                    <Table.Row key={rent.id}>
+                    <Table.Row key={rent.id} aria-label={`Peminjaman #${rent.id} oleh ${rent.client_name}`}>
                       <Table.Cell>#{rent.id}</Table.Cell>
                       <Table.Cell>{rent.client_name}</Table.Cell>
                       <Table.Cell>{rent.items?.length || 0} kostum</Table.Cell>
                       <Table.Cell>{rent.rent_start} - {rent.rent_end}</Table.Cell>
                       <Table.Cell>
-                        <Chip size="sm" variant={statusColors[rent.status]}>
+                         <Chip size="sm" {...statusColors[rent.status]}>
                           {statusLabels[rent.status] || rent.status}
                         </Chip>
                       </Table.Cell>
                       <Table.Cell>
                         <div className="flex flex-col sm:flex-row gap-2">
-                          <Button as={Link} to={`/rents/${rent.id}`} variant="bordered" size="sm">Detail</Button>
-                          {rent.status !== 'returned' && (
-                            <Button variant="secondary" size="sm" onPress={() => { setSelectedRentId(rent.id); setIsReturnOpen(true); }}><CheckCircle size={14} />Kembalikan</Button>
-                          )}
+                           <Button onPress={() => navigate(`/rents/${rent.id}`)} variant="bordered" size="sm" aria-label={`Detail peminjaman #${rent.id}`}>Detail</Button>
+                           {rent.status !== 'returned' && (
+                             <Button variant="secondary" size="sm" onPress={() => { setSelectedRentId(rent.id); setIsReturnOpen(true); }} aria-label="Kembalikan peminjaman"><CheckCircle size={14} />Kembalikan</Button>
+                           )}
                         </div>
                       </Table.Cell>
                     </Table.Row>
@@ -212,8 +213,8 @@ const RentHistoryPage = () => {
             </Modal.Header>
             <Modal.Body>Tandai kostum sudah dikembalikan?</Modal.Body>
             <Modal.Footer>
-              <Button variant="bordered" onPress={() => setIsReturnOpen(false)}>Batal</Button>
-              <Button variant="secondary" onPress={handleMarkReturned} isPending={actionLoading}>Kembalikan</Button>
+               <Button variant="bordered" onPress={() => setIsReturnOpen(false)} aria-label="Batal">Batal</Button>
+               <Button variant="secondary" onPress={handleMarkReturned} isPending={actionLoading} aria-label="Kembalikan peminjaman">Kembalikan</Button>
             </Modal.Footer>
           </Modal.Dialog>
         </Modal.Container>
@@ -227,8 +228,8 @@ const RentHistoryPage = () => {
             </Modal.Header>
             <Modal.Body>Hapus peminjaman ini?</Modal.Body>
             <Modal.Footer>
-              <Button variant="bordered" onPress={() => setIsDeleteOpen(false)}>Batal</Button>
-              <Button variant="danger" onPress={handleDelete} isPending={actionLoading}>Hapus</Button>
+              <Button variant="bordered" onPress={() => setIsDeleteOpen(false)} aria-label="Batal">Batal</Button>
+              <Button variant="danger" onPress={handleDelete} isPending={actionLoading} aria-label="Hapus peminjaman">Hapus</Button>
             </Modal.Footer>
           </Modal.Dialog>
         </Modal.Container>

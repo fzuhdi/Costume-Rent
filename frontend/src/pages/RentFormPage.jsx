@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getRentById, createRent, updateRent } from '../api/rentApi';
 import ClientSelect from '../components/ClientSelect';
 import CostumeMultiSelect from '../components/CostumeMultiSelect';
@@ -26,6 +26,38 @@ const RentFormPage = () => {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (isEdit) {
+      fetchRent();
+    }
+  }, [id]);
+
+  const fetchRent = async () => {
+    setLoading(true);
+    try {
+      const response = await getRentById(id);
+      const rent = response.data;
+      setFormData({
+        client: { type: 'existing', client: { id: rent.client_id, name: rent.client_name } },
+        guarantee_type: rent.guarantee_type || 'KTP',
+        rent_start: rent.rent_start?.split('T')[0] || '',
+        rent_end: rent.rent_end?.split('T')[0] || '',
+        notes: rent.notes || '',
+        client_phone: '',
+        client_address: '',
+      });
+      setItems(rent.items?.map(item => ({
+        costume_id: item.costume_id,
+        costume: item.costume,
+        quantity: item.quantity,
+      })) || []);
+    } catch (error) {
+      console.error('Failed to fetch rent:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleClientChange = (client) => {
     setFormData((prev) => ({ ...prev, client }));
@@ -93,7 +125,7 @@ const RentFormPage = () => {
     }
   };
 
-  if (isEdit && loading) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-48">
         <div className="text-[var(--muted)]">Memuat...</div>
@@ -162,12 +194,12 @@ const RentFormPage = () => {
               <h3 className="text-base font-medium mb-3">Data Peminjaman</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <TextField isRequired>
-                  <Label>Tanggal Mulai *</Label>
+                  <Label>Tanggal Mulai</Label>
                   <Input type="date" value={formData.rent_start} onChange={(e) => setFormData((prev) => ({...prev, rent_start: e.target.value}))} />
                   <FieldError>{errors.rent_start}</FieldError>
                 </TextField>
                 <TextField isRequired>
-                  <Label>Tanggal Selesai *</Label>
+                  <Label>Tanggal Selesai</Label>
                   <Input type="date" value={formData.rent_end} onChange={(e) => setFormData((prev) => ({...prev, rent_end: e.target.value}))} />
                   <FieldError>{errors.rent_end}</FieldError>
                 </TextField>
@@ -187,8 +219,8 @@ const RentFormPage = () => {
             </TextField>
 
             <div className="flex gap-3 justify-end">
-              <Button variant="bordered" as={Link} to="/rents">Batal</Button>
-              <Button type="submit" variant="primary" isPending={saving}>
+              <Button variant="bordered" onPress={() => navigate('/rents')} aria-label="Batal">Batal</Button>
+              <Button type="submit" variant="primary" isPending={saving} aria-label="Simpan">
                 {({isPending}) => (
                   <>
                     {!isPending && <Save size={18} />}

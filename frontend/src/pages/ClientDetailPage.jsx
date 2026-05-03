@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getClientById, updateClient } from '../api/clientApi';
 import { ArrowLeft, Edit, Save, X, User, Phone, MapPin, ClipboardList, AlertTriangle } from 'lucide-react';
 import {
@@ -7,9 +7,9 @@ import {
 } from '@heroui/react';
 
 const statusColors = {
-  active: 'secondary',
-  returned: 'secondary',
-  overdue: 'danger-soft',
+  active: { variant: 'secondary' },
+  returned: { variant: 'secondary' },
+  overdue: { variant: 'soft', color: 'danger' },
 };
 
 const statusLabels = {
@@ -20,6 +20,7 @@ const statusLabels = {
 
 const ClientDetailPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -85,7 +86,7 @@ const ClientDetailPage = () => {
       <Card>
         <Card.Content className="text-center py-12">
           <h3 className="text-lg font-semibold mb-4">Klien tidak ditemukan</h3>
-          <Button as={Link} to="/clients" variant="primary">Kembali ke Daftar</Button>
+           <Button onPress={() => navigate('/clients')} variant="primary">Kembali ke Daftar</Button>
         </Card.Content>
       </Card>
     );
@@ -188,12 +189,12 @@ const ClientDetailPage = () => {
                         <Table.Cell>#{rent.id}</Table.Cell>
                         <Table.Cell>{rent.rent_start} - {rent.rent_end}</Table.Cell>
                         <Table.Cell>
-                          <Chip size="sm" variant={statusColors[rent.status]}>
+                          <Chip size="sm" {...statusColors[rent.status]}>
                             {statusLabels[rent.status] || rent.status}
                           </Chip>
                         </Table.Cell>
                         <Table.Cell>
-                          <Button as={Link} to={`/rents/${rent.id}`} variant="bordered" size="sm">Detail</Button>
+                           <Button onPress={() => navigate(`/rents/${rent.id}`)} variant="bordered" size="sm">Detail</Button>
                         </Table.Cell>
                       </Table.Row>
                     ))}
@@ -223,7 +224,7 @@ const ClientDetailPage = () => {
             </div>
           </div>
           {overdueRents.length > 0 && (
-            <Chip variant="danger-soft" className="mt-4"><AlertTriangle size={14} />{overdueRents.length} peminjaman terlambat</Chip>
+             <Chip variant="soft" color="danger" className="mt-4"><AlertTriangle size={14} />{overdueRents.length} peminjaman terlambat</Chip>
           )}
         </Card.Content>
       </Card>
