@@ -4,7 +4,7 @@ import { getRentById, createRent, updateRent } from '../api/rentApi';
 import ClientSelect from '../components/ClientSelect';
 import CostumeMultiSelect from '../components/CostumeMultiSelect';
 import { ArrowLeft, Save } from 'lucide-react';
-import { TextField, TextArea, Label, Select, ListBox, Button, Card, Separator, FieldError } from '@heroui/react';
+import { TextField, TextArea, Label, Select, ListBox, Button, Card, Separator, FieldError, Input } from '@heroui/react';
 
 const GUARANTEE_TYPES = ['KTP', 'SIM', 'KK', 'Paspor', 'Lainnya'];
 
@@ -16,10 +16,11 @@ const RentFormPage = () => {
   const [formData, setFormData] = useState({
     client: null,
     guarantee_type: 'KTP',
-    guarantee_number: '',
     rent_start: '',
     rent_end: '',
     notes: '',
+    client_phone: '',
+    client_address: '',
   });
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(isEdit);
@@ -62,7 +63,6 @@ const RentFormPage = () => {
     try {
       const payload = {
         guarantee_type: formData.guarantee_type,
-        guarantee_number: formData.guarantee_number,
         rent_start: formData.rent_start,
         rent_end: formData.rent_end,
         notes: formData.notes,
@@ -76,6 +76,8 @@ const RentFormPage = () => {
         payload.client_id = formData.client.client.id;
       } else if (formData.client?.type === 'new') {
         payload.client_name = formData.client.name;
+        payload.client_phone = formData.client_phone;
+        payload.client_address = formData.client_address;
       }
 
       if (isEdit) {
@@ -115,13 +117,25 @@ const RentFormPage = () => {
             <div>
               <h3 className="text-base font-medium mb-3">Data Klien</h3>
               <ClientSelect value={formData.client} onChange={handleClientChange} error={errors.client} />
+              {formData.client?.type === 'new' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+                  <TextField>
+                    <Label>Nomor Telepon</Label>
+                    <Input value={formData.client_phone} onChange={(e) => setFormData((prev) => ({...prev, client_phone: e.target.value}))} />
+                  </TextField>
+                  <TextField>
+                    <Label>Alamat</Label>
+                    <Input value={formData.client_address} onChange={(e) => setFormData((prev) => ({...prev, client_address: e.target.value}))} />
+                  </TextField>
+                </div>
+              )}
             </div>
 
             <Separator />
 
             <div>
               <h3 className="text-base font-medium mb-3">Data Jaminan</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Select
                   value={formData.guarantee_type}
                   onChange={(v) => setFormData((prev) => ({ ...prev, guarantee_type: v }))}
@@ -139,10 +153,6 @@ const RentFormPage = () => {
                     </ListBox>
                   </Select.Popover>
                 </Select>
-                <TextField value={formData.guarantee_number} onChange={(e) => setFormData((prev) => ({...prev, guarantee_number: e.target.value}))}>
-                  <Label>Nomor Jaminan</Label>
-                  <Input />
-                </TextField>
               </div>
             </div>
 
@@ -150,15 +160,15 @@ const RentFormPage = () => {
 
             <div>
               <h3 className="text-base font-medium mb-3">Data Peminjaman</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <TextField value={formData.rent_start} onChange={(e) => setFormData((prev) => ({...prev, rent_start: e.target.value}))} isRequired>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <TextField isRequired>
                   <Label>Tanggal Mulai *</Label>
-                  <Input type="date" />
+                  <Input type="date" value={formData.rent_start} onChange={(e) => setFormData((prev) => ({...prev, rent_start: e.target.value}))} />
                   <FieldError>{errors.rent_start}</FieldError>
                 </TextField>
-                <TextField value={formData.rent_end} onChange={(e) => setFormData((prev) => ({...prev, rent_end: e.target.value}))} isRequired>
+                <TextField isRequired>
                   <Label>Tanggal Selesai *</Label>
-                  <Input type="date" />
+                  <Input type="date" value={formData.rent_end} onChange={(e) => setFormData((prev) => ({...prev, rent_end: e.target.value}))} />
                   <FieldError>{errors.rent_end}</FieldError>
                 </TextField>
               </div>
@@ -171,9 +181,9 @@ const RentFormPage = () => {
               <CostumeMultiSelect value={items} onChange={setItems} error={errors.items} />
             </div>
 
-            <TextField value={formData.notes} onChange={(e) => setFormData((prev) => ({...prev, notes: e.target.value}))}>
+            <TextField>
               <Label>Catatan</Label>
-              <TextArea minRows={3} />
+              <TextArea rows={3} value={formData.notes} onChange={(e) => setFormData((prev) => ({...prev, notes: e.target.value}))} />
             </TextField>
 
             <div className="flex gap-3 justify-end">
