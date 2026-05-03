@@ -14,7 +14,7 @@ const CatalogueFormPage = () => {
     description: '',
     region_id: '',
     category_id: '',
-    condition: 'good',
+    price: '',
     quantity: 1,
     acquired_at: '',
   });
@@ -50,7 +50,7 @@ const CatalogueFormPage = () => {
           description: costume.description || '',
           region_id: costume.region_id?.toString() || '',
           category_id: costume.category_id?.toString() || '',
-          condition: costume.condition || 'good',
+          price: costume.price?.toString() || '',
           quantity: costume.quantity || 1,
           acquired_at: costume.acquired_at || '',
         });
@@ -77,7 +77,7 @@ const CatalogueFormPage = () => {
         description: formData.description,
         region_id: formData.region_id ? parseInt(formData.region_id) : null,
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
-        condition: formData.condition,
+        price: formData.price ? parseInt(formData.price) : 0,
         quantity: parseInt(formData.quantity),
         acquired_at: formData.acquired_at || null,
       };
@@ -149,12 +149,12 @@ const CatalogueFormPage = () => {
             <h2 className="text-xl font-semibold">{isEdit ? 'Edit Kostum' : 'Tambah Kostum Baru'}</h2>
           </div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <TextField value={formData.name} isRequired>
+            <TextField isRequired>
               <Label>Nama Kostum *</Label>
-              <Input onChange={(e) => setFormData((prev) => ({...prev, name: e.target.value}))} />
+              <Input value={formData.name} onChange={(e) => setFormData((prev) => ({...prev, name: e.target.value}))} />
               <FieldError />
             </TextField>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select
                 value={formData.region_id}
                 onChange={(v) => setFormData((prev) => ({...prev, region_id: v ?? ''}))}
@@ -191,19 +191,23 @@ const CatalogueFormPage = () => {
                   </ListBox>
                 </Select.Popover>
               </Select>
-              <TextField value={String(formData.quantity)} isRequired>
-                <Label>Jumlah Stok *</Label>
-                <Input type="number" min="1" onChange={(e) => setFormData((prev) => ({...prev, quantity: e.target.value}))} />
+              <TextField isRequired>
+                <Label>Harga Sewa per Set (Rp) *</Label>
+                <Input type="number" min="0" value={formData.price} onChange={(e) => setFormData((prev) => ({...prev, price: e.target.value}))} />
                 <FieldError />
               </TextField>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
+              <TextField isRequired>
+                <Label>Jumlah Stok *</Label>
+                <Input type="number" min="1" value={formData.quantity} onChange={(e) => setFormData((prev) => ({...prev, quantity: parseInt(e.target.value, 10) || 0}))} />
+                <FieldError />
+              </TextField>
             </div>
             <TextArea
               value={formData.description}
               onChange={(e) => setFormData((prev) => ({...prev, description: e.target.value}))}
               placeholder="Deskripsi kostum..."
               minrows={4}
+              aria-label="Deskripsi kostum"
             />
             <div>
               <Label>Gambar Kostum</Label>
@@ -212,6 +216,7 @@ const CatalogueFormPage = () => {
                 multiple
                 accept="image/*"
                 onChange={handleFileSelect}
+                aria-label="Upload costume images"
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
               />
               {(images.length > 0 || stagedFiles.length > 0) && (
@@ -238,7 +243,7 @@ const CatalogueFormPage = () => {
               )}
             </div>
             <div className="flex gap-3 justify-end">
-              <Button variant="bordered" onPress={() => window.location.href = '/catalogue'}>Batal</Button>
+              <Button variant="bordered" onPress={() => navigate('/catalogue')}>Batal</Button>
               <Button type="submit" variant="primary" isPending={saving}>
                 {({isPending}) => (
                   <>

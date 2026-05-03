@@ -103,7 +103,7 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
         onChange={(e) => setSearch(e.target.value)}
         onFocus={handleFocus}
         onClick={handleClearAndSearch}
-        startContent={<Search size={18} />}
+        aria-label="Cari kostum"
         className="mb-2"
       />
 

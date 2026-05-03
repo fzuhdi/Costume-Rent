@@ -41,9 +41,6 @@ func (s *CostumeService) List(filter dto.CostumeFilter) (*dto.PaginatedResponse,
 			query = query.Where("category_id = ?", id)
 		}
 	}
-	if filter.Condition != "" {
-		query = query.Where("condition = ?", filter.Condition)
-	}
 
 	var total int64
 	query.Count(&total)
@@ -62,7 +59,7 @@ func (s *CostumeService) List(filter dto.CostumeFilter) (*dto.PaginatedResponse,
 			Description: c.Description,
 			RegionID:    c.RegionID,
 			CategoryID:  c.CategoryID,
-			Condition:   c.Condition,
+			Price:       c.Price,
 			Quantity:    c.Quantity,
 			CoverImage:  c.CoverImage,
 		}
@@ -102,7 +99,7 @@ func (s *CostumeService) GetByID(id uint) (*dto.CostumeDetailResponse, error) {
 		Description: costume.Description,
 		RegionID:    costume.RegionID,
 		CategoryID:  costume.CategoryID,
-		Condition:   costume.Condition,
+		Price:       costume.Price,
 		Quantity:    costume.Quantity,
 		CoverImage:  costume.CoverImage,
 	}
@@ -138,13 +135,10 @@ func (s *CostumeService) Create(req dto.CreateCostumeRequest) (*dto.CostumeDetai
 		Description: req.Description,
 		RegionID:    req.RegionID,
 		CategoryID:  req.CategoryID,
-		Condition:   req.Condition,
+		Price:       req.Price,
 		Quantity:    req.Quantity,
 	}
 
-	if costume.Condition == "" {
-		costume.Condition = "good"
-	}
 	if costume.Quantity < 1 {
 		costume.Quantity = 1
 	}
@@ -180,8 +174,8 @@ func (s *CostumeService) Update(id uint, req dto.UpdateCostumeRequest) (*dto.Cos
 	if req.CategoryID != nil {
 		costume.CategoryID = req.CategoryID
 	}
-	if req.Condition != "" {
-		costume.Condition = req.Condition
+	if req.Price > 0 {
+		costume.Price = req.Price
 	}
 	if req.Quantity > 0 {
 		costume.Quantity = req.Quantity

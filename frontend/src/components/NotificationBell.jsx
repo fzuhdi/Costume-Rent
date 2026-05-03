@@ -15,67 +15,68 @@ const NotificationBell = ({ count }) => {
   };
 
   return (
-    <Popover isOpen={isOpen} onOpenChange={setIsOpen}>
-      <Popover.Trigger aria-label="Buka notifikasi">
-        {count > 0 ? (
-          <Badge content={count}>
-            <Bell size={20} />
-          </Badge>
-        ) : (
-          <Bell size={20} />
-        )}
-      </Popover.Trigger>
-      <Popover.Content>
-        <Popover.Dialog>
-          <div className="px-2 py-2 max-w-xs">
-            <div className="flex items-center justify-between px-2 py-1 border-b border-[var(--border)]">
-              <h3 className="text-base font-semibold">Notifikasi</h3>
-              <Button isIconOnly size="sm" variant="light" aria-label="Tutup notifikasi" onPress={() => setIsOpen(false)}>
-                <X size={18} />
+    <div className="flex items-center justify-center">
+      <Popover isOpen={isOpen} onOpenChange={setIsOpen} placement="bottom-end">
+        <Badge.Anchor>
+          <Button isIconOnly variant="ghost" aria-label="Notifikasi" onPress={() => setIsOpen(!isOpen)} className="w-10 h-10 rounded-full">
+            <Bell size={20} className="text-[var(--muted)]" />
+          </Button>
+          {count > 0 && (
+            <Badge color="danger" size="sm" placement="top-right" className="border-2 border-[var(--surface)]">
+              {count}
+            </Badge>
+          )}
+        </Badge.Anchor>
+
+        <Popover.Content className="p-0 border border-[var(--border)] shadow-xl overflow-hidden rounded-xl">
+          <div className="w-80 bg-[var(--surface)]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--border)]/10">
+              <h3 className="text-sm font-bold">Notifikasi</h3>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                onPress={() => setIsOpen(false)}
+                aria-label="Tutup notifikasi"
+              >
+                <X size={16} />
               </Button>
             </div>
 
             <div className="max-h-80 overflow-y-auto">
               {notifications.length === 0 ? (
-                <div className="p-8 text-center text-sm text-[var(--muted)]">Tidak ada notifikasi</div>
+                <div className="p-10 text-center text-xs text-[var(--muted)]">
+                  Tidak ada notifikasi
+                </div>
               ) : (
                 notifications.map((item) => (
                   <div
                     key={item.rent_order_id}
-                    className="flex items-center gap-3 p-3 cursor-pointer hover:bg-[var(--border)] transition-colors"
+                    className="flex items-center gap-3 p-4 cursor-pointer hover:bg-[var(--border)]/30 transition-colors border-b border-[var(--border)]/50 last:border-0"
                     onClick={() => handleNotificationClick(item.rent_order_id)}
                   >
-                    <div
-                      className={`flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 ${
-                        item.type === 'overdue' ? 'bg-danger/10 text-danger' : 'bg-warning/10 text-warning'
-                      }`}
-                    >
-                      {item.type === 'overdue' ? (
-                        <AlertTriangle size={16} />
-                      ) : (
-                        <Calendar size={16} />
-                      )}
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 ${
+                      item.type === 'overdue' ? 'bg-danger/10 text-danger' : 'bg-warning/10 text-warning'
+                    }`}>
+                      {item.type === 'overdue' ? <AlertTriangle size={16} /> : <Calendar size={16} />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{item.client_name}</div>
-                      <div className="text-xs text-[var(--muted)]">
-                        {item.type === 'overdue' ? 'Terlambat' : 'Segera'} - {item.rent_end}
+                      <div className="text-xs font-bold truncate">{item.client_name}</div>
+                      <div className="text-[10px] text-[var(--muted)] uppercase">
+                        {item.type === 'overdue' ? 'Terlambat' : 'Segera'} • {item.rent_end}
                       </div>
                     </div>
-                    <Chip
-                      size="sm"
-                      variant={item.type === 'overdue' ? 'danger-soft' : 'secondary'}
-                    >
-                      {item.type === 'overdue' ? 'Terlambat' : 'Segera'}
+                    <Chip size="sm" variant="soft" color={item.type === 'overdue' ? 'danger' : 'warning'}>
+                      <Chip.Label>{item.type === 'overdue' ? 'Late' : 'Soon'}</Chip.Label>
                     </Chip>
                   </div>
                 ))
               )}
             </div>
           </div>
-        </Popover.Dialog>
-      </Popover.Content>
-    </Popover>
+        </Popover.Content>
+      </Popover>
+    </div>
   );
 };
 

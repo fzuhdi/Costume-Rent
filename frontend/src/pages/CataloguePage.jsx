@@ -1,31 +1,38 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getCostumes, getRegions, getCategories } from '../api/costumeApi';
-import { Plus, Search, Grid, List, Filter } from 'lucide-react';
+import { Search, Grid, List, Filter, AlignLeft } from 'lucide-react';
 import {
-  Input, Button, ButtonGroup,
+  Input, Button, ButtonGroup, Separator,
   Label, ListBox, Select,
-  Table, Chip, Spinner, Pagination, Card
+  Spinner, Card
 } from '@heroui/react';
-
-const conditionColors = {
-  baik: 'success',
-  sedang: 'warning',
-  rusak: 'danger',
-};
+import CostumeTableView from '../components/CostumeTableView';
+import CostumeListView from '../components/CostumeListView';
+import CostumeCardView from '../components/CostumeCardView';
+import CustomPagination from '../components/CustomPagination';
 
 const CataloguePage = () => {
+  const navigate = useNavigate();
   const [costumes, setCostumes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('table');
+  const [view, setView] = useState('list');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [regionFilter, setRegionFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [regions, setRegions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [expandedKeys, setExpandedKeys] = useState(new Set([]));
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     fetchFilters();
@@ -33,7 +40,7 @@ const CataloguePage = () => {
 
   useEffect(() => {
     fetchCostumes();
-  }, [search, regionFilter, categoryFilter, page]);
+  }, [debouncedSearch, regionFilter, categoryFilter, page, limit]);
 
   const fetchFilters = async () => {
     try {
@@ -52,13 +59,26 @@ const CataloguePage = () => {
     setLoading(true);
     try {
       const response = await getCostumes({
-        search,
+        search: debouncedSearch,
         region_id: regionFilter,
         category_id: categoryFilter,
         page,
-        limit: 12,
+        limit,
       });
-      setCostumes(response.data.data || []);
+      const data = (response.data.data || []).map((c) => ({
+        ...c,
+        children: [{
+          id: `detail-${c.id}`,
+          name: c.name,
+          description: c.description,
+          region: c.region,
+          category: c.category,
+          quantity: c.quantity,
+          cover_image: c.cover_image,
+          acquired_at: c.acquired_at,
+        }],
+      }));
+      setCostumes(data);
       setTotalPages(response.data.total_pages || 1);
       setTotal(response.data.total || 0);
     } catch (error) {
@@ -68,202 +88,165 @@ const CataloguePage = () => {
     }
   };
 
+  const handleExpandedChange = (keys) => {
+    setExpandedKeys(keys);
+  };
+
   return (
-      <Card>
-        <Card.Header className="flex flex-col gap-4">
-          <div className="flex flex-rowflex-wrap items-end justify-between gap-3">
-              <h1 className="text-2xl font-bold mr-4">Katalog Kostum</h1>
-          </div>
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="flex flex-wrap items-end gap-3 flex-1">
-              <div className="min-w-[200px]">
-                <Input
-                  placeholder="Cari kostum..."
-                  value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                />
-              </div>
-              <div className="w-[180px]">
-                <Select
-                  placeholder="Semua Wilayah"
-                  selectedKeys={regionFilter ? [regionFilter] : []}
-                  onSelectionChange={(keys) => {
-                    setRegionFilter(keys.currentKey ?? '');
-                    setPage(1);
-                  }}
-                  aria-label='Choose Region'
-                >
-                  <Select.Trigger>
-                    <Select.Value />
-                    <Select.Indicator />
-                  </Select.Trigger>
-                  <Select.Popover>
-                    <ListBox>
-                      <ListBox.Item key="wilayah-all" id="" aria-label="Choose region Semua Wilayah">
-                        Semua Wilayah
-                      </ListBox.Item>
-                      {regions.map((r) => (
-                        <ListBox.Item key={"wilayah-" + r.id} id={String(r.id)} aria-label={`Choose region ${r.name}`}>
-                          {r.name}
-                        </ListBox.Item>
-                      ))}
-                    </ListBox>
-                  </Select.Popover>
-                </Select>
-              </div>
-
-              <div className="w-[180px]">
-                <Select
-                  placeholder="Semua Kategori"
-                  selectedKeys={categoryFilter ? [categoryFilter] : []}
-                  onSelectionChange={(keys) => {
-                    setCategoryFilter(keys.currentKey ?? '');
-                    setPage(1);
-                  }}
-                  aria-label='Choose Category'
-                >
-                  <Select.Trigger>
-                    <Select.Value />
-                    <Select.Indicator />
-                  </Select.Trigger>
-                  <Select.Popover>
-                    <ListBox>
-                      <ListBox.Item key="kategori-all" id="" aria-label="Choose category Semua Kategori">
-                        Semua Kategori
-                      </ListBox.Item>
-                      {categories.map((c) => (
-                        <ListBox.Item key={"kategori-" + c.id} id={String(c.id)} aria-label={`Choose category ${c.name}`}>
-                          {c.name}
-                        </ListBox.Item>
-                      ))}
-                    </ListBox>
-                  </Select.Popover>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <ButtonGroup>
-                <Button
-                  isIconOnly
-                  variant={view === 'table' ? 'primary' : 'bordered'}
-                  aria-label="Tampilkan tampilan tabel"
-                  onPress={() => setView('table')}
-                >
-                  <List size={18} />
-                </Button>
-                <Button
-                  isIconOnly
-                  variant={view === 'grid' ? 'primary' : 'bordered'}
-                  aria-label="Tampilkan tampilan grid"
-                  onPress={() => setView('grid')}
-                >
-                  <Grid size={18} />
-                </Button>
-              </ButtonGroup>
-              <Button
-                onPress={() => window.location.href = '/catalogue/new'}
-                variant="primary"
-                aria-label='Tambah Kostum'
-              >
-                Tambah Kostum
-              </Button>
-            </div>
-          </div>
-
-          {/* Bottom info */}
-          <p className="text-sm text-[var(--muted)]">
-            Ditemukan {total} kostum
-          </p>
-
-        </Card.Header>
-
-      {loading ? (
-        <div className="flex justify-center items-center h-48">
-          <Spinner aria-label="Memuat data kostum" />
+    <Card>
+      <Card.Header className="flex flex-col gap-4 px-6 py-5">
+        {/* Title + Add button */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h1 className="text-2xl font-bold">Katalog Kostum</h1>
+          <Button
+            onPress={() => navigate('/catalogue/new')}
+            variant="primary"
+          >
+            Tambah Kostum
+          </Button>
         </div>
-      ) : costumes.length === 0 ? (
-          <Card.Content className="text-center py-12">
+
+        <Separator />
+
+        {/* Filters + View toggle */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
+          <Input
+            placeholder="Cari kostum..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            aria-label="Cari kostum"
+            className="w-full sm:w-[200px]"
+          />
+          <Select
+            placeholder="Semua Wilayah"
+            value={regionFilter || null}
+            onChange={(key) => {
+              setRegionFilter(key ? String(key) : '');
+              setPage(1);
+            }}
+            className="w-full sm:w-[160px]"
+            aria-label="Filter Wilayah"
+          >
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover>
+              <ListBox>
+                <ListBox.Item id="" textValue="Semua Wilayah">
+                  Semua Wilayah
+                  <ListBox.ItemIndicator />
+                </ListBox.Item>
+                {regions.map((r) => (
+                  <ListBox.Item key={String(r.id)} id={String(r.id)} textValue={r.name}>
+                    {r.name}
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                ))}
+              </ListBox>
+            </Select.Popover>
+          </Select>
+          <Select
+            placeholder="Semua Kategori"
+            value={categoryFilter || null}
+            onChange={(key) => {
+              setCategoryFilter(key ? String(key) : '');
+              setPage(1);
+            }}
+            className="w-full sm:w-[160px]"
+            aria-label="Filter Kategori"
+          >
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover>
+              <ListBox>
+                <ListBox.Item id="" textValue="Semua Kategori">
+                  Semua Kategori
+                  <ListBox.ItemIndicator />
+                </ListBox.Item>
+                {categories.map((c) => (
+                  <ListBox.Item key={String(c.id)} id={String(c.id)} textValue={c.name}>
+                    {c.name}
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                ))}
+              </ListBox>
+            </Select.Popover>
+          </Select>
+
+          <div className="flex-1" />
+
+          <ButtonGroup>
+            <Button
+              isIconOnly
+              variant={view === 'list' ? 'primary' : 'outline'}
+              aria-label="Tampilkan tampilan list"
+              onPress={() => setView('list')}
+            >
+              <AlignLeft size={18} />
+            </Button>
+            <Button
+              isIconOnly
+              variant={view === 'table' ? 'primary' : 'outline'}
+              aria-label="Tampilkan tampilan tabel"
+              onPress={() => setView('table')}
+            >
+              <List size={18} />
+            </Button>
+            <Button
+              isIconOnly
+              variant={view === 'grid' ? 'primary' : 'outline'}
+              aria-label="Tampilkan tampilan grid"
+              onPress={() => setView('grid')}
+            >
+              <Grid size={18} />
+            </Button>
+          </ButtonGroup>
+        </div>
+        
+
+        <Separator />
+      </Card.Header>
+      
+      <Card.Content>
+        {loading ? (
+          <div className="flex justify-center items-center h-48">
+            <Spinner aria-label="Memuat data kostum" />
+          </div>
+        ) : costumes.length === 0 ? (
+          <div className="text-center py-12">
             <Filter size={64} className="mx-auto mb-4 opacity-50" />
             <h3 className="text-lg font-semibold">Tidak ada kostum</h3>
             <p className="text-sm text-[var(--muted)]">Coba ubah filter atau tambahkan kostum baru</p>
-          </Card.Content>
-      ) : view === 'table' ? (
-        <Card>
-          <Card.Content>
-            <Table aria-label="Table of costumes">
-              <Table.ScrollContainer>
-                <Table.Content aria-label="Table Content">
-                  <Table.Header>
-                    <Table.Column isRowHeader>Nama</Table.Column>
-                    <Table.Column>Wilayah</Table.Column>
-                    <Table.Column>Kategori</Table.Column>
-                    <Table.Column>Stok</Table.Column>
-                    <Table.Column>Aksi</Table.Column>
-                  </Table.Header>
-                  <Table.Body>
-                    {costumes.map((costume) => (
-                      <Table.Row key={costume.id}>
-                        <Table.Cell>
-                          <div className="flex items-center gap-2">
-                            {costume.cover_image && (
-                              <img src={costume.cover_image} alt="" className="w-10 h-10 object-cover rounded" />
-                            )}
-                            <span>{costume.name}</span>
-                          </div>
-                        </Table.Cell>
-                        <Table.Cell>{costume.region || '-'}</Table.Cell>
-                        <Table.Cell>{costume.category || '-'}</Table.Cell>
-                        <Table.Cell>{costume.quantity}</Table.Cell>
-                        <Table.Cell>
-                          <Button variant="bordered" size="sm" aria-label={`Detail ${costume.name}`} onPress={() => window.location.href = `/catalogue/${costume.id}`}>
-                            Detail
-                          </Button>
-                        </Table.Cell>
-                      </Table.Row>
-                    ))}
-                  </Table.Body>
-                </Table.Content>
-              </Table.ScrollContainer>
-            </Table>
-          </Card.Content>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {costumes.map((costume) => (
-            <Link to={`/catalogue/${costume.id}`} key={costume.id} className="block" aria-label={`Lihat detail ${costume.name}`}>
-              <Card className="cursor-pointer hover:shadow-md transition-shadow" aria-label={`Kostum ${costume.name}`}>
-                <Card.Content className="p-0">
-                  <div className="aspect-square bg-[var(--border)] relative">
-                    {costume.cover_image ? (
-                      <img src={costume.cover_image} alt={costume.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-[var(--muted)]">No Image</div>
-                    )}
-                    <Chip size="sm" className="absolute top-2 right-2" variant={conditionColors[costume.condition] === 'success' ? 'secondary' : conditionColors[costume.condition] === 'warning' ? 'secondary' : 'danger-soft'}>
-                      {costume.condition}
-                    </Chip>
-                  </div>
-                  <div className="p-3">
-                    <h3 className="text-sm font-medium truncate">{costume.name}</h3>
-                    <p className="text-xs text-[var(--muted)] truncate">
-                      {costume.region} {costume.category && `• ${costume.category}`}
-                    </p>
-                    <p className="text-xs text-[var(--muted)]">Stok: {costume.quantity}</p>
-                  </div>
-                </Card.Content>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      )}
+          </div>
+        ) : view === 'list' ? (
+          <CostumeListView
+            costumes={costumes}
+            expandedKeys={expandedKeys}
+            onExpandedChange={handleExpandedChange}
+          />
+        ) : view === 'table' ? (
+          <CostumeTableView
+            costumes={costumes}
+            expandedKeys={expandedKeys}
+            onExpandedChange={handleExpandedChange}
+          />
+        ) : (
+          <CostumeCardView costumes={costumes} />
+        )}
+      </Card.Content>
 
-      {totalPages > 1 && (
-        <div className="flex justify-center">
-          <Pagination aria-label="Navigasi halaman" total={totalPages} page={page} onChange={setPage} />
-        </div>
-      )}
-    
+      <Card.Footer>
+        <CustomPagination
+          total={total}
+          page={page}
+          limit={limit}
+          onPageChange={setPage}
+          onLimitChange={(l) => { setLimit(l); setPage(1); }}
+        />
+      </Card.Footer>
     </Card>
   );
 };

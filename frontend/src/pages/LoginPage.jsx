@@ -60,28 +60,14 @@ const LoginPage = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-            <TextField
-              name="email"
-              type="email"
-              isRequired
-              value={email}
-              onChange={setEmail}
-              aria-label="Email address"
-            >
+            <TextField name="email" type="email" isRequired aria-label="Email address">
               <Label>Email</Label>
-              <Input placeholder="admin@busana.com" aria-label="Email address" />
+              <Input type="email" placeholder="admin@busana.com" value={email} onChange={(e) => setEmail(e.target.value)} />
             </TextField>
 
-            <TextField
-              name="password"
-              type="password"
-              isRequired
-              value={password}
-              onChange={setPassword}
-              aria-label="Password"
-            >
+            <TextField name="password" type="password" isRequired aria-label="Password">
               <Label>Password</Label>
-              <Input placeholder="Enter password" aria-label="Password" />
+              <Input type="password" placeholder="Enter password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </TextField>
 
             <Button
@@ -90,9 +76,9 @@ const LoginPage = () => {
               size="lg"
               isLoading={loading}
               className="w-full mt-2"
-              startContent={!loading && <LogIn size={18} />}
               aria-label="Login to your account"
             >
+              {!loading && <LogIn size={18} />}
               Login
             </Button>
           </form>

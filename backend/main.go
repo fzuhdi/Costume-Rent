@@ -164,7 +164,7 @@ func seedData() {
 			description string
 			regionID    *uint
 			categoryID  *uint
-			condition   string
+			price       int
 			quantity    int
 			imageFile   string
 		}
@@ -172,32 +172,32 @@ func seedData() {
 		costumes := []costumeSeed{
 			{
 				name: "Kebaya Bali", description: "Kebaya Bali dengan motif songket tradisional",
-				regionID: &baliID, categoryID: &cat1ID, condition: "excellent", quantity: 5,
+				regionID: &baliID, categoryID: &cat1ID, price: 75000, quantity: 5,
 				imageFile: "kebaya_bali.jpg",
 			},
 			{
 				name: "Baju Joged", description: "Baju tari joged banteng untuk pertunjukan",
-				regionID: &baliID, categoryID: &cat1ID, condition: "good", quantity: 3,
+				regionID: &baliID, categoryID: &cat1ID, price: 60000, quantity: 3,
 				imageFile: "baju_joged.jpg",
 			},
 			{
 				name: "Topeng Keras", description: "Topeng keras untuk tari topeng khas Bali",
-				regionID: &baliID, categoryID: &cat2ID, condition: "good", quantity: 10,
+				regionID: &baliID, categoryID: &cat2ID, price: 35000, quantity: 10,
 				imageFile: "topeng_bali.jpg",
 			},
 			{
 				name: "Baju Batik", description: "Baju batik Jawa untuk acara formal",
-				regionID: &jawaID, categoryID: &cat1ID, condition: "excellent", quantity: 8,
+				regionID: &jawaID, categoryID: &cat1ID, price: 50000, quantity: 8,
 				imageFile: "baju_batik.jpg",
 			},
 			{
 				name: "Baju Melayu", description: "Pakaian adat Melayu Sumatera",
-				regionID: &sumateraID, categoryID: &cat1ID, condition: "good", quantity: 4,
+				regionID: &sumateraID, categoryID: &cat1ID, price: 65000, quantity: 4,
 				imageFile: "baju_melayu.jpg",
 			},
 			{
 				name: "Selendang Songket", description: "Selendang songket dengan benang emas",
-				regionID: &baliID, categoryID: &cat3ID, condition: "excellent", quantity: 15,
+				regionID: &baliID, categoryID: &cat3ID, price: 40000, quantity: 15,
 				imageFile: "selendang_songket.jpg",
 			},
 		}
@@ -215,7 +215,7 @@ func seedData() {
 				Description: c.description,
 				RegionID:    c.regionID,
 				CategoryID:  c.categoryID,
-				Condition:   c.condition,
+				Price:       c.price,
 				Quantity:    c.quantity,
 				AcquiredAt:  &acquired,
 				CoverImage:  imagePath,

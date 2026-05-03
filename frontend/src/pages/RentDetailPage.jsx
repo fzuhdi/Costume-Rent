@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getRentById, markReturned, deleteRent } from '../api/rentApi';
 import { ArrowLeft, Edit, Trash2, CheckCircle, User, Calendar, FileText, Shield } from 'lucide-react';
-import {
-  Button, Card, Chip, Spinner, Table
-} from '@heroui/react';
+import { Button, Card, Chip, Spinner, Table, Modal } from '@heroui/react';
 
 const statusColors = {
   active: 'secondary',
@@ -80,10 +78,10 @@ const RentDetailPage = () => {
   if (!rent) {
     return (
       <Card>
-        <CardContent className="text-center py-12">
+        <Card.Content className="text-center py-12">
           <h3 className="text-lg font-semibold mb-4">Peminjaman tidak ditemukan</h3>
           <Button as={Link} to="/rents" variant="primary">Kembali ke Riwayat</Button>
-        </CardContent>
+        </Card.Content>
       </Card>
     );
   }
@@ -97,22 +95,22 @@ const RentDetailPage = () => {
 
       <Card>
         <Card.Content>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div className="flex flex-col">
               <h2 className="text-xl font-semibold">Peminjaman #{rent.id}</h2>
               <Chip className="mt-2" variant={statusColors[rent.status] ?? 'secondary'}>
                 {statusLabels[rent.status] || rent.status}
               </Chip>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {rent.status !== 'returned' && (
-                <Button variant="secondary" size="sm" onPress={() => setIsReturnOpen(true)} isPending={processing} startContent={<CheckCircle size={16} />}>Kembalikan</Button>
+                <Button variant="secondary" size="sm" onPress={() => setIsReturnOpen(true)} isPending={processing}><CheckCircle size={16} />Kembalikan</Button>
               )}
-              <Button as={Link} to={`/rents/${id}/edit`} variant="bordered" size="sm" startContent={<Edit size={16} />}>Edit</Button>
-              <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={processing} startContent={<Trash2 size={16} />}>Hapus</Button>
+              <Button as={Link} to={`/rents/${id}/edit`} variant="bordered" size="sm"><Edit size={16} />Edit</Button>
+              <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={processing}><Trash2 size={16} />Hapus</Button>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div className="flex items-center gap-3">
               <User size={20} className="text-[var(--muted)]" />
               <div>
@@ -165,14 +163,14 @@ const RentDetailPage = () => {
                   {rent.items?.map((item) => (
                     <Table.Row key={item.id}>
                       <Table.Cell>
-                        {item.cover_image ? (
-                          <img src={item.cover_image} alt="" className="w-10 h-10 object-cover rounded" />
+                        {item.costume.cover_image ? (
+                          <img src={item.costume.cover_image} alt="" className="w-10 h-10 object-cover rounded" />
                         ) : (
                           <span className="text-[var(--muted)]">-</span>
                         )}
                       </Table.Cell>
-                      <Table.Cell>{item.costume_name}</Table.Cell>
-                      <Table.Cell>{item.quantity} unit</Table.Cell>
+                      <Table.Cell>{item.costume.name}</Table.Cell>
+                      <Table.Cell>{item.costume.quantity} unit</Table.Cell>
                     </Table.Row>
                   ))}
                 </Table.Body>
@@ -185,7 +183,7 @@ const RentDetailPage = () => {
       <Card>
         <Card.Content>
           <h3 className="text-sm font-medium mb-2">Informasi</h3>
-          <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
             <div className="flex justify-between">
               <span className="text-[var(--muted)]">Dibuat</span>
               <span>{rent.created_at}</span>

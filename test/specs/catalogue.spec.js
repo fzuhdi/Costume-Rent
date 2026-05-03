@@ -84,7 +84,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
     expect(content).toMatch(/deskripsi|description/i);
     expect(content).toMatch(/wilayah|region/i);
     expect(content).toMatch(/kategori|category/i);
-    expect(content).toMatch(/kondisi|condition/i);
+    expect(content).toMatch(/harga|price/i);
   });
 
   test('[AC-005-003] - Display costume images', async ({ page }) => {

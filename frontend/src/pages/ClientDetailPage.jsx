@@ -83,10 +83,10 @@ const ClientDetailPage = () => {
   if (!client) {
     return (
       <Card>
-        <CardContent className="text-center py-12">
+        <Card.Content className="text-center py-12">
           <h3 className="text-lg font-semibold mb-4">Klien tidak ditemukan</h3>
           <Button as={Link} to="/clients" variant="primary">Kembali ke Daftar</Button>
-        </CardContent>
+        </Card.Content>
       </Card>
     );
   }
@@ -106,26 +106,26 @@ const ClientDetailPage = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Informasi Klien</h2>
             {!editing && (
-              <Button variant="bordered" size="sm" onPress={handleEdit} startContent={<Edit size={16} />}>Edit</Button>
+              <Button variant="bordered" size="sm" onPress={handleEdit}><Edit size={16} />Edit</Button>
             )}
           </div>
           {editing ? (
             <div className="flex flex-col gap-4">
-              <TextField value={editData.name} onChange={(e) => setEditData((prev) => ({...prev, name: e.target.value}))}>
+              <TextField>
                 <Label>Nama</Label>
-                <Input />
+                <Input value={editData.name} onChange={(e) => setEditData((prev) => ({...prev, name: e.target.value}))} />
                 <FieldError />
               </TextField>
-              <TextField value={editData.phone} onChange={(e) => setEditData((prev) => ({...prev, phone: e.target.value}))}>
+              <TextField>
                 <Label>Telepon</Label>
-                <Input />
+                <Input value={editData.phone} onChange={(e) => setEditData((prev) => ({...prev, phone: e.target.value}))} />
               </TextField>
-              <TextField value={editData.address} onChange={(e) => setEditData((prev) => ({...prev, address: e.target.value}))}>
+              <TextField>
                 <Label>Alamat</Label>
-                <TextArea />
+                <TextArea value={editData.address} onChange={(e) => setEditData((prev) => ({...prev, address: e.target.value}))} />
               </TextField>
               <div className="flex gap-3 justify-end">
-                <Button variant="bordered" onPress={handleCancel} startContent={<X size={16} />}>Batal</Button>
+                <Button variant="bordered" onPress={handleCancel}><X size={16} />Batal</Button>
                 <Button variant="primary" onPress={handleSave} isPending={saving}>
                   {({isPending}) => (
                     <>
@@ -137,7 +137,7 @@ const ClientDetailPage = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
               <div className="flex items-center gap-3">
                 <User size={20} className="text-[var(--muted)]" />
                 <div>
@@ -208,7 +208,7 @@ const ClientDetailPage = () => {
       <Card>
         <Card.Content>
           <h3 className="text-sm font-medium mb-2">Statistik</h3>
-          <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
             <div>
               <p className="text-2xl font-bold">{client.rent_orders?.length || 0}</p>
               <p className="text-xs text-[var(--muted)]">Total Pinjaman</p>
@@ -223,9 +223,7 @@ const ClientDetailPage = () => {
             </div>
           </div>
           {overdueRents.length > 0 && (
-            <Chip variant="danger-soft" className="mt-4" startContent={<AlertTriangle size={14} />}>
-              {overdueRents.length} peminjaman terlambat
-            </Chip>
+            <Chip variant="danger-soft" className="mt-4"><AlertTriangle size={14} />{overdueRents.length} peminjaman terlambat</Chip>
           )}
         </Card.Content>
       </Card>

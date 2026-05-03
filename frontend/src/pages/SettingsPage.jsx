@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { Save, Upload, Image } from 'lucide-react';
-import { TextField, Input, Button, Card, Chip, FieldError } from '@heroui/react';
+import { TextField, Input, Button, Card, Chip, FieldError, Label } from '@heroui/react';
 
 const SettingsPage = () => {
   const { settings, updateSettings, uploadLogo } = useSettings();
@@ -62,8 +62,8 @@ const SettingsPage = () => {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Logo Aplikasi</label>
-              <div className="flex items-center gap-4">
-                <div className="w-20 h-20 bg-[var(--border)] rounded-lg flex items-center justify-center">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="w-20 h-20 bg-[var(--border)] rounded-lg flex items-center justify-center flex-shrink-0">
                   {preview ? (
                     <img src={preview} alt="Logo" className="w-full h-full object-contain" />
                   ) : (
@@ -81,14 +81,14 @@ const SettingsPage = () => {
               </div>
             </div>
 
-            <TextField value={formData.app_name} onChange={(e) => setFormData((prev) => ({...prev, app_name: e.target.value}))} isRequired>
+            <TextField isRequired>
               <Label>Nama Aplikasi</Label>
-              <Input placeholder="Costume Rental" />
+              <Input value={formData.app_name} onChange={(e) => setFormData((prev) => ({...prev, app_name: e.target.value}))} placeholder="Costume Rental" />
               <FieldError />
             </TextField>
-            <TextField value={formData.tagline} onChange={(e) => setFormData((prev) => ({...prev, tagline: e.target.value}))}>
+            <TextField>
               <Label>Tagline</Label>
-              <Input placeholder="Inventory & Rental Management" />
+              <Input value={formData.tagline} onChange={(e) => setFormData((prev) => ({...prev, tagline: e.target.value}))} placeholder="Inventory & Rental Management" />
             </TextField>
 
             {successMsg && <Chip variant="secondary">{successMsg}</Chip>}
@@ -123,9 +123,9 @@ const SettingsPage = () => {
             <h3 className="font-bold">{formData.app_name || 'Costume Rental'}</h3>
             <p className="text-sm text-[var(--muted)]">{formData.tagline || 'Inventory & Rental Management'}</p>
           </div>
-      </Card.Content>
-    </Card>
-  </div>
+        </Card.Content>
+      </Card>
+    </div>
   );
 };
 

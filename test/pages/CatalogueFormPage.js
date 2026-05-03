@@ -15,8 +15,9 @@ class CatalogueFormPage extends BasePage {
     // Use the button that contains the placeholder text
     this.regionSelect = page.getByRole('button', { name: /pilih wilayah/i });
     this.categorySelect = page.getByRole('button', { name: /pilih kategori/i });
-    // Condition select - find button that shows the current value
     this.conditionSelect = page.locator('button').filter({ hasText: /excellent|good|fair/i }).first();
+    // Price input
+    this.priceInput = page.locator('label').filter({ hasText: /harga/i }).locator('..').locator('input[type="number"]');
     // Submit button - find by text content using JavaScript
     this.submitButton = page.getByRole('button', { name: /simpan|menyimpan/i }).first();
     // File input - might be hidden, use evaluate to set files
@@ -34,7 +35,7 @@ class CatalogueFormPage extends BasePage {
     await this.assertFormLoaded();
   }
 
-  async fillForm({ name, description, region, category, condition, quantity, acquiredAt }) {
+  async fillForm({ name, description, region, category, price, quantity, acquiredAt }) {
     if (name) await this.nameInput.fill(name);
     if (region) {
       await this.regionSelect.click();
@@ -44,10 +45,7 @@ class CatalogueFormPage extends BasePage {
       await this.categorySelect.click();
       await this.page.getByRole('option', { name: new RegExp(category, 'i') }).first().click();
     }
-    if (condition) {
-      await this.conditionSelect.click();
-      await this.page.getByRole('option', { name: new RegExp(condition, 'i') }).first().click();
-    }
+    if (price) await this.priceInput.fill(price.toString());
     if (quantity) await this.quantityInput.fill(quantity.toString());
     if (acquiredAt) await this.acquiredDateInput.fill(acquiredAt);
     if (description) await this.descriptionInput.fill(description);

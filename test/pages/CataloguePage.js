@@ -10,9 +10,9 @@ class CataloguePage extends BasePage {
     this.searchInput = page.getByPlaceholder('Cari kostum...');
     this.regionFilter = page.getByRole('button', { name: /wilayah/i });
     this.categoryFilter = page.getByRole('button', { name: /kategori/i });
-    this.costumeRows = page.locator('table tbody tr');
+    this.costumeRows = page.locator('table tbody tr').filter({ hasNot: page.locator('td[colspan]') });
     this.costumeLinks = page.locator('a[href*="/catalogue/"]').filter({ hasNotText: /tambah|new/i });
-    this.detailButtons = page.getByRole('button', { name: /^Detail / });
+    this.editButtons = page.getByRole('button', { name: /^Edit / });
   }
 
   async goto() {
@@ -47,11 +47,11 @@ class CataloguePage extends BasePage {
   async clickFirstCostume() {
     // Wait for the table to load
     await this.page.waitForSelector('table tbody tr', { timeout: 10000 });
-    // Click the first "Detail" button using aria-label pattern
-    const detailBtn = this.page.getByRole('button', { name: /^Detail / }).first();
-    await detailBtn.click({ timeout: 10000 });
+    // Click the first costume name link (links to detail page)
+    const nameLink = this.page.getByRole('link', { name: /^Lihat detail / }).first();
+    await nameLink.click({ timeout: 10000 });
     // Wait for navigation to detail page
-    await this.page.waitForURL(/\/catalogue\/\d+/, { timeout: 10000 });
+    await this.page.waitForURL(/\/catalogue\/\d+(?!\/edit)/, { timeout: 10000 });
     // Wait for detail page to render
     await this.page.waitForLoadState('networkidle');
   }

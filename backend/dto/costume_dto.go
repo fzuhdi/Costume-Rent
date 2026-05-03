@@ -5,7 +5,7 @@ type CreateCostumeRequest struct {
 	Description string  `json:"description"`
 	RegionID    *uint   `json:"region_id"`
 	CategoryID  *uint   `json:"category_id"`
-	Condition   string  `json:"condition"`
+	Price       int     `json:"price"`
 	Quantity    int     `json:"quantity" validate:"min=0"`
 	AcquiredAt  *string `json:"acquired_at"`
 }
@@ -15,7 +15,7 @@ type UpdateCostumeRequest struct {
 	Description string  `json:"description"`
 	RegionID    *uint   `json:"region_id"`
 	CategoryID  *uint   `json:"category_id"`
-	Condition   string  `json:"condition"`
+	Price       int     `json:"price"`
 	Quantity    int     `json:"quantity"`
 	AcquiredAt  *string `json:"acquired_at"`
 }
@@ -28,7 +28,7 @@ type CostumeListResponse struct {
 	Region      string  `json:"region"`
 	CategoryID  *uint   `json:"category_id"`
 	Category    string  `json:"category"`
-	Condition   string  `json:"condition"`
+	Price       int     `json:"price"`
 	Quantity    int     `json:"quantity"`
 	CoverImage  string  `json:"cover_image"`
 	AcquiredAt  *string `json:"acquired_at"`
@@ -38,7 +38,6 @@ type CostumeFilter struct {
 	Search    string `form:"search"`
 	RegionID  string `form:"region_id"`
 	CategoryID string `form:"category_id"`
-	Condition string `form:"condition"`
 	Page      int    `form:"page"`
 	Limit     int    `form:"limit"`
 }
@@ -59,7 +58,7 @@ type CostumeDetailResponse struct {
 	Region      string                  `json:"region"`
 	CategoryID  *uint                   `json:"category_id"`
 	Category    string                  `json:"category"`
-	Condition   string                  `json:"condition"`
+	Price       int                     `json:"price"`
 	Quantity    int                     `json:"quantity"`
 	CoverImage  string                  `json:"cover_image"`
 	AcquiredAt  *string                 `json:"acquired_at"`

@@ -1,73 +1,53 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 
-/* ─── HeroUI theme override — standard web palette ─────────────────────────
-   All foreground/background combinations verified >= 4.5:1 (WCAG AA)
-   Primary:  indigo-600 / indigo-400 dark  (6.29:1 / 5.95:1)
-   Muted:    gray-500   / gray-400   dark  (4.83:1 / 6.99:1)
-   Danger:   red-600    / red-400    dark
-   Success:  green-600  / green-400  dark
-   Warning:  amber-600  / amber-400  dark
-──────────────────────────────────────────────────────────────────────────── */
-
 @theme {
   --color-primary: #4f46e5;
 }
 
 :root {
   --sidebar-width: 250px;
+  --sidebar-width-collapsed: 64px;
   --navbar-height: 60px;
 }
 
 @layer theme {
   :root, .light {
-    /* Brand */
-    --primary:            #4f46e5;   /* indigo-600  — 6.29:1 on white ✓ */
-    --primary-hover:      #4338ca;   /* indigo-700 */
-    --primary-active:     #3730a3;   /* indigo-800 */
+    --primary:            #4f46e5;
+    --primary-hover:      #4338ca;
+    --primary-active:     #3730a3;
     --primary-foreground: #ffffff;
-
-    /* Semantic */
-    --success:            #16a34a;   /* green-600   — 5.85:1 on white ✓ */
-    --warning:            #d97706;   /* amber-600   — 4.69:1 on white ✓ */
-    --danger:             #dc2626;   /* red-600     — 5.99:1 on white ✓ */
-    --secondary:          #0891b2;   /* cyan-600    — 4.56:1 on white ✓ */
-
-    /* Neutrals */
-    --background:         #f9fafb;   /* gray-50 */
-    --surface:            #ffffff;   /* white — cards, modals */
-    --foreground:         #111827;   /* gray-900 — 16.75:1 on white ✓ */
-    --muted:              #6b7280;   /* gray-500 — 4.83:1 on white ✓ */
-    --border:             #e5e7eb;   /* gray-200 */
+    --success:            #16a34a;
+    --warning:            #d97706;
+    --danger:             #dc2626;
+    --secondary:          #0891b2;
+    --background:         #f9fafb;
+    --surface:            #ffffff;
+    --foreground:         #111827;
+    --muted:              #6b7280;
+    --border:             #e5e7eb;
     --input-bg:           #ffffff;
-    --input-border:       #d1d5db;   /* gray-300 */
+    --input-border:       #d1d5db;
   }
 
   .dark, [data-theme="dark"] {
-    /* Brand */
-    --primary:            #818cf8;   /* indigo-400  — 5.95:1 on gray-900 ✓ */
-    --primary-hover:      #6366f1;   /* indigo-500 */
-    --primary-active:     #4f46e5;   /* indigo-600 */
+    --primary:            #818cf8;
+    --primary-hover:      #6366f1;
+    --primary-active:     #4f46e5;
     --primary-foreground: #ffffff;
-
-    /* Semantic */
-    --success:            #4ade80;   /* green-400   — 7.52:1 on gray-900 ✓ */
-    --warning:            #fbbf24;   /* amber-400   — 9.32:1 on gray-900 ✓ */
-    --danger:             #f87171;   /* red-400     — 6.63:1 on gray-900 ✓ */
-    --secondary:          #22d3ee;   /* cyan-400    — 9.47:1 on gray-900 ✓ */
-
-    /* Neutrals */
-    --background:         #111827;   /* gray-900 */
-    --surface:            #1f2937;   /* gray-800 — cards, modals */
-    --foreground:         #f9fafb;   /* gray-50  — 16.98:1 on gray-900 ✓ */
-    --muted:              #9ca3af;   /* gray-400 — 6.99:1 on gray-900 ✓ */
-    --border:             #374151;   /* gray-700 */
-    --input-bg:           #1f2937;   /* gray-800 */
-    --input-border:       #4b5563;   /* gray-600 */
+    --success:            #4ade80;
+    --warning:            #fbbf24;
+    --danger:             #f87171;
+    --secondary:          #22d3ee;
+    --background:         #111827;
+    --surface:            #1f2937;
+    --foreground:         #f9fafb;
+    --muted:              #9ca3af;
+    --border:             #374151;
+    --input-bg:           #1f2937;
+    --input-border:       #4b5563;
   }
 }
-
-/* ─── Base ──────────────────────────────────────────────────────────────── */
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
@@ -77,8 +57,6 @@ body {
   line-height: 1.5;
 }
 
-/* ─── App layout ────────────────────────────────────────────────────────── */
-
 .app-layout {
   min-height: 100vh;
 }
@@ -86,6 +64,7 @@ body {
 .app-content {
   display: flex;
   padding-top: var(--navbar-height);
+  position: relative;
 }
 
 .main-content {
@@ -93,11 +72,119 @@ body {
   margin-left: var(--sidebar-width);
   padding: 24px;
   min-height: calc(100vh - var(--navbar-height));
+  transition: margin-left 0.3s ease;
+}
+
+.main-content.sidebar-collapsed {
+  margin-left: var(--sidebar-width-collapsed);
 }
 
 @media (max-width: 768px) {
-  .main-content {
+  .main-content,
+  .main-content.sidebar-collapsed {
     margin-left: 0;
     padding: 16px;
   }
+  nav {
+    padding-left: 0 !important;
+  }
+  
+  /* Ensure the header takes full width */
+  header {
+    width: 100%;
+  }
+}
+
+.mobile-sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  top: var(--navbar-height);
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 80;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.mobile-sidebar-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-sidebar {
+  position: fixed;
+  top: var(--navbar-height);
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  max-width: 85vw;
+  z-index: 90;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.mobile-sidebar.active {
+  transform: translateX(0);
+}
+
+@media (min-width: 769px) {
+  .mobile-sidebar-overlay {
+    display: none;
+  }
+  .mobile-sidebar {
+    display: none;
+  }
+}
+
+:root {
+  --sidebar-width: 260px;
+  --sidebar-width-collapsed: 72px; /* Slightly wider for better icon centering */
+  --navbar-height: 64px;
+}
+
+/* Ensure the layout doesn't shift abruptly */
+.main-content {
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+nav {
+  transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Subtle hover effect for sidebar items */
+.group:hover svg {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}
+
+button:hover {
+  box-shadow: 0 0 10px rgba(79, 70, 229, 0.2); /* Subtle primary color glow */
+}
+
+.mobile-sidebar {
+  position: fixed;
+  top: 0; /* Changed from var(--navbar-height) to 0 for full height */
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  max-width: 80vw;
+  z-index: 100; /* Higher than navbar */
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-sidebar.active {
+  transform: translateX(0);
+}
+
+/* Make sure the overlay covers everything */
+.mobile-sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 90;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
 }

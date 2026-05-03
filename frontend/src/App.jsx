@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SidebarProvider, useSidebar } from './context/SidebarContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { SettingsProvider } from './context/SettingsContext';
 import Navbar from './components/Navbar';
@@ -44,6 +45,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       >
+        <Route path="/" element={<Navigate to="/catalogue" replace />} />
         <Route path="/catalogue" element={<CataloguePage />} />
         <Route path="/catalogue/:id" element={<CatalogueDetailPage />} />
         <Route path="/catalogue/new" element={<CatalogueFormPage />} />
@@ -63,12 +65,14 @@ const AppRoutes = () => {
 };
 
 const AuthenticatedLayout = () => {
+  const { isCollapsed } = useSidebar();
+
   return (
     <div className="app-layout">
       <Navbar />
       <div className="app-content">
         <Sidebar />
-        <main className="main-content">
+        <main className={`main-content ${isCollapsed ? 'sidebar-collapsed' : ''}`}>
           <Outlet />
         </main>
       </div>
@@ -82,7 +86,9 @@ const App = () => {
       <AuthProvider>
         <SettingsProvider>
           <NotificationProvider>
-            <AppRoutes />
+            <SidebarProvider>
+              <AppRoutes />
+            </SidebarProvider>
           </NotificationProvider>
         </SettingsProvider>
       </AuthProvider>

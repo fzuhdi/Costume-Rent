@@ -20,7 +20,7 @@ type Costume struct {
 	Region      Region          `json:"region,omitempty" gorm:"foreignKey:RegionID"`
 	CategoryID  *uint           `json:"category_id"`
 	Category    Category        `json:"category,omitempty" gorm:"foreignKey:CategoryID"`
-	Condition   string          `json:"condition" gorm:"default:good"`
+	Price       int             `json:"price" gorm:"default:0"`
 	Quantity    int             `json:"quantity" gorm:"default:1"`
 	AcquiredAt  *time.Time      `json:"acquired_at"`
 	CoverImage  string          `json:"cover_image"`

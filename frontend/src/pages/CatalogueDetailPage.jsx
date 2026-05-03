@@ -2,13 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getCostumeById, deleteCostume } from '../api/costumeApi';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
-import { Button, Card, Chip, Spinner, Modal, ModalDialog, ModalHeader, ModalBody, ModalFooter } from '@heroui/react';
-
-const conditionColors = {
-  baik: 'success',
-  sedang: 'warning',
-  rusak: 'danger',
-};
+import { Button, Card, Chip, Spinner, Modal } from '@heroui/react';
 
 const CatalogueDetailPage = () => {
   const { id } = useParams();
@@ -58,10 +52,10 @@ const CatalogueDetailPage = () => {
   if (!costume) {
     return (
       <Card>
-        <CardContent className="text-center py-12">
+        <Card.Content className="text-center py-12">
           <h3 className="text-lg font-semibold mb-4">Kostum tidak ditemukan</h3>
           <Button as={Link} to="/catalogue" variant="primary">Kembali ke Katalog</Button>
-        </CardContent>
+        </Card.Content>
       </Card>
     );
   }
@@ -94,14 +88,14 @@ const CatalogueDetailPage = () => {
 
         <Card>
           <Card.Content>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <h2 className="text-xl font-semibold">{costume.name}</h2>
-              <div className="flex gap-2">
-                <Button variant="bordered" size="sm" onPress={() => window.location.href = `/catalogue/${id}/edit`} startContent={<Edit size={16} />}>Edit</Button>
-                 <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={deleting} startContent={<Trash2 size={16} />}>Hapus</Button>
+              <div className="flex gap-2 flex-shrink-0">
+                <Button variant="bordered" size="sm" onPress={() => navigate(`/catalogue/${id}/edit`)}><Edit size={16} />Edit</Button>
+                <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={deleting}><Trash2 size={16} />Hapus</Button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-[var(--muted)]">Wilayah</span>
                 <p>{costume.region?.name || '-'}</p>
@@ -111,10 +105,8 @@ const CatalogueDetailPage = () => {
                 <p>{costume.category?.name || '-'}</p>
               </div>
               <div>
-                <span className="text-[var(--muted)]">Kondisi</span>
-                <Chip size="sm" variant={conditionColors[costume.condition] === 'success' ? 'secondary' : conditionColors[costume.condition] === 'warning' ? 'secondary' : 'danger-soft'}>
-                  {costume.condition}
-                </Chip>
+                <span className="text-[var(--muted)]">Harga Sewa/Hari</span>
+                <p>{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(costume.price)}</p>
               </div>
               <div>
                 <span className="text-[var(--muted)]">Stok</span>
@@ -137,29 +129,14 @@ const CatalogueDetailPage = () => {
           </Card.Content>
         </Card>
       </div>
-{/* 
-      <Modal isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <ModalDialog>
-          <ModalHeader>
-            Konfirmasi
-          </ModalHeader>
-          <ModalBody>
-            Apakah Anda yakin ingin menghapus kostum ini?
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="bordered" onPress={() => setIsDeleteOpen(false)}>Batal</Button>
-            <Button variant="danger" onPress={handleDelete} isPending={deleting}>Hapus</Button>
-          </ModalFooter>
-        </ModalDialog>
-      </Modal> */}
+
       <Modal isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <Modal.Backdrop>
           <Modal.Container>
             <Modal.Dialog>
-              <Modal.CloseTrigger /> {/* Optional: Close button */}
+              <Modal.CloseTrigger />
               <Modal.Header>
-                <Modal.Icon /> {/* Optional: Icon */}
-                <Modal.Heading />
+                <Modal.Heading>Konfirmasi</Modal.Heading>
               </Modal.Header>
               <Modal.Body>
                 Apakah Anda yakin ingin menghapus kostum ini?
