@@ -5,15 +5,29 @@ import { ArrowLeft, Edit, Trash2, CheckCircle, User, Calendar, FileText, Shield 
 import { Button, Card, Chip, Spinner, Table, Modal } from '@heroui/react';
 
 const statusColors = {
-  active: 'secondary',
-  returned: 'secondary',
-  overdue: 'danger-soft',
+  active: { variant: 'secondary' },
+  returned: { variant: 'secondary' },
+  overdue: { variant: 'soft', color: 'danger' },
 };
 
 const statusLabels = {
   active: 'Aktif',
   returned: 'Dikembalikan',
   overdue: 'Terlambat',
+};
+
+const formatDateTime = (isoString) => {
+  if (!isoString) return '-';
+  const d = new Date(isoString);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+};
+
+const formatDate = (isoString) => {
+  if (!isoString) return '-';
+  const d = new Date(isoString);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
 };
 
 const RentDetailPage = () => {
@@ -80,7 +94,7 @@ const RentDetailPage = () => {
       <Card>
         <Card.Content className="text-center py-12">
           <h3 className="text-lg font-semibold mb-4">Peminjaman tidak ditemukan</h3>
-          <Button as={Link} to="/rents" variant="primary">Kembali ke Riwayat</Button>
+           <Button onPress={() => navigate('/rents')} variant="primary" aria-label="Kembali ke Riwayat">Kembali ke Riwayat</Button>
         </Card.Content>
       </Card>
     );
@@ -98,7 +112,7 @@ const RentDetailPage = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div className="flex flex-col">
               <h2 className="text-xl font-semibold">Peminjaman #{rent.id}</h2>
-              <Chip className="mt-2" variant={statusColors[rent.status] ?? 'secondary'}>
+               <Chip className="mt-2" {...(statusColors[rent.status] ?? { variant: 'secondary' })}>
                 {statusLabels[rent.status] || rent.status}
               </Chip>
             </div>
@@ -106,8 +120,8 @@ const RentDetailPage = () => {
               {rent.status !== 'returned' && (
                 <Button variant="secondary" size="sm" onPress={() => setIsReturnOpen(true)} isPending={processing}><CheckCircle size={16} />Kembalikan</Button>
               )}
-              <Button as={Link} to={`/rents/${id}/edit`} variant="bordered" size="sm"><Edit size={16} />Edit</Button>
-              <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={processing}><Trash2 size={16} />Hapus</Button>
+               <Button onPress={() => navigate(`/rents/${id}/edit`)} variant="bordered" size="sm" aria-label="Edit peminjaman"><Edit size={16} />Edit</Button>
+               <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={processing} aria-label="Hapus peminjaman"><Trash2 size={16} />Hapus</Button>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
@@ -122,7 +136,7 @@ const RentDetailPage = () => {
               <Calendar size={20} className="text-[var(--muted)]" />
               <div>
                 <span className="text-[var(--muted)]">Tanggal Pinjam</span>
-                <p className="font-medium">{rent.rent_start} - {rent.rent_end}</p>
+                 <p className="font-medium">{formatDate(rent.rent_start)} - {formatDate(rent.rent_end)}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -184,14 +198,14 @@ const RentDetailPage = () => {
         <Card.Content>
           <h3 className="text-sm font-medium mb-2">Informasi</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-[var(--muted)]">Dibuat</span>
-              <span>{rent.created_at}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[var(--muted)]">Diperbarui</span>
-              <span>{rent.updated_at}</span>
-            </div>
+             <div className="flex gap-1">
+               <span className="text-[var(--muted)]">Dibuat:</span>
+               <span>{formatDateTime(rent.created_at)}</span>
+             </div>
+             <div className="flex gap-1">
+               <span className="text-[var(--muted)]">Diperbarui:</span>
+               <span>{formatDateTime(rent.updated_at)}</span>
+             </div>
           </div>
         </Card.Content>
       </Card>
@@ -206,7 +220,7 @@ const RentDetailPage = () => {
               <Modal.Body>Tandai kostum sudah dikembalikan?</Modal.Body>
               <Modal.Footer>
                 <Button variant="bordered" onPress={() => setIsReturnOpen(false)}>Batal</Button>
-                <Button variant="secondary" onPress={handleMarkReturned} isPending={processing}>Kembalikan</Button>
+                <Button variant="secondary" onPress={handleMarkReturned} isPending={processing} aria-label="Kembalikan peminjaman">Kembalikan</Button>
               </Modal.Footer>
             </Modal.Dialog>
           </Modal.Container>
