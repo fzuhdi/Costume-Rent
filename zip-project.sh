@@ -1,0 +1,15 @@
+zip -r project.zip . \
+  --exclude "*/node_modules/*" \
+  --exclude "*/dist/*" \
+  --exclude "*/.vite/*" \
+  --exclude "backend/server" \
+  --exclude "backend/uploads/*" \
+  --exclude "*.db" \
+  --exclude "test/test-results/*" \
+  --exclude "*.webm" \
+  --exclude "*.log" \
+  --exclude ".opencode/state/*" \
+  --exclude "test/test-results/*" \
+  --exclude "test/playwright-report/*" \
+  --exclude "test/package-lock.json" \
+  --exclude ".playwright-mcp/*" \
