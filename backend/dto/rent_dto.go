@@ -6,7 +6,6 @@ type CreateRentOrderRequest struct {
 	ClientPhone     string         `json:"client_phone"`
 	ClientAddress   string         `json:"client_address"`
 	GuaranteeType   string         `json:"guarantee_type" validate:"required"`
-	GuaranteeNumber string         `json:"guarantee_number"`
 	RentStart       string         `json:"rent_start" validate:"required"`
 	RentEnd         string         `json:"rent_end" validate:"required"`
 	Items           []RentItemInput `json:"items" validate:"required,min=1"`
@@ -20,7 +19,6 @@ type RentItemInput struct {
 
 type UpdateRentOrderRequest struct {
 	GuaranteeType   string         `json:"guarantee_type"`
-	GuaranteeNumber string         `json:"guarantee_number"`
 	RentStart       string         `json:"rent_start"`
 	RentEnd         string         `json:"rent_end"`
 	Status          string         `json:"status"`
@@ -35,7 +33,6 @@ type RentOrderResponse struct {
 	ClientPhone      string            `json:"client_phone"`
 	ClientAddress   string            `json:"client_address"`
 	GuaranteeType   string            `json:"guarantee_type"`
-	GuaranteeNumber string            `json:"guarantee_number"`
 	RentStart       string            `json:"rent_start"`
 	RentEnd         string            `json:"rent_end"`
 	Status          string            `json:"status"`

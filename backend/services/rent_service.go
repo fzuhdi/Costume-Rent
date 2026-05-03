@@ -125,15 +125,14 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 		}
 	}
 
-	order := models.RentOrder{
-		ClientID:        clientID,
-		GuaranteeType:   req.GuaranteeType,
-		GuaranteeNumber: req.GuaranteeNumber,
-		RentStart:       rentStart,
-		RentEnd:         rentEnd,
-		Status:          "active",
-		Notes:           req.Notes,
-		CreatedBy:       userID,
+  order := models.RentOrder{
+		ClientID:      clientID,
+		GuaranteeType: req.GuaranteeType,
+		RentStart:     rentStart,
+		RentEnd:       rentEnd,
+		Status:        "active",
+		Notes:         req.Notes,
+		CreatedBy:     userID,
 	}
 
 	if err := config.DB.Create(&order).Error; err != nil {
@@ -161,11 +160,8 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest) (*models.R
 		return nil, err
 	}
 
-	if req.GuaranteeType != "" {
-		order.GuaranteeType = req.GuaranteeType
-	}
-	if req.GuaranteeNumber != "" {
-		order.GuaranteeNumber = req.GuaranteeNumber
+  if req.GuaranteeType != "" {
+		order.GuaranteeType = req.GuaranteeType;
 	}
 	if req.RentStart != "" {
 		if t, err := time.Parse("2006-01-02", req.RentStart); err == nil {
@@ -237,19 +233,18 @@ func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderR
 	}
 
 	return dto.RentOrderResponse{
-		ID:              order.ID,
-		ClientID:        order.ClientID,
-		ClientName:      order.Client.Name,
-		ClientPhone:     order.Client.Phone,
-		ClientAddress:   order.Client.Address,
-		GuaranteeType:   order.GuaranteeType,
-		GuaranteeNumber: order.GuaranteeNumber,
-		RentStart:       order.RentStart.Format("2006-01-02"),
-		RentEnd:         order.RentEnd.Format("2006-01-02"),
-		Status:          order.Status,
-		Notes:           order.Notes,
-		Items:           items,
-		CreatedAt:       order.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:       order.UpdatedAt.Format("2006-01-02 15:04:05"),
+		ID:            order.ID,
+		ClientID:      order.ClientID,
+		ClientName:    order.Client.Name,
+		ClientPhone:   order.Client.Phone,
+		ClientAddress: order.Client.Address,
+		GuaranteeType: order.GuaranteeType,
+		RentStart:     order.RentStart.Format("2006-01-02"),
+		RentEnd:       order.RentEnd.Format("2006-01-02"),
+		Status:        order.Status,
+		Notes:         order.Notes,
+		Items:         items,
+		CreatedAt:     order.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:     order.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}
 }

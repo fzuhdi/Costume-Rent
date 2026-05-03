@@ -7,7 +7,6 @@ type RentOrder struct {
 	ClientID        uint            `json:"client_id" gorm:"not null" validate:"required"`
 	Client          Client          `json:"client,omitempty" gorm:"foreignKey:ClientID"`
 	GuaranteeType   string          `json:"guarantee_type" gorm:"not null" validate:"required"`
-	GuaranteeNumber string          `json:"guarantee_number"`
 	RentStart       time.Time       `json:"rent_start" gorm:"not null" validate:"required"`
 	RentEnd         time.Time       `json:"rent_end" gorm:"not null" validate:"required"`
 	Status          string          `json:"status" gorm:"default:active"`
