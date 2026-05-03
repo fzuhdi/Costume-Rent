@@ -148,3 +148,8 @@ If session crashes or context is lost:
 - **SQLite CGO**: always build with `CGO_ENABLED=1 go build` — never plain `go build`
 - **Auth pattern**: reference `frontend/src/context/AuthContext.jsx` for auth hook usage
 - **Transient bugs**: check `.opencode/state/bug-reports/` — do not hardcode bugs here
+
+---
+
+## Knowledge Base
+- `.opencode/knowledge/heroui-v3-patterns.md` — HeroUI v3 component patterns and known issues
