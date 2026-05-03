@@ -1,9 +1,7 @@
 # AGENTS.md — Costume Rental
 
-## Trigger Commands
-
-### `start`
-**First `start` of session** — full load:
+## Auto-Load (CRITICAL — runs before responding to ANY message)
+Before responding to anything, always execute this first:
 1. `ls -t .opencode/logs/*.md | head -1 | xargs cat`
 2. Read `.opencode/skills/orchestrator/SKILL.md`
 3. Read `.opencode/skills/engineer/SKILL.md`
@@ -14,15 +12,12 @@
 8. Read `.opencode/state/orchestrator-progress.json`
 9. `bash ls .opencode/state/bug-reports/` — read open bug files as needed
 
-**Repeated `start`** — state refresh only:
-1. Read `.opencode/state/orchestrator-progress.json`
-2. `bash ls .opencode/state/bug-reports/` — read open bug files as needed
-
-Then output **Standard Report**.
-
 ---
 
-### `status`
+## Trigger Commands
+
+### `start` / `status`
+Read current state and recommend what to do next:
 1. Read `.opencode/state/orchestrator-progress.json`
 2. `bash ls .opencode/state/bug-reports/` — read open bug files as needed
 
@@ -36,7 +31,7 @@ Then output **Standard Report**.
 - Open/todo bugs by feature
 - Incomplete features from ACCEPTANCE_CRITERIA.md
 
-| State | Print this next action |
+| State | Recommended next action |
 |---|---|
 | Open bugs exist | `Fix open bugs for [feature-id] — run /engineer [feature-id]` |
 | No tests exist | `Write tests for [feature-id] — run /sdet [feature-id]` |
@@ -91,12 +86,13 @@ Then output **Standard Report**.
 ---
 
 ## Activity Logging (MANDATORY)
+Log after every meaningful action: feature build · bug fix · test run · file change · blocked state.
 
-Log after every meaningful action: feature build, bug fix, test run, file change, blocked state.
+### When to log
+Log after: feature build · bug fix · test run · file create/modify/delete · blocked state · error encountered · git commit/push
 
 ### Log file
-One file per day: `.opencode/logs/YYYY-MM-DD.md`
-Append entries — never overwrite.
+One file per day: `.opencode/logs/YYYY-MM-DD.md` — append only, never overwrite.
 
 ### Daily file structure
 ```
@@ -124,12 +120,29 @@ Append entries — never overwrite.
 ---
 ```
 
+### Log example
+```
+## 14:32 — Fix open bugs for RENT
+
+**Prompt:** Fix all open bugs for RENT using /engineer RENT
+
+**Actions taken:**
+- BUG-RENT-AC009: missing route in routes.go — fixed
+- BUG-RENT-AC012: marked sdet-fault — test contradicts AC-012
+
+**Files changed:**
+- `backend/routes/routes.go` — added POST /api/rents
+- `.opencode/state/bug-reports/BUG-RENT-AC009.json` — verified
+- `.opencode/state/bug-reports/BUG-RENT-AC012.json` — sdet-fault
+
+**Outcome:** Partial — 1 verified, 1 sdet-fault pending SDET review
+```
+
 ### Log retention (3 most recent files)
 After each log write:
 ```bash
 ls -t .opencode/logs/*.md | tail -n +4 | xargs -r rm -f
 ```
-Keeps the 3 most recent daily files. Older files deleted automatically.
 
 ---
 
@@ -137,7 +150,7 @@ Keeps the 3 most recent daily files. Older files deleted automatically.
 1. `ls -t .opencode/logs/*.md | head -1 | xargs cat` — find last incomplete TODO
 2. `cat .opencode/logs/$(date +%Y-%m-%d).md` — check today's last log entry
 3. Read `.opencode/state/orchestrator-progress.json` — if missing, treat as pending
-4. `bash ls .opencode/state/bug-reports/` — if open/todo bugs exist → status is bug-fixing
+4. `bash ls .opencode/state/bug-reports/` — if open/todo bugs → status is bug-fixing
 5. Correct `orchestrator-progress.json` if inconsistent
 6. Resume: `/orchestrator [feature-id]`
 
