@@ -11,6 +11,7 @@ Before responding to anything, always execute this first:
 7. Read `docs/ACCEPTANCE_CRITERIA.md`
 8. Read `.opencode/state/orchestrator-progress.json`
 9. `bash ls .opencode/state/bug-reports/` — read open bug files as needed
+10. When user reports bugs or says "doesn't work": Read `.opencode/knowledge/common-bugs.md` for known issues
 
 ---
 
@@ -64,6 +65,7 @@ Then output **Standard Report**.
 - `.opencode/knowledge/runbook.md` — known bugs + fixes
 - `.opencode/knowledge/project-notes.md` — architecture decisions
 - `.opencode/knowledge/heroui-v3-patterns.md` — HeroUI v3 patterns
+- `.opencode/knowledge/common-bugs.md` — common bugs & fixes (READ THIS when user reports issues)
 
 ---
 
@@ -166,3 +168,4 @@ ls -t .opencode/logs/*.md | tail -n +4 | xargs -r rm -f
 | Docker not picking up changes | `docker compose build --no-cache` |
 | Bug reports show `UNKNOWN` feature | Check `AC_FEATURE_MAP` in `sync-bug-reports.js` |
 | HeroUI wrong syntax | Scan `frontend/src/components/` — use v3 compound syntax only |
+| **When user reports "X doesn't work"** | **Read `.opencode/knowledge/common-bugs.md` FIRST** |
