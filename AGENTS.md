@@ -1,171 +1,58 @@
 # AGENTS.md — Costume Rental
 
-## Auto-Load (CRITICAL — runs before responding to ANY message)
-Before responding to anything, always execute this first:
-1. `ls -t .opencode/logs/*.md | head -1 | xargs cat`
-2. Read `.opencode/skills/orchestrator/SKILL.md`
-3. Read `.opencode/skills/engineer/SKILL.md`
-4. Read `.opencode/skills/sdet/SKILL.md`
-5. Read `.opencode/skills/feature-builder/SKILL.md`
-6. Read `.opencode/skills/shared/bug-report-schema.md`
-7. Read `docs/ACCEPTANCE_CRITERIA.md`
-8. Read `.opencode/state/orchestrator-progress.json`
-9. `bash ls .opencode/state/bug-reports/` — read open bug files as needed
-10. When user reports bugs or says "doesn't work": Read `.opencode/knowledge/common-bugs.md` for known issues
-
----
-
-## Trigger Commands
-
-### `start` / `status`
-Read current state and recommend what to do next:
-1. Read `.opencode/state/orchestrator-progress.json`
-2. `bash ls .opencode/state/bug-reports/` — read open bug files as needed
-
-Then output **Standard Report**.
-
----
-
-### Standard Report
-
-- Current feature, status, iteration count, remaining iterations
-- Open/todo bugs by feature
-- Incomplete features from ACCEPTANCE_CRITERIA.md
-
-| State | Recommended next action |
-|---|---|
-| Open bugs exist | `Fix open bugs for [feature-id] — run /engineer [feature-id]` |
-| No tests exist | `Write tests for [feature-id] — run /sdet [feature-id]` |
-| No implementation | `Implement [feature-id] — run /feature-builder [feature-id]` |
-| All pass, no bugs | `[feature-id] complete. Next: /orchestrator [next-feature-id]` |
-| Iteration limit hit | `[feature-id] hit iteration limit. Manual review required.` |
-| Nothing pending | `All complete. Run: cd test && npx playwright test` |
-
----
-
-## Agent Skills
-
-| Invocation | Role | When to use |
-|---|---|---|
-| `/orchestrator [feature-id]` | Workflow engine | Full feature dev loop |
-| `/feature-builder [feature-id]` | Product Engineer | Implement feature from AC |
-| `/engineer [feature-id]` | Fullstack Engineer | Fix open bugs |
-| `/sdet [feature-id]` | SDET | Write or run tests |
-
-**Always provide `[feature-id]`.**
-
----
-
-## Key Paths
-- `docs/ACCEPTANCE_CRITERIA.md` — feature source of truth
-- `docs/project-plan.md` — architecture reference
-- `.opencode/state/orchestrator-progress.json` — current feature + iteration
-- `.opencode/state/bug-reports/` — one JSON per bug
-- `.opencode/logs/YYYY-MM-DD.md` — daily log, most recent = source of truth
-- `.opencode/knowledge/runbook.md` — known bugs + fixes
-- `.opencode/knowledge/project-notes.md` — architecture decisions
-- `.opencode/knowledge/heroui-v3-patterns.md` — HeroUI v3 patterns
-- `.opencode/knowledge/common-bugs.md` — common bugs & fixes (READ THIS when user reports issues)
-
----
+Tiny project memory. **Skills/subagents/knowledge load on demand — do NOT eagerly read them.**
 
 ## Stack
-- **Backend:** Go + Gin · SQLite via `glebarez/sqlite` · `CGO_ENABLED=0` always
-- **Frontend:** React 19 · Vite 5 · HeroUI v3 · Tailwind v4
-- **Auth:** JWT (golang-jwt/jwt/v5) + bcrypt
-- **Tests:** Playwright JS · specs in `test/specs/` · format `[AC-001-001]`
-- **Containers:** Docker + Docker Compose + Nginx
+Go + Gin · React 19 + Vite + HeroUI v3 + Tailwind v4 · SQLite (`glebarez/sqlite`, `CGO_ENABLED=0`) · JWT + bcrypt · Playwright · Docker Compose + Nginx.
 
----
+## Workflow entry points (always prefer these over freeform requests)
 
-## Running Tests (always `cd test` first)
-- `npm run test` — full run + sync bug reports ← **use by default**
-- `npx playwright test specs/[feature].spec.js` — single feature
-- `npx playwright test --grep "[AC-001-001]"` — single AC
-- `npx playwright test --headed --slow-mo 500` — debug
-- `npx playwright show-report` — HTML report
-
----
-
-## Activity Logging (MANDATORY)
-Log after every meaningful action: feature build · bug fix · test run · file change · blocked state.
-
-### When to log
-Log after: feature build · bug fix · test run · file create/modify/delete · blocked state · error encountered · git commit/push
-
-### Log file
-One file per day: `.opencode/logs/YYYY-MM-DD.md` — append only, never overwrite.
-
-### Daily file structure
-```
-# Log — YYYY-MM-DD
-
-## TODO List
-- [ ] pending task
-- [x] completed task
-
----
-
-## HH:MM — {short title}
-
-**Prompt:** {user instruction verbatim or close paraphrase}
-
-**Actions taken:**
-- {sub-task and result}
-
-**Files changed:**
-- `path/to/file` — {what changed}
-
-**Outcome:** success | partial | blocked
-{If partial or blocked: what remains and why}
-
----
-```
-
-### Log example
-```
-## 14:32 — Fix open bugs for RENT
-
-**Prompt:** Fix all open bugs for RENT using /engineer RENT
-
-**Actions taken:**
-- BUG-RENT-AC009: missing route in routes.go — fixed
-- BUG-RENT-AC012: marked sdet-fault — test contradicts AC-012
-
-**Files changed:**
-- `backend/routes/routes.go` — added POST /api/rents
-- `.opencode/state/bug-reports/BUG-RENT-AC009.json` — verified
-- `.opencode/state/bug-reports/BUG-RENT-AC012.json` — sdet-fault
-
-**Outcome:** Partial — 1 verified, 1 sdet-fault pending SDET review
-```
-
-### Log retention (3 most recent files)
-After each log write:
-```bash
-ls -t .opencode/logs/*.md | tail -n +4 | xargs -r rm -f
-```
-
----
-
-## Crash Recovery
-1. `ls -t .opencode/logs/*.md | head -1 | xargs cat` — find last incomplete TODO
-2. `cat .opencode/logs/$(date +%Y-%m-%d).md` — check today's last log entry
-3. Read `.opencode/state/orchestrator-progress.json` — if missing, treat as pending
-4. `bash ls .opencode/state/bug-reports/` — if open/todo bugs → status is bug-fixing
-5. Correct `orchestrator-progress.json` if inconsistent
-6. Resume: `/orchestrator [feature-id]`
-
----
-
-## Known Issues
-| Issue | Fix |
+| Command | Purpose |
 |---|---|
-| `pread64 undeclared` build error | Use `glebarez/sqlite` + `CGO_ENABLED=0` |
-| `useAuth is not exported` | Add `export const useAuth = () => useContext(AuthContext)` |
-| Infinite page reload | Only poll notifications when `isAuthenticated === true` |
-| DB `out of memory (14)` | Mount volume to directory `/app/` not file path |
-| Docker not picking up changes | `docker compose build --no-cache` |
-| Bug reports show `UNKNOWN` feature | Check `AC_FEATURE_MAP` in `sync-bug-reports.js` |
-| HeroUI wrong syntax | Scan `frontend/src/components/` — use v3 compound syntax only |
-| **When user reports "X doesn't work"** | **Read `.opencode/knowledge/common-bugs.md` FIRST** |
+| `/start` or `/status` | Status + recommended next action |
+| `/orchestrator [feature-id]` | Run the full FSM workflow for a feature |
+| `/developer [build\|fix] [feature-id]` | Direct subagent (debug only) |
+| `/sdet [write\|run\|triage] [feature-id]` | Direct subagent (debug only) |
+| `/reviewer [feature-id] [bugs] [sha]` | Direct subagent (debug only) |
+
+## Key paths
+
+| Path | Purpose |
+|---|---|
+| `docs/ACCEPTANCE_CRITERIA.md` | Source of truth for features |
+| `.opencode/skills/orchestrator/SKILL.md` | FSM definition |
+| `.opencode/agents/{developer,sdet,reviewer}.md` | Subagents |
+| `.opencode/skills/shared/{constraints,io-contract}.md` | Shared contracts |
+| `.opencode/knowledge/runbook.md` | Operational guide |
+| `.opencode/knowledge/common-bugs.md` | Recurring bugs (read when user reports an issue) |
+| `.opencode/knowledge/heroui-v3-patterns.md` | HeroUI v3 syntax |
+| `.opencode/state/orchestrator-progress.json` | Feature + iteration state |
+| `.opencode/state/feature-manifest.json` | Pre-indexed feature → AC/file map (gitignored, auto-built) |
+| `.opencode/state/feature-{id}/failures.md` | Append-only failure log per feature |
+| `.opencode/state/feature-{id}/disputes.md` | sdet-fault arbitration log |
+| `.opencode/state/checkpoints.json` | Git SHAs for pre-fix checkpoints |
+| `.opencode/scripts/build-manifest.mjs` | Rebuilds feature-manifest.json |
+
+## Intent classifier (apply silently)
+
+- Status / "where are we" → run `/start`.
+- Bug report / "X doesn't work" → consult `common-bugs.md` first.
+- Continue / resume / build / fix a feature → run `/orchestrator [feature-id]`.
+- General code question → answer directly, load only what you need.
+
+## Logging (lightweight)
+After meaningful actions append to `.opencode/logs/YYYY-MM-DD.md`:
+```
+## HH:MM — {title}
+**Prompt:** {instruction}
+**Actions:** {bullets}
+**Files:** {paths}
+**Outcome:** success|partial|blocked
+```
+Then prune: `ls -t .opencode/logs/*.md | tail -n +4 | xargs -r rm -f`
+
+## Crash recovery
+`/start` reads the latest log + progress + bug list and recommends the next step.
+
+## Quick gotchas
+`pread64` build error → `CGO_ENABLED=0` + `glebarez/sqlite` · `useAuth not exported` → add hook export · infinite reload → fetch notifications only when `isAuthenticated` · DB `out of memory` → mount volume to `/app/` not the file · Docker stale → `build --no-cache` · HeroUI syntax → see `heroui-v3-patterns.md`.
