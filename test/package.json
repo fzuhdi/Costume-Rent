@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "Playwright tests for Costume Rental with Page Object Model",
   "scripts": {
-    "test": "npx playwright test || true && node helpers/sync-bug-reports.js",
-    "test:dry": "npx playwright test || true && node helpers/sync-bug-reports.js --dry-run",
-    "test:verbose": "npx playwright test || true && node helpers/sync-bug-reports.js --verbose",
+    "test": "npx playwright test || true && node helpers/sync-failure-log.mjs",
+    "test:dry": "npx playwright test || true && node helpers/sync-failure-log.mjs --dry-run",
+    "test:verbose": "npx playwright test || true && node helpers/sync-failure-log.mjs --verbose",
     "test:auth": "npx playwright test specs/auth.spec.js",
     "test:catalogue": "npx playwright test specs/catalogue.spec.js",
     "test:rental": "npx playwright test specs/rental.spec.js",
