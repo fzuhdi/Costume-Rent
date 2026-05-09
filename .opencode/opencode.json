@@ -15,10 +15,16 @@
   },
   "permission": {
     "skill": {
-      "sdet": "allow",
-      "engineer": "allow",
       "orchestrator": "allow",
       "*": "allow"
+    },
+    "task": {
+      "*": "deny",
+      "developer": "allow",
+      "sdet": "allow",
+      "reviewer": "allow",
+      "explore": "allow",
+      "general": "allow"
     }
   },
   "compaction": {
