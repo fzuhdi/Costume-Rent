@@ -1,6 +1,6 @@
 ---
 id: PLAN-20260516-regression-continued
-status: ready
+status: complete
 source_plan: inline-user-request
 ---
 
@@ -25,8 +25,8 @@ Extend regression coverage to all remaining features (CATALOGUE, RENT, CLIENT, N
 - TICKET-20260516-006 - complete - feature - CATALOGUE name/thumbnail/quantity
 - TICKET-20260516-007 - complete - feature - CATALOGUE pagination
 - TICKET-20260516-008 - complete - feature - CATALOGUE region/category labels
-- TICKET-20260516-009 - ready - feature - NAVIGATION sidebar Katalog menu
-- TICKET-20260516-010 - ready - feature - API health endpoint
+- TICKET-20260516-009 - complete - feature - NAVIGATION sidebar Katalog menu
+- TICKET-20260516-010 - complete - feature - API health endpoint
 
 ## Draft Ticket Roadmap
 - CATALOGUE: remaining AC-003-002 to AC-008-007 (name/quantity display, pagination, add/edit/detail/delete, images, search/filter, available qty)
@@ -40,10 +40,10 @@ Extend regression coverage to all remaining features (CATALOGUE, RENT, CLIENT, N
 ## Status Summary
 - draft: 0
 - review: 0
-- ready: 7
+- ready: 0
 - in_progress: 0
 - blocked: 0
-- complete: 0
+- complete: 7
 
 ## Execution
 `/engineering/orchestrator PLAN-20260516-regression-continued`
