@@ -67,6 +67,11 @@ const AC_FEATURE_MAP = [
   { from: 21, to: 24,  feature: 'SETTINGS'   },  // AC-021 to AC-024
   { from: 25, to: 27,  feature: 'NAVIGATION' },  // AC-025 to AC-027
   { from: 28, to: 30,  feature: 'API'        },  // AC-028 to AC-030
+  { from: 31, to: 32,  feature: 'CATALOGUE'  },  // AC-031 to AC-032 (extended)
+  { from: 33, to: 34,  feature: 'RENT'       },  // AC-033 to AC-034 (extended)
+  { from: 35, to: 40,  feature: 'API'        },  // AC-035 to AC-040 (extended)
+  { from: 41, to: 41,  feature: 'NAVIGATION' },  // AC-041 (Dark mode)
+  { from: 42, to: 42,  feature: 'CLIENT'     },  // AC-042 (Delete client)
 ];
 
 function featureFromAC(ac) {
