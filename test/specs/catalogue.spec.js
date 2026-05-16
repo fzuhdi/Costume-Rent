@@ -244,6 +244,31 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await cataloguePage.assertAvailableQuantityVisible();
   });
 
+  // AC-003-004: Region and category labels shown per costume
+  test('[AC-003-004] - Region and category labels shown per costume', async ({ page }) => {
+    const cataloguePage = new CataloguePage(page);
+    await cataloguePage.goto();
+    await cataloguePage.assertPageLoaded();
+
+    const cardCount = await cataloguePage.costumeRows.count();
+    expect(cardCount).toBeGreaterThan(0);
+
+    // Detect active view by checking for a visible <table> element
+    const hasTable = await page.locator('table[aria-label="Table of costumes"]').isVisible().catch(() => false);
+
+    if (hasTable) {
+      // Table view: "Wilayah" and "Kategori" column headers are the per-costume labels
+      await expect(page.getByText('Wilayah')).toBeVisible();
+      await expect(page.getByText('Kategori')).toBeVisible();
+    } else {
+      // List / card view: each costume row shows region and category separated by a bullet
+      for (let i = 0; i < Math.min(cardCount, 2); i++) {
+        const card = cataloguePage.costumeRows.nth(i);
+        await expect(card.locator('text=/•/')).toBeVisible();
+      }
+    }
+  });
+
   // AC-003-005: Empty state shown when no results match search
   test('[AC-003-005] - Empty state shown when no results match search', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
