@@ -26,6 +26,10 @@ MODE: write | run | triage
 FEATURE: {feature-id}
 SLICE_ID: {AC-NNN-NNN}
 DEFERRED_SLICE_IDS: [...]
+TICKET_ID: {optional TICKET-YYYYMMDD-NNN}
+TICKET_FILE: {optional docs/tickets/TICKET-YYYYMMDD-NNN.md}
+TICKET_TYPE: {optional feature | bug | chore | spike}
+TICKET_ACCEPTANCE_CRITERION: {optional single criterion}
 ```
 
 If `SLICE_ID` is missing, return `OUTCOME: blocked`.
@@ -34,12 +38,13 @@ If `SLICE_ID` is missing, return `OUTCOME: blocked`.
 
 1. `.opencode/skills/shared/constraints.md`
 2. `.opencode/skills/shared/io-contract.md`
-3. `docs/ACCEPTANCE_CRITERIA.md`
+3. `docs/ACCEPTANCE_CRITERIA.md` unless `TICKET_FILE` is provided
 4. `.opencode/state/feature-manifest.json` (look up `ac_ids` and `test_file`)
 
 ## Tracer-slice discipline
 
 - Test exactly one `SLICE_ID` per invocation.
+- If `TICKET_FILE` is provided, test that ticket's `TICKET_ACCEPTANCE_CRITERION`; use the AC docs only for mapping and context.
 - Do not write tests for sibling ACs in `DEFERRED_SLICE_IDS`.
 - Do not run the full suite during normal slice testing.
 - Prefer the fastest targeted command that proves the current slice.
@@ -47,7 +52,7 @@ If `SLICE_ID` is missing, return `OUTCOME: blocked`.
 
 ## MODE: write
 
-1. Locate the exact AC bullet for `SLICE_ID`.
+1. Locate the exact behavior from `TICKET_ACCEPTANCE_CRITERION` when provided; otherwise locate the exact AC bullet for `SLICE_ID`.
 2. Use `feature-manifest.json[{feature-id}].test_file` as the target spec file.
 3. Create or update exactly one `test()` block whose title includes `SLICE_ID`.
 4. Create or update a Page Object only if the current slice has non-trivial UI interaction.

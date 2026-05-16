@@ -33,6 +33,9 @@ The invoker provides:
 
 - `FEATURE: {feature-id}`
 - `SLICE_ID: {AC-NNN-NNN}`
+- `TICKET_ID: {optional TICKET-YYYYMMDD-NNN}`
+- `TICKET_FILE: {optional docs/tickets/TICKET-YYYYMMDD-NNN.md}`
+- `TICKET_TYPE: {optional feature | bug | chore | spike}`
 - `CHECKPOINT_SHA: {git sha}` - the commit before the fix
 
 If `SLICE_ID` is missing, return `OUTCOME: blocked`.
@@ -45,11 +48,12 @@ For the current `SLICE_ID`:
    ```markdown
    - **AC-NNN-NNN** [fixed|sdet-fault|todo] {root-cause + what changed}
    ```
-2. Get the diff:
+2. If `TICKET_FILE` is provided, read it and use its acceptance criterion to judge whether the fix stayed within the ticket scope.
+3. Get the diff:
    ```bash
    git diff {checkpoint-sha}..HEAD -- backend/ frontend/
    ```
-3. Check all of:
+4. Check all of:
    - Diff scope: only files relevant to this slice's root cause.
    - Root cause match: the diff fixes what the failures.md line claims.
    - Symptom vs cause: the fix addresses the underlying system behavior, not just a visible symptom.

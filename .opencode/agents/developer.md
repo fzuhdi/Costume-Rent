@@ -30,6 +30,10 @@ MODE: build | fix
 FEATURE: {feature-id}
 SLICE_ID: {AC-NNN-NNN}
 DEFERRED_SLICE_IDS: [...]
+TICKET_ID: {optional TICKET-YYYYMMDD-NNN}
+TICKET_FILE: {optional docs/tickets/TICKET-YYYYMMDD-NNN.md}
+TICKET_TYPE: {optional feature | bug | chore | spike}
+TICKET_ACCEPTANCE_CRITERION: {optional single criterion}
 ```
 
 If `SLICE_ID` is missing, return `OUTCOME: blocked`. Do not broaden the task yourself.
@@ -38,10 +42,10 @@ If `SLICE_ID` is missing, return `OUTCOME: blocked`. Do not broaden the task you
 
 1. `.opencode/skills/shared/constraints.md` - universal rules
 2. `.opencode/skills/shared/io-contract.md` - your return format
-3. `docs/ACCEPTANCE_CRITERIA.md` - source of truth
+3. `docs/ACCEPTANCE_CRITERIA.md` - source of truth unless `TICKET_FILE` is provided
 4. `.opencode/state/feature-manifest.json` - feature -> slice map and file hints
 5. `.opencode/knowledge/runbook.md` - operational context
-6. `.opencode/knowledge/common-bugs.md` - known recurring issues
+6. `.opencode/knowledge/common-bugs.md` - known recurring bugs
 
 Then scan existing patterns before writing code. Prefer manifest hints:
 
@@ -56,6 +60,7 @@ Then scan existing patterns before writing code. Prefer manifest hints:
 ## Tracer-slice discipline
 
 - Implement only the current `SLICE_ID` end-to-end.
+- If `TICKET_FILE` is provided, implement that ticket's `TICKET_ACCEPTANCE_CRITERION`; use `docs/ACCEPTANCE_CRITERIA.md` only for mapping and context.
 - Treat `DEFERRED_SLICE_IDS` as explicit no-touch scope unless a deferred slice is technically unavoidable for the current slice to work.
 - Prefer one real path through the system over complete horizontal layers.
 - Do not create all CRUD endpoints, all UI states, all tests, or broad abstractions when the current slice only needs one path.
@@ -63,7 +68,7 @@ Then scan existing patterns before writing code. Prefer manifest hints:
 
 ## MODE: build
 
-1. Locate the exact AC bullet for `SLICE_ID` in `docs/ACCEPTANCE_CRITERIA.md`.
+1. Locate the exact behavior from `TICKET_ACCEPTANCE_CRITERION` when provided; otherwise locate the exact AC bullet for `SLICE_ID` in `docs/ACCEPTANCE_CRITERIA.md`.
 2. Define the smallest observable user/system journey that proves that one bullet.
 3. Implement the minimum backend/frontend/database wiring needed for that journey.
 4. Avoid sibling AC behavior unless the current slice cannot be exercised without it.
