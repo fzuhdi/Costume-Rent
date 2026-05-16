@@ -9,6 +9,7 @@ Go + Gin · React 19 + Vite + HeroUI v3 + Tailwind v4 · SQLite (`glebarez/sqlit
 | Group | Directory | Commands |
 |---|---|---|
 | Engineering | `.opencode/commands/engineering/` | `/engineering/orchestrator`, `/engineering/developer`, `/engineering/sdet`, `/engineering/reviewer` |
+| Planning | `.opencode/commands/planning/` | `/planning/plan-to-tickets` |
 | Productivity | `.opencode/commands/productivity/` | `/productivity/start`, `/productivity/status` |
 | Utility | `.opencode/commands/utility/` | (reserved) |
 
@@ -16,13 +17,17 @@ Go + Gin · React 19 + Vite + HeroUI v3 + Tailwind v4 · SQLite (`glebarez/sqlit
 | Path | Purpose |
 |---|---|
 | `docs/ACCEPTANCE_CRITERIA.md` | Source of truth for features |
+| `docs/plans/*.md` | Agile plan/epic summaries grouped by `plan_id` |
+| `docs/tickets/*.md` | Orchestrator-ready tracer tickets grouped by `plan_id` |
 | `.opencode/skills/orchestrator/SKILL.md` | FSM definition |
+| `.opencode/skills/plan-to-tickets/SKILL.md` | Converts plans/PRDs/bugs into tracer tickets |
 | `.opencode/agents/{developer,sdet,reviewer}.md` | Subagents |
 | `.opencode/skills/shared/{constraints,io-contract}.md` | Shared contracts |
 | `.opencode/knowledge/runbook.md` | Operational guide |
-| `.opencode/knowledge/common-bugs.md` | Recurring bugs (read when user reports an issue) |
+| `.opencode/knowledge/common-bugs.md` | Recurring bugs (read when user reports a bug) |
 | `.opencode/knowledge/heroui-v3-patterns.md` | HeroUI v3 syntax |
 | `.opencode/state/orchestrator-progress.json` | Feature + current tracer slice + iteration state |
+| `.opencode/state/ticket-progress.json` | Runtime ticket/plan execution status |
 | `.opencode/state/feature-manifest.json` | Pre-indexed feature → AC/file map (gitignored, auto-built) |
 | `.opencode/state/feature-{id}/failures.md` | Append-only failure log per feature |
 | `.opencode/state/feature-{id}/disputes.md` | sdet-fault arbitration log |
@@ -32,7 +37,8 @@ Go + Gin · React 19 + Vite + HeroUI v3 + Tailwind v4 · SQLite (`glebarez/sqlit
 ## Intent classifier (apply silently)
 - Status / "where are we" → run `/productivity/status` or `/productivity/start`.
 - Bug report / "X doesn't work" → consult `common-bugs.md` first.
-- Continue / resume / build / fix a feature → run `/engineering/orchestrator [feature-id]` to select the next tracer slice, or `/engineering/orchestrator [feature-id] [slice-id]` for a specific slice.
+- Plan / PRD / bug batch to work items → run `/planning/plan-to-tickets [plan-file]`.
+- Continue / resume / build / fix a feature → run `/engineering/orchestrator [feature-id]` to select the next tracer slice, `/engineering/orchestrator [feature-id] [slice-id]` for a specific slice, `/engineering/orchestrator [ticket-id]` for one ticket, or `/engineering/orchestrator [plan-id]` for all ready tickets in one plan.
 - General code question → answer directly, load only what you need.
 
 ## Logging (lightweight)
