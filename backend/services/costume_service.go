@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/busana/backend/config"
@@ -353,8 +354,8 @@ func (s *CostumeService) GetRegions() ([]dto.RegionResponse, error) {
 func (s *CostumeService) CreateRegion(name string) (*dto.RegionResponse, error) {
 	region := models.Region{Name: name}
 	if err := config.DB.Create(&region).Error; err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return nil, errors.New("region already exists")
+		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "unique") {
+			return nil, errors.New("duplicate region: already exists")
 		}
 		return nil, err
 	}

@@ -6,7 +6,6 @@ import (
 	"github.com/busana/backend/config"
 	"github.com/busana/backend/dto"
 	"github.com/busana/backend/models"
-	"gorm.io/gorm"
 )
 
 type ClientService struct{}
@@ -84,9 +83,7 @@ func (s *ClientService) List(filter dto.ClientFilter) (*dto.PaginatedResponse, e
 
 func (s *ClientService) GetByID(id uint) (*models.Client, error) {
 	var client models.Client
-	if err := config.DB.Preload("RentOrders", func(db *gorm.DB) {
-		db.Where("deleted_at IS NULL").Order("created_at DESC")
-	}).First(&client, id).Error; err != nil {
+	if err := config.DB.Preload("RentOrders", "deleted_at IS NULL").Order("created_at DESC").First(&client, id).Error; err != nil {
 		return nil, err
 	}
 	return &client, nil
