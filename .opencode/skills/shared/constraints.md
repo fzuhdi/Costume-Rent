@@ -9,6 +9,12 @@ These constraints apply to ALL workflow agents (developer, sdet, reviewer).
 - Never push to `main`/`master`. Never use `--no-verify`. Never use `--force` on shared branches.
 - Always log meaningful actions (file changes, fixes, decisions) to `.opencode/logs/YYYY-MM-DD.md`.
 
+## Tracer bullet rule
+- Normal workflow owns exactly one `SLICE_ID` at a time.
+- Build the smallest end-to-end behavior that proves that slice through the real system.
+- Defer sibling ACs, broad infrastructure, full CRUD completion, and generalized abstractions until their own slice is selected.
+- Verify the slice immediately with the narrowest honest test before expanding scope.
+
 ## Role boundaries (system-enforced via permissions, but stated for clarity)
 - **developer** — owns `backend/`, `frontend/`. May NOT touch `test/`.
 - **sdet**      — owns `test/`. May NOT touch `backend/` or `frontend/`.
