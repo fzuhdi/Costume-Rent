@@ -8,6 +8,7 @@ When invoked via the Task tool, every workflow subagent must end its work by ret
 OUTCOME: success | partial | blocked
 FEATURE: {feature-id}
 SLICE_ID: {AC-NNN-NNN}
+TICKET_ID: {TICKET-YYYYMMDD-NNN or "none"}
 SUMMARY: {one-line plain-text summary}
 
 DETAILS:
@@ -36,6 +37,8 @@ NOTES:
 - A worker must operate on exactly one `SLICE_ID`.
 - Sibling ACs belong in `DEFERRED_SLICE_IDS`; do not implement or test them opportunistically.
 - If a dependency/foundation is needed, build the smallest version that proves the current slice and list the deferred work in `NOTES`.
+- `TICKET_ID`, `TICKET_FILE`, `TICKET_TYPE`, and `TICKET_ACCEPTANCE_CRITERION` are optional. When present, the ticket file's criterion is the source of truth for the slice behavior.
+- Plan execution still uses exactly one `SLICE_ID` per worker call; plan batching is only an orchestrator queue.
 
 ## Subagent-specific extensions
 

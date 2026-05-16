@@ -11,6 +11,7 @@ These constraints apply to ALL workflow agents (developer, sdet, reviewer).
 
 ## Tracer bullet rule
 - Normal workflow owns exactly one `SLICE_ID` at a time.
+- Plan execution may process multiple tickets, but each ticket must complete the one-slice FSM before the next ticket starts.
 - Build the smallest end-to-end behavior that proves that slice through the real system.
 - Defer sibling ACs, broad infrastructure, full CRUD completion, and generalized abstractions until their own slice is selected.
 - Verify the slice immediately with the narrowest honest test before expanding scope.
@@ -22,6 +23,7 @@ These constraints apply to ALL workflow agents (developer, sdet, reviewer).
 
 ## Source of truth
 - Features: `docs/ACCEPTANCE_CRITERIA.md`
+- Ticket work: `docs/tickets/*.md` when `TICKET_FILE` is provided
 - Architecture: `docs/project-plan.md`
 - Failure log format: `.opencode/skills/shared/io-contract.md`
 - Operational runbook: `.opencode/knowledge/runbook.md`
