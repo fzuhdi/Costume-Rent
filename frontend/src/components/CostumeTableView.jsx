@@ -41,7 +41,7 @@ const CostumeTableView = ({ costumes, expandedKeys, onExpandedChange }) => {
                  <Table.Cell>{costume.available_quantity ?? costume.quantity} unit</Table.Cell>
                 <Table.Cell>{formatPrice(costume.price)}</Table.Cell>
                 <Table.Cell>
-                   <Button isIconOnly variant="bordered" size="sm" onPress={() => navigate(`/catalogue/${costume.id}/edit`)}>
+                   <Button isIconOnly variant="bordered" size="sm" aria-label={`Edit ${costume.name}`} onPress={() => navigate(`/catalogue/${costume.id}/edit`)}>
                     <Pencil size={16} />
                   </Button>
                 </Table.Cell>
