@@ -1,12 +1,12 @@
 package dto
 
 type CreateCostumeRequest struct {
-	Name        string  `json:"name" validate:"required"`
+	Name        string  `json:"name" binding:"required"`
 	Description string  `json:"description"`
 	RegionID    *uint   `json:"region_id"`
 	CategoryID  *uint   `json:"category_id"`
 	Price       int     `json:"price"`
-	Quantity    int     `json:"quantity" validate:"min=0"`
+	Quantity    int     `json:"quantity" binding:"min=0"`
 	AcquiredAt  *string `json:"acquired_at"`
 }
 

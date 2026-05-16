@@ -5,16 +5,16 @@ type CreateRentOrderRequest struct {
 	ClientName      string         `json:"client_name"`
 	ClientPhone     string         `json:"client_phone"`
 	ClientAddress   string         `json:"client_address"`
-	GuaranteeType   string         `json:"guarantee_type" validate:"required"`
-	RentStart       string         `json:"rent_start" validate:"required"`
-	RentEnd         string         `json:"rent_end" validate:"required"`
-	Items           []RentItemInput `json:"items" validate:"required,min=1"`
+	GuaranteeType   string         `json:"guarantee_type" binding:"required"`
+	RentStart       string         `json:"rent_start" binding:"required"`
+	RentEnd         string         `json:"rent_end" binding:"required"`
+	Items           []RentItemInput `json:"items" binding:"required"`
 	Notes           string         `json:"notes"`
 }
 
 type RentItemInput struct {
-	CostumeID uint `json:"costume_id" validate:"required"`
-	Quantity  int  `json:"quantity" validate:"required,min=1"`
+	CostumeID uint `json:"costume_id" binding:"required"`
+	Quantity  int  `json:"quantity" binding:"required,min=1"`
 }
 
 type UpdateRentOrderRequest struct {
