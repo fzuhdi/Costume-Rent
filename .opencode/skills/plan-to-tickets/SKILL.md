@@ -1,121 +1,72 @@
 ---
 name: plan-to-tickets
-description: Convert a PRD, bug report, or implementation plan into an Agile-style plan plus independent tracer-bullet tickets that the orchestrator can execute by ticket or plan.
+description: Convert PRDs, bug reports, ask-me output, or implementation plans into Agile plan files and TDD-ready backlog tickets for the orchestrator.
 ---
 
 # Plan To Tickets
 
-Use this skill when the user runs `/plan-to-tickets` or asks to turn a PRD, ask-me output, feature request, bug report, or implementation plan into orchestrator-ready backlog tickets.
+Use this skill when the user runs `/plan-to-tickets` or asks to turn a PRD, ask-me output, feature request, bug report, or implementation plan into backlog tickets.
 
-This skill is planning-only. It creates plan and ticket files; it does not invoke `/engineering/orchestrator`, `developer`, `sdet`, or `reviewer`.
+This skill is planning-only. It creates or repairs plan/ticket files; it does not invoke `/engineering/orchestrator`, `developer`, `sdet`, or `reviewer`.
 
----
+## Agile TDD Model
 
-## Agile Model
-
-Use one backlog. Do not split features and bugs into separate workflow concepts.
+Use one backlog:
 
 ```text
 Plan / Epic
   -> Ticket / Backlog Item
       -> type: feature | bug | chore | spike
-      -> one tracer-bullet slice
-      -> acceptance criteria
-      -> definition of done
+      -> exactly one acceptance criterion when executable
+      -> explicit expected outcome
+      -> explicit RED and GREEN expectations
 ```
 
-The orchestrator executes tickets. It does not execute nested subtasks inside a giant ticket.
-
----
+Only mapped `feature` and `bug` tickets with `status: ready` are executable. `chore` and `spike` stay as draft backlog records until converted into mapped feature/bug tickets.
 
 ## Inputs
 
-The command may provide:
-
 ```text
-PLAN_FILE: {path}
+PLAN_FILE: {optional path}
 PLAN_ID: {optional stable id}
 RAW_ARGUMENTS: {original command arguments}
 ```
 
-If `PLAN_FILE` is missing, infer the most likely plan path from the user's message. If no plan path is clear, ask one short question for the path and stop.
+If the user asks to repair ambiguous blocked tickets, scan existing tickets for the requested plan and update only matching `status: blocked` tickets. Do not overwrite `in_progress` or `complete` tickets.
 
-`/ask-me` output is allowed input, but not required. Treat any PRD, sketch, note, bug report, or plan as acceptable source material.
-
----
+If `PLAN_FILE` is missing and no source is obvious, ask one short question and stop.
 
 ## Output Locations
 
-Write or update the parent plan summary:
+- Plan summary: `docs/plans/{PLAN_ID}.md`
+- Tickets: `docs/tickets/{TICKET_ID}.md`
 
-```text
-docs/plans/{PLAN_ID}.md
-```
+Create directories if missing. New ticket IDs use the next available sequence for today: `TICKET-YYYYMMDD-001`.
 
-Write executable tickets to:
+Do not overwrite existing ticket files except when explicitly repairing a blocked ambiguous ticket for the same plan and same criterion. Preserve the existing ticket ID during repair and set `status: review`.
 
-```text
-docs/tickets/{TICKET_ID}.md
-```
+## Status Enums
 
-Create `docs/plans/` and `docs/tickets/` if needed.
+Ticket status: `draft | review | ready | in_progress | blocked | complete`.
 
-Ticket IDs use the next available sequence for the current date:
+Plan status: `draft | ready | in_progress | blocked | complete`.
 
-```text
-TICKET-YYYYMMDD-001
-TICKET-YYYYMMDD-002
-```
+Use `status: ready` only when a `feature` or `bug` ticket has all required TDD fields and is independently executable. Use `status: review` for repaired ambiguous tickets that need reviewer audit before execution. Use `status: draft` for unclear, dependent, unmapped, chore, or spike work.
 
-Do not overwrite existing ticket files. If a ticket already exists for the same plan and same acceptance criterion, leave it unchanged and report it as existing.
+## Ready Ticket Requirements
 
----
+A ready executable ticket must have:
 
-## Plan ID Rule
+- exactly one acceptance criterion
+- concrete `feature` and `slice_id`
+- `expected_outcome`
+- `test_interface: e2e | api`
+- `red_expectation`
+- `green_expectation`
+- no prerequisite ticket dependency
+- no conflict with `docs/ACCEPTANCE_CRITERIA.md`
 
-Every ticket from one source plan must share the same `plan_id`.
-
-If the caller supplies `PLAN_ID`, use it. Otherwise derive one from the plan filename or title:
-
-```text
-PLAN-YYYYMMDD-{short-kebab-title}
-```
-
-The orchestrator uses `plan_id` to execute all ready tickets from one plan.
-
----
-
-## Ticket Rule
-
-One ticket equals one executable tracer bullet.
-
-Each ticket must contain exactly one observable acceptance criterion and one smallest end-to-end path. Do not create broad tickets such as "build catalogue module" or "add all settings screens".
-
-Good ticket shape:
-
-- One user/system outcome
-- One `type`: `feature`, `bug`, `chore`, or `spike`
-- One `feature`
-- One `slice_id`
-- One targeted test expectation or spike output
-- Deferred sibling work listed explicitly
-
-If a requirement is too vague, create a `status: draft` ticket with the open questions. Do not invent product decisions.
-
----
-
-## Ticket Types
-
-| Type | Use When | Done Means |
-|---|---|---|
-| `feature` | New user-visible behavior | Acceptance criterion passes through the real system. |
-| `bug` | Existing expected behavior is broken | Repro fails before the fix, passes after the fix, and regression test exists. |
-| `chore` | Maintenance or internal change | Concrete operational or code-health outcome is complete. |
-| `spike` | Uncertainty reduction | Decision, notes, prototype, or follow-up tickets are produced. |
-
-`bug` tickets still use the same orchestrator path as feature tickets. They just include expected result, actual result, and reproduction path.
-
----
+If any required field is missing, keep the ticket `draft` with open questions. Do not invent product decisions.
 
 ## Feature And Slice Mapping
 
@@ -123,18 +74,11 @@ Before writing tickets:
 
 1. Run or rely on `.opencode/scripts/build-manifest.mjs` if `.opencode/state/feature-manifest.json` is stale or missing.
 2. Read `docs/ACCEPTANCE_CRITERIA.md` and `.opencode/state/feature-manifest.json`.
-3. Map each ticket to the nearest existing `feature` and `slice_id` where possible.
+3. Map each executable ticket to the nearest existing `feature` and `slice_id`.
 
-If no existing acceptance-criteria slice matches cleanly, still create the ticket but set:
+If no slice matches cleanly, set `status: draft`, `slice_id: TBD`, and include the missing AC/slice recommendation in `## Open Questions`.
 
-```yaml
-status: draft
-slice_id: TBD
-```
-
-and include the missing AC/slice recommendation in `## Open Questions`.
-
----
+If a source requirement conflicts with `docs/ACCEPTANCE_CRITERIA.md`, do not choose a winner silently. Create or repair the ticket as `status: review` or `status: draft` with the conflict called out.
 
 ## Plan File Template
 
@@ -152,13 +96,21 @@ source_plan: docs/plans/source.md
 
 ## Tickets
 - TICKET-YYYYMMDD-001 - ready - feature - {title}
-- TICKET-YYYYMMDD-002 - draft - bug - {title}
+- TICKET-YYYYMMDD-002 - draft - chore - {title}
+
+## Status Summary
+- draft: N
+- review: N
+- ready: N
+- in_progress: 0
+- blocked: 0
+- complete: 0
 
 ## Execution
 `/engineering/orchestrator PLAN-YYYYMMDD-short-title`
 ```
 
----
+Plan status is `ready` when at least one executable ticket is ready or one repaired ticket awaits review and there are no unresolved plan-level questions that block all work. Otherwise use `draft`.
 
 ## Ticket File Template
 
@@ -173,15 +125,28 @@ slice_id: AC-004-001
 priority: 1
 source_plan: docs/plans/example.md
 test_file: test/specs/catalogue.spec.js
+expected_outcome: User sees the new visible behavior.
+test_interface: e2e
+red_expectation: The acceptance test fails because the behavior is missing.
+green_expectation: The same acceptance test passes after the minimal implementation.
 ---
 
 # {short ticket title}
 
-## User Outcome
-{one sentence describing the user/system-visible outcome}
+## Expected Outcome
+{one sentence describing the visible user/system outcome}
 
-## Acceptance Criteria
+## Acceptance Criterion
 - {single observable criterion for this tracer ticket}
+
+## Public Test Interface
+`e2e` or `api`, with one sentence explaining why this is the highest useful public interface.
+
+## RED Expectation
+{the specific expected failing behavior before implementation}
+
+## GREEN Expectation
+{the specific passing behavior after implementation}
 
 ## Smallest End-To-End Path
 1. {entry point}
@@ -190,13 +155,16 @@ test_file: test/specs/catalogue.spec.js
 
 ## Definition Of Ready
 - Feature and slice are mapped.
-- Acceptance criterion is testable.
+- Exactly one acceptance criterion is present.
+- Expected outcome, public test interface, RED expectation, and GREEN expectation are present.
 - Deferred work is explicit.
+- No prerequisite ticket dependency remains.
 
 ## Definition Of Done
-- Targeted test exists and includes `slice_id`.
-- Targeted test passes.
-- No deferred sibling scope was implemented.
+- SDET RED test exists and includes `slice_id`.
+- RED failed for the expected reason or already-green coverage was reviewer-approved.
+- GREEN passes the same recorded test.
+- Final reviewer audit approved scope and test integrity.
 
 ## Targeted Test
 `cd test && npx playwright test --grep "{slice_id}"`
@@ -211,7 +179,7 @@ test_file: test/specs/catalogue.spec.js
 `/engineering/orchestrator TICKET-YYYYMMDD-001`
 ```
 
-For `type: bug`, include:
+For `type: bug`, also include:
 
 ```markdown
 ## Bug Details
@@ -220,9 +188,17 @@ For `type: bug`, include:
 - Repro: {minimal reproduction path}
 ```
 
-Use `status: ready` only when the ticket has a concrete `feature`, `slice_id`, and acceptance criterion. Use `status: draft` for unclear or unmapped work.
+## Ambiguous Ticket Repair
 
----
+When repairing tickets blocked by reviewer as `ticket-ambiguous`:
+
+1. Preserve the existing ticket ID and file path.
+2. Update the same ticket with clarified required fields.
+3. Set `status: review`, not `ready`.
+4. Keep `in_progress` and `complete` tickets unchanged and report them as protected.
+5. Update the plan status summary.
+
+The orchestrator reviewer must later return `ticket-ready` before the ticket can become `ready`.
 
 ## Final Report
 
@@ -232,18 +208,22 @@ End with:
 OUTCOME: success | partial | blocked
 PLAN_ID: {plan-id}
 PLAN_FILE: docs/plans/{plan-id}.md
-SOURCE_PLAN: {path}
+SOURCE_PLAN: {path or inline}
 READY_TICKETS: {count}
+REVIEW_TICKETS: {count}
 DRAFT_TICKETS: {count}
 
 TICKETS_CREATED:
 - TICKET-... - ready - feature - {title}
 
-TICKETS_EXISTING:
+TICKETS_REPAIRED:
+- TICKET-... - review - {title}
+
+TICKETS_EXISTING_OR_PROTECTED:
 - TICKET-... - {reason}
 
 NEXT_COMMAND:
 /engineering/orchestrator {PLAN_ID}
 ```
 
-If no ready tickets were created, set `OUTCOME: partial` and explain which decisions are needed before orchestration.
+If no ready or review tickets exist, set `OUTCOME: partial` and explain which decisions are needed before orchestration.
