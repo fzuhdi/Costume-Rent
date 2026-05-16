@@ -1,6 +1,6 @@
 ---
 id: PLAN-20260516-regression-testing
-status: ready
+status: complete
 source_plan: inline-user-request
 ---
 
@@ -21,9 +21,9 @@ The project has an orchestrator-ready regression backlog that starts with AUTH a
 - Prefer the existing Playwright tests as the public regression interface; add or repair tests only when a slice has no reliable coverage.
 
 ## Tickets
-- TICKET-20260516-001 - ready - feature - AUTH valid login succeeds
-- TICKET-20260516-002 - ready - feature - AUTH login redirects to catalogue
-- TICKET-20260516-003 - ready - feature - AUTH login stores token
+- TICKET-20260516-001 - complete - feature - AUTH valid login succeeds
+- TICKET-20260516-002 - complete - feature - AUTH login redirects to catalogue
+- TICKET-20260516-003 - complete - feature - AUTH login stores token
 
 ## Deferred Ticket Roadmap
 - AUTH: remaining login validation, session persistence, logout, and route protection slices.
@@ -38,10 +38,10 @@ The project has an orchestrator-ready regression backlog that starts with AUTH a
 ## Status Summary
 - draft: 0
 - review: 0
-- ready: 3
+- ready: 0
 - in_progress: 0
 - blocked: 0
-- complete: 0
+- complete: 3
 
 ## Execution
 `/engineering/orchestrator PLAN-20260516-regression-testing`
