@@ -24,15 +24,33 @@ test.describe('Catalogue Management (Costume Management)', () => {
     expect(count).toBeGreaterThan(0);
   });
 
-  test('[AC-003-002] - Show costume name, image thumbnail, quantity', async ({ page }) => {
+  test('[AC-003-002] - Each costume card shows name, thumbnail, and quantity', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.assertPageLoaded();
-    const rows = await cataloguePage.costumeRows.count();
-    expect(rows).toBeGreaterThan(0);
-    const bodyText = await page.locator('body').textContent();
-    const hasQuantity = /stok|jumlah|qty/i.test(bodyText);
-    expect(hasQuantity).toBe(true);
+
+    const cardCount = await cataloguePage.costumeRows.count();
+    expect(cardCount).toBeGreaterThan(0);
+
+    for (let i = 0; i < cardCount; i++) {
+      const card = cataloguePage.costumeRows.nth(i);
+
+      // 1. Name: visible paragraph with text identifying the costume
+      const nameEl = card.locator('p').first();
+      await expect(nameEl).toBeVisible();
+      const nameText = (await nameEl.textContent())?.trim() ?? '';
+      expect(nameText.length).toBeGreaterThan(0);
+
+      // 2. Thumbnail: visible costume image with alt text
+      const thumbnail = card.locator('img').first();
+      await expect(thumbnail).toBeVisible();
+      const alt = await thumbnail.getAttribute('alt');
+      expect(alt).not.toBeNull();
+      expect(alt.trim().length).toBeGreaterThan(0);
+
+      // 3. Quantity: visible indicator of available stock
+      await expect(card).toContainText(/tersedia|unit/i);
+    }
   });
 
   test('[AC-003-003] - Paginated or scrollable list', async ({ page }) => {
