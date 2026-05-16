@@ -26,6 +26,7 @@ frontend/package-lock.json
 
 # Opencode
 .opencode/state
+.opencode/logs/
 
 # IDE
 .idea/
