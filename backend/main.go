@@ -20,6 +20,7 @@ func main() {
 
 	migrateDB()
 	seedData()
+	seedRentals()
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -230,6 +231,62 @@ func seedData() {
 	}
 
 	log.Println("Seed data check completed")
+}
+
+func seedRentals() {
+	db := config.GetDB()
+
+	var clientCount int64
+	db.Model(&models.Client{}).Count(&clientCount)
+	if clientCount > 0 {
+		return // Already seeded
+	}
+
+	log.Println("Seeding sample rental data...")
+
+	client := models.Client{
+		Name:    "Budi Santoso",
+		Phone:   "08123456789",
+		Address: "Jl. Merdeka No. 1, Jakarta",
+	}
+	if err := db.Create(&client).Error; err != nil {
+		log.Printf("Failed to seed client: %v", err)
+		return
+	}
+
+	var costume models.Costume
+	if err := db.First(&costume).Error; err != nil {
+		log.Printf("No costume found for rental seed: %v", err)
+		return
+	}
+
+	rentStart := time.Now()
+	rentEnd := time.Now().AddDate(0, 0, 7)
+	rent := models.RentOrder{
+		ClientID:      client.ID,
+		GuaranteeType: "KTP",
+		RentStart:     rentStart,
+		RentEnd:       rentEnd,
+		Status:        "active",
+		Notes:         "Penyewaan untuk acara adat",
+		CreatedBy:     1,
+	}
+	if err := db.Create(&rent).Error; err != nil {
+		log.Printf("Failed to seed rental: %v", err)
+		return
+	}
+
+	item := models.RentOrderItem{
+		RentOrderID: rent.ID,
+		CostumeID:   costume.ID,
+		Quantity:    1,
+	}
+	if err := db.Create(&item).Error; err != nil {
+		log.Printf("Failed to seed rental item: %v", err)
+		return
+	}
+
+	log.Println("Sample rental created for client Budi Santoso")
 }
 
 func imageExists(filename string) bool {
