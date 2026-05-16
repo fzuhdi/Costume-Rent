@@ -22,9 +22,8 @@
     }
   },
   "compaction": {
-    "auto": true,
-    "prune": true,
-    "reserved": 10000
+    "auto": false,
+    "prune": false
   },
   "mcp": {
     "heroui-react": {

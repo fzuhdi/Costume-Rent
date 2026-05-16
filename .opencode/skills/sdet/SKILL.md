@@ -79,19 +79,19 @@ When engineer marks a bug as "sdet-fault":
 cd test && npm run test
 
 # Run specific feature only (then sync manually)
-cd test && npx playwright test test/specs/{feature-id}.spec.js && node helpers/sync-bug-reports.js
+cd test && npm run test:feature -- {feature-id} # e.g. npm run test:feature -- catalogue
 
 # Run single AC test (debugging — does not sync bug reports)
-cd test && npx playwright test --grep "AC-XXX"
+cd test && npm run test:specific -- AC-XXX-YYY # e.g. npm run test:specific -- AC-001-002 or cd test && npx playwright test --grep "login with valid credentials"
 
 # Run with browser visible (debugging — does not sync bug reports)
-cd test && npx playwright test --headed --slow-mo 500
+cd test && npm run test:headed
 
 # List all tests
-cd test && npx playwright test --list
+cd test && npm run test:list
 
 # View HTML report
-cd test && npx playwright show-report
+cd test && npm run test:report
 
 ## Principle
 A failing honest test is better than a passing dishonest test.
