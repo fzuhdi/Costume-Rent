@@ -19,7 +19,7 @@ Use one ticket workflow for features, bugs, chores, and spikes. Do not create a 
 
 | Command | Purpose |
 |---|---|
-| `/planning/plan-to-tickets [plan-file] [plan-id optional]` | Converts a PRD, bug report, or plan into a plan file plus tracer tickets. |
+| `/plan-to-tickets [plan-file] [plan-id optional]` | Converts a PRD, bug report, or plan into a plan file plus tracer tickets. |
 | `/engineering/orchestrator` | Lists current feature status plus ready tickets and plans. |
 | `/engineering/orchestrator [feature-id] [slice-id optional]` | Runs one acceptance-criteria slice directly. |
 | `/engineering/orchestrator [ticket-id]` | Runs one ticket from `docs/tickets/`. |
@@ -33,7 +33,7 @@ Use one ticket workflow for features, bugs, chores, and spikes. Do not create a 
 /ask-me                         optional future clarification step
   -> plan, PRD, bug batch, or notes
 
-/planning/plan-to-tickets PLAN
+/plan-to-tickets PLAN
   -> docs/plans/PLAN-*.md
   -> docs/tickets/TICKET-*.md
 

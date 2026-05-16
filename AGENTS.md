@@ -9,7 +9,7 @@ Go + Gin · React 19 + Vite + HeroUI v3 + Tailwind v4 · SQLite (`glebarez/sqlit
 | Group | Directory | Commands |
 |---|---|---|
 | Engineering | `.opencode/commands/engineering/` | `/engineering/orchestrator`, `/engineering/developer`, `/engineering/sdet`, `/engineering/reviewer` |
-| Planning | `.opencode/commands/planning/` | `/planning/plan-to-tickets` |
+| Planning | (inline in `opencode.json`) | `/plan-to-tickets` |
 | Productivity | `.opencode/commands/productivity/` | `/productivity/start`, `/productivity/status` |
 | Utility | `.opencode/commands/utility/` | (reserved) |
 
@@ -37,7 +37,7 @@ Go + Gin · React 19 + Vite + HeroUI v3 + Tailwind v4 · SQLite (`glebarez/sqlit
 ## Intent classifier (apply silently)
 - Status / "where are we" → run `/productivity/status` or `/productivity/start`.
 - Bug report / "X doesn't work" → consult `common-bugs.md` first.
-- Plan / PRD / bug batch to work items → run `/planning/plan-to-tickets [plan-file]`.
+- Plan / PRD / bug batch to work items → run `/plan-to-tickets [plan-file]`.
 - Continue / resume / build / fix a feature → run `/engineering/orchestrator [feature-id]` to select the next tracer slice, `/engineering/orchestrator [feature-id] [slice-id]` for a specific slice, `/engineering/orchestrator [ticket-id]` for one ticket, or `/engineering/orchestrator [plan-id]` for all ready tickets in one plan.
 - General code question → answer directly, load only what you need.
 

@@ -170,7 +170,7 @@ Also check `failures.md`: if the current `SLICE_ID` has the status sequence `[sd
 
 ## Ticket Files
 
-Ticket files live in `docs/tickets/*.md` and are produced by `/planning/plan-to-tickets`.
+Ticket files live in `docs/tickets/*.md` and are produced by `/plan-to-tickets`.
 
 Required frontmatter:
 

@@ -5,7 +5,7 @@ description: Convert a PRD, bug report, or implementation plan into an Agile-sty
 
 # Plan To Tickets
 
-Use this skill when the user runs `/planning/plan-to-tickets` or asks to turn a PRD, ask-me output, feature request, bug report, or implementation plan into orchestrator-ready backlog tickets.
+Use this skill when the user runs `/plan-to-tickets` or asks to turn a PRD, ask-me output, feature request, bug report, or implementation plan into orchestrator-ready backlog tickets.
 
 This skill is planning-only. It creates plan and ticket files; it does not invoke `/engineering/orchestrator`, `developer`, `sdet`, or `reviewer`.
 

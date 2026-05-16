@@ -27,6 +27,16 @@
       "general": "allow"
     }
   },
+  "skills": {
+    "paths": [".opencode/skills"]
+  },
+  "command": {
+    "plan-to-tickets": {
+      "description": "Convert a PRD or plan into orchestrator-ready tracer tickets. Usage /plan-to-tickets [plan-file] [plan-id optional]",
+      "template": "Load the plan-to-tickets skill (.opencode/skills/plan-to-tickets/SKILL.md).\n\nRaw arguments: **$ARGUMENTS**\n\nInterpret arguments as:\n- Plan file: $1\n- Optional plan id: $2\n\nRun the skill with:\n- PLAN_FILE: $1\n- PLAN_ID: $2\n- RAW_ARGUMENTS: $ARGUMENTS\n\nCreate or update only planning artifacts such as docs/plans/*.md and docs/tickets/*.md. Do not invoke the orchestrator or any engineering subagent.",
+      "agent": "build"
+    }
+  },
   "compaction": {
     "auto": true,
     "prune": true,
