@@ -36,6 +36,32 @@ class ClientListPage extends BasePage {
   async expectClientVisible(name) {
     await expect(this.clientRows.filter({ hasText: name })).toBeVisible();
   }
+
+  async assertTotalRentsVisible() {
+    const bodyText = await this.page.locator('body').textContent();
+    const hasRents = /total sewa|total rents|jumlah sewa/i.test(bodyText);
+    expect(hasRents).toBe(true);
+  }
+
+  async assertActiveRentsVisible() {
+    const bodyText = await this.page.locator('body').textContent();
+    const hasActive = /aktif|active/i.test(bodyText);
+    expect(hasActive).toBe(true);
+  }
+
+  async assertOverdueIndicator() {
+    const overdueBadge = this.page.locator('[data-slot="badge"]').filter({ hasText: /terlambat|overdue/i });
+    await expect(overdueBadge.first()).toBeVisible();
+  }
+
+  async deleteClient(name) {
+    // Find the client row and click delete button
+    const row = this.clientRows.filter({ hasText: name });
+    const deleteButton = row.locator('button').filter({ hasText: /hapus|delete/i });
+    await deleteButton.click();
+    // Handle confirmation dialog
+    this.page.once('dialog', dialog => dialog.accept());
+  }
 }
 
 module.exports = { ClientListPage };

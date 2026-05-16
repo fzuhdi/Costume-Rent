@@ -41,4 +41,73 @@ test.describe('Authentication', () => {
     await loginPage.logout();
     await expect(page).toHaveURL(/\/login/);
   });
+
+  // AC-001-002: Login redirects to /catalogue
+  test('[AC-001-002] - Login redirects to /catalogue', async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    await expect(page).toHaveURL(/\/catalogue$/);
+  });
+
+  // AC-001-003: Auth token stored after login
+  test('[AC-001-003] - Auth token stored after login', async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    await loginPage.assertTokenInLocalStorage();
+  });
+
+  // AC-002-002: Wrong email shows error
+  test('[AC-002-002] - Wrong email shows error', async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.login('nobody@example.com', ADMIN_PASSWORD);
+    await loginPage.expectError('');
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  // AC-002-003: Empty form does not submit
+  test('[AC-002-003] - Empty form does not submit', async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.submitButton.click();
+    await expect(page).toHaveURL(/\/login/);
+    // No network request to /api/auth/login should be made
+    const token = await page.evaluate(() => localStorage.getItem('token'));
+    expect(token).toBeNull();
+  });
+
+  // AC-003: Route Protection (unauthenticated access)
+  test('[AC-003-001] - Unauthenticated /catalogue redirects to login', async ({ page, context }) => {
+    await context.clearCookies();
+    await page.goto('/catalogue');
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test('[AC-003-002] - Unauthenticated /rents redirects to login', async ({ page, context }) => {
+    await context.clearCookies();
+    await page.goto('/rents');
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test('[AC-003-003] - Unauthenticated /clients redirects to login', async ({ page, context }) => {
+    await context.clearCookies();
+    await page.goto('/clients');
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test('[AC-003-004] - Unauthenticated /settings redirects to login', async ({ page, context }) => {
+    await context.clearCookies();
+    await page.goto('/settings');
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  // AC-005-002: Token removed after logout
+  test('[AC-005-002] - Token removed from localStorage after logout', async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    await loginPage.logout();
+    await loginPage.assertNoTokenInLocalStorage();
+  });
 });

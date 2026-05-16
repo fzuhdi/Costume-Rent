@@ -63,6 +63,11 @@ func (h *CostumeHandler) Create(c *gin.Context) {
 		return
 	}
 
+	if req.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		return
+	}
+
 	costume, err := h.costumeService.Create(req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

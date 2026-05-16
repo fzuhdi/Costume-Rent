@@ -48,7 +48,45 @@ func (h *ClientHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, client)
+	// Build response with rent_history
+	type RentOrderSimple struct {
+		ID        uint   `json:"id"`
+		Status    string `json:"status"`
+		RentStart string `json:"rent_start"`
+		RentEnd   string `json:"rent_end"`
+	}
+
+	type ClientDetailResponse struct {
+		ID           uint              `json:"id"`
+		Name         string            `json:"name"`
+		Phone        string            `json:"phone"`
+		Address      string            `json:"address"`
+		CreatedAt    string            `json:"created_at"`
+		RentHistory  []RentOrderSimple `json:"rent_history"`
+	}
+
+	rentHistory := make([]RentOrderSimple, 0)
+	for _, order := range client.RentOrders {
+		if order.DeletedAt.Valid {
+			continue
+		}
+		rentHistory = append(rentHistory, RentOrderSimple{
+			ID:        order.ID,
+			Status:    order.Status,
+			RentStart: order.RentStart.Format("2006-01-02"),
+			RentEnd:   order.RentEnd.Format("2006-01-02"),
+		})
+	}
+
+	response := ClientDetailResponse{
+		ID:          client.ID,
+		Name:        client.Name,
+		Phone:       client.Phone,
+		Address:     client.Address,
+		CreatedAt:   client.CreatedAt.Format("2006-01-02"),
+		RentHistory:  rentHistory,
+	}
+	c.JSON(http.StatusOK, response)
 }
 
 func (h *ClientHandler) Search(c *gin.Context) {
@@ -82,7 +120,14 @@ func (h *ClientHandler) Create(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, client)
+	response := dto.ClientResponse{
+		ID:         client.ID,
+		Name:       client.Name,
+		Phone:      client.Phone,
+		Address:    client.Address,
+		CreatedAt:  client.CreatedAt.Format("2006-01-02"),
+	}
+	c.JSON(http.StatusCreated, response)
 }
 
 func (h *ClientHandler) Update(c *gin.Context) {

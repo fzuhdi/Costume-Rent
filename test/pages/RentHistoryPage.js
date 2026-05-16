@@ -36,6 +36,26 @@ class RentHistoryPage extends BasePage {
   async expectRentVisible(orderId) {
     await expect(this.rentRows.filter({ hasText: `#${orderId}` })).toBeVisible();
   }
+
+  async searchRental(name) {
+    const searchInput = this.page.getByPlaceholder(/cari client|search/i);
+    await searchInput.fill(name);
+    await this.page.waitForTimeout(500);
+  }
+
+  async findActiveRental() {
+    await this.filterByStatus('Aktif');
+    const firstRow = this.rentRows.first();
+    const isVisible = await firstRow.isVisible().catch(() => false);
+    return isVisible ? firstRow : null;
+  }
+
+  async findOverdueRental() {
+    await this.filterByStatus('Terlambat');
+    const firstRow = this.rentRows.first();
+    const isVisible = await firstRow.isVisible().catch(() => false);
+    return isVisible ? firstRow : null;
+  }
 }
 
 module.exports = { RentHistoryPage };

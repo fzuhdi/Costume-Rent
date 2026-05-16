@@ -28,6 +28,17 @@ class LoginPage extends BasePage {
     await expect(this.page).toHaveURL(/\/login/);
     await expect(this.title).toBeVisible();
   }
+
+  async assertTokenInLocalStorage() {
+    const token = await this.page.evaluate(() => localStorage.getItem('token'));
+    expect(token).not.toBeNull();
+    expect(token.length).toBeGreaterThan(0);
+  }
+
+  async assertNoTokenInLocalStorage() {
+    const token = await this.page.evaluate(() => localStorage.getItem('token'));
+    expect(token).toBeNull();
+  }
 }
 
 module.exports = { LoginPage };

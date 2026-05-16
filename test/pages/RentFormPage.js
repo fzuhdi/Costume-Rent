@@ -52,6 +52,32 @@ class RentFormPage extends BasePage {
   async submit() {
     await this.submitButton.click();
   }
+
+  async addNewClient(name, phone, address) {
+    // Click the client select and choose "create new" option
+    await this.clientSelect.click();
+    await this.page.getByRole('option', { name: /klien baru|new client/i }).click();
+    // Fill new client form
+    await this.page.getByPlaceholder(/nama klien|client name/i).fill(name);
+    await this.page.getByPlaceholder(/telepon|phone/i).fill(phone);
+    await this.page.getByPlaceholder(/alamat|address/i).fill(address);
+  }
+
+  async assertErrorMessage(message) {
+    const errorAlert = this.page.locator('[data-slot="alert"]');
+    await expect(errorAlert).toBeVisible();
+    if (message) {
+      await expect(errorAlert).toContainText(message);
+    }
+  }
+
+  async getAvailableQuantityForCostume(costumeName) {
+    // Find the costume in the multi-select and read its available quantity
+    const costumeItem = this.page.getByText(costumeName).locator('..').locator('..');
+    const text = await costumeItem.textContent();
+    const match = text.match(/tersedia[:\s]*(\d+)/i);
+    return match ? parseInt(match[1]) : null;
+  }
 }
 
 module.exports = { RentFormPage };

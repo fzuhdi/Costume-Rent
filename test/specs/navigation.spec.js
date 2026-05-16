@@ -7,6 +7,12 @@ const ADMIN_PASSWORD = 'admin123';
 
 test.describe('Navigation & UI', () => {
   test.beforeEach(async ({ page }) => {
+    await context.clearCookies();
+    await context.clearPermissions(); // optional
+    await context.addInitScript(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+    });
     const loginPage = new LoginPage(page);
     await loginPage.login(ADMIN_EMAIL, ADMIN_PASSWORD);
     await expect(page).toHaveURL(/\/catalogue/);
@@ -87,5 +93,60 @@ test.describe('Navigation & UI', () => {
     await expect(page.locator('body')).toBeVisible();
     const bodyText = await page.locator('body').textContent();
     expect(bodyText.length).toBeGreaterThan(0);
+  });
+
+  // AC-025-005: Active sidebar link is highlighted
+  test('[AC-025-005] - Active sidebar link is highlighted', async ({ page }) => {
+    const sidebarPage = new SidebarPage(page);
+    await sidebarPage.clickPeminjaman();
+    await expect(page).toHaveURL(/\/rents/);
+    // Check that "Peminjaman" link has active styling
+    const className = await sidebarPage.peminjamanLink.getAttribute('class');
+    expect(className).toMatch(/bg-\[var\(--primary\)\]/);
+  });
+
+  // AC-026-004: 404 page has link back to catalogue
+  test('[AC-026-004] - 404 page has link back to catalogue', async ({ page }) => {
+    await page.goto('/nonexistent-page-xyz-'.concat(Date.now()));
+    await expect(page.locator('h1')).toContainText(/404/i);
+    // Should have a link/button to return to catalogue
+    const backLink = page.getByRole('link', { name: /katalog|catalogue|kembali|back/i }).or(
+      page.getByRole('button', { name: /katalog|catalogue|kembali|back/i })
+    );
+    await expect(backLink.first()).toBeVisible();
+    await backLink.first().click();
+    await expect(page).toHaveURL(/\/catalogue/);
+  });
+
+  // AC-027-003: Dark mode toggle switches theme (AC-041)
+  test('[AC-027-003] - Dark mode toggle switches theme', async ({ page }) => {
+    const navbarPage = new (require('../pages/NavbarPage.js')).NavbarPage(page);
+    // Click theme toggle
+    await navbarPage.toggleTheme();
+    await page.waitForTimeout(500);
+    // Check html has 'dark' class
+    await navbarPage.assertDarkMode(true);
+    // Click again to switch back
+    await navbarPage.toggleTheme();
+    await page.waitForTimeout(500);
+    await navbarPage.assertDarkMode(false);
+  });
+
+  // AC-027-004: Dark mode preference persists on reload (AC-041)
+  test('[AC-027-004] - Dark mode preference persists on reload', async ({ page }) => {
+    const navbarPage = new (require('../pages/NavbarPage.js')).NavbarPage(page);
+    // Enable dark mode
+    await navbarPage.toggleTheme();
+    await page.waitForTimeout(500);
+    // Verify dark mode is on
+    await navbarPage.assertDarkMode(true);
+    // Check localStorage
+    const theme = await page.evaluate(() => localStorage.getItem('heroui-theme'));
+    expect(theme).toBe('dark');
+    // Reload
+    await page.reload();
+    await page.waitForTimeout(500);
+    // Should still be in dark mode
+    await navbarPage.assertDarkMode(true);
   });
 });
