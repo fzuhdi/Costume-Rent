@@ -20,11 +20,11 @@ Extend regression coverage to all remaining features (CATALOGUE, RENT, CLIENT, N
 - Features processed in order: CATALOGUE, RENT, CLIENT, NOTIFICATION, SETTINGS, NAVIGATION, API.
 
 ## Tickets
-- TICKET-20260516-004 - ready - feature - CATALOGUE display all costumes
-- TICKET-20260516-005 - ready - feature - RENT view rental list
-- TICKET-20260516-006 - ready - feature - CLIENT navigate to clients
-- TICKET-20260516-007 - ready - feature - NOTIFICATION badge shows overdue count
-- TICKET-20260516-008 - ready - feature - SETTINGS navigate to settings
+- TICKET-20260516-004 - complete - feature - CATALOGUE display all costumes
+- TICKET-20260516-005 - complete - feature - RENT view rental list
+- TICKET-20260516-006 - complete - feature - CATALOGUE name/thumbnail/quantity
+- TICKET-20260516-007 - complete - feature - CATALOGUE pagination
+- TICKET-20260516-008 - complete - feature - CATALOGUE region/category labels
 - TICKET-20260516-009 - ready - feature - NAVIGATION sidebar Katalog menu
 - TICKET-20260516-010 - ready - feature - API health endpoint
 
