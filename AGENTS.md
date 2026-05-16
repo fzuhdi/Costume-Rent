@@ -7,11 +7,12 @@ Before responding to anything, always execute this first:
 3. Read `.opencode/skills/engineer/SKILL.md`
 4. Read `.opencode/skills/sdet/SKILL.md`
 5. Read `.opencode/skills/feature-builder/SKILL.md`
-6. Read `.opencode/skills/shared/bug-report-schema.md`
-7. Read `docs/ACCEPTANCE_CRITERIA.md`
-8. Read `.opencode/state/orchestrator-progress.json`
-9. `bash ls .opencode/state/bug-reports/` — read open bug files as needed
-10. When user reports bugs or says "doesn't work": Read `.opencode/knowledge/common-bugs.md` for known issues
+6. Read `.opencode/skills/commit-push/SKILL.md`
+7. Read `.opencode/skills/shared/bug-report-schema.md`
+8. Read `docs/ACCEPTANCE_CRITERIA.md`
+9. Read `.opencode/state/orchestrator-progress.json`
+10. `bash ls .opencode/state/bug-reports/` — read open bug files as needed
+11. When user reports bugs or says "doesn't work": Read `.opencode/knowledge/common-bugs.md` for known issues
 
 ---
 
@@ -23,6 +24,11 @@ Read current state and recommend what to do next:
 2. `bash ls .opencode/state/bug-reports/` — read open bug files as needed
 
 Then output **Standard Report**.
+
+### `/commit-push`
+Commit and push changed files in logical batches (2-3 files each, more if tightly coupled):
+1. Load `.opencode/skills/commit-push/SKILL.md`
+2. Follow its workflow: survey → group → commit each batch → push → confirm
 
 ---
 
@@ -46,13 +52,14 @@ Then output **Standard Report**.
 ## Agent Skills
 
 | Invocation | Role | When to use |
-|---|---|---|
+|---|---|---|---|
 | `/orchestrator [feature-id]` | Workflow engine | Full feature dev loop |
 | `/feature-builder [feature-id]` | Product Engineer | Implement feature from AC |
 | `/engineer [feature-id]` | Fullstack Engineer | Fix open bugs |
 | `/sdet [feature-id]` | SDET | Write or run tests |
+| `/commit-push` | Git commit & push | Commit and push changes in logical batches |
 
-**Always provide `[feature-id]`.**
+**`/orchestrator`, `/feature-builder`, `/engineer`, `/sdet` require `[feature-id]`.**
 
 ---
 
