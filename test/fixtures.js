@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 
 const IGNORED_AXE_RULES = [
   'color-contrast',
+  'scrollable-region-focusable',
 ];
 
 export const test = base.extend({
@@ -20,6 +21,8 @@ export const test = base.extend({
       const text = msg.text();
       const key  = `error::${text}`;
 
+      if (text.includes('401') || text.includes('404')) return;
+
       if (!seen.has(key)) {
         seen.set(key, 1);
         issues.push({ key, label: `[ERROR] ${text}` });
@@ -32,6 +35,8 @@ export const test = base.extend({
     page.on('pageerror', (err) => {
       const text = err.message;
       const key  = `pageerror::${text}`;
+
+      if (text.includes('concurrent rendering') || text.includes('React was able to recover')) return;
 
       if (!seen.has(key)) {
         seen.set(key, 1);

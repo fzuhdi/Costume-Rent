@@ -1,3 +1,4 @@
+const { expect } = require('@playwright/test');
 const { BasePage } = require('./BasePage.js');
 
 class CatalogueFormPage extends BasePage {
@@ -81,6 +82,16 @@ class CatalogueFormPage extends BasePage {
         input.click();
       });
     });
+  }
+
+  async assertValidationErrorForName() {
+    // After submitting with empty name, form should not navigate away
+    const url = this.page.url();
+    expect(url).toMatch(/\/catalogue\/new/);
+  }
+
+  async assertFormShowsPrice() {
+    await expect(this.priceInput).toBeVisible();
   }
 }
 

@@ -72,6 +72,22 @@ const CatalogueFormPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Validate required fields
+    if (!formData.name.trim()) {
+      alert('Nama kostum harus diisi');
+      setSaving(false);
+      return;
+    }
+    if (!formData.region_id) {
+      alert('Wilayah harus dipilih');
+      setSaving(false);
+      return;
+    }
+    if (!formData.category_id) {
+      alert('Kategori harus dipilih');
+      setSaving(false);
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -84,26 +100,27 @@ const CatalogueFormPage = () => {
         acquired_at: formData.acquired_at || null,
       };
 
-      let costumeId;
-      if (isEdit) {
-        await updateCostume(id, payload);
-        costumeId = id;
-      } else {
-        const result = await createCostume(payload);
-        costumeId = result.data.id;
-      }
-
-      for (const staged of stagedFiles) {
-        const fd = new FormData();
-        fd.append('image', staged.file);
-        try {
-          await uploadCostumeImage(costumeId, fd);
-        } catch (error) {
-          console.error('Failed to upload staged image:', error);
+        let costumeId;
+        if (isEdit) {
+          await updateCostume(id, payload);
+          costumeId = id;
+        } else {
+          const result = await createCostume(payload);
+          costumeId = result.data.id;
         }
-      }
 
-      navigate('/catalogue');
+        for (const staged of stagedFiles) {
+          const fd = new FormData();
+          fd.append('image', staged.file);
+          try {
+            await uploadCostumeImage(costumeId, fd);
+          } catch (error) {
+            console.error('Failed to upload staged image:', error);
+          }
+        }
+
+        // Navigate to detail page after save
+        navigate(`/catalogue/${costumeId}`);
     } catch (error) {
       console.error('Failed to save costume:', error);
     } finally {

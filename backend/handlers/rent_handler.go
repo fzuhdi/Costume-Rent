@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/busana/backend/dto"
 	"github.com/busana/backend/middleware"
@@ -56,6 +57,21 @@ func (h *RentHandler) Create(c *gin.Context) {
 	var req dto.CreateRentOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate rent_end is after rent_start
+	if req.RentStart != "" && req.RentEnd != "" {
+		start, err1 := time.Parse("2006-01-02", req.RentStart)
+		end, err2 := time.Parse("2006-01-02", req.RentEnd)
+		if err1 == nil && err2 == nil && !end.After(start) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "rent_end must be after rent_start"})
+			return
+		}
+	}
+
+	if len(req.Items) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "items are required"})
 		return
 	}
 

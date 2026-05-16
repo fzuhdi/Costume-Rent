@@ -15,10 +15,26 @@
   },
   "permission": {
     "skill": {
-      "sdet": "allow",
-      "engineer": "allow",
       "orchestrator": "allow",
       "*": "allow"
+    },
+    "task": {
+      "*": "deny",
+      "developer": "allow",
+      "sdet": "allow",
+      "reviewer": "allow",
+      "explore": "allow",
+      "general": "allow"
+    }
+  },
+  "skills": {
+    "paths": [".opencode/skills"]
+  },
+  "command": {
+    "plan-to-tickets": {
+      "description": "Convert or repair a PRD, bug report, ask-me output, or plan into TDD-ready backlog tickets. Usage /plan-to-tickets [plan-file] [plan-id optional]",
+      "template": "Load the plan-to-tickets skill (.opencode/skills/plan-to-tickets/SKILL.md).\n\nRaw arguments: **$ARGUMENTS**\n\nInterpret arguments as:\n- Plan file: $1\n- Optional plan id: $2\n\nRun the skill with:\n- PLAN_FILE: $1\n- PLAN_ID: $2\n- RAW_ARGUMENTS: $ARGUMENTS\n\nCreate or update only planning artifacts such as docs/plans/*.md and docs/tickets/*.md. Preserve in_progress and complete tickets. Repaired ambiguous tickets must be set to status: review. Do not invoke the orchestrator or any engineering subagent.",
+      "agent": "build"
     }
   },
   "compaction": {

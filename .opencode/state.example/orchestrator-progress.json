@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 2,
+  "currentPlan": null,
+  "currentTicket": null,
+  "currentFeature": null,
+  "currentSlice": null,
+  "status": "idle",
+  "iteration": 0,
+  "maxIterations": 4,
+  "branch": null,
+  "baseBranch": null,
+  "lastCheckpointSha": null,
+  "red": {
+    "status": null,
+    "testFile": null,
+    "testTitle": null,
+    "failureSummary": null,
+    "preRedCheckpointSha": null,
+    "afterRedCheckpointSha": null
+  },
+  "green": {
+    "refactorNeeded": null,
+    "refactorUsed": false,
+    "greenCommitSha": null,
+    "refactorCommitSha": null
+  },
+  "completedSlices": []
+}

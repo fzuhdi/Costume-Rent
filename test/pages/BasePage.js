@@ -21,12 +21,13 @@ class BasePage {
   }
 
   async logout() {
-    await this.page.click('button[aria-label="Logout"]');
+    await this.page.click('button[aria-label*="Profil"]');
+    await this.page.locator('button:has-text("Logout")').click();
     await this.page.waitForURL(/\/login/);
   }
 
   async expectNotification(message) {
-    const alert = this.page.locator('[data-slot="alert"]');
+    const alert = this.page.locator('[data-slot="alert-root"]');
     await alert.toContainText(message);
   }
 

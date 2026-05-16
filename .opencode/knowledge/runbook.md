@@ -1,19 +1,11 @@
 ---
-name: costume-rental
-description: Development and deployment guide for Costume Rental management system (React + Go + SQLite + Docker)
-license: MIT
-compatibility: opencode
-metadata:
-  audience: developers
-  stack: react-go-docker
+name: costume-rental-runbook
+description: Operational guide for the Costume Rental project (React + Go + SQLite + Docker)
 ---
 
-# Costume Rental - Development Skill
-
-This skill provides guidance for working with the Costume Rental fullstack application.
+# Costume Rental — Runbook
 
 ## Quick Start
-
 ```bash
 # Start application
 docker compose up --build -d
@@ -23,42 +15,53 @@ docker compose down -v && docker compose build --no-cache && docker compose up -
 ```
 
 ## Default Credentials
-- Email: admin@busana.com
-- Password: admin123
+- Email: `admin@busana.com`
+- Password: `admin123`
+
+---
 
 ## Common Issues & Fixes
 
-### 1. Backend Build Fails - SQLite Errors
+### 1. Backend build fails — SQLite errors
 **Error:** `pread64 undeclared`, `off64_t` not found
-**Cause:** Using mattn/go-sqlite3 with CGO on Alpine Linux
-**Fix:** Use glebarez/sqlite (pure Go driver)
+**Cause:** `mattn/go-sqlite3` requires CGO on Alpine.
+**Fix:** Use `glebarez/sqlite` (pure Go) and build with `CGO_ENABLED=0`.
 ```go
 // go.mod
 github.com/glebarez/sqlite v1.10.0
 
-// Dockerfile - use CGO_ENABLED=0
+// backend/config/database.go
+import "github.com/glebarez/sqlite"
+```
+```dockerfile
 RUN CGO_ENABLED=0 GOOS=linux go build -o server ./main.go
 ```
 
-### 2. Frontend Import Errors
+### 2. Frontend hook import errors
 **Error:** `useAuth is not exported`, `useNotification is not exported`
-**Fix:** Add hook exports to context files:
+**Fix:** Add hook exports in context files.
 ```jsx
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 };
 ```
 
-### 3. Infinite Page Reload
-**Cause:** Notification API called without auth token
+### 3. Infinite page reload
+**Cause:** Notification API called without auth token.
 **Fix:**
-1. Put /api/notifications inside auth group in routes
-2. Only fetch when isAuthenticated=true in frontend
+1. Backend — put `/api/notifications` inside the auth-protected route group.
+2. Frontend — only fetch when `isAuthenticated === true`.
+```jsx
+const fetchNotifications = useCallback(async () => {
+  if (!isAuthenticated) return;
+  // ...
+}, [isAuthenticated]);
+```
 
-### 4. Database "out of memory" Error
-**Fix:** Check volume path in docker-compose.yml:
+### 4. Database "out of memory" on startup
+**Fix:** Mount the volume to the directory, not the file path.
 ```yaml
 # Wrong
 - busana_db:/app/busana_tari.db
@@ -66,89 +69,56 @@ export const useAuth = () => {
 - busana_db:/app
 ```
 
-## API Endpoints
+### 5. Docker not picking up changes
+**Fix:** `docker compose build --no-cache`
 
-### Public (No Auth)
-- GET /api/settings
-- GET /api/costumes
-- POST /api/auth/login
-- POST /api/auth/register
+> For a deeper catalogue of recurring bugs, see `.opencode/knowledge/common-bugs.md`.
 
-### Protected (Requires Auth)
-- GET /api/notifications
-- GET/POST /api/rents
-- GET/POST /api/clients
-- PUT /api/settings
-- All /api/users/* endpoints
+---
+
+## API Surface
+
+### Public (no auth)
+- `GET  /api/settings`
+- `GET  /api/costumes`
+- `POST /api/auth/login`
+- `POST /api/auth/register`
+
+### Protected (JWT required)
+- `GET  /api/notifications`
+- `GET|POST /api/rents`
+- `GET|POST /api/clients`
+- `PUT  /api/settings`
+- `*    /api/users/*`
+
+---
 
 ## Testing
-
+Run from `test/` (this is required — never invoke playwright from project root):
 ```bash
-# Run all tests (requires docker compose up)
-cd test && npx playwright test
-
-# Run only API tests
-cd test && npx playwright test api.test.js
-
-# Run only frontend tests
-cd test && npx playwright test frontend.test.js
+cd test && npx playwright test --grep "AC-001-001"      # tracer slice (default workflow)
+cd test && npx playwright test specs/{feature}.spec.js  # feature regression
+cd test && npm run test                                 # full regression
+cd test && npx playwright test --headed --slow-mo 500   # debug
+cd test && npx playwright show-report                   # HTML report
 ```
 
-## Test Framework
+For tracer-slice workflow, the orchestrator records targeted run results in `.opencode/state/feature-{id}/failures.md`. Use `npm run test` for full regression checkpoints, not for every slice.
 
-The `test/` folder uses Playwright for both API and frontend tests.
+---
 
+## Project Layout
 ```
-test/
-├── playwright.config.js  # Playwright config
-├── api.test.js           # API tests
-├── frontend.test.js       # Frontend/e2e tests
-└── package.json
-```
-
-### Adding Tests
-
-Create a new `*.test.js` file:
-
-```javascript
-const { test, expect } = require('@playwright/test');
-
-test.describe('My Feature', () => {
-  test('should do something', async ({ request }) => {
-    const response = await request.get('/api/something');
-    expect(response.status()).toBe(200);
-  });
-});
-```
-
-For frontend tests:
-
-```javascript
-test.describe('My Page', () => {
-  test('should display content', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('h1')).toContainText('Welcome');
-  });
-});
-```
-
-## Project Structure
-```
-Costume Rent/
-├── backend/              # Go API
-├── frontend/             # React app
+Costume-Rent/
+├── backend/                 # Go API (Gin)
+├── frontend/                # React 19 + Vite + HeroUI v3
 ├── docker-compose.yml
-├── .env.production
-├── test/                 # Test scripts
-└── .opencode/          
-    ├── skills/          # Agent definitions
-    ├── knowledge/       # Project documentation
-    ├── commands/        # Custom commands
-    ├── plugins/         # Plugin configurations
-    ├── state/           # Runtime state
-    └── logs/            # Session logs
+├── test/                    # Playwright tests
+└── .opencode/
+    ├── agents/              # Subagent definitions (developer, sdet, reviewer)
+    ├── commands/            # Slash commands
+    ├── skills/              # Orchestrator skill + shared docs
+    ├── knowledge/           # This runbook + common-bugs + project-notes
+    ├── state/               # Runtime state (progress, bug reports, checkpoints)
+    └── logs/                # Daily activity logs
 ```
-
-## Additional Files
-- `test/api-test.sh` - API test script
-- `test/test-log.txt` - Test execution log

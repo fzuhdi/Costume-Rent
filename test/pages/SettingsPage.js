@@ -1,3 +1,4 @@
+const { expect } = require('@playwright/test');
 const { BasePage } = require('./BasePage.js');
 
 class SettingsPage extends BasePage {
@@ -5,10 +6,10 @@ class SettingsPage extends BasePage {
     super(page);
     this.appNameInput = page.locator('input[placeholder="Costume Rental"]');
     this.taglineInput = page.locator('input[placeholder="Inventory & Rental Management"]');
-    this.logoUpload = page.locator('input[type="file"][accept="image/*"]');
+    this.logoUpload = page.locator('button[aria-label="Pilih Logo"]');
     this.logoPreview = page.locator('.w-20.h-20 img');
-    this.saveButton = page.locator('button:has-text("Simpan Perubahan")');
-    this.successMessage = page.locator('chip:has-text("berhasil disimpan")');
+    this.saveButton = page.locator('button[aria-label="Simpan Perubahan"]');
+    this.successMessage = page.locator('text=Pengaturan berhasil disimpan');
     this.previewAppName = page.locator('.h-12 span.font-bold');
   }
 
@@ -36,6 +37,15 @@ class SettingsPage extends BasePage {
 
   async expectSaved() {
     await expect(this.page.locator('text=Pengaturan berhasil disimpan')).toBeVisible({ timeout: 5000 });
+  }
+
+  async assertAppNamePrepopulated() {
+    const value = await this.appNameInput.inputValue();
+    expect(value.length).toBeGreaterThan(0);
+  }
+
+  async assertSuccessMessage() {
+    await expect(this.successMessage).toBeVisible({ timeout: 5000 });
   }
 }
 
