@@ -1,119 +1,89 @@
 # Subagent I/O Contract
 
-When invoked via the Task tool, every workflow subagent must end its work by returning a single final message in the format below. The orchestrator parses this directly.
+Every workflow subagent must end with one parseable final message. The orchestrator reads literal field names.
 
-## Required return format (final message)
+## Base Return
 
 ```text
 OUTCOME: success | partial | blocked
 FEATURE: {feature-id}
 SLICE_ID: {AC-NNN-NNN}
 TICKET_ID: {TICKET-YYYYMMDD-NNN or "none"}
-SUMMARY: {one-line plain-text summary}
+SUMMARY: {one-line summary}
 
 DETAILS:
 - {bullet 1}
-- {bullet 2}
 
 FILES_MODIFIED:
-- path/to/file - {what changed}
+- path/to/file - {what changed, or "none"}
 
 NEW_DEPENDENCIES:
-- {package@version} - {why}      # or "none"
+- {package@version} - {why, or "none"}
 
 NOTES:
-{anything orchestrator should know: blockers, follow-ups, recommendations}
+{blockers, disputes, recommendations, or "none"}
 ```
 
-## Outcome semantics
+## Ticket Semantics
 
-- `success` - the assigned slice task is complete and ready for the next FSM transition.
-- `partial` - some work was done, but the slice still needs another loop.
-- `blocked` - cannot proceed without out-of-scope action; orchestrator should escalate.
+- Normal TDD workflow calls require `SLICE_ID`, `TICKET_ID`, `TICKET_FILE`, `TICKET_TYPE`, `TICKET_ACCEPTANCE_CRITERION`, `EXPECTED_OUTCOME`, `TEST_INTERFACE`, `RED_EXPECTATION`, and `GREEN_EXPECTATION`.
+- Executable workflow calls use `TICKET_TYPE: feature | bug`.
+- One worker call operates on exactly one ticket and one `SLICE_ID`.
+- Sibling ACs belong in `DEFERRED_SLICE_IDS` and must not be implemented or tested opportunistically.
 
-## Tracer-slice semantics
-
-- `SLICE_ID` is required for all normal workflow calls.
-- A worker must operate on exactly one `SLICE_ID`.
-- Sibling ACs belong in `DEFERRED_SLICE_IDS`; do not implement or test them opportunistically.
-- If a dependency/foundation is needed, build the smallest version that proves the current slice and list the deferred work in `NOTES`.
-- `TICKET_ID`, `TICKET_FILE`, `TICKET_TYPE`, and `TICKET_ACCEPTANCE_CRITERION` are optional. When present, the ticket file's criterion is the source of truth for the slice behavior.
-- Plan execution still uses exactly one `SLICE_ID` per worker call; plan batching is only an orchestrator queue.
-
-## Subagent-specific extensions
-
-### developer (build mode)
-
-Add to DETAILS:
+## SDET RED Extension
 
 ```text
-SLICE_STATUS: implemented | partial | blocked
-DEFERRED_SLICE_IDS_UNTOUCHED: true | false
-```
-
-### developer (fix mode)
-
-Add to DETAILS:
-
-```text
-LATEST_FAILURE_SECTION: "Iteration N - <timestamp> (developer)"
-SLICE_STATUS: fixed | todo | sdet-fault
-ROOT_CAUSE: {one-line root cause}
-TARGETED_TEST_COMMAND: {command run, or "not run - reason"}
-```
-
-Append a new section to `.opencode/state/feature-{feature-id}/failures.md` for the current slice only:
-
-```markdown
-## Iteration {N} - {ISO timestamp} (developer)
-- **{SLICE_ID}** [fixed|todo|sdet-fault] {root-cause + what changed}
-```
-
-Use `[fixed]` when the code change is ready for SDET retest. Do not mark your own work `[verified]`; only the SDET/orchestrator verification loop can establish that.
-
-### sdet (write mode)
-
-Add to DETAILS:
-
-```text
-SLICE_TEST_WRITTEN: true | false
-TEST_FILE: test/specs/{feature-id}.spec.js
+RED_STATUS: failing_expected | already_green | failing_wrong_reason | blocked
+TEST_FILE: test/specs/example.spec.js
 TEST_TITLE: {title containing SLICE_ID}
-PAGES_CREATED_OR_UPDATED: [path, ...]   # or "none"
+TEST_COMMAND: {targeted command run}
+RED_FAILURE_SUMMARY: {why it failed, or why already green/blocked}
+PAGES_CREATED_OR_UPDATED: [path, ...] | none
 ```
 
-### sdet (run mode)
-
-Add to DETAILS:
+## SDET GREEN Rerun Extension
 
 ```text
 SLICE_STATUS: verified | open | todo
-TEST_COMMAND: cd test && npx playwright test --grep "{SLICE_ID}"
+TEST_FILE: {recorded file}
+TEST_TITLE: {recorded title}
+TEST_COMMAND: {targeted command run}
 TESTS_RUN: N
 TESTS_PASSED: N
 TESTS_FAILED: N
-FAILURE_SUMMARY: {one-line failure/root symptom, or "none"}
+FAILURE_SUMMARY: {one-line symptom, or "none"}
 ```
 
-Do not write `failures.md` in run mode. The orchestrator records the returned `SLICE_STATUS` in the failure log.
-
-### sdet (triage mode)
-
-Add to DETAILS:
+## Developer GREEN Extension
 
 ```text
-SLICE_STATUS: test-fixed | developer-wrong | blocked
-DISPUTES_FILE_PATH: .opencode/state/feature-{feature-id}/disputes.md
-TRIAGE_REASON: {one-line explanation}
+GREEN_STATUS: ready_for_sdet | ticket-ambiguous | red-test-wrong | blocked
+ROOT_CAUSE: {one-line cause}
+TARGETED_TEST_COMMAND: {command run, or "not run - reason"}
+REFACTOR_NEEDED: yes | no
+DEFERRED_SLICE_IDS_UNTOUCHED: true | false
 ```
 
-### reviewer
-
-Add to DETAILS:
+## Developer Refactor Extension
 
 ```text
-VERDICT: approved | rejected
-REASON: {one-line if rejected; "fix matches root cause" if approved}
-DIFF_SIZE_LINES: N
-CHECKPOINT_SHA_REVIEWED: {sha}
+GREEN_STATUS: refactor_ready_for_sdet | blocked
+REFACTOR_SUMMARY: {what changed and why}
+TESTS_CHANGED: false
 ```
+
+## Reviewer Extension
+
+```text
+REVIEW_VERDICT: ticket-ready | ticket-still-ambiguous | red-test-wrong | ticket-ambiguous | red-approved | coverage-approved | coverage-rejected | approved | rejected
+REASON: {plain-language explanation citing ticket/slice}
+DIFF_SIZE_LINES: N | not_applicable
+CHECKPOINT_SHA_REVIEWED: {sha or "none"}
+```
+
+## Outcome Semantics
+
+- `success` means the assigned TDD step completed and the orchestrator can evaluate the step-specific status field.
+- `partial` means progress was made but another loop is required.
+- `blocked` means the orchestrator must block or escalate; do not continue by guessing.
