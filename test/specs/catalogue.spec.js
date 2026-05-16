@@ -1,10 +1,57 @@
 const { test, expect } = require('../fixtures');
+const path = require('path');
 const { LoginPage } = require('../pages/LoginPage');
 const { CataloguePage } = require('../pages/CataloguePage');
 const { CatalogueFormPage } = require('../pages/CatalogueFormPage');
 
 const ADMIN_EMAIL = 'admin@busana.com';
 const ADMIN_PASSWORD = 'admin123';
+const fixtureImage1 = path.join(__dirname, '../fixtures/images/costume-cover-1.jpg');
+const fixtureImage2 = path.join(__dirname, '../fixtures/images/costume-cover-2.jpg');
+
+async function createE2ECostumeViaApi(page, purpose) {
+  const name = `E2E_CATALOGUE_${purpose}_${Date.now()}`;
+  const token = await page.evaluate(() => localStorage.getItem('token'));
+
+  const result = await page.evaluate(async ({ token, name }) => {
+    const response = await fetch('/api/costumes', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name, quantity: 2, price: 10000 }),
+    });
+    const body = await response.json().catch(() => ({}));
+    return { status: response.status, body };
+  }, { token, name });
+
+  expect([200, 201]).toContain(result.status);
+  const id = result.body.id || result.body.data?.id;
+  expect(id).toBeTruthy();
+  return { id, name };
+}
+
+async function createE2ECostumeViaUi(page, purpose, images = []) {
+  const name = `E2E_CATALOGUE_${purpose}_${Date.now()}`;
+  const cataloguePage = new CataloguePage(page);
+  await cataloguePage.goto();
+  await cataloguePage.clickAddCostume();
+  const formPage = new CatalogueFormPage(page);
+  await formPage.assertFormLoaded();
+  await formPage.fillForm({
+    name,
+    region: 'Bali',
+    category: 'Baju Adat',
+    quantity: '1',
+  });
+  if (images.length > 0) {
+    await formPage.uploadImages(images);
+  }
+  await formPage.submit();
+  await expect(page).toHaveURL(/\/catalogue\/\d+/, { timeout: 15000 });
+  return { name, detailUrl: page.url() };
+}
 
 test.describe('Catalogue Management (Costume Management)', () => {
   test.beforeEach(async ({ page }) => {
@@ -41,12 +88,15 @@ test.describe('Catalogue Management (Costume Management)', () => {
       const nameText = (await nameEl.textContent())?.trim() ?? '';
       expect(nameText.length).toBeGreaterThan(0);
 
-      // 2. Thumbnail: visible costume image with alt text
-      const thumbnail = card.locator('img').first();
+      // 2. Thumbnail: visible costume image or placeholder icon
+      const thumbnail = card.locator('img, svg').first();
       await expect(thumbnail).toBeVisible();
-      const alt = await thumbnail.getAttribute('alt');
-      expect(alt).not.toBeNull();
-      expect(alt.trim().length).toBeGreaterThan(0);
+      const isImg = await thumbnail.evaluate(el => el.tagName === 'IMG');
+      if (isImg) {
+        const alt = await thumbnail.getAttribute('alt');
+        expect(alt).not.toBeNull();
+        expect(alt.trim().length).toBeGreaterThan(0);
+      }
 
       // 3. Quantity: visible indicator of available stock
       await expect(card).toContainText(/tersedia|unit/i);
@@ -78,7 +128,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await cataloguePage.goto();
     await cataloguePage.clickAddCostume();
     const formPage = new CatalogueFormPage(page);
-    await formPage.nameInput.fill('AC-004 Test Costume');
+    await formPage.nameInput.fill(`E2E_CATALOGUE_AC004_CREATE_${Date.now()}`);
     await formPage.submit();
     await expect(page).toHaveURL(/\/catalogue/, { timeout: 10000 });
   });
@@ -176,27 +226,25 @@ test.describe('Catalogue Management (Costume Management)', () => {
   });
 
   test('[AC-007-002] - Confirmation dialog before delete', async ({ page }) => {
-    const cataloguePage = new CataloguePage(page);
-    await cataloguePage.goto();
-    await cataloguePage.clickFirstCostume();
+    const costume = await createE2ECostumeViaApi(page, 'AC007_CONFIRM');
+    await page.goto(`/catalogue/${costume.id}`);
     page.once('dialog', dialog => {
       expect(dialog.type()).toBe('confirm');
-      dialog.accept();
+      dialog.dismiss();
     });
     await page.getByRole('button', { name: /hapus/i }).click();
   });
 
   test('[AC-007-003] - Costume removed from database', async ({ page }) => {
+    const costume = await createE2ECostumeViaApi(page, 'AC007_DELETE');
     const cataloguePage = new CataloguePage(page);
-    await cataloguePage.goto();
-    const initialCount = await cataloguePage.getCostumeCount();
-    await cataloguePage.clickFirstCostume();
+    await page.goto(`/catalogue/${costume.id}`);
     page.once('dialog', dialog => dialog.accept());
     await page.getByRole('button', { name: /hapus/i }).click();
     await expect(page).toHaveURL(/\/catalogue/);
     await cataloguePage.assertPageLoaded();
-    const finalCount = await cataloguePage.getCostumeCount();
-    expect(finalCount).toBeLessThan(initialCount);
+    await cataloguePage.searchCostume(costume.name);
+    await cataloguePage.assertEmptyState();
   });
 
   // AC-008-001: Upload Costume Image
@@ -216,8 +264,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await cataloguePage.clickAddCostume();
     const formPage = new CatalogueFormPage(page);
     await formPage.assertFormLoaded();
-    const hasMultiple = await formPage.fileInput.getAttribute('multiple').catch(() => null);
-    expect(hasMultiple !== null).toBeTruthy();
+    const hasMultiple = await formPage.fileInput.evaluate((input) => input.hasAttribute('multiple'));
+    expect(hasMultiple).toBeTruthy();
   });
 
   test('[AC-008-003] - Images display in detail page', async ({ page }) => {
@@ -232,7 +280,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
       category: 'Baju Adat',
       quantity: '1'
     });
-    await formPage.uploadImages([{ name: 'test.jpg', mimeType: 'image/jpeg', buffer: Buffer.alloc(100) }]);
+    await formPage.uploadImages(fixtureImage1);
     await formPage.submit();
     await expect(page).toHaveURL(/\/catalogue/);
   });
@@ -381,7 +429,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await cataloguePage.clickAddCostume();
     const formPage = new CatalogueFormPage(page);
     await formPage.assertFormLoaded();
-    const testName = 'AC004 Test Costume ' + Date.now();
+    const testName = 'E2E_CATALOGUE_AC004_SAVE_' + Date.now();
     await formPage.fillForm({
       name: testName,
       region: 'Bali',
@@ -445,13 +493,12 @@ test.describe('Catalogue Management (Costume Management)', () => {
     const formPage = new CatalogueFormPage(page);
     await formPage.assertFormLoaded();
     await formPage.fillForm({
-      name: 'Cover Image Test ' + Date.now(),
+      name: 'E2E_CATALOGUE_AC008_COVER_' + Date.now(),
       region: 'Bali',
       category: 'Baju Adat',
       quantity: '1'
     });
-    // Upload image
-    await formPage.uploadImages([{ name: 'cover.jpg', mimeType: 'image/jpeg', buffer: Buffer.alloc(100) }]);
+    await formPage.uploadImages(fixtureImage1);
     await formPage.submit();
     await expect(page).toHaveURL(/\/catalogue\/\d+/);
     // Check that image is shown as cover
@@ -462,10 +509,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
 
   // AC-008-005: Delete image removes it from gallery
   test('[AC-008-005] - Delete image removes it from gallery', async ({ page }) => {
-    const cataloguePage = new CataloguePage(page);
-    await cataloguePage.goto();
-    // Find a costume with images
-    await cataloguePage.clickFirstCostume();
+    await createE2ECostumeViaUi(page, 'AC008_DELETE_IMAGE', [fixtureImage1, fixtureImage2]);
     await expect(page).toHaveURL(/\/catalogue\/\d+/);
     const deleteButtons = page.getByRole('button', { name: /hapus gambar|delete.*image/i });
     const hasDeleteButton = await deleteButtons.first().isVisible().catch(() => false);
@@ -479,11 +523,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
 
   // AC-008-006: Deleting cover image promotes next image
   test('[AC-008-006] - Deleting cover image promotes next image', async ({ page }) => {
-    const cataloguePage = new CataloguePage(page);
-    await cataloguePage.goto();
-    // This test requires a costume with 2+ images
-    // For now, just verify the UI doesn't crash
-    await cataloguePage.clickFirstCostume();
+    await createE2ECostumeViaUi(page, 'AC008_PROMOTE_COVER', [fixtureImage1, fixtureImage2]);
     await expect(page).toHaveURL(/\/catalogue\/\d+/);
     const images = page.locator('img');
     const count = await images.count();

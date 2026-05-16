@@ -7,7 +7,7 @@ class LoginPage extends BasePage {
     this.emailInput = page.locator('input[type="email"]');
     this.passwordInput = page.locator('input[type="password"]');
     this.submitButton = page.locator('button[type="submit"]');
-    this.errorAlert = page.locator('[data-slot="alert"]');
+    this.errorAlert = page.locator('[data-slot="alert-description"]');
     this.title = page.locator('h1, h2').first();
   }
 

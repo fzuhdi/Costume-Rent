@@ -83,6 +83,7 @@ Return `GREEN_STATUS: refactor_ready_for_sdet` when ready for the same recorded 
 
 - Never edit anything under `test/`.
 - Never weaken behavior to satisfy a test.
+- Never treat a test run as successful when `node scripts/quality-gate.mjs` fails.
 - Never implement sibling ACs opportunistically.
 - Never create a new test framework inside a feature ticket.
 - Never commit, push, stash, reset, or clean the worktree.

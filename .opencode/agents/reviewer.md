@@ -6,6 +6,7 @@ permission:
   edit: deny
   bash:
     "*": deny
+    "node scripts/quality-gate.mjs": allow
     "git diff*": allow
     "git log*": allow
     "git show*": allow
@@ -60,6 +61,8 @@ Return:
 
 Use when SDET wrote a test and it already passes. Approve only if the test genuinely covers the single criterion and is not broad or weak.
 
+Run or require `node scripts/quality-gate.mjs` before approving any test coverage. Reject if the gate fails or if the test diff weakens acceptance coverage, even when Playwright is green.
+
 Return:
 
 - `REVIEW_VERDICT: coverage-approved`
@@ -75,7 +78,7 @@ git diff {CHECKPOINT_SHA}..HEAD
 git diff {CHECKPOINT_SHA}..HEAD -- test/
 ```
 
-If `git status --short` is not empty, return `REVIEW_VERDICT: rejected` because uncommitted changes would not be included in the committed checkpoint diff. Approve only when app changes are minimal, the SDET RED test file/title is unchanged since after-RED, sibling ACs are not implemented, and ticket scope is respected.
+If `git status --short` is not empty, return `REVIEW_VERDICT: rejected` because uncommitted changes would not be included in the committed checkpoint diff. Also require `node scripts/quality-gate.mjs` to pass. Approve only when app changes are minimal, the SDET RED test file/title is unchanged since after-RED, sibling ACs are not implemented, ticket scope is respected, and test coverage integrity was not weakened.
 
 Return:
 
@@ -88,6 +91,9 @@ Rejection is binding. There is no override.
 
 - Never edit files.
 - Never run tests/builds.
+- Never approve skipped, weakened, deleted, or pass-through acceptance checks.
+- Never approve tests that require global clean state, use destructive cleanup, or mutate/delete data not created by that test.
+- Verify test-created data uses `E2E_...` for browser tests and `API_...` for API tests.
 - Never propose broad refactors or sibling work.
 - Never fix ambiguous tickets or bad tests yourself.
 

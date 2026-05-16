@@ -21,7 +21,7 @@ async function createTestCostume(request, token) {
   const response = await request.post('/api/costumes', {
     headers: { Authorization: `Bearer ${token}` },
     data: {
-      name: 'API Test Costume ' + Date.now(),
+      name: 'API_COSTUME_AC030_CREATE_' + Date.now(),
       quantity: 5,
       price: 100000
     }
@@ -38,9 +38,9 @@ async function createTestClient(request, token) {
   const response = await request.post('/api/clients', {
     headers: { Authorization: `Bearer ${token}` },
     data: {
-      name: 'API Test Client ' + Date.now(),
+      name: 'API_CLIENT_AC030_CREATE_' + Date.now(),
       phone: '08123456789',
-      address: 'Test Address'
+      address: 'API_CLIENT_AC030_ADDRESS'
     }
   });
   if (response.status() === 201 || response.status() === 200) {
@@ -91,7 +91,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     const token = await getToken(request);
     const response = await request.post('/api/regions', {
       headers: { Authorization: `Bearer ${token}` },
-      data: { name: 'API Test Region ' + Date.now() }
+      data: { name: 'API_REGION_AC028_CREATE_' + Date.now() }
     });
     expect([200, 201]).toContain(response.status());
     const body = await response.json();
@@ -102,7 +102,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
   test('[AC-028-006] - POST /api/regions duplicate name returns error', async ({ request }) => {
     const token = await getToken(request);
     // First create a region
-    const name = 'Duplicate Test Region';
+    const name = 'API_REGION_AC028_DUPLICATE_' + Date.now();
     await request.post('/api/regions', {
       headers: { Authorization: `Bearer ${token}` },
       data: { name }
@@ -278,7 +278,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     const response = await request.post('/api/costumes', {
       headers: { Authorization: `Bearer ${token}` },
       data: {
-        name: 'API Test Costume ' + Date.now(),
+        name: 'API_COSTUME_AC030_CREATE_' + Date.now(),
         quantity: 3,
         price: 50000
       }
@@ -310,11 +310,11 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     if (costumeId) {
       const response = await request.put(`/api/costumes/${costumeId}`, {
         headers: { Authorization: `Bearer ${token}` },
-        data: { name: 'Updated Name ' + Date.now() }
+        data: { name: 'API_COSTUME_AC030_UPDATE_' + Date.now() }
       });
       expect(response.status()).toBe(200);
       const body = await response.json();
-      expect(body.name || body.data?.name).toMatch(/Updated Name/);
+      expect(body.name || body.data?.name).toMatch(/API_COSTUME_AC030_UPDATE_/);
     }
   });
 
@@ -397,9 +397,9 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     const response = await request.post('/api/clients', {
       headers: { Authorization: `Bearer ${token}` },
       data: {
-        name: 'API Test Client ' + Date.now(),
+        name: 'API_CLIENT_AC030_CREATE_' + Date.now(),
         phone: '08123456789',
-        address: 'Test Address'
+        address: 'API_CLIENT_AC030_ADDRESS'
       }
     });
     expect([200, 201]).toContain(response.status());
@@ -735,7 +735,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
 
   test('[AC-030-038] - PUT /api/settings with auth updates app_name', async ({ request }) => {
     const token = await getToken(request);
-    const newName = 'API Updated Name ' + Date.now();
+    const newName = 'API_SETTINGS_AC030_UPDATE_' + Date.now();
     const response = await request.put('/api/settings', {
       headers: { Authorization: `Bearer ${token}` },
       data: { app_name: newName }
@@ -751,7 +751,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
 
   test('[AC-040-001] - POST /api/categories duplicate name returns error', async ({ request }) => {
     const token = await getToken(request);
-    const name = 'Duplicate Test Category ' + Date.now();
+    const name = 'API_CATEGORY_AC040_DUPLICATE_' + Date.now();
     // First create
     await request.post('/api/categories', {
       headers: { Authorization: `Bearer ${token}` },

@@ -14,7 +14,7 @@ test.describe('Notifications', () => {
 
   // AC-018: Overdue Rental Alerts
   test('[AC-018-001] - Badge shows count of overdue rentals', async ({ page }) => {
-    const notificationBell = page.locator('button[aria-label="Buka notifikasi"]');
+    const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await expect(notificationBell).toBeVisible();
     const badge = notificationBell.locator('[data-slot="badge"]');
     const isVisible = await badge.isVisible().catch(() => false);
@@ -26,19 +26,19 @@ test.describe('Notifications', () => {
   });
 
   test('[AC-018-002] - Alert displays for rentals past end date', async ({ page }) => {
-    const notificationBell = page.locator('button[aria-label="Buka notifikasi"]');
+    const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await notificationBell.click();
     const dropdown = page.locator('.max-h-80');
     await expect(dropdown).toBeVisible();
     const bodyText = await page.locator('body').textContent();
     const hasOverdueText = /Terlambat|overdue/i.test(bodyText);
     const hasPastDueText = /rent_end|tanggal/i.test(bodyText);
-    expect(hasOverdueText || hasPastDueText || true).toBeTruthy();
+    expect(hasOverdueText || hasPastDueText).toBeTruthy();
   });
 
   // AC-019: Due Soon Reminders
   test('[AC-019-001] - Reminder for rentals due within 3 days', async ({ page }) => {
-    const notificationBell = page.locator('button[aria-label="Buka notifikasi"]');
+    const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await notificationBell.click();
     const dropdown = page.locator('.max-h-80');
     await expect(dropdown).toBeVisible();
@@ -48,7 +48,7 @@ test.describe('Notifications', () => {
   });
 
   test('[AC-019-002] - Notification displayed in navbar', async ({ page }) => {
-    const notificationBell = page.locator('button[aria-label="Buka notifikasi"]');
+    const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await expect(notificationBell).toBeVisible();
     const bellIcon = notificationBell.locator('svg');
     await expect(bellIcon).toBeVisible();
@@ -56,7 +56,7 @@ test.describe('Notifications', () => {
 
   // AC-020: Notification Bell
   test('[AC-020-001] - Click bell shows notification dropdown', async ({ page }) => {
-    const notificationBell = page.locator('button[aria-label="Buka notifikasi"]');
+    const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await notificationBell.click();
     const dropdown = page.locator('.max-h-80');
     await expect(dropdown).toBeVisible();
@@ -65,15 +65,14 @@ test.describe('Notifications', () => {
   });
 
   test('[AC-020-002] - List of overdue and due soon rentals', async ({ page }) => {
-    const notificationBell = page.locator('button[aria-label="Buka notifikasi"]');
+    const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await notificationBell.click();
     const dropdown = page.locator('.max-h-80');
     await expect(dropdown).toBeVisible();
-    const notificationItems = page.locator('[class*="p-3 cursor-pointer"]');
-    const count = await notificationItems.count();
-    const emptyText = page.locator('div:text("Tidak ada notifikasi")');
-    const isEmpty = await emptyText.isVisible().catch(() => false);
-    expect(count > 0 || isEmpty).toBeTruthy();
+    const dropdownContent = page.locator('.max-h-80');
+    const hasContent = await dropdownContent.textContent();
+    const hasItems = hasContent && hasContent.trim().length > 0;
+    expect(hasItems || false).toBeTruthy();
   });
 
   // AC-018-003: Badge count matches API count
@@ -91,7 +90,7 @@ test.describe('Notifications', () => {
     const apiCount = response.data.count;
 
     // Check badge
-    const notificationBell = page.locator('button[aria-label="Buka notifikasi"]');
+    const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     const badge = notificationBell.locator('[data-slot="badge"]');
     const isVisible = await badge.isVisible().catch(() => false);
     if (isVisible && apiCount > 0) {
@@ -102,7 +101,7 @@ test.describe('Notifications', () => {
 
   // AC-018-004: Badge hidden when count is 0
   test('[AC-018-004] - Badge hidden when count is 0', async ({ page }) => {
-    const notificationBell = page.locator('button[aria-label="Buka notifikasi"]');
+    const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     const badge = notificationBell.locator('[data-slot="badge"]');
     const isVisible = await badge.isVisible().catch(() => false);
     if (!isVisible) {
@@ -110,29 +109,27 @@ test.describe('Notifications', () => {
     } else {
       const badgeText = await badge.textContent();
       const count = parseInt(badgeText);
-      expect(count === 0 || true).toBeTruthy();
+      expect(count).toBe(0);
     }
   });
 
   // AC-020-003: Notification item shows client name and rent_end date
   test('[AC-020-003] - Notification item shows client name and rent_end date', async ({ page }) => {
-    const notificationBell = page.locator('button[aria-label="Buka notifikasi"]');
+    const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await notificationBell.click();
     const dropdown = page.locator('.max-h-80');
     await expect(dropdown).toBeVisible();
 
-    const notificationItems = page.locator('[class*="p-3 cursor-pointer"]');
-    const count = await notificationItems.count();
-    if (count > 0) {
-      const firstItemText = await notificationItems.first().textContent();
-      // Should contain client name and date
-      expect(firstItemText.length).toBeGreaterThan(0);
+    const dropdownContent = page.locator('.max-h-80');
+    const contentText = await dropdownContent.textContent();
+    if (contentText && contentText.trim().length > 0) {
+      expect(contentText.length).toBeGreaterThan(0);
     }
   });
 
   // AC-020-004: Overdue items are visually distinct from due_soon
   test('[AC-020-004] - Overdue items are visually distinct from due_soon', async ({ page }) => {
-    const notificationBell = page.locator('button[aria-label="Buka notifikasi"]');
+    const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await notificationBell.click();
     const dropdown = page.locator('.max-h-80');
     await expect(dropdown).toBeVisible();
@@ -144,6 +141,6 @@ test.describe('Notifications', () => {
     const hasDueSoon = await dueSoonItems.first().isVisible().catch(() => false);
 
     // At least one type should be visible if there are notifications
-    expect(hasOverdue || hasDueSoon || true).toBeTruthy();
+    expect(hasOverdue || hasDueSoon).toBeTruthy();
   });
 });

@@ -1,12 +1,13 @@
+const { expect } = require('@playwright/test');
 const { BasePage } = require('./BasePage.js');
 
 class NavbarPage extends BasePage {
   constructor(page) {
     super(page);
     this.brand = page.locator('[data-slot="navbar-brand"]');
-    this.notificationBell = page.locator('[data-slot="button"]').filter({ has: page.locator('svg[aria-label="Notifications"]') });
-    this.notificationBadge = this.notificationBell.locator('[data-slot="badge"]');
-    this.userMenu = page.locator('[data-slot="navbar-content"]').locator('button[aria-label*="User"]');
+    this.notificationBell = page.locator('button[aria-label="Notifikasi"]');
+    this.notificationBadge = this.page.locator('[data-slot="badge"]').first();
+    this.userMenu = page.locator('button[aria-label*="Profil"]');
     this.logoutButton = page.locator('button:has-text("Logout")');
   }
 
@@ -16,6 +17,7 @@ class NavbarPage extends BasePage {
 
   async clickNotificationBell() {
     await this.notificationBell.click();
+    await this.page.waitForTimeout(500);
   }
 
   async expectNotificationCount(count) {
@@ -29,7 +31,7 @@ class NavbarPage extends BasePage {
   }
 
   async toggleTheme() {
-    const themeToggle = this.page.locator('button[aria-label*="theme"], button[aria-label*="dark"], button').filter({ has: this.page.locator('svg[data-icon="sun"], svg[data-icon="moon"]') }).first();
+    const themeToggle = this.page.locator('button[aria-label="Beralih ke mode gelap"], button[aria-label="Beralih ke mode terang"]').first();
     await themeToggle.click();
   }
 

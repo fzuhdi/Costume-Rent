@@ -25,6 +25,10 @@ Go + Gin · React 19 + Vite + HeroUI v3 + Tailwind v4 · SQLite (`glebarez/sqlit
 | `.opencode/skills/plan-to-tickets/SKILL.md` | Converts/repairs plans/PRDs/bugs into TDD-ready tickets |
 | `.opencode/agents/{developer,sdet,reviewer}.md` | Subagents |
 | `.opencode/skills/shared/{constraints,io-contract}.md` | Shared contracts |
+| `docs/engineering/TEST_INTEGRITY_POLICY.md` | Acceptance-test integrity contract |
+| `docs/engineering/FORBIDDEN_PATTERNS.md` | Patterns the quality gate rejects |
+| `docs/engineering/QUALITY_GATES.md` | Tiered quality gate commands and checkpoints |
+| `docs/engineering/REVIEW_CHECKLIST.md` | Repo-specific review checklist |
 | `.opencode/knowledge/runbook.md` | Operational guide |
 | `.opencode/knowledge/common-bugs.md` | Recurring bugs (read when user reports a bug) |
 | `.opencode/knowledge/heroui-v3-patterns.md` | HeroUI v3 syntax |
@@ -58,3 +62,6 @@ Then prune: `ls -t .opencode/logs/*.md | tail -n +4 | xargs -r rm -f`
 
 ## Quick gotchas
 `pread64` build error → `CGO_ENABLED=0` + `glebarez/sqlite` · `useAuth not exported` → add hook export · infinite reload → fetch notifications only when `isAuthenticated` · DB `out of memory` → mount volume to `/app/` not the file · Docker stale → `build --no-cache` · HeroUI syntax → see `heroui-v3-patterns.md`.
+
+## Test integrity
+A green suite is invalid if acceptance coverage was weakened. Run `node scripts/quality-gate.mjs` after any `test/**` edit and before final review/commit. Product gaps must stay as honest failures or become explicit tickets; do not hide them with skips, weak assertions, or broad suppressions.

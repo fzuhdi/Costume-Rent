@@ -3,10 +3,10 @@ const { BasePage } = require('./BasePage.js');
 class SidebarPage extends BasePage {
   constructor(page) {
     super(page);
-    this.katalogLink = page.locator('a[href="/catalogue"]');
-    this.peminjamanLink = page.locator('a[href="/rents"]');
-    this.klienLink = page.locator('a[href="/clients"]');
-    this.pengaturanLink = page.locator('a[href="/settings"]');
+    this.katalogLink = page.locator('aside a[href="/catalogue"]').first();
+    this.peminjamanLink = page.locator('aside a[href="/rents"]').first();
+    this.klienLink = page.locator('aside a[href="/clients"]').first();
+    this.pengaturanLink = page.locator('aside a[href="/settings"]').first();
     this.sidebar = page.locator('aside');
   }
 
@@ -31,7 +31,7 @@ class SidebarPage extends BasePage {
   }
 
   async expectActiveLink(path) {
-    const activeLink = this.page.locator(`a[href="${path}"]`);
+    const activeLink = this.page.locator(`aside a[href="${path}"]`).first();
     await expect(activeLink).toHaveClass(/bg-\[var\(--primary\)\]\/20/);
   }
 }

@@ -56,13 +56,24 @@ Read:
 2. Use `TEST_INTERFACE` exactly. If it is wrong for the behavior, return `RED_STATUS: blocked` with reason `test interface mismatch`.
 3. The test title must include `SLICE_ID`.
 4. Run the targeted RED command.
-5. Return:
+5. If any file under `test/**` changed, run `node scripts/quality-gate.mjs` from the repo root. If it fails, return `RED_STATUS: blocked` with the gate findings.
+6. Return:
    - `RED_STATUS: failing_expected` only when the test fails for the expected product-behavior reason.
    - `RED_STATUS: already_green` only when the test genuinely covers the criterion and already passes.
    - `RED_STATUS: failing_wrong_reason` when selectors/auth/setup/flakiness or another non-product reason causes failure.
    - `RED_STATUS: blocked` when the ticket is ambiguous, conflicts with AC docs, or the environment cannot validate RED.
 
-Do not weaken assertions to get an expected failure.
+Do not weaken assertions to get an expected failure. Do not skip, delete, or loosen an acceptance check to make a test pass. Selector/setup/page-object repairs are allowed only when the same acceptance criterion remains covered.
+
+Test state rules:
+
+- Do not require a globally clean DB.
+- Do not run reset/truncate/drop/delete-all cleanup.
+- Create unique self-owned records when data is needed.
+- Browser/E2E-created records must start with `E2E_`.
+- API-created records must start with `API_`.
+- Mutate/delete only records created by the current test and namespace.
+- Upload tests must use committed files under `test/fixtures/images/`, not fake buffers or mutable `backend/uploads` runtime files.
 
 ## MODE: run-green
 
@@ -79,6 +90,8 @@ Do not weaken assertions to get an expected failure.
 - Never change the recorded RED test during GREEN rerun.
 - Never run broad suites unless the orchestrator explicitly asks.
 - Never use arbitrary sleeps/timeouts.
+- Never add `test.skip`, `test.fixme`, `.only`, `expect(... || true)`, pass-on-error catches, or broad console/a11y suppressions.
+- Never delete arbitrary first rows or seeded/demo data.
 
 ## Return
 

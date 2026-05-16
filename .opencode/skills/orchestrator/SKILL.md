@@ -74,6 +74,7 @@ Forbidden:
 
 - `red-writing -> green-building` without `RED_STATUS: failing_expected`.
 - Any developer edit to the recorded SDET acceptance test during GREEN or refactor.
+- Treating a Playwright-green run as successful when `node scripts/quality-gate.mjs` fails.
 - Continuing plan mode after a dirty/disputed blocked ticket.
 - Auto-stash, auto-reset, auto-checkout discard, or force push.
 - Auto-PR for partial plans.
@@ -199,6 +200,8 @@ In parallel when useful:
 
 SDET must return `TEST_FILE`, `TEST_TITLE`, `RED_STATUS`, `RED_FAILURE_SUMMARY`, and `TEST_COMMAND`. Commit non-empty RED changes as `test(tdd): red <ticket-id>` when a failing expected RED is produced.
 
+After any SDET edit under `test/**`, run `node scripts/quality-gate.mjs`. If it fails, block before RED validation; do not continue to audit or GREEN.
+
 ### red-validating
 
 Parse SDET RED result:
@@ -211,6 +214,8 @@ Parse SDET RED result:
 RED setup/environment failures block. Do not start GREEN.
 
 ### already-green-audit
+
+Run `node scripts/quality-gate.mjs` before invoking reviewer. If it fails, block with the gate findings.
 
 Invoke `reviewer MODE: already-green-audit`.
 
@@ -259,6 +264,8 @@ Invoke `developer MODE: refactor` at most once. Refactor is app-code-only, bound
 
 Before invoking reviewer, require a clean worktree. GREEN and refactor changes must already be committed so the reviewer can audit the full implementation diff from the after-RED checkpoint. If app/test changes are still uncommitted, block instead of invoking reviewer.
 
+Run `node scripts/quality-gate.mjs` before final-review. If it fails, block with the gate findings even when targeted tests pass.
+
 Invoke `reviewer MODE: final-review` with after-RED checkpoint SHA.
 
 Reviewer checks minimal scope, no sibling ACs, and no changes to the SDET RED test since after-RED. Rejection is binding; developer fixes or the ticket escalates at `maxIterations`. There is no reviewer override.
@@ -270,6 +277,8 @@ Update ticket frontmatter to `complete`, update runtime state, and commit durabl
 ### plan-complete
 
 Update plan frontmatter/status summary to `complete` and commit `docs(tdd): complete <plan-id>`.
+
+Run `node scripts/quality-gate.mjs` before plan completion. A plan cannot be complete while the gate fails.
 
 Push and create PR:
 

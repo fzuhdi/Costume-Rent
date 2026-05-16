@@ -23,7 +23,10 @@ test.describe('Authentication', () => {
 
   test('[AC-002-001] - Invalid credentials show error', async ({ page }) => {
     const loginPage = new LoginPage(page);
-    await loginPage.login('wrong@test.com', 'wrongpass');
+    await loginPage.goto();
+    await page.fill('input[type="email"]', 'wrong@test.com');
+    await page.fill('input[type="password"]', 'wrongpass');
+    await page.click('button[type="submit"]');
     await expect(page).toHaveURL(/\/login/);
     await expect(loginPage.errorAlert).toBeVisible({ timeout: 3000 });
   });
@@ -62,9 +65,12 @@ test.describe('Authentication', () => {
   test('[AC-002-002] - Wrong email shows error', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
-    await loginPage.login('nobody@example.com', ADMIN_PASSWORD);
-    await loginPage.expectError('');
+    await page.fill('input[type="email"]', 'nobody@example.com');
+    await page.fill('input[type="password"]', ADMIN_PASSWORD);
+    await page.click('button[type="submit"]');
+    await page.waitForTimeout(2000);
     await expect(page).toHaveURL(/\/login/);
+    await expect(loginPage.errorAlert).toBeVisible();
   });
 
   // AC-002-003: Empty form does not submit

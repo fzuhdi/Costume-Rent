@@ -6,6 +6,31 @@ const { ClientDetailPage } = require('../pages/ClientDetailPage');
 const ADMIN_EMAIL = 'admin@busana.com';
 const ADMIN_PASSWORD = 'admin123';
 
+async function createE2EClientViaApi(page, purpose) {
+  const name = `E2E_CLIENT_${purpose}_${Date.now()}`;
+  const token = await page.evaluate(() => localStorage.getItem('token'));
+
+  const result = await page.evaluate(async ({ token, name }) => {
+    const response = await fetch('/api/clients', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name,
+        phone: '08123456789',
+        address: 'E2E_CLIENT_ADDRESS',
+      }),
+    });
+    const body = await response.json().catch(() => ({}));
+    return { status: response.status, body };
+  }, { token, name });
+
+  expect([200, 201]).toContain(result.status);
+  return { id: result.body.id || result.body.data?.id, name };
+}
+
 test.describe('Client Management', () => {
   test.beforeEach(async ({ page }) => {
     const loginPage = new LoginPage(page);
@@ -153,18 +178,13 @@ test.describe('Client Management', () => {
 
   // AC-042: Delete client (was AC-015-006)
   test('[AC-042-001] - Delete client', async ({ page }) => {
+    const client = await createE2EClientViaApi(page, 'AC042_DELETE');
     const clientListPage = new ClientListPage(page);
     await clientListPage.goto();
-    // Create a test client first via API or use existing
     const initialCount = await clientListPage.clientRows.count();
-    if (initialCount > 0) {
-      const firstName = await clientListPage.clientRows.first().locator('td').first().textContent();
-      if (firstName) {
-        await clientListPage.deleteClient(firstName.trim());
-        await page.waitForTimeout(500);
-        const finalCount = await clientListPage.clientRows.count();
-        expect(finalCount).toBeLessThanOrEqual(initialCount);
-      }
-    }
+    await clientListPage.deleteClient(client.name);
+    await page.waitForTimeout(500);
+    const finalCount = await clientListPage.clientRows.count();
+    expect(finalCount).toBeLessThan(initialCount);
   });
 });
