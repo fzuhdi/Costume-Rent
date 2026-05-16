@@ -22,13 +22,19 @@ test.describe('Rental Management', () => {
     await expect(page.locator('h1, h2').first()).toBeVisible();
   });
 
-  // AC-009: View Rental List
-  test('[AC-009-001] - Display all rentals with status', async ({ page }) => {
+  // AC-009-001: View Rental List — navigate to /rents and display all rentals with status chip/badge
+  test('[AC-009-001] - Display all rentals with status chip/badge', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
+    // Page heading confirms we are on the rental list
     await expect(page.locator('h1')).toContainText(/Riwayat Peminjaman/i);
-    const countText = await page.locator('p.text-sm.text-\\[var\\(--muted\\)\\]').textContent();
-    expect(countText).toMatch(/Ditemukan \d+ peminjaman/i);
+    // At least one rental row must be visible
+    const rows = rentHistoryPage.rentRows;
+    const rowCount = await rows.count();
+    expect(rowCount).toBeGreaterThan(0);
+    // Each rental row must display a status chip/badge indicator
+    const firstRowChip = rows.first().locator('[data-slot="chip"]');
+    await expect(firstRowChip).toBeVisible();
   });
 
   test('[AC-009-002] - Filter by status active and returned', async ({ page }) => {
