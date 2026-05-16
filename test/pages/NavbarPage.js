@@ -27,6 +27,32 @@ class NavbarPage extends BasePage {
     await this.logoutButton.click();
     await this.page.waitForURL(/\/login/);
   }
+
+  async toggleTheme() {
+    const themeToggle = this.page.locator('button[aria-label*="theme"], button[aria-label*="dark"], button').filter({ has: this.page.locator('svg[data-icon="sun"], svg[data-icon="moon"]') }).first();
+    await themeToggle.click();
+  }
+
+  async assertDarkMode(enabled) {
+    const htmlClass = await this.page.evaluate(() => document.documentElement.className);
+    if (enabled) {
+      expect(htmlClass).toContain('dark');
+    } else {
+      expect(htmlClass).not.toContain('dark');
+    }
+  }
+
+  async assertNotificationBadgeCount(expectedCount) {
+    const countText = await this.notificationBadge.textContent();
+    const count = parseInt(countText) || 0;
+    expect(count).toBe(expectedCount);
+  }
+
+  async clickNotificationBell() {
+    await this.notificationBell.click();
+    const dropdown = this.page.locator('.max-h-80');
+    await expect(dropdown).toBeVisible();
+  }
 }
 
 module.exports = { NavbarPage };

@@ -45,6 +45,33 @@ class ClientDetailPage extends BasePage {
   async getRentHistoryCount() {
     return await this.rentHistoryRows.count();
   }
+
+  async assertRentalHistoryOrder() {
+    const rows = await this.rentHistoryRows.all();
+    if (rows.length < 2) return; // Need at least 2 to check order
+    // Get dates from each row and verify they're in descending order
+    const dates = [];
+    for (const row of rows) {
+      const text = await row.textContent();
+      const dateMatch = text.match(/(\d{4}-\d{2}-\d{2})/);
+      if (dateMatch) dates.push(new Date(dateMatch[1]));
+    }
+    for (let i = 1; i < dates.length; i++) {
+      expect(dates[i].getTime()).toBeLessThanOrEqual(dates[i-1].getTime());
+    }
+  }
+
+  async editPhone(newPhone) {
+    await this.clickEdit();
+    await this.phoneInput.fill(newPhone);
+    await this.save();
+  }
+
+  async editAddress(newAddress) {
+    await this.clickEdit();
+    await this.addressInput.fill(newAddress);
+    await this.save();
+  }
 }
 
 module.exports = { ClientDetailPage };

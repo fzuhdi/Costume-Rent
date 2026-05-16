@@ -37,6 +37,15 @@ class SettingsPage extends BasePage {
   async expectSaved() {
     await expect(this.page.locator('text=Pengaturan berhasil disimpan')).toBeVisible({ timeout: 5000 });
   }
+
+  async assertAppNamePrepopulated() {
+    const value = await this.appNameInput.inputValue();
+    expect(value.length).toBeGreaterThan(0);
+  }
+
+  async assertSuccessMessage() {
+    await expect(this.successMessage).toBeVisible({ timeout: 5000 });
+  }
 }
 
 module.exports = { SettingsPage };
