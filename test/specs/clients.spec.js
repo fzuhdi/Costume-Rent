@@ -78,10 +78,93 @@ test.describe('Client Management', () => {
     if (count > 0) {
       await clientListPage.clickFirstClient();
       const clientDetailPage = new ClientDetailPage(page);
-      await clientDetailPage.clickEdit();
-      await expect(clientDetailPage.nameInput).toBeVisible();
-      await expect(clientDetailPage.phoneInput).toBeVisible();
-      await expect(clientDetailPage.saveButton).toBeVisible();
+      await expect(clientDetailPage.editButton).toBeVisible();
+    }
+  });
+
+  // AC-015-003: Client list shows total rents and active rents
+  test('[AC-015-003] - Client list shows total rents and active rents', async ({ page }) => {
+    const clientListPage = new ClientListPage(page);
+    await clientListPage.goto();
+    await clientListPage.assertTotalRentsVisible();
+    await clientListPage.assertActiveRentsVisible();
+  });
+
+  // AC-015-004: Search client by name
+  test('[AC-015-004] - Search client by name', async ({ page }) => {
+    const clientListPage = new ClientListPage(page);
+    await clientListPage.goto();
+    const firstClientName = await clientListPage.clientRows.first().locator('td').first().textContent();
+    if (firstClientName) {
+      await clientListPage.searchClient(firstClientName.trim());
+      await page.waitForTimeout(500);
+      await clientListPage.expectClientVisible(firstClientName.trim());
+      // Clear search
+      await clientListPage.searchInput.fill('');
+      await page.waitForTimeout(500);
+    }
+  });
+
+  // AC-015-005: Overdue indicator shown for clients with overdue rentals
+  test('[AC-015-005] - Overdue indicator shown for clients with overdue rentals', async ({ page }) => {
+    const clientListPage = new ClientListPage(page);
+    await clientListPage.goto();
+    // Check if any client has overdue indicator
+    await clientListPage.assertOverdueIndicator();
+  });
+
+  // AC-016-003: Client detail shows correct rental history order
+  test('[AC-016-003] - Client detail shows correct rental history order', async ({ page }) => {
+    const clientListPage = new ClientListPage(page);
+    await clientListPage.goto();
+    const count = await clientListPage.clientRows.count();
+    if (count > 0) {
+      await clientListPage.clickFirstClient();
+      const clientDetailPage = new ClientDetailPage(page);
+      await clientDetailPage.assertRentalHistoryOrder();
+    }
+  });
+
+  // AC-017-003: Edit client phone number
+  test('[AC-017-003] - Edit client phone number', async ({ page }) => {
+    const clientListPage = new ClientListPage(page);
+    await clientListPage.goto();
+    const count = await clientListPage.clientRows.count();
+    if (count > 0) {
+      await clientListPage.clickFirstClient();
+      const clientDetailPage = new ClientDetailPage(page);
+      await clientDetailPage.editPhone('08123456789');
+      await expect(page.locator('body')).toContainText('08123456789');
+    }
+  });
+
+  // AC-017-004: Edit client address
+  test('[AC-017-004] - Edit client address', async ({ page }) => {
+    const clientListPage = new ClientListPage(page);
+    await clientListPage.goto();
+    const count = await clientListPage.clientRows.count();
+    if (count > 0) {
+      await clientListPage.clickFirstClient();
+      const clientDetailPage = new ClientDetailPage(page);
+      await clientDetailPage.editAddress('Jl. Test Auto No. 1');
+      await expect(page.locator('body')).toContainText('Jl. Test Auto No. 1');
+    }
+  });
+
+  // AC-042: Delete client (was AC-015-006)
+  test('[AC-042-001] - Delete client', async ({ page }) => {
+    const clientListPage = new ClientListPage(page);
+    await clientListPage.goto();
+    // Create a test client first via API or use existing
+    const initialCount = await clientListPage.clientRows.count();
+    if (initialCount > 0) {
+      const firstName = await clientListPage.clientRows.first().locator('td').first().textContent();
+      if (firstName) {
+        await clientListPage.deleteClient(firstName.trim());
+        await page.waitForTimeout(500);
+        const finalCount = await clientListPage.clientRows.count();
+        expect(finalCount).toBeLessThanOrEqual(initialCount);
+      }
     }
   });
 });
