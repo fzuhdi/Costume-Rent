@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Deterministic tracer-bullet FSM for feature development. Selects one small AC slice, dispatches developer, sdet, and reviewer via the Task tool, verifies it, then stops. Use this skill when the user runs /engineering/orchestrator, /productivity/start, /productivity/status, or asks to continue/resume feature work.
+description: Deterministic tracer-bullet FSM for feature and Agile ticket execution. Runs one slice, one ticket, or all ready tickets for one plan via developer, sdet, and reviewer. Use this skill when the user runs /engineering/orchestrator, /productivity/start, /productivity/status, or asks to continue/resume feature work.
 ---
 
 # Orchestrator - Tracer-Bullet Workflow Engine
@@ -21,9 +21,10 @@ A tracer bullet is the smallest end-to-end slice that proves one observable beha
 
 - The workflow unit is `SLICE_ID`, not a whole feature.
 - `SLICE_ID` is one AC sub-ID from `feature-manifest.json[{feature-id}].ac_ids`, for example `AC-004-001`.
-- One orchestrator run may build, test, fix, review, and verify exactly one `SLICE_ID`.
+- One FSM pass may build, test, fix, review, and verify exactly one `SLICE_ID`.
 - Do not build sibling ACs, complete CRUD surfaces, broad abstractions, generalized infrastructure, or multiple UI locations unless they are strictly required for the current slice to work end-to-end.
-- After a slice is verified, stop and report the next candidate slice. Do not automatically continue to the next slice in the same invocation.
+- In direct feature/slice mode, after a slice is verified, stop and report the next candidate slice.
+- In plan mode, the orchestrator may run multiple ready tickets from one `PLAN_ID`, but each ticket still executes through the single-slice FSM before the next ticket starts.
 
 This is intentional: vertical slice first, feedback immediately, expand only after verification.
 
@@ -34,6 +35,7 @@ This is intentional: vertical slice first, feedback immediately, expand only aft
 | File | Purpose |
 |---|---|
 | `.opencode/state/orchestrator-progress.json` | Current feature, current slice, status, iteration counter |
+| `.opencode/state/ticket-progress.json` | Ticket and plan execution status |
 | `.opencode/state/feature-manifest.json` | Feature -> AC slice map plus implementation/test hints |
 | `.opencode/state/feature-{id}/failures.md` | Append-only slice status/failure log |
 | `.opencode/state/feature-{id}/disputes.md` | SDET-fault arbitration log, created on demand |
@@ -60,6 +62,8 @@ Do not support older feature-only progress shapes. If this file exists, it must 
 
 `selecting-slice | building | writing-test | testing | bug-fixing | reviewing | verification | slice-complete | feature-complete | escalated`
 
+Plan execution wraps these states with a queue of ready ticket files. It does not add new worker states.
+
 ## Allowed transitions
 
 ```text
@@ -77,7 +81,8 @@ reviewing       -> bug-fixing        (reviewer rejects, <= 1 prior rejection of 
 reviewing       -> testing           (2nd rejection of same fix-set; let targeted test decide and log override)
 verification    -> slice-complete    (all narrow checks pass)
 verification    -> bug-fixing        (a narrow check fails)
-slice-complete  -> STOP              (report next slice; do not continue automatically)
+slice-complete  -> STOP              (direct feature/slice or ticket mode)
+slice-complete  -> selecting-slice   (plan mode only; next ready ticket)
 feature-complete -> STOP
 ANY             -> escalated         (iteration >= maxIterations or conflict detected)
 ```
@@ -87,7 +92,8 @@ ANY             -> escalated         (iteration >= maxIterations or conflict det
 - `building -> feature-complete`
 - `bug-fixing -> feature-complete`
 - `verification -> feature-complete` when any slice remains unverified
-- `slice-complete -> selecting-slice` in the same invocation
+- `slice-complete -> selecting-slice` in direct feature/slice mode
+- `slice-complete -> selecting-slice` across different tickets unless the invocation target is a `PLAN_ID`
 - Any transition that expands from the current `SLICE_ID` to sibling slices without explicit user instruction
 
 ---
@@ -122,22 +128,91 @@ Also check `failures.md`: if the current `SLICE_ID` has the status sequence `[sd
 
 2. Read `.opencode/state/feature-manifest.json`.
 
-3. Determine target feature and optional target slice from the command prompt:
+3. Determine invocation mode from the first command argument:
+   - `TICKET-YYYYMMDD-NNN` -> Ticket mode.
+   - `PLAN-YYYYMMDD-*` -> Plan mode.
+   - Known feature id -> Direct feature/slice mode.
+   - No argument -> Standard Report, including ready ticket plans.
+
+4. In Ticket mode:
+   - Load `docs/tickets/{ticket-id}.md`.
+   - Require frontmatter fields `id`, `plan_id`, `type`, `status`, `feature`, and `slice_id`.
+   - Require `status: ready` unless `.opencode/state/ticket-progress.json` already marks the ticket `in_progress`.
+   - Use the ticket frontmatter `feature` and `slice_id` as the target.
+   - Treat the ticket file's `## Acceptance Criteria` section as the source of truth for the slice.
+
+5. In Plan mode:
+   - Scan `docs/tickets/*.md`.
+   - Select tickets whose frontmatter has the requested `plan_id` and `status: ready`.
+   - Exclude tickets already marked `complete` in `.opencode/state/ticket-progress.json`.
+   - Sort by numeric `priority`, then ticket id.
+   - Execute each selected ticket through the single-slice FSM, one ticket at a time.
+   - Stop on the first blocked/escalated ticket. Do not continue past architectural uncertainty.
+
+6. In Direct feature/slice mode:
    - If a feature was supplied, use it.
    - If no feature was supplied, use `orchestrator-progress.json.currentFeature` if present.
-   - If neither exists, run Standard Report and ask the user which feature to work on.
+   - If neither exists, run Standard Report and ask the user which feature, ticket, or plan to work on.
    - If a `SLICE_ID` was supplied, validate that it exists in `feature-manifest.json[{feature-id}].ac_ids`.
 
-4. Read `.opencode/state/orchestrator-progress.json` if present:
+7. Read `.opencode/state/orchestrator-progress.json` if present:
    - If the file is missing, initialize a new slice-shaped progress object after target feature/slice selection.
    - If the file exists and lacks any required progress field, transition to `escalated` with reason `invalid progress state`.
    - If `status` is not one of the Slice states, transition to `escalated` with reason `invalid progress status`.
 
-5. Read `.opencode/state/feature-{id}/failures.md` if present. Use the Parsing failures.md rule below to derive the latest status per slice.
+8. Read `.opencode/state/feature-{id}/failures.md` if present. Use the Parsing failures.md rule below to derive the latest status per slice.
 
-6. Check conflict patterns for the selected slice. Escalate immediately if found.
+9. Check conflict patterns for the selected slice. Escalate immediately if found.
 
-7. Resume from the validated state.
+10. Resume from the validated state.
+
+---
+
+## Ticket Files
+
+Ticket files live in `docs/tickets/*.md` and are produced by `/planning/plan-to-tickets`.
+
+Required frontmatter:
+
+```yaml
+id: TICKET-YYYYMMDD-001
+plan_id: PLAN-YYYYMMDD-short-title
+type: feature
+status: ready
+feature: CATALOGUE
+slice_id: AC-004-001
+priority: 1
+source_plan: docs/plans/example.md
+test_file: test/specs/catalogue.spec.js
+```
+
+The orchestrator only executes `status: ready` tickets. `status: draft` tickets are listed but skipped.
+
+When a ticket is active, include these fields in every developer and SDET prompt:
+
+```text
+TICKET_ID: {ticket-id}
+TICKET_FILE: docs/tickets/{ticket-id}.md
+TICKET_TYPE: feature | bug | chore | spike
+TICKET_ACCEPTANCE_CRITERION: {single criterion from the ticket file}
+```
+
+The ticket acceptance criterion overrides broad feature interpretation. `docs/ACCEPTANCE_CRITERIA.md` and the manifest still provide feature/slice mapping and file hints.
+
+---
+
+## Plan Execution Rule
+
+Given `PLAN_ID`:
+
+1. Build the ready ticket queue from `docs/tickets/*.md`.
+2. If no ready tickets remain, report plan complete or no ready work.
+3. For the next ticket, set `currentTicket`, `currentPlan`, `currentFeature`, `currentSlice`, and `currentTicketType` in `.opencode/state/ticket-progress.json`.
+4. Run the normal single-slice FSM until `slice-complete`, `escalated`, or iteration limit.
+5. On `slice-complete`, mark the ticket `complete` in `.opencode/state/ticket-progress.json` and continue to the next ready ticket for the same plan.
+6. On `escalated` or blocked worker, mark the ticket `blocked`, write the escalation report, and stop the plan run.
+
+Never combine two tickets into one developer/SDET/reviewer task. The batch is only a queue wrapper around the single-slice workflow.
 
 ---
 
@@ -181,7 +256,7 @@ Always invoke workers via the Task tool:
 Task(
   subagent_type = "developer" | "sdet" | "reviewer",
   description   = short label,
-  prompt        = "MODE: {build|fix|write|run|triage}\nFEATURE: {feature-id}\nSLICE_ID: {slice-id}\nDEFERRED_SLICE_IDS: [...]\n{specifics}"
+  prompt        = "MODE: {build|fix|write|run|triage}\nFEATURE: {feature-id}\nSLICE_ID: {slice-id}\nDEFERRED_SLICE_IDS: [...]\nTICKET_ID: {optional ticket-id}\nTICKET_FILE: {optional ticket-file}\nTICKET_TYPE: {optional ticket-type}\nTICKET_ACCEPTANCE_CRITERION: {optional criterion}\n{specifics}"
 )
 ```
 
@@ -209,7 +284,7 @@ Update `.opencode/state/orchestrator-progress.json` with `currentFeature`, `curr
 
 ```text
 Task(developer,
-  "MODE: build\nFEATURE: {feature-id}\nSLICE_ID: {slice-id}\nDEFERRED_SLICE_IDS: [all other slices]\nImplement ONLY this tracer slice end-to-end per docs/ACCEPTANCE_CRITERIA.md. Defer sibling ACs and broad infrastructure."
+  "MODE: build\nFEATURE: {feature-id}\nSLICE_ID: {slice-id}\nDEFERRED_SLICE_IDS: [all other slices]\nTICKET_ID: {optional ticket-id}\nTICKET_FILE: {optional ticket-file}\nTICKET_TYPE: {optional ticket-type}\nTICKET_ACCEPTANCE_CRITERION: {optional criterion}\nImplement ONLY this tracer slice end-to-end. If TICKET_FILE is present, use that ticket's acceptance criterion as source of truth. Otherwise use docs/ACCEPTANCE_CRITERIA.md. Defer sibling ACs and broad infrastructure."
 )
 ```
 
@@ -222,7 +297,7 @@ Parse return:
 
 ```text
 Task(sdet,
-  "MODE: write\nFEATURE: {feature-id}\nSLICE_ID: {slice-id}\nDEFERRED_SLICE_IDS: [all other slices]\nWrite or update exactly one targeted Playwright/API test for this slice. Do not run it."
+  "MODE: write\nFEATURE: {feature-id}\nSLICE_ID: {slice-id}\nDEFERRED_SLICE_IDS: [all other slices]\nTICKET_ID: {optional ticket-id}\nTICKET_FILE: {optional ticket-file}\nTICKET_TYPE: {optional ticket-type}\nTICKET_ACCEPTANCE_CRITERION: {optional criterion}\nWrite or update exactly one targeted Playwright/API test for this slice. If TICKET_FILE is present, test the ticket acceptance criterion. Do not run it."
 )
 ```
 
@@ -235,7 +310,7 @@ Parse return:
 
 ```text
 Task(sdet,
-  "MODE: run\nFEATURE: {feature-id}\nSLICE_ID: {slice-id}\nDEFERRED_SLICE_IDS: [all other slices]\nRun only the targeted test for this slice, normally: cd test && npx playwright test --grep \"{slice-id}\". Report SLICE_STATUS."
+  "MODE: run\nFEATURE: {feature-id}\nSLICE_ID: {slice-id}\nDEFERRED_SLICE_IDS: [all other slices]\nTICKET_ID: {optional ticket-id}\nTICKET_FILE: {optional ticket-file}\nTICKET_TYPE: {optional ticket-type}\nTICKET_ACCEPTANCE_CRITERION: {optional criterion}\nRun only the targeted test for this slice, normally: cd test && npx playwright test --grep \"{slice-id}\". Report SLICE_STATUS."
 )
 ```
 
@@ -266,9 +341,9 @@ Parse return:
    ```
 3. Dispatch developer:
    ```text
-   Task(developer,
-     "MODE: fix\nFEATURE: {feature-id}\nSLICE_ID: {slice-id}\nDEFERRED_SLICE_IDS: [all other slices]\nFix ONLY this open slice. Append one developer entry to failures.md marked [fixed|todo|sdet-fault] with root-cause summary."
-   )
+Task(developer,
+      "MODE: fix\nFEATURE: {feature-id}\nSLICE_ID: {slice-id}\nDEFERRED_SLICE_IDS: [all other slices]\nTICKET_ID: {optional ticket-id}\nTICKET_FILE: {optional ticket-file}\nTICKET_TYPE: {optional ticket-type}\nTICKET_ACCEPTANCE_CRITERION: {optional criterion}\nFix ONLY this open slice. If TICKET_FILE is present, use its acceptance criterion as source of truth. Append one developer entry to failures.md marked [fixed|todo|sdet-fault] with root-cause summary."
+    )
    ```
 4. Parse return -> `reviewing` unless `OUTCOME: blocked`, which escalates.
 
@@ -276,7 +351,7 @@ Parse return:
 
 ```text
 Task(reviewer,
-  "FEATURE: {feature-id}\nSLICE_ID: {slice-id}\nCHECKPOINT_SHA: {sha}\nReview only the diff for this tracer slice."
+  "FEATURE: {feature-id}\nSLICE_ID: {slice-id}\nTICKET_ID: {optional ticket-id}\nTICKET_FILE: {optional ticket-file}\nTICKET_TYPE: {optional ticket-type}\nCHECKPOINT_SHA: {sha}\nReview only the diff for this tracer slice."
 )
 ```
 
@@ -303,14 +378,16 @@ Run narrow checks for the current `SLICE_ID` only, in order. Stop on first failu
 
 1. Append the current `SLICE_ID` to `completedSlices` if absent.
 2. Update `.opencode/state/orchestrator-progress.json` with `status: "slice-complete"`.
-3. Count remaining unverified slices for the feature.
-4. Output a tracer summary:
+3. If a `TICKET_ID` is active, mark it `complete` in `.opencode/state/ticket-progress.json` with `completedAt`, `type`, `feature`, `slice_id`, and `plan_id`.
+4. Count remaining unverified slices for the feature or remaining ready tickets for the active plan.
+5. Output a tracer summary:
    - Completed slice
    - Files touched by workers
    - Verification commands/results
    - Deferred sibling slices
-    - Next recommended command: `/engineering/orchestrator {feature-id}` or `/engineering/orchestrator {feature-id} {next-slice-id}`
-5. STOP. Do not start the next slice.
+     - Next recommended command: `/engineering/orchestrator {feature-id}`, `/engineering/orchestrator {feature-id} {next-slice-id}`, or `/engineering/orchestrator {plan-id}`
+6. In direct feature/slice or ticket mode, STOP. Do not start the next slice.
+7. In plan mode only, continue to the next ready ticket for the same `PLAN_ID` unless the ticket was blocked/escalated or no ready tickets remain.
 
 ### STATE: feature-complete
 
@@ -344,11 +421,13 @@ Output the escalation report. Do not run the rollback command.
 
 ---
 
-## Standard Report (for `/productivity/start`, `/productivity/status`)
+## Standard Report (for `/productivity/start`, `/productivity/status`, and empty `/engineering/orchestrator`)
 
 After running Startup, output:
 
 - Current feature, current slice, status, iteration count, remaining iterations
+- Ready ticket plans from `docs/tickets/*.md`, grouped by `plan_id` with ready/draft/complete counts
+- Ready individual tickets, sorted by `priority` then ticket id
 - Latest open/todo/fixed slice IDs from `failures.md`
 - Completed slice count versus total slice count for the feature
 - Incomplete features from manifest
@@ -359,6 +438,8 @@ Then recommend the next action:
 
 | Condition | Recommendation |
 |---|---|
+| Ready plan tickets exist | `Run /engineering/orchestrator {plan-id}` to execute all ready tickets for one plan |
+| Ready individual ticket exists | `Run /engineering/orchestrator {ticket-id}` to execute one ticket |
 | No feature selected | `Run /engineering/orchestrator {feature-id}` |
 | Current slice is open/todo | `Run /engineering/orchestrator {feature-id} {slice-id} to fix the current tracer slice` |
 | Current slice is fixed | `Run /engineering/orchestrator {feature-id} {slice-id} to retest the current tracer slice` |
