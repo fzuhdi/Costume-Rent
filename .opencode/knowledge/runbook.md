@@ -96,14 +96,14 @@ const fetchNotifications = useCallback(async () => {
 ## Testing
 Run from `test/` (this is required — never invoke playwright from project root):
 ```bash
-cd test && npm run test          # run tests + sync bug reports (default)
-cd test && npx playwright test specs/{feature}.spec.js  # single feature
-cd test && npx playwright test --grep "AC-001-001"      # single AC
+cd test && npx playwright test --grep "AC-001-001"      # tracer slice (default workflow)
+cd test && npx playwright test specs/{feature}.spec.js  # feature regression
+cd test && npm run test                                 # full regression
 cd test && npx playwright test --headed --slow-mo 500   # debug
 cd test && npx playwright show-report                   # HTML report
 ```
 
-The sync script (`test/helpers/sync-failure-log.mjs`) auto-appends iteration sections to `.opencode/state/feature-{id}/failures.md`. Never write failure entries manually — always run `npm run test`.
+For tracer-slice workflow, the orchestrator records targeted run results in `.opencode/state/feature-{id}/failures.md`. Use `npm run test` for full regression checkpoints, not for every slice.
 
 ---
 
@@ -113,7 +113,7 @@ Costume-Rent/
 ├── backend/                 # Go API (Gin)
 ├── frontend/                # React 19 + Vite + HeroUI v3
 ├── docker-compose.yml
-├── test/                    # Playwright tests + sync script
+├── test/                    # Playwright tests
 └── .opencode/
     ├── agents/              # Subagent definitions (developer, sdet, reviewer)
     ├── commands/            # Slash commands
