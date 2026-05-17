@@ -2,7 +2,7 @@
 
 ## Execution Model
 
-Use the coordinator checkout for scheduling only. A single orchestrator subagent is dispatched for the target plan or ticket. For plans, the orchestrator subagent handles ticket discovery, sequencing, regression, and plan completion internally.
+Use the coordinator checkout for scheduling only. A single orchestrator subagent is dispatched for the target plan or ticket by default. For plans, the orchestrator subagent handles ticket discovery, sequencing, regression, and plan completion internally.
 
 ```text
 route arguments
@@ -12,7 +12,7 @@ route arguments
 -> summarize aggregate status
 ```
 
-Only one orchestrator subagent runs at a time. The orchestrator subagent runs in the same checkout but in its own agent context, managing its own state files, checkpoint commits, subagent dispatches, and plan completion.
+Only one orchestrator subagent runs at a time in the default single-checkout mode. The orchestrator subagent runs in the same checkout but in its own agent context, managing its own state files, checkpoint commits, subagent dispatches, and plan completion. Isolated worktrees are advanced mode only and follow `docs/adr/0003-ticket-and-workflow-workspaces.md`.
 
 ## Argument Routing
 
@@ -45,6 +45,15 @@ Queue order:
 5. Blocked or ambiguous items are report-only unless the user asks to repair planning artifacts.
 
 The orchestrator subagent handles internal ticket sequencing, dependency ordering, regression, and plan completion.
+
+## Dependency And Installer Approval
+
+The coordinator must not repair setup by installing packages or browsers on its own.
+
+- If a run needs `node_modules`, browser caches, package installs, or dependency updates, ask the user before running any installer.
+- Approval requests must include the package or tool, requested version when known, reason, affected manifest/lockfile or cache, exact command, and fallback if denied.
+- In advanced isolated-worktree mode, prefer reusing, copying, or junctioning an existing dependency directory only when the relevant lockfile hash matches.
+- If dependency manifests or lockfiles must change, pause concurrent ticket execution, ask approval, run the install once in a controlled workspace, and refresh the shared cache keyed by lockfile hash.
 
 ## Orchestrator Subagent Dispatch
 
@@ -120,4 +129,5 @@ Lower-level rules remain binding, including:
 - developer does not edit SDET-owned acceptance tests
 - reviewer rejection is binding
 - acceptance integrity gate must pass
+- dependency and installer commands require explicit user approval
 - plan-completion impacted regression must pass before completion or PR

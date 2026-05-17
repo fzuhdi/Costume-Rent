@@ -31,6 +31,9 @@ Isolated Git worktrees remain an option for advanced use cases where the model/p
 - Worker agents must run from the active item workspace root.
 - The coordinator must not run multiple workflow engines in the same checkout concurrently (this rule applies to the single-checkout subagent approach).
 - The coordinator must not dispatch worker subagents from one project root with absolute paths into another worktree.
+- Dependency directories may be reused, copied, or junctioned into ticket worktrees only when they match the relevant lockfile hash.
+- Dependency manifest or lockfile changes stop parallel ticket execution; the agent must ask user approval before editing dependency files or running installers, then install once in a controlled workspace and refresh the shared cache keyed by lockfile hash.
+- Missing dependency directories, Playwright browsers, runtime caches, or other generated setup artifacts are setup blocks until the user approves the exact install command.
 
 Recommended workspace root:
 
@@ -43,6 +46,7 @@ Recommended workspace root:
 - The orchestrator subagent context isolates state, reducing shared-state collisions in the checkout.
 - True parallel ticket execution is not available unless the model/provider supports concurrent requests.
 - Isolated worktrees remain available as the mechanism for true parallel execution when the provider makes it viable.
+- Worktree dependency reuse avoids repeated installs but does not authorize automatic dependency or browser installation.
 
 ## Supersedes
 This refines ADR 0001 and ADR 0002. Their single-checkout sequential plan behavior still applies inside one checkout's orchestrator subagent execution. The parallel worktree fan-out from the original ADR 0003 is superseded by single-checkout sequential subagent dispatch, with isolated worktrees retained as a documented advanced option.

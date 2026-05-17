@@ -4,7 +4,11 @@ These constraints apply to ALL workflow agents (developer, sdet, reviewer).
 
 ## Universal rules
 - Never modify `docker-compose.yml`, Dockerfiles, `nginx.conf` unless explicitly told.
-- Never introduce new dependencies without recording them in your return summary.
+- Never add, update, or remove dependencies without explicit user approval before the change.
+- Never run dependency or tool installers such as `npm install`, `npm ci`, `npx playwright install`, package-manager add/update commands, or browser/runtime installers without explicit user approval. Missing dependencies, missing browser caches, or lockfile drift are setup blocks until approved.
+- When asking for dependency/install approval, state the package or tool, requested version when known, reason, affected manifest/lockfile or cache, exact command, and fallback if denied.
+- In isolated worktrees, reuse an existing dependency directory only when it matches the relevant lockfile hash. If a dependency manifest or lockfile must change, serialize the work, ask approval, install once in a controlled workspace, and refresh the shared cache for that lockfile hash.
+- Record approved dependency changes and install commands in your return summary.
 - Never weaken assertions, skip tests, or use arbitrary `sleep` to "fix" timing — use proper waits.
 - A green suite is invalid if acceptance coverage was weakened. Product gaps must remain honest failures or become explicit product tickets.
 - Acceptance tests must be additive and self-scoped. Do not require global clean DB state, reset/truncate/drop data, or mutate records the test did not create.

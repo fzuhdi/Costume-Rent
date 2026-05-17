@@ -105,9 +105,13 @@ cd test && npx playwright show-report                   # HTML report
 
 For tracer-test case workflow, use targeted `--grep` runs during RED/GREEN. After a plan's tickets complete, run the full impacted spec files before plan completion. If impacted regression fails, run `node helpers/sync-regression-bugs.mjs --plan <plan-id>` from `test/` to create/update same-plan `review` bug tickets.
 
+Do not run `npm install`, `npm ci`, `npx playwright install`, package-manager add/update commands, or browser/runtime installers without explicit user approval. Missing `node_modules` or Playwright browser caches are setup blocks until approved.
+
 ## Workspaces
 
-Coordinator-managed executable tickets and substantial workflow-maintenance changes use isolated Git worktrees. See `docs/adr/0003-ticket-and-workflow-workspaces.md` for the durable policy.
+Coordinator-managed executable tickets use the default single-checkout orchestrator unless advanced isolated worktrees are explicitly viable. Substantial workflow-maintenance changes use isolated Git worktrees unless the user accepts the current checkout. See `docs/adr/0003-ticket-and-workflow-workspaces.md` for the durable policy.
+
+For advanced ticket worktrees, reuse, copy, or junction dependency directories only when the relevant lockfile hash matches. If manifests or lockfiles change, pause concurrent work, ask user approval, install once in a controlled workspace, and refresh the shared cache keyed by lockfile hash.
 
 Useful commands:
 

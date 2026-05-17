@@ -77,10 +77,22 @@ Forbidden:
 - `red-writing -> green-building` without `RED_STATUS: failing_expected`.
 - Any developer edit to the recorded SDET acceptance test during GREEN or refactor.
 - Treating a targeted test run as successful when the project-configured quality gate fails.
+- Running dependency installers, package-manager add/update commands, browser installers, or runtime installers without explicit user approval.
 - Continuing plan mode after a dirty/disputed blocked ticket.
 - Auto-stash, auto-reset, auto-checkout discard, or force push.
 - Auto-PR for partial plans.
 - Marking a plan complete before impacted-spec regression passes.
+
+## Dependency And Installer Approval
+
+Dependency and tool installation is user-approved setup work, not an automatic repair.
+
+- If a command fails because dependencies, Playwright browsers, runtime tool caches, or other generated setup artifacts are missing, block and ask the user before running any installer.
+- If a ticket appears to require adding, updating, or removing a dependency, stop parallel ticket work, ask the user before editing manifests or lockfiles, and continue only after approval.
+- The approval request must include the package or tool, requested version when known, why it is needed, affected manifest/lockfile or cache, the exact command to run, and the fallback if denied.
+- In isolated worktrees, reuse or copy dependency directories only when the relevant lockfile hash matches. Do not run installs independently in each worktree.
+- After approval, run the install once in a controlled workspace and treat the resulting dependency cache as keyed by the lockfile hash.
+- Record the approval, command, and affected files/caches in runtime state or the final return summary.
 
 ## Ticket Contract
 
@@ -222,7 +234,7 @@ Parse SDET RED result:
 - `RED_STATUS: failing_wrong_reason` -> `red-arbitrating`.
 - `RED_STATUS: blocked` -> block ticket; if clean, persist `docs(tdd): block <ticket-id>`.
 
-RED setup/environment failures block. Do not start GREEN.
+RED setup/environment failures block. Do not start GREEN. Missing dependencies or missing browser/runtime caches require explicit user approval before any install command is run.
 
 ### already-green-audit
 

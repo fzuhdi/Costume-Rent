@@ -22,7 +22,7 @@ Use one backlog for features, bugs, chores, and spikes. The orchestrator execute
 |---|---|
 | `/init-project <prd-or-plan>` | Initializes or repairs the Project Adapter only after the Greenfield Gate confirms an empty/docs-only product repo. |
 | `/plan-to-tickets [plan-file] [plan-id optional]` | Converts or repairs plans/bugs/ask-me output into TDD-ready plan and ticket files. |
-| `/coordinator [plan-id|ticket-id]` | Arg-first coordinator entry point. Empty args ask for a target before scanning; explicit plans fan out ready tickets into isolated ticket workspaces with max parallel 3. |
+| `/coordinator [plan-id|ticket-id]` | Arg-first coordinator entry point. Empty args ask for a target before scanning; explicit targets dispatch one orchestrator subagent by default. |
 | `/engineering/orchestrator` | Shows TDD status, review/ready tickets, plans, checkpoints, and PR post-step state. |
 | `/engineering/orchestrator [ticket-id]` | Runs one ready feature/bug ticket through strict TDD. |
 | `/engineering/orchestrator [plan-id]` | Audits review tickets and runs all ready executable tickets for one plan sequentially. |
@@ -30,6 +30,14 @@ Use one backlog for features, bugs, chores, and spikes. The orchestrator execute
 | `/productivity/status` | Reports current TDD workflow status without invoking subagents. |
 
 The `coordinator` skill is the preferred user-facing entry point for multiple tickets/plans and workflow-maintenance sequencing. Direct `developer`, `sdet`, and `reviewer` commands are debug-only for normal users.
+
+## Dependency And Installer Approval
+
+Agents must ask before adding, updating, or removing dependencies, editing dependency manifests/lockfiles for dependency changes, or running installers such as `npm install`, `npm ci`, package-manager add/update commands, `npx playwright install`, or browser/runtime installers.
+
+When approval is needed, the agent reports the package/tool, version when known, reason, affected manifest/lockfile or cache, exact command, and fallback if denied. Missing dependencies or Playwright/browser caches are setup blocks until approved.
+
+In isolated worktrees, dependency directories may be reused, copied, or junctioned only when they match the relevant lockfile hash. If manifests or lockfiles must change, pause concurrent ticket execution, ask approval, install once in a controlled workspace, and refresh the shared cache for that lockfile hash.
 
 ## TDD Flow
 
@@ -81,7 +89,7 @@ When invoked with a `PLAN_ID`, the orchestrator:
 
 Draft chore/spike backlog records do not block PR creation.
 
-Coordinator plan mode is different: `/coordinator PLAN-...` reads only the target plan and its tickets, then runs ready executable tickets in parallel item workspaces when child OpenCode sessions can be launched from those workspace roots. It runs at most 3 ticket orchestrators at once, schedules independent tickets before dependency-bearing tickets, and keeps ticket branch integration plus impacted regression sequential.
+Coordinator plan mode is the preferred entry point for targeted plan runs. By default it reads only the target plan and its tickets, then dispatches one orchestrator subagent for the full plan in the same checkout. Advanced isolated-worktree fan-out is available only when the environment supports true parallel child OpenCode sessions; it must keep ticket branch integration, dependency-changing work, and impacted regression sequential.
 
 ## Branches And Commits
 
@@ -89,7 +97,8 @@ Coordinator plan mode is different: `/coordinator PLAN-...` reads only the targe
 - Ticket branch: `tdd/{ticket-id}`.
 - Branches are created only from a clean worktree.
 - No auto-stash, auto-reset, or dirty-work discard.
-- Coordinator-managed tickets and substantial workflow changes use isolated workspaces per `docs/adr/0003-ticket-and-workflow-workspaces.md`.
+- Coordinator-managed tickets use the default single-checkout orchestrator unless advanced isolated worktrees are explicitly viable per `docs/adr/0003-ticket-and-workflow-workspaces.md`.
+- Substantial workflow changes use isolated workspaces per `docs/adr/0003-ticket-and-workflow-workspaces.md` unless the user explicitly accepts using the current checkout.
 - Worker agents run from the item workspace root. Do not dispatch worker subagents across absolute paths into another worktree.
 
 Commit convention:
