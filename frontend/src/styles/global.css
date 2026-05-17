@@ -84,6 +84,7 @@ body {
   .main-content.sidebar-collapsed {
     margin-left: 0;
     padding: 16px;
+    padding-bottom: calc(var(--navbar-height) + 16px);
   }
   nav {
     padding-left: 0 !important;

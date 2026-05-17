@@ -116,7 +116,7 @@ const SidebarMobile = () => {
   return (
     <>
       <div className={`mobile-sidebar-overlay ${isMobileOpen ? 'active' : ''}`} onClick={closeMobile} />
-      <aside className={`mobile-sidebar bg-[var(--surface)] border-r border-[var(--border)] flex flex-col ${isMobileOpen ? 'active' : ''}`}>
+      <div className={`mobile-sidebar bg-[var(--surface)] border-r border-[var(--border)] flex flex-col ${isMobileOpen ? 'active' : ''}`}>
         <div className="flex items-center gap-3 px-5 py-5 border-b border-[var(--border)]">
           <div className="bg-[var(--primary)] p-1.5 rounded-lg">
             <Layers size={20} className="text-white" />
@@ -136,7 +136,7 @@ const SidebarMobile = () => {
             ))}
           </div>
         </nav>
-      </aside>
+      </div>
     </>
   );
 };
