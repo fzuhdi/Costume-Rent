@@ -134,4 +134,34 @@ test.describe('Navigation & UI', () => {
     await page.reload();
     await navbarPage.assertDarkMode(true);
   });
+
+  // NAVIGATION-014: Mobile Bottom Tabs Provide Core Admin Navigation
+  test('[NAVIGATION-014] - Mobile Bottom Tabs Provide Core Admin Navigation', async ({ page }) => {
+    const { BottomTabPage } = require('../pages/BottomTabPage.js');
+    const { SidebarPage } = require('../pages/SidebarPage.js');
+
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    const bottomTabPage = new BottomTabPage(page);
+    await bottomTabPage.expectTabsVisible();
+
+    await bottomTabPage.clickPeminjaman();
+    await expect(page).toHaveURL(/\/rents/);
+    await bottomTabPage.expectActiveTab('/rents');
+
+    await bottomTabPage.clickKlien();
+    await expect(page).toHaveURL(/\/clients/);
+    await bottomTabPage.expectActiveTab('/clients');
+
+    await bottomTabPage.clickKatalog();
+    await expect(page).toHaveURL(/\/catalogue/);
+    await bottomTabPage.expectActiveTab('/catalogue');
+
+    await page.setViewportSize({ width: 1280, height: 720 });
+    const sidebarPage = new SidebarPage(page);
+    await expect(sidebarPage.sidebar).toBeVisible();
+    await expect(sidebarPage.katalogLink).toBeVisible();
+    await expect(sidebarPage.peminjamanLink).toBeVisible();
+    await expect(sidebarPage.klienLink).toBeVisible();
+  });
 });
