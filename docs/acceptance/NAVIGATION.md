@@ -92,3 +92,17 @@ Status: covered
 Test type: e2e
 Criterion: Dark mode preference persists on reload.
 Expected outcome: The system satisfies this behavior: Dark mode preference persists on reload.
+
+## NAVIGATION-014: Mobile Bottom Tabs Provide Core Admin Navigation
+
+Status: ready
+Test type: e2e
+Criterion: On a mobile viewport, bottom tabs link to /catalogue, /rents, and /clients, show the active section, and the desktop sidebar remains available on desktop.
+Expected outcome: Authenticated staff can navigate core admin sections with thumb-friendly mobile tabs without losing the existing desktop sidebar workflow.
+
+## NAVIGATION-015: Responsive Admin Shell Has No Horizontal Body Scroll
+
+Status: ready
+Test type: e2e
+Criterion: The authenticated admin shell at 320px, 375px, 390px, 768px, and desktop widths has no horizontal body scroll and keeps primary controls visible.
+Expected outcome: Staff can use the admin shell across supported mobile and desktop widths without clipped navigation, hidden actions, or horizontal page scrolling.

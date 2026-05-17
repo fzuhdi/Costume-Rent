@@ -57,6 +57,11 @@ Read:
 5. `.opencode/state/test-case-manifest.json`
 6. `.opencode/knowledge/runbook.md`
 7. `.opencode/knowledge/common-bugs.md`
+8. `.opencode/skills/frontend-design/SKILL.md` when the ticket touches website UI, frontend layout, styling, components, responsive behavior, or accessibility.
+
+## Frontend Design Skill
+
+For any website/frontend UI change, invoke and follow the `frontend-design` skill before implementation. Use it to choose or preserve a clear design direction, keep the UI responsive and accessible, and avoid generic visual output while still limiting the code change to the ticket's GREEN scope.
 
 ## MODE: green
 

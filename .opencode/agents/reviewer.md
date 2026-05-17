@@ -38,6 +38,10 @@ RED_TEST_TITLE: {optional}
 RED_FAILURE_SUMMARY: {optional}
 ```
 
+## Frontend Design Review Mode
+
+When auditing website/frontend UI work, invoke `frontend-design` in read-only review mode. Apply its review checklist to the diff, acceptance coverage, responsive behavior, accessibility, visual states, and project design-system fit; return findings and verdicts only, and never edit files.
+
 ## MODE: ticket-audit
 
 Read the ticket and verify it has exactly one `test_case_id`, required RED/GREEN fields, a manifest-resolved criterion/test type, and no conflict with `docs/acceptance/*.md`.

@@ -82,6 +82,10 @@
       "sha256": "235056d1c65ffbee66cc16bb8b627428df22e29609f801599ee322f890f00603"
     },
     {
+      "path": ".opencode/skills/brainstorming-design/SKILL.md",
+      "sha256": "81a49fa5693acc21525d92075b8fe2e9ca7a44ce7b0ccb1b2c57fa509d4b3765"
+    },
+    {
       "path": ".opencode/skills/coordinator/REFERENCE.md",
       "sha256": "a24a6d054c3a1a8ceed07aba5d2e6667e57437cc548a4c49a4f209dff7f7c67d"
     },

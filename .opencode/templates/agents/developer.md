@@ -47,7 +47,11 @@ If `TEST_CASE_ID`, ticket fields, or RED artifacts are missing in `MODE: green`,
 
 ## Pre-flight
 
-Read `.opencode/skills/shared/constraints.md`, `.opencode/skills/shared/io-contract.md`, `TICKET_FILE`, `.opencode/state/test-case-manifest.json`, and relevant project code roots.
+Read `.opencode/skills/shared/constraints.md`, `.opencode/skills/shared/io-contract.md`, `TICKET_FILE`, `.opencode/state/test-case-manifest.json`, and relevant project code roots. When the ticket touches website UI, frontend layout, styling, components, responsive behavior, or accessibility, also read `.opencode/skills/frontend-design/SKILL.md`.
+
+## Frontend Design Skill
+
+For any website/frontend UI change, invoke and follow the `frontend-design` skill before implementation. Use it to choose or preserve a clear design direction, keep the UI responsive and accessible, and avoid generic visual output while still limiting the code change to the ticket's GREEN scope.
 
 ## MODE: green
 

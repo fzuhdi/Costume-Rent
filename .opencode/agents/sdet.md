@@ -49,6 +49,11 @@ Read:
 3. `TICKET_FILE`
 4. `docs/acceptance/*.md` for mapping/context only
 5. `.opencode/state/test-case-manifest.json`
+6. `.opencode/skills/frontend-design/SKILL.md` when the ticket exercises website UI, responsive behavior, visual states, or accessibility.
+
+## Frontend Design Review Mode
+
+For browser/website UI acceptance work, use `frontend-design` in review/checklist mode only. Apply its review checklist to the acceptance test intent, selectors, viewport expectations, visual states, and accessibility coverage, but do not implement design changes or modify application code.
 
 ## MODE: red
 

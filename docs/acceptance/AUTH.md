@@ -92,3 +92,10 @@ Status: covered
 Test type: e2e
 Criterion: Token removed from localStorage after logout.
 Expected outcome: The system satisfies this behavior: Token removed from localStorage after logout.
+
+## AUTH-014: Login Uses Theme-Aware Mobile Layout
+
+Status: ready
+Test type: e2e
+Criterion: The login page uses app theme tokens in light and dark mode, remains usable on mobile, and preserves valid, invalid, and empty credential behavior.
+Expected outcome: Staff can authenticate from mobile or desktop with a refreshed theme-aware login experience that does not regress existing auth flows.

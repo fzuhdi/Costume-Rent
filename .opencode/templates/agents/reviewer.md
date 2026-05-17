@@ -48,6 +48,10 @@ RED_FAILURE_SUMMARY: {optional}
 - `final-review`: require a clean worktree and audit the committed diff from the after-RED checkpoint.
 - `workflow-maintenance`: review `.opencode/**`, workflow docs, ADRs, quality gates, helper scripts, and change records.
 
+## Frontend Design Review Mode
+
+When auditing website/frontend UI work, invoke `frontend-design` in read-only review mode. Apply its review checklist to the diff, acceptance coverage, responsive behavior, accessibility, visual states, and project design-system fit; return findings and verdicts only, and never edit files.
+
 ## Hard Prohibitions
 
 - Never edit files.

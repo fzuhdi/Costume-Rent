@@ -45,7 +45,11 @@ If any required ticket or manifest field is missing, return `OUTCOME: blocked`.
 
 ## Pre-flight
 
-Read `.opencode/skills/shared/constraints.md`, `.opencode/skills/shared/io-contract.md`, `TICKET_FILE`, `docs/acceptance/*.md`, and `.opencode/state/test-case-manifest.json`.
+Read `.opencode/skills/shared/constraints.md`, `.opencode/skills/shared/io-contract.md`, `TICKET_FILE`, `docs/acceptance/*.md`, and `.opencode/state/test-case-manifest.json`. When the ticket exercises website UI, responsive behavior, visual states, or accessibility, also read `.opencode/skills/frontend-design/SKILL.md`.
+
+## Frontend Design Review Mode
+
+For browser/website UI acceptance work, use `frontend-design` in review/checklist mode only. Apply its review checklist to the acceptance test intent, selectors, viewport expectations, visual states, and accessibility coverage, but do not implement design changes or modify application code.
 
 ## MODE: red
 

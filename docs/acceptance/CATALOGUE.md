@@ -239,3 +239,17 @@ Status: covered
 Test type: e2e
 Criterion: Deleting cover image promotes next image.
 Expected outcome: The system satisfies this behavior: Deleting cover image promotes next image.
+
+## CATALOGUE-035: Mobile Catalogue Uses Collapsible Filters And Inventory Cards
+
+Status: ready
+Test type: e2e
+Criterion: On a mobile viewport, the catalogue prioritizes image-forward costume inventory cards and keeps search, region, category, and view controls available through a compact collapsible filter area.
+Expected outcome: Staff can browse, search, filter, and open costume inventory on mobile without filters permanently pushing the catalogue content below the fold.
+
+## CATALOGUE-036: Costume Detail And Form Are Mobile Usable
+
+Status: ready
+Test type: e2e
+Criterion: Costume detail and create/edit form pages show images, stock, fields, validation, cancel/save actions, and edit/delete actions in scannable mobile sections without horizontal scrolling.
+Expected outcome: Staff can inspect, create, edit, and delete costumes from mobile while preserving existing catalogue behavior and validation.
