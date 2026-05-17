@@ -62,8 +62,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await expect(page.locator('h1, h2').first()).toBeVisible();
   });
 
-  // AC-003-001: View Costume List
-  test('[AC-003-001] - Display all costumes in catalogue page', async ({ page }) => {
+  // CATALOGUE-001: View Costume List
+  test('[CATALOGUE-001] - Display all costumes in catalogue page', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.assertPageLoaded();
@@ -71,7 +71,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
     expect(count).toBeGreaterThan(0);
   });
 
-  test('[AC-003-002] - Each costume card shows name, thumbnail, and quantity', async ({ page }) => {
+  test('[CATALOGUE-002] - Each costume card shows name, thumbnail, and quantity', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.assertPageLoaded();
@@ -103,7 +103,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
     }
   });
 
-  test('[AC-003-003] - Paginated or scrollable list', async ({ page }) => {
+  test('[CATALOGUE-003] - Paginated or scrollable list', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.assertPageLoaded();
@@ -114,8 +114,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     expect(hasPagination || hasScroll).toBeTruthy();
   });
 
-  // AC-004-001: Add New Costume
-  test('[AC-004-001] - Navigate to /catalogue/new via UI', async ({ page }) => {
+  // CATALOGUE-004: Add New Costume
+  test('[CATALOGUE-004] - Navigate to /catalogue/new via UI', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickAddCostume();
@@ -123,7 +123,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await expect(page.locator('h2').first()).toContainText(/tambah|tambah kostum baru/i);
   });
 
-  test('[AC-004-002] - Submit saves to database and redirects', async ({ page }) => {
+  test('[CATALOGUE-005] - Submit saves to database and redirects', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickAddCostume();
@@ -133,8 +133,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await expect(page).toHaveURL(/\/catalogue/, { timeout: 10000 });
   });
 
-  // AC-005-001: View Costume Detail
-  test('[AC-005-001] - Navigate to /catalogue/:id', async ({ page }) => {
+  // CATALOGUE-006: View Costume Detail
+  test('[CATALOGUE-006] - Navigate to /catalogue/:id', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickFirstCostume();
@@ -142,7 +142,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await expect(page.locator('h2').first()).not.toBeEmpty();
   });
 
-  test('[AC-005-002] - Display costume details', async ({ page }) => {
+  test('[CATALOGUE-007] - Display costume details', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickFirstCostume();
@@ -155,7 +155,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
     expect(content).toMatch(/harga|price/i);
   });
 
-  test('[AC-005-003] - Display costume images', async ({ page }) => {
+  test('[CATALOGUE-008] - Display costume images', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickFirstCostume();
@@ -165,7 +165,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
     expect(hasImages || hasNoImageText).toBeTruthy();
   });
 
-  test('[AC-005-004] - Show edit button', async ({ page }) => {
+  test('[CATALOGUE-009] - Show edit button', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickFirstCostume();
@@ -173,8 +173,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await expect(page.getByRole('button', { name: /edit/i })).toBeVisible();
   });
 
-  // AC-006-001: Edit Costume
-  test('[AC-006-001] - Navigate to /catalogue/:id/edit', async ({ page }) => {
+  // CATALOGUE-010: Edit Costume
+  test('[CATALOGUE-010] - Navigate to /catalogue/:id/edit', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickFirstCostume();
@@ -183,7 +183,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await expect(page.locator('h2').first()).toContainText(/edit kostum/i);
   });
 
-  test('[AC-006-002] - Pre-populate form with existing data', async ({ page }) => {
+  test('[CATALOGUE-011] - Pre-populate form with existing data', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickFirstCostume();
@@ -194,19 +194,19 @@ test.describe('Catalogue Management (Costume Management)', () => {
     expect(nameValue.length).toBeGreaterThan(0);
   });
 
-  test('[AC-006-003] - Save changes updates database', async ({ page }) => {
+  test('[CATALOGUE-012] - Save changes updates database', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickFirstCostume();
     await page.getByRole('button', { name: /edit/i }).click();
     const formPage = new CatalogueFormPage(page);
     await formPage.assertFormLoaded();
-    await formPage.descriptionInput.fill('Updated by AC-006 test');
+    await formPage.descriptionInput.fill('Updated by CATALOGUE test');
     await formPage.submit();
     await expect(page).toHaveURL(/\/catalogue\/\d+/);
   });
 
-  test('[AC-006-004] - Redirect to detail page after save', async ({ page }) => {
+  test('[CATALOGUE-013] - Redirect to detail page after save', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickFirstCostume();
@@ -217,15 +217,15 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await expect(page).toHaveURL(/\/catalogue\/\d+/);
   });
 
-  // AC-007-001: Delete Costume
-  test('[AC-007-001] - Delete button available on detail', async ({ page }) => {
+  // CATALOGUE-014: Delete Costume
+  test('[CATALOGUE-014] - Delete button available on detail', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickFirstCostume();
     await expect(page.getByRole('button', { name: /hapus/i })).toBeVisible();
   });
 
-  test('[AC-007-002] - Confirmation dialog before delete', async ({ page }) => {
+  test('[CATALOGUE-015] - Confirmation dialog before delete', async ({ page }) => {
     const costume = await createE2ECostumeViaApi(page, 'AC007_CONFIRM');
     await page.goto(`/catalogue/${costume.id}`);
     page.once('dialog', dialog => {
@@ -235,7 +235,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await page.getByRole('button', { name: /hapus/i }).click();
   });
 
-  test('[AC-007-003] - Costume removed from database', async ({ page }) => {
+  test('[CATALOGUE-016] - Costume removed from database', async ({ page }) => {
     const costume = await createE2ECostumeViaApi(page, 'AC007_DELETE');
     const cataloguePage = new CataloguePage(page);
     await page.goto(`/catalogue/${costume.id}`);
@@ -247,8 +247,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await cataloguePage.assertEmptyState();
   });
 
-  // AC-008-001: Upload Costume Image
-  test('[AC-008-001] - Image upload button on form', async ({ page }) => {
+  // CATALOGUE-017: Upload Costume Image
+  test('[CATALOGUE-017] - Image upload button on form', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickAddCostume();
@@ -258,7 +258,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
     expect(fileInputExists).toBeTruthy();
   });
 
-  test('[AC-008-002] - Supports multiple images', async ({ page }) => {
+  test('[CATALOGUE-018] - Supports multiple images', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickAddCostume();
@@ -268,7 +268,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
     expect(hasMultiple).toBeTruthy();
   });
 
-  test('[AC-008-003] - Images display in detail page', async ({ page }) => {
+  test('[CATALOGUE-019] - Images display in detail page', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickAddCostume();
@@ -285,15 +285,15 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await expect(page).toHaveURL(/\/catalogue/);
   });
 
-  // AC-003-004: Available quantity shown separately from total
-  test('[AC-003-004] - Available quantity shown separately from total', async ({ page }) => {
+  // CATALOGUE-021: Available quantity shown separately from total
+  test('[CATALOGUE-020] - Available quantity shown separately from total', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.assertAvailableQuantityVisible();
   });
 
-  // AC-003-004: Region and category labels shown per costume
-  test('[AC-003-004] - Region and category labels shown per costume', async ({ page }) => {
+  // CATALOGUE-021: Region and category labels shown per costume
+  test('[CATALOGUE-021] - Region and category labels shown per costume', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.assertPageLoaded();
@@ -317,16 +317,16 @@ test.describe('Catalogue Management (Costume Management)', () => {
     }
   });
 
-  // AC-003-005: Empty state shown when no results match search
-  test('[AC-003-005] - Empty state shown when no results match search', async ({ page }) => {
+  // CATALOGUE-022: Empty state shown when no results match search
+  test('[CATALOGUE-022] - Empty state shown when no results match search', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.searchCostume('zzzzznotexist');
     await cataloguePage.assertEmptyState();
   });
 
-  // AC-003-006: Search filters costumes by name
-  test('[AC-003-006] - Search filters costumes by name', async ({ page }) => {
+  // CATALOGUE-023: Search filters costumes by name
+  test('[CATALOGUE-023] - Search filters costumes by name', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     // Get first costume name from list view or table view
@@ -343,8 +343,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     expect(countAfterClear).toBeGreaterThan(0);
   });
 
-  // AC-003-007: Filter by region
-  test('[AC-003-007] - Filter by region', async ({ page }) => {
+  // CATALOGUE-024: Filter by region
+  test('[CATALOGUE-024] - Filter by region', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     // Select "Bali" region (adjust based on seeded data)
@@ -361,8 +361,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await cataloguePage.selectRegion('Semua Wilayah');
   });
 
-  // AC-003-008: Filter by category
-  test('[AC-003-008] - Filter by category', async ({ page }) => {
+  // CATALOGUE-025: Filter by category
+  test('[CATALOGUE-025] - Filter by category', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.selectCategory('Baju Adat');
@@ -372,8 +372,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     expect(rows).toBeGreaterThanOrEqual(0);
   });
 
-  // AC-003-009: Toggle between table and grid view
-  test('[AC-003-009] - Toggle between table and grid view', async ({ page }) => {
+  // CATALOGUE-026: Toggle between table and grid view
+  test('[CATALOGUE-026] - Toggle between table and grid view', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     // Switch to gallery view
@@ -390,8 +390,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     expect(rows).toBeGreaterThanOrEqual(0);
   });
 
-  // AC-003-010: Page resets to 1 when search changes
-  test('[AC-003-010] - Page resets to 1 when search changes', async ({ page }) => {
+  // CATALOGUE-027: Page resets to 1 when search changes
+  test('[CATALOGUE-027] - Page resets to 1 when search changes', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     // Navigate to page 2 if pagination exists
@@ -409,8 +409,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await cataloguePage.assertPageResetTo1();
   });
 
-  // AC-004-003: Required field validation - name empty
-  test('[AC-004-003] - Required field: name shows validation error if empty', async ({ page }) => {
+  // CATALOGUE-028: Required field validation - name empty
+  test('[CATALOGUE-028] - Required field: name shows validation error if empty', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickAddCostume();
@@ -422,8 +422,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await formPage.assertValidationErrorForName();
   });
 
-  // AC-004-004: All fields saved correctly (including price)
-  test('[AC-004-004] - All fields saved correctly', async ({ page }) => {
+  // CATALOGUE-029: All fields saved correctly (including price)
+  test('[CATALOGUE-029] - All fields saved correctly', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickAddCostume();
@@ -436,7 +436,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
       category: 'Baju Adat',
       quantity: '5',
       price: '150000',
-      description: 'Test description for AC-004-004'
+      description: 'Test description for CATALOGUE-029'
     });
     // Fill acquisition date - use the input directly
     const acquiredAt = new Date().toISOString().split('T')[0];
@@ -455,8 +455,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await expect(page.locator('body')).toContainText('Test description');
   });
 
-  // AC-005-005: Available quantity shown on detail page
-  test('[AC-005-005] - Available quantity shown on detail page', async ({ page }) => {
+  // CATALOGUE-030: Available quantity shown on detail page
+  test('[CATALOGUE-030] - Available quantity shown on detail page', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickFirstCostume();
@@ -467,8 +467,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     expect(hasAvailableQty).toBe(true);
   });
 
-  // AC-007-004: Cancel delete does not remove costume
-  test('[AC-007-004] - Cancel delete does not remove costume', async ({ page }) => {
+  // CATALOGUE-031: Cancel delete does not remove costume
+  test('[CATALOGUE-031] - Cancel delete does not remove costume', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     const initialCount = await cataloguePage.getCostumeCount();
@@ -485,8 +485,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     }
   });
 
-  // AC-008-004: First uploaded image becomes cover image
-  test('[AC-008-004] - First uploaded image becomes cover image', async ({ page }) => {
+  // CATALOGUE-032: First uploaded image becomes cover image
+  test('[CATALOGUE-032] - First uploaded image becomes cover image', async ({ page }) => {
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
     await cataloguePage.clickAddCostume();
@@ -507,8 +507,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     expect(isVisible).toBe(true);
   });
 
-  // AC-008-005: Delete image removes it from gallery
-  test('[AC-008-005] - Delete image removes it from gallery', async ({ page }) => {
+  // CATALOGUE-033: Delete image removes it from gallery
+  test('[CATALOGUE-033] - Delete image removes it from gallery', async ({ page }) => {
     await createE2ECostumeViaUi(page, 'AC008_DELETE_IMAGE', [fixtureImage1, fixtureImage2]);
     await expect(page).toHaveURL(/\/catalogue\/\d+/);
     const deleteButtons = page.getByRole('button', { name: /hapus gambar|delete.*image/i });
@@ -521,8 +521,8 @@ test.describe('Catalogue Management (Costume Management)', () => {
     }
   });
 
-  // AC-008-006: Deleting cover image promotes next image
-  test('[AC-008-006] - Deleting cover image promotes next image', async ({ page }) => {
+  // CATALOGUE-034: Deleting cover image promotes next image
+  test('[CATALOGUE-034] - Deleting cover image promotes next image', async ({ page }) => {
     await createE2ECostumeViaUi(page, 'AC008_PROMOTE_COVER', [fixtureImage1, fixtureImage2]);
     await expect(page).toHaveURL(/\/catalogue\/\d+/);
     const images = page.locator('img');

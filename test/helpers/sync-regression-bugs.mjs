@@ -14,22 +14,6 @@ import { parseArgs } from 'node:util';
 
 const DEFAULT_RESULTS = 'test-results/results.json';
 
-const AC_FEATURE_MAP = [
-  { from: 1, to: 2, feature: 'AUTH', testFile: 'test/specs/auth.spec.js' },
-  { from: 3, to: 8, feature: 'CATALOGUE', testFile: 'test/specs/catalogue.spec.js' },
-  { from: 9, to: 14, feature: 'RENT', testFile: 'test/specs/rental.spec.js' },
-  { from: 15, to: 17, feature: 'CLIENT', testFile: 'test/specs/clients.spec.js' },
-  { from: 18, to: 20, feature: 'NOTIFICATION', testFile: 'test/specs/notifications.spec.js' },
-  { from: 21, to: 24, feature: 'SETTINGS', testFile: 'test/specs/settings.spec.js' },
-  { from: 25, to: 27, feature: 'NAVIGATION', testFile: 'test/specs/navigation.spec.js' },
-  { from: 28, to: 30, feature: 'API', testFile: 'test/specs/api.spec.js' },
-  { from: 31, to: 32, feature: 'CATALOGUE', testFile: 'test/specs/catalogue.spec.js' },
-  { from: 33, to: 34, feature: 'RENT', testFile: 'test/specs/rental.spec.js' },
-  { from: 35, to: 40, feature: 'API', testFile: 'test/specs/api.spec.js' },
-  { from: 41, to: 41, feature: 'NAVIGATION', testFile: 'test/specs/navigation.spec.js' },
-  { from: 42, to: 42, feature: 'CLIENT', testFile: 'test/specs/clients.spec.js' },
-];
-
 const FAILING_STATUSES = new Set(['failed', 'timedOut', 'unexpected', 'interrupted']);
 
 const { values: args, positionals } = parseArgs({
@@ -121,20 +105,29 @@ function replaceFrontmatterStatus(content, status) {
   return content.replace(/^---\r?\n/, `---\nstatus: ${status}\n`);
 }
 
-function featureInfoFromAc(ac) {
-  const num = Number.parseInt(ac.replace(/^AC-/, '').split('-')[0], 10);
-  const entry = AC_FEATURE_MAP.find((item) => num >= item.from && num <= item.to);
-  return entry ?? { feature: 'UNKNOWN', testFile: 'test/specs/unknown.spec.js' };
-}
-
 function parseTestTitle(title) {
-  const acMatch = title.match(/\[?AC-(\d{3})(?:-(\d{3}))?\]?/i);
-  const ac = acMatch ? (acMatch[2] ? `AC-${acMatch[1]}-${acMatch[2]}` : `AC-${acMatch[1]}`) : null;
-  const info = ac ? featureInfoFromAc(ac) : null;
+  const idMatch = title.match(/\[([A-Z][A-Z0-9_]*-\d{3})\]/);
+  const testCaseId = idMatch ? idMatch[1] : null;
+  const manifestPath = path.join(root, '.opencode', 'state', 'test-case-manifest.json');
+  let manifestCase = null;
+  if (testCaseId && fs.existsSync(manifestPath)) {
+    try { manifestCase = JSON.parse(fs.readFileSync(manifestPath, 'utf8')).test_cases?.[testCaseId] ?? null; } catch {}
+  }
+  if (testCaseId && !manifestCase) {
+    return {
+      testCaseId: null,
+      feature: 'UNKNOWN',
+      mappedTestFile: 'test/specs/unknown.spec.js',
+      manifestCase: null,
+      unmappedReason: `missing manifest entry for ${testCaseId}`,
+    };
+  }
   return {
-    ac,
-    feature: info?.feature ?? 'UNKNOWN',
-    mappedTestFile: info?.testFile ?? 'test/specs/unknown.spec.js',
+    testCaseId,
+    feature: manifestCase?.feature_id ?? testCaseId?.split('-')[0] ?? 'UNKNOWN',
+    mappedTestFile: manifestCase?.tests?.[0]?.spec_file ?? manifestCase?.spec_files?.[0] ?? 'test/specs/unknown.spec.js',
+    manifestCase,
+    unmappedReason: testCaseId ? null : 'missing bracketed test_case_id',
   };
 }
 
@@ -230,7 +223,7 @@ function yamlValue(value) {
 }
 
 function ticketTitle(failure) {
-  return `${failure.feature} regression for ${failure.ac}`;
+  return `${failure.feature} regression for ${failure.testCaseId}`;
 }
 
 function renderEvidence(failure, existing = false) {
@@ -238,7 +231,7 @@ function renderEvidence(failure, existing = false) {
   const lines = [
     `## Regression Evidence${existing ? ` - ${timestamp}` : ''}`,
     `- Source plan: ${planId}`,
-    `- Slice: ${failure.ac}`,
+    `- Test case: ${failure.testCaseId}`,
     `- Test file: \`${failure.testFile}\``,
     `- Test title: ${failure.title}`,
     `- Status: ${failure.status}`,
@@ -255,70 +248,59 @@ function renderEvidence(failure, existing = false) {
 }
 
 function renderNewTicket(id, failure, priority) {
-  const testInterface = failure.testFile.endsWith('/api.spec.js') || failure.testFile.endsWith('\\api.spec.js') ? 'api' : 'e2e';
   const sourcePlan = `docs/plans/${planId}.md`;
+  const repro = failure.testCommand ? `\`${failure.testCommand}\`` : `Run the manifest test command for \`${failure.testCaseId}\`.`;
 
   return `---
 id: ${id}
 plan_id: ${planId}
 type: bug
 status: review
-feature: ${failure.feature}
-slice_id: ${failure.ac}
+test_case_id: ${failure.testCaseId}
 priority: ${priority}
 source_plan: ${sourcePlan}
-test_file: ${failure.testFile}
-expected_outcome: ${yamlValue(`Impacted regression slice ${failure.ac} passes for ${failure.feature}.`)}
-test_interface: ${testInterface}
-red_expectation: ${yamlValue(`The existing ${failure.ac} regression test fails with the captured product failure.`)}
-green_expectation: ${yamlValue(`The same ${failure.ac} regression test passes after the bug fix.`)}
+red_expectation: ${yamlValue(`The existing ${failure.testCaseId} regression test fails with the captured product failure.`)}
+green_expectation: ${yamlValue(`The same ${failure.testCaseId} regression test passes after the bug fix.`)}
 generated_from: impacted-regression
 ---
 
 # ${ticketTitle(failure)}
 
-## Expected Outcome
-Impacted regression slice \`${failure.ac}\` passes for \`${failure.feature}\`.
-
-## Acceptance Criterion
-- Restore the existing \`${failure.ac}\` acceptance behavior proven by \`${failure.testFile}\`.
-
-## Public Test Interface
-\`${testInterface}\`, because the failing impacted regression test already exercises this behavior through the public test boundary.
+## Acceptance Mapping
+Criterion, expected outcome, test type, spec files, and targeted command resolve from \`.opencode/state/test-case-manifest.json\` by \`test_case_id\`.
 
 ## RED Expectation
-The existing \`${failure.ac}\` regression test fails with the captured product failure.
+The existing \`${failure.testCaseId}\` regression test fails with the captured product failure.
 
 ## GREEN Expectation
-The same \`${failure.ac}\` regression test passes after the bug fix.
+The same \`${failure.testCaseId}\` regression test passes after the bug fix.
 
 ## Smallest End-To-End Path
-1. Run the targeted regression command for \`${failure.ac}\`.
+1. Run the targeted regression command for \`${failure.testCaseId}\`.
 2. Observe the captured failure.
 3. Fix the smallest product behavior gap so the same test passes.
 
 ## Bug Details
-- Expected: \`${failure.ac}\` passes during impacted-spec regression.
+- Expected: \`${failure.testCaseId}\` passes during impacted-spec regression.
 - Actual: ${failure.detail.summary}
-- Repro: Run from \`test/\`: \`npx playwright test ${failure.testFile.replace(/^test\//, '')} --grep "${failure.ac}"\`
+- Repro: ${repro}
 
 ${renderEvidence(failure)}
 
 ## Definition Of Ready
-- Feature and slice are mapped.
-- Exactly one acceptance criterion is present.
-- Expected outcome, public test interface, RED expectation, and GREEN expectation are present.
+- Exactly one \`test_case_id\` maps to the Test Case Manifest.
+- RED expectation and GREEN expectation are present.
 - Deferred work is explicit.
 - No prerequisite ticket dependency remains.
 
 ## Definition Of Done
-- SDET RED test exists and includes \`${failure.ac}\`.
+- SDET RED test exists and includes \`${failure.testCaseId}\`.
 - RED failed for the expected reason or already-green coverage was reviewer-approved.
 - GREEN passes the same recorded test.
 - Final reviewer audit approved scope and test integrity.
 
 ## Targeted Test
-Run from \`test/\`: \`npx playwright test ${failure.testFile.replace(/^test\//, '')} --grep "${failure.ac}"\`
+Use the \`test_command\` from \`.opencode/state/test-case-manifest.json\` for this \`test_case_id\`.
 
 ## Deferred Work
 - none
@@ -330,7 +312,6 @@ Run from \`test/\`: \`npx playwright test ${failure.testFile.replace(/^test\//, 
 \`/engineering/orchestrator ${id}\`
 `;
 }
-
 function appendEvidence(ticket, failure) {
   const updated = ticket.content.replace(/^status:\s*complete$/m, 'status: review');
   return `${updated.trimEnd()}\n\n${renderEvidence(failure, true)}\n`;
@@ -340,14 +321,14 @@ function upsertTicketForFailure(failure, tickets, createdTickets) {
   const existing = tickets.find((ticket) =>
     ticket.frontmatter.plan_id === planId &&
     ticket.frontmatter.type === 'bug' &&
-    ticket.frontmatter.slice_id === failure.ac &&
+    ticket.frontmatter.test_case_id === failure.testCaseId &&
     ticket.frontmatter.status !== 'complete'
   );
 
   if (existing) {
     const nextContent = appendEvidence(existing, failure);
     if (!dryRun) fs.writeFileSync(existing.filePath, nextContent);
-    log(`updated ${path.relative(root, existing.filePath)} for ${failure.ac}`);
+    log(`updated ${path.relative(root, existing.filePath)} for ${failure.testCaseId}`);
     return { action: 'updated', id: existing.frontmatter.id };
   }
 
@@ -359,7 +340,7 @@ function upsertTicketForFailure(failure, tickets, createdTickets) {
 
   if (!dryRun) fs.writeFileSync(filePath, content);
   createdTickets.push(ticket);
-  log(`created ${path.relative(root, filePath)} for ${failure.ac}`);
+  log(`created ${path.relative(root, filePath)} for ${failure.testCaseId}`);
   return { action: 'created', id };
 }
 
@@ -418,17 +399,18 @@ function main() {
     if (!FAILING_STATUSES.has(test.status)) continue;
 
     const parsed = parseTestTitle(test.title);
-    if (!parsed.ac || parsed.feature === 'UNKNOWN') {
-      unmapped.push(test.title);
+    if (!parsed.testCaseId || parsed.feature === 'UNKNOWN') {
+      unmapped.push(`${test.title} (${parsed.unmappedReason ?? 'unmapped test case'})`);
       continue;
     }
 
     failures.push({
-      ac: parsed.ac,
+      testCaseId: parsed.testCaseId,
       feature: parsed.feature,
       title: test.title,
       status: test.status,
       testFile: normalizeTestFile(test.file, parsed.mappedTestFile),
+      testCommand: parsed.manifestCase?.test_command ?? null,
       detail: extractFailureDetail(test),
     });
   }
@@ -447,13 +429,13 @@ function main() {
     process.exit(0);
   }
 
-  const uniqueFailuresBySlice = new Map();
+  const uniqueFailuresByTestCase = new Map();
   for (const failure of failures) {
-    if (!uniqueFailuresBySlice.has(failure.ac)) uniqueFailuresBySlice.set(failure.ac, failure);
+    if (!uniqueFailuresByTestCase.has(failure.testCaseId)) uniqueFailuresByTestCase.set(failure.testCaseId, failure);
   }
-  const uniqueFailures = [...uniqueFailuresBySlice.values()];
+  const uniqueFailures = [...uniqueFailuresByTestCase.values()];
   if (uniqueFailures.length !== failures.length) {
-    log(`deduped failures by slice_id: ${failures.length} -> ${uniqueFailures.length}`);
+    log(`deduped failures by test_case_id: ${failures.length} -> ${uniqueFailures.length}`);
   }
 
   fs.mkdirSync(ticketsDir, { recursive: true });
@@ -463,7 +445,7 @@ function main() {
   const outcomes = [];
 
   for (const failure of uniqueFailures) {
-    debug(`${failure.ac}: ${failure.detail.summary}`);
+    debug(`${failure.testCaseId}: ${failure.detail.summary}`);
     outcomes.push(upsertTicketForFailure(failure, tickets, createdTickets));
   }
 

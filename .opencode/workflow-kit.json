@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "kit_marker": "workflow-kit:owned",
+  "hash_normalization": "text-lf",
+  "target_project_scope": "greenfield-only",
+  "required_project_adapter": ".opencode/project.json",
+  "static_kit_files": [
+    {
+      "path": ".opencode/README.md",
+      "sha256": "9f5b5eb808bfd5ec35d2c39fabfe5d44560c6ffc85ad46d2e34b5637630d90e9"
+    },
+    {
+      "path": ".opencode/commands/engineering/developer.md",
+      "sha256": "685c94bccad155ef90d1e22ec40d2ccb220572cca47ad0614f62ea81cca81e5e"
+    },
+    {
+      "path": ".opencode/commands/engineering/orchestrator.md",
+      "sha256": "f7de5d9cc516d27211d31a21ca5d82fdc895f7c01033ef8d26a79e24ed508740"
+    },
+    {
+      "path": ".opencode/commands/engineering/reviewer.md",
+      "sha256": "f265e333a1e6f242b2c3faca4004a07677e28d1ced8654d5bc536fefcea125fc"
+    },
+    {
+      "path": ".opencode/commands/engineering/sdet.md",
+      "sha256": "5b111ce874c4fd5a0afde2ab0d3a6986041742be72fe0932623f27098d3114f5"
+    },
+    {
+      "path": ".opencode/commands/productivity/start.md",
+      "sha256": "93f22eeb2b459389f41f63135cb4016b7e055a91065968188b32a88eee3637bc"
+    },
+    {
+      "path": ".opencode/commands/productivity/status.md",
+      "sha256": "ab5f4e5ecebe161286a76befdeba3580059f5b887e02a59f9a9ba9a9ae84381a"
+    },
+    {
+      "path": ".opencode/commands/utility/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".opencode/dcp.json",
+      "sha256": "4d7750713aadc0e499c65dbc353638a8c6a58fbebe7434c56bc5ac76fae563b9"
+    },
+    {
+      "path": ".opencode/knowledge/common-bugs.md",
+      "sha256": "90fd6c12b9346b6cee7124c13951003b8068805b20d703ddcf97bef6817d9ddd"
+    },
+    {
+      "path": ".opencode/knowledge/heroui-v3-patterns.md",
+      "sha256": "b63d955ab17db72b369d311de2a6086df6f30293e5bf8ba9885690c045450302"
+    },
+    {
+      "path": ".opencode/knowledge/project-notes.md",
+      "sha256": "14130fcc9aeb40a17530c31e093d659a302a0774fbabd0af5587f65c6c8ee4f4"
+    },
+    {
+      "path": ".opencode/knowledge/runbook.md",
+      "sha256": "efccf6328f388dddd21dd2674a78bbaa122c52538bab208b73b5fef9281d3ec3"
+    },
+    {
+      "path": ".opencode/opencode.json",
+      "sha256": "659bb929143866dfed9c5d2f6b19275336b75283e1fc87c6d04a0a7f16082ae5"
+    },
+    {
+      "path": ".opencode/scripts/build-test-case-manifest.mjs",
+      "sha256": "8c6c6e441b70bd4e69f01a3268aebea42cdffaeb62064602c4e59dcdc3b7efbc"
+    },
+    {
+      "path": "scripts/quality-gate.mjs",
+      "sha256": "c18a23794e3894c4d74a13dcea4f8f9c1452de9d980f47bfd1c7becb623c76fc"
+    },
+    {
+      "path": ".opencode/skills/ask-me/ADR-FORMAT.md",
+      "sha256": "17cc636374beb083b50f37f4b53b9c4768ba5db9a001821f0e3433f35e050075"
+    },
+    {
+      "path": ".opencode/skills/ask-me/CONTEXT-FORMAT.md",
+      "sha256": "5772384e80f0f0c7fd29f58d0c954fcc59d36334ba816ad1cb05cbbe73fc9dc9"
+    },
+    {
+      "path": ".opencode/skills/ask-me/SKILL.md",
+      "sha256": "235056d1c65ffbee66cc16bb8b627428df22e29609f801599ee322f890f00603"
+    },
+    {
+      "path": ".opencode/skills/coordinator/REFERENCE.md",
+      "sha256": "a24a6d054c3a1a8ceed07aba5d2e6667e57437cc548a4c49a4f209dff7f7c67d"
+    },
+    {
+      "path": ".opencode/skills/coordinator/SKILL.md",
+      "sha256": "ceaab0b2fc049b7e76b62d38fea2e3acaade95d8f1926a0bcb0471ae3ac1255c"
+    },
+    {
+      "path": ".opencode/skills/init-project/SKILL.md",
+      "sha256": "55129dee79ab849f6b9176031dd1d2a758ce792e64edbcd2b832308d2c75d4fb"
+    },
+    {
+      "path": ".opencode/skills/orchestrator/SKILL.md",
+      "sha256": "9a4a3b9ad446e1c2ede75e412079f110c43b5a6fc41a21aa53b2498efe4203e5"
+    },
+    {
+      "path": ".opencode/skills/plan-to-tickets/SKILL.md",
+      "sha256": "e0da31a03d70f1818d9e727874ae44aa4b76c2fe462cadf67c263621b69602df"
+    },
+    {
+      "path": ".opencode/skills/shared/constraints.md",
+      "sha256": "2d79f25304a3fe0574a25a67f229be908c33846aa2f65485d016da87daac0580"
+    },
+    {
+      "path": ".opencode/skills/shared/io-contract.md",
+      "sha256": "c9a8a0023d2752bf0be7e32e04309fc974f12ebf68673c76867c8fdea953c4f2"
+    },
+    {
+      "path": ".opencode/skills/workflow-maintenance/REFERENCE.md",
+      "sha256": "a0927b6797f4c52b1b60412cde0cfd3f93ae1f7515c5e6abf52726d43a6aef5a"
+    },
+    {
+      "path": ".opencode/skills/workflow-maintenance/SKILL.md",
+      "sha256": "8caa7033c8970cabe3e14dcb11c65ebf701e8dcdaf9048e4cc398ca7f8b8d751"
+    },
+    {
+      "path": ".opencode/skills/write-a-prd/SKILL.md",
+      "sha256": "be1167e141925992e498523337a6b8967b78e3a50342d4c471c8a8af212a7be8"
+    },
+    {
+      "path": ".opencode/skills/write-a-skill/SKILL.md",
+      "sha256": "c63c3474313be92bb02f5dd223484529704746ccefa6209cab684c3a034dab1e"
+    },
+    {
+      "path": ".opencode/state.example/checkpoints.json",
+      "sha256": "d006a34834df3088cb19d0b2a69961a79578190a724f498a608adf12e8e20d26"
+    },
+    {
+      "path": ".opencode/state.example/orchestrator-progress.json",
+      "sha256": "21f5282db176d428072b23d6574fd6c92984edb9dee4747e3d5f137ac881a453"
+    },
+    {
+      "path": ".opencode/state.example/ticket-progress.json",
+      "sha256": "e69eb52adc8df4249358042cd4eacf1d6cad128c547c45fb6013df1fc1c0d509"
+    },
+    {
+      "path": ".opencode/templates/agents/developer.md",
+      "sha256": "7d5c74dc8aa1f15aae618c0a36fab0164591b928426a629cdffeea4131e142ab"
+    },
+    {
+      "path": ".opencode/templates/agents/reviewer.md",
+      "sha256": "47ca24598f9bafb5976ee27729035637d1f53b20d2f112ee37d5c0636c29a85a"
+    },
+    {
+      "path": ".opencode/templates/agents/sdet.md",
+      "sha256": "67975d7ae05bea507697dd5a3a73977321c22e4103fa0f0c8b3045c4d2352259"
+    },
+    {
+      "path": ".opencode/templates/agents/workflow-engineer.md",
+      "sha256": "5f4fd7ac1036dd9c9b9b2427ff486ed41159586961aac0b0f41b9f7f8d151457"
+    },
+    {
+      "path": "test/helpers/sync-failure-log.mjs",
+      "sha256": "117d46fa142fb91e214f717ea6149ffd689cae22b5b8629928e0ca09848e8386"
+    },
+    {
+      "path": "test/helpers/sync-regression-bugs.mjs",
+      "sha256": "a6fa7c6c70a47459e5be808fdc20edcb6c66cde3f6348df10970686983e41bcb"
+    }
+  ],
+  "rendered_project_files": [
+    {
+      "path": ".opencode/agents/developer.md",
+      "source_template": ".opencode/templates/agents/developer.md"
+    },
+    {
+      "path": ".opencode/agents/sdet.md",
+      "source_template": ".opencode/templates/agents/sdet.md"
+    },
+    {
+      "path": ".opencode/agents/reviewer.md",
+      "source_template": ".opencode/templates/agents/reviewer.md"
+    },
+    {
+      "path": ".opencode/agents/workflow-engineer.md",
+      "source_template": null
+    },
+    {
+      "path": "AGENTS.md",
+      "source_template": null
+    },
+    {
+      "path": ".opencode/state/test-case-manifest.json",
+      "source_template": null
+    }
+  ],
+  "concept": "Static workflow-kit files and workflow helper scripts are copied as-is. Project files are rendered or generated from .opencode/project.json by /init-project after the Greenfield Gate confirms an empty/docs-only product repo. This kit is not an adoption/migration workflow for existing product code, tests, dependency manifests, or CI. Text file hashes normalize CRLF/CR to LF before sha256 so validation is stable across operating systems."
+}

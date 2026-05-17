@@ -96,14 +96,14 @@ const fetchNotifications = useCallback(async () => {
 ## Testing
 Run from `test/` (this is required — never invoke playwright from project root):
 ```bash
-cd test && npx playwright test --grep "AC-001-001"      # tracer slice (default workflow)
+cd test && npx playwright test --grep "AUTH-001"      # tracer test case (default workflow)
 cd test && npx playwright test specs/{feature}.spec.js  # feature regression
 cd test && npm run test                                 # full regression
 cd test && npx playwright test --headed --slow-mo 500   # debug
 cd test && npx playwright show-report                   # HTML report
 ```
 
-For tracer-slice workflow, use targeted `--grep` runs during RED/GREEN. After a plan's tickets complete, run the full impacted spec files before plan completion. If impacted regression fails, run `node helpers/sync-regression-bugs.mjs --plan <plan-id>` from `test/` to create/update same-plan `review` bug tickets.
+For tracer-test case workflow, use targeted `--grep` runs during RED/GREEN. After a plan's tickets complete, run the full impacted spec files before plan completion. If impacted regression fails, run `node helpers/sync-regression-bugs.mjs --plan <plan-id>` from `test/` to create/update same-plan `review` bug tickets.
 
 ## Workspaces
 

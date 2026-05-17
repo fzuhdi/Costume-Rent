@@ -3,7 +3,7 @@
   "currentPlan": null,
   "currentTicket": null,
   "currentFeature": null,
-  "currentSlice": null,
+  "currentTestCase": null,
   "currentTicketType": null,
   "status": "idle",
   "branch": null,

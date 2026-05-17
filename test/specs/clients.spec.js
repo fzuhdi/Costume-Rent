@@ -40,15 +40,15 @@ test.describe('Client Management', () => {
     await expect(page.locator('h1, h2').first()).toBeVisible();
   });
 
-  // AC-015: View Client List
-  test('[AC-015-001] - Navigate to /clients', async ({ page }) => {
+  // CLIENT: View Client List
+  test('[CLIENT-001] - Navigate to /clients', async ({ page }) => {
     const clientListPage = new ClientListPage(page);
     await clientListPage.goto();
     await expect(page).toHaveURL(/\/clients/);
     await expect(page.locator('h1')).toContainText(/Klien/i);
   });
 
-  test('[AC-015-002] - Display all clients with name and phone', async ({ page }) => {
+  test('[CLIENT-002] - Display all clients with name and phone', async ({ page }) => {
     const clientListPage = new ClientListPage(page);
     await clientListPage.goto();
     await expect(clientListPage.clientTable).toBeVisible();
@@ -60,8 +60,8 @@ test.describe('Client Management', () => {
     }
   });
 
-  // AC-016: View Client Detail
-  test('[AC-016-001] - View client detail page', async ({ page }) => {
+  // CLIENT: View Client Detail
+  test('[CLIENT-003] - View client detail page', async ({ page }) => {
     const clientListPage = new ClientListPage(page);
     await clientListPage.goto();
     const count = await clientListPage.clientRows.count();
@@ -73,7 +73,7 @@ test.describe('Client Management', () => {
     }
   });
 
-  test('[AC-016-002] - Display client rental history', async ({ page }) => {
+  test('[CLIENT-004] - Display client rental history', async ({ page }) => {
     const clientListPage = new ClientListPage(page);
     await clientListPage.goto();
     const count = await clientListPage.clientRows.count();
@@ -84,8 +84,8 @@ test.describe('Client Management', () => {
     }
   });
 
-  // AC-017: Edit Client
-  test('[AC-017-001] - Edit button on client detail', async ({ page }) => {
+  // CLIENT: Edit Client
+  test('[CLIENT-005] - Edit button on client detail', async ({ page }) => {
     const clientListPage = new ClientListPage(page);
     await clientListPage.goto();
     const count = await clientListPage.clientRows.count();
@@ -96,7 +96,7 @@ test.describe('Client Management', () => {
     }
   });
 
-  test('[AC-017-002] - Update client information and save', async ({ page }) => {
+  test('[CLIENT-006] - Update client information and save', async ({ page }) => {
     const clientListPage = new ClientListPage(page);
     await clientListPage.goto();
     const count = await clientListPage.clientRows.count();
@@ -107,16 +107,16 @@ test.describe('Client Management', () => {
     }
   });
 
-  // AC-015-003: Client list shows total rents and active rents
-  test('[AC-015-003] - Client list shows total rents and active rents', async ({ page }) => {
+  // CLIENT-007: Client list shows total rents and active rents
+  test('[CLIENT-007] - Client list shows total rents and active rents', async ({ page }) => {
     const clientListPage = new ClientListPage(page);
     await clientListPage.goto();
     await clientListPage.assertTotalRentsVisible();
     await clientListPage.assertActiveRentsVisible();
   });
 
-  // AC-015-004: Search client by name
-  test('[AC-015-004] - Search client by name', async ({ page }) => {
+  // CLIENT-008: Search client by name
+  test('[CLIENT-008] - Search client by name', async ({ page }) => {
     const clientListPage = new ClientListPage(page);
     await clientListPage.goto();
     const firstClientName = await clientListPage.clientRows.first().locator('td').first().textContent();
@@ -130,16 +130,16 @@ test.describe('Client Management', () => {
     }
   });
 
-  // AC-015-005: Overdue indicator shown for clients with overdue rentals
-  test('[AC-015-005] - Overdue indicator shown for clients with overdue rentals', async ({ page }) => {
+  // CLIENT-009: Overdue indicator shown for clients with overdue rentals
+  test('[CLIENT-009] - Overdue indicator shown for clients with overdue rentals', async ({ page }) => {
     const clientListPage = new ClientListPage(page);
     await clientListPage.goto();
     // Check if any client has overdue indicator
     await clientListPage.assertOverdueIndicator();
   });
 
-  // AC-016-003: Client detail shows correct rental history order
-  test('[AC-016-003] - Client detail shows correct rental history order', async ({ page }) => {
+  // CLIENT-010: Client detail shows correct rental history order
+  test('[CLIENT-010] - Client detail shows correct rental history order', async ({ page }) => {
     const clientListPage = new ClientListPage(page);
     await clientListPage.goto();
     const count = await clientListPage.clientRows.count();
@@ -150,8 +150,8 @@ test.describe('Client Management', () => {
     }
   });
 
-  // AC-017-003: Edit client phone number
-  test('[AC-017-003] - Edit client phone number', async ({ page }) => {
+  // CLIENT-011: Edit client phone number
+  test('[CLIENT-011] - Edit client phone number', async ({ page }) => {
     const clientListPage = new ClientListPage(page);
     await clientListPage.goto();
     const count = await clientListPage.clientRows.count();
@@ -163,8 +163,8 @@ test.describe('Client Management', () => {
     }
   });
 
-  // AC-017-004: Edit client address
-  test('[AC-017-004] - Edit client address', async ({ page }) => {
+  // CLIENT-012: Edit client address
+  test('[CLIENT-012] - Edit client address', async ({ page }) => {
     const clientListPage = new ClientListPage(page);
     await clientListPage.goto();
     const count = await clientListPage.clientRows.count();
@@ -176,8 +176,8 @@ test.describe('Client Management', () => {
     }
   });
 
-  // AC-042: Delete client (was AC-015-006)
-  test('[AC-042-001] - Delete client', async ({ page }) => {
+  // CLIENT: Delete client
+  test('[CLIENT-013] - Delete client', async ({ page }) => {
     const client = await createE2EClientViaApi(page, 'AC042_DELETE');
     const clientListPage = new ClientListPage(page);
     await clientListPage.goto();

@@ -8,7 +8,7 @@ description: Drafts and refines product requirements documents (PRDs) that turn 
 ## Quick Start
 
 1. Identify the product idea, target users, problem, desired outcome, scope, and constraints.
-2. Inspect existing context before drafting when a repo is available: `CONTEXT.md`, `docs/ACCEPTANCE_CRITERIA.md`, `docs/plans/`, `docs/tickets/`, and `docs/adr/` when relevant.
+2. Inspect existing context before drafting when a repo is available: `CONTEXT.md`, `docs/acceptance/*.md`, `docs/plans/`, `docs/tickets/`, and `docs/adr/` when relevant.
 3. Ask only blocking questions. If assumptions are safe, draft with an `Assumptions` section instead of stopping.
 4. Write to the requested path. If no path is given and no repo convention exists, use `docs/prds/{short-kebab-title}.md`.
 5. After drafting, summarize the key tradeoffs and ask whether scope, requirements, or detail level should change.

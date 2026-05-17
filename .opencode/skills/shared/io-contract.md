@@ -7,7 +7,7 @@ Every workflow subagent must end with one parseable final message. The orchestra
 ```text
 OUTCOME: success | partial | blocked
 FEATURE: {feature-id}
-SLICE_ID: {AC-NNN-NNN}
+TEST_CASE_ID: {FEATURE-001}
 TICKET_ID: {TICKET-YYYYMMDD-NNN or "none"}
 SUMMARY: {one-line summary}
 
@@ -26,17 +26,17 @@ NOTES:
 
 ## Ticket Semantics
 
-- Normal TDD workflow calls require `SLICE_ID`, `TICKET_ID`, `TICKET_FILE`, `TICKET_TYPE`, `TICKET_ACCEPTANCE_CRITERION`, `EXPECTED_OUTCOME`, `TEST_INTERFACE`, `RED_EXPECTATION`, and `GREEN_EXPECTATION`.
+- Normal TDD workflow calls require `TEST_CASE_ID`, `TICKET_ID`, `TICKET_FILE`, `TICKET_TYPE`, `TICKET_ACCEPTANCE_CRITERION`, `EXPECTED_OUTCOME`, `TEST_INTERFACE`, `RED_EXPECTATION`, and `GREEN_EXPECTATION`.
 - Executable workflow calls use `TICKET_TYPE: feature | bug`.
-- One worker call operates on exactly one ticket and one `SLICE_ID`.
-- Sibling ACs belong in `DEFERRED_SLICE_IDS` and must not be implemented or tested opportunistically.
+- One worker call operates on exactly one ticket and one `TEST_CASE_ID`.
+- Sibling test cases belong in `DEFERRED_TEST_CASE_IDS` and must not be implemented or tested opportunistically.
 
 ## SDET RED Extension
 
 ```text
 RED_STATUS: failing_expected | already_green | failing_wrong_reason | blocked
 TEST_FILE: test/specs/example.spec.js
-TEST_TITLE: {title containing SLICE_ID}
+TEST_TITLE: {title containing TEST_CASE_ID}
 TEST_COMMAND: {targeted command run}
 RED_FAILURE_SUMMARY: {why it failed, or why already green/blocked}
 PAGES_CREATED_OR_UPDATED: [path, ...] | none
@@ -45,7 +45,7 @@ PAGES_CREATED_OR_UPDATED: [path, ...] | none
 ## SDET GREEN Rerun Extension
 
 ```text
-SLICE_STATUS: verified | open | todo
+TEST_CASE_STATUS: verified | open | todo
 TEST_FILE: {recorded file}
 TEST_TITLE: {recorded title}
 TEST_COMMAND: {targeted command run}
@@ -62,7 +62,7 @@ GREEN_STATUS: ready_for_sdet | ticket-ambiguous | red-test-wrong | blocked
 ROOT_CAUSE: {one-line cause}
 TARGETED_TEST_COMMAND: {command run, or "not run - reason"}
 REFACTOR_NEEDED: yes | no
-DEFERRED_SLICE_IDS_UNTOUCHED: true | false
+DEFERRED_TEST_CASE_IDS_UNTOUCHED: true | false
 ```
 
 ## Developer Refactor Extension
@@ -77,7 +77,7 @@ TESTS_CHANGED: false
 
 ```text
 REVIEW_VERDICT: ticket-ready | ticket-still-ambiguous | red-test-wrong | ticket-ambiguous | red-approved | coverage-approved | coverage-rejected | approved | rejected
-REASON: {plain-language explanation citing ticket/slice}
+REASON: {plain-language explanation citing ticket/test case}
 DIFF_SIZE_LINES: N | not_applicable
 CHECKPOINT_SHA_REVIEWED: {sha or "none"}
 ```

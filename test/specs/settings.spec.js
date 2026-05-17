@@ -13,15 +13,15 @@ test.describe('Settings', () => {
     await expect(page.locator('body')).not.toBeEmpty();
   });
 
-  // AC-021: Access Settings
-  test('[AC-021-001] - Navigate to /settings via sidebar', async ({ page }) => {
+  // SETTINGS: Access Settings
+  test('[SETTINGS-001] - Navigate to /settings via sidebar', async ({ page }) => {
     const settingsPage = new SettingsPage(page);
     await settingsPage.goto();
     await expect(page).toHaveURL(/\/settings/);
     await expect(page.locator('h1')).toContainText(/Pengaturan/i);
   });
 
-  test('[AC-021-002] - Form displays current settings', async ({ page }) => {
+  test('[SETTINGS-002] - Form displays current settings', async ({ page }) => {
     const settingsPage = new SettingsPage(page);
     await settingsPage.goto();
     await expect(settingsPage.appNameInput).toBeVisible();
@@ -29,8 +29,8 @@ test.describe('Settings', () => {
     await expect(settingsPage.saveButton).toBeVisible();
   });
 
-  // AC-022: Customize App Name
-  test('[AC-022-001] - Edit app name field', async ({ page }) => {
+  // SETTINGS: Customize App Name
+  test('[SETTINGS-003] - Edit app name field', async ({ page }) => {
     const settingsPage = new SettingsPage(page);
     await settingsPage.goto();
     await settingsPage.editAppName('Test App Name');
@@ -38,7 +38,7 @@ test.describe('Settings', () => {
     expect(value).toBe('Test App Name');
   });
 
-  test('[AC-022-002] - App name shows in navbar', async ({ page }) => {
+  test('[SETTINGS-004] - App name shows in navbar', async ({ page }) => {
     const settingsPage = new SettingsPage(page);
     await settingsPage.goto();
     const navbarBrand = page.locator('aside span.text-lg.font-bold').first();
@@ -46,8 +46,8 @@ test.describe('Settings', () => {
     expect(brandText.length).toBeGreaterThan(0);
   });
 
-  // AC-023: Customize Tagline
-  test('[AC-023-001] - Edit tagline field', async ({ page }) => {
+  // SETTINGS: Customize Tagline
+  test('[SETTINGS-005] - Edit tagline field', async ({ page }) => {
     const settingsPage = new SettingsPage(page);
     await settingsPage.goto();
     await settingsPage.editTagline('Test Tagline');
@@ -55,7 +55,7 @@ test.describe('Settings', () => {
     expect(value).toBe('Test Tagline');
   });
 
-  test('[AC-023-002] - Tagline changes apply instantly', async ({ page }) => {
+  test('[SETTINGS-006] - Tagline changes apply instantly', async ({ page }) => {
     const settingsPage = new SettingsPage(page);
     await settingsPage.goto();
     await settingsPage.editTagline('Instant Preview');
@@ -63,14 +63,14 @@ test.describe('Settings', () => {
     await expect(previewTagline).toContainText(/Instant Preview/i);
   });
 
-  // AC-024: Upload Logo
-  test('[AC-024-001] - Upload logo image', async ({ page }) => {
+  // SETTINGS: Upload Logo
+  test('[SETTINGS-007] - Upload logo image', async ({ page }) => {
     const settingsPage = new SettingsPage(page);
     await settingsPage.goto();
     await expect(settingsPage.logoUpload).toBeVisible();
   });
 
-  test('[AC-024-002] - Logo displays in navbar after upload', async ({ page }) => {
+  test('[SETTINGS-008] - Logo displays in navbar after upload', async ({ page }) => {
     const settingsPage = new SettingsPage(page);
     await settingsPage.goto();
     const logoPreview = settingsPage.logoPreview;
@@ -79,22 +79,22 @@ test.describe('Settings', () => {
     expect(isVisible || hasPlaceholder).toBeTruthy();
   });
 
-  test('[AC-024-003] - Logo changes apply instantly', async ({ page }) => {
+  test('[SETTINGS-009] - Logo changes apply instantly', async ({ page }) => {
     const settingsPage = new SettingsPage(page);
     await settingsPage.goto();
     const previewSection = page.locator('.h-12.bg-\\[var\\(--surface\\)\\]');
     await expect(previewSection).toBeVisible();
   });
 
-  // AC-021-003: Settings page shows current app name value
-  test('[AC-021-003] - Settings page shows current app name value', async ({ page }) => {
+  // SETTINGS-010: Settings page shows current app name value
+  test('[SETTINGS-010] - Settings page shows current app name value', async ({ page }) => {
     const settingsPage = new SettingsPage(page);
     await settingsPage.goto();
     await settingsPage.assertAppNamePrepopulated();
   });
 
-  // AC-022-003: App name persists after page reload
-  test('[AC-022-003] - App name persists after page reload', async ({ page }) => {
+  // SETTINGS-011: App name persists after page reload
+  test('[SETTINGS-011] - App name persists after page reload', async ({ page }) => {
     const settingsPage = new SettingsPage(page);
     await settingsPage.goto();
     await settingsPage.editAppName('Auto Test Name');
@@ -106,8 +106,8 @@ test.describe('Settings', () => {
     expect(value).toBe('Auto Test Name');
   });
 
-  // AC-023-003: Tagline persists after page reload
-  test('[AC-023-003] - Tagline persists after page reload', async ({ page }) => {
+  // SETTINGS-012: Tagline persists after page reload
+  test('[SETTINGS-012] - Tagline persists after page reload', async ({ page }) => {
     const settingsPage = new SettingsPage(page);
     await settingsPage.goto();
     await settingsPage.editTagline('Auto Test Tagline');
@@ -118,8 +118,8 @@ test.describe('Settings', () => {
     expect(value.length).toBeGreaterThan(0);
   });
 
-  // AC-022-004: Success message appears after save
-  test('[AC-022-004] - Success message appears after save', async ({ page }) => {
+  // SETTINGS-013: Success message appears after save
+  test('[SETTINGS-013] - Success message appears after save', async ({ page }) => {
     const settingsPage = new SettingsPage(page);
     await settingsPage.goto();
     await settingsPage.editAppName('Success Test ' + Date.now());

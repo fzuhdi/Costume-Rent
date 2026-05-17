@@ -3,7 +3,7 @@
   "currentPlan": null,
   "currentTicket": null,
   "currentFeature": null,
-  "currentSlice": null,
+  "currentTestCase": null,
   "status": "idle",
   "iteration": 0,
   "maxIterations": 4,
@@ -31,5 +31,5 @@
     "lastResultsPath": null,
     "lastSyncSummary": null
   },
-  "completedSlices": []
+  "completedTestCases": []
 }

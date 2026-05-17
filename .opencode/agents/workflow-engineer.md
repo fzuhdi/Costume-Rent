@@ -72,7 +72,7 @@ Run the narrowest relevant checks, for example:
 
 - JSON parse for `.opencode/opencode.json`.
 - `node --check` for changed JavaScript helpers.
-- `node scripts/quality-gate.mjs` after workflow test-helper or test-policy changes.
+- the project-configured quality gate after workflow test-helper or test-policy changes.
 - Grep for stale names or duplicate policy when renaming or moving workflow docs.
 
 ## Return

@@ -1,6 +1,8 @@
 # OpenCode Workflow
 
-This `.opencode` setup uses an Agile backlog with strict TDD tracer-ticket execution. A plan acts like an epic. Ready `feature` and `bug` tickets are executable backlog items. Each executable ticket has exactly one acceptance criterion, an expected outcome, a public test interface, a RED expectation, and a GREEN expectation.
+This `.opencode` setup uses an Agile backlog with strict TDD tracer-ticket execution. A plan acts like an epic. Ready `feature` and `bug` tickets are executable backlog items. Each executable ticket maps to exactly one generated Test Case Manifest entry, plus a RED expectation and a GREEN expectation.
+
+This Workflow Kit is intended for empty/greenfield product repositories where OpenCode establishes the project structure, acceptance IDs, test strategy, and workflow conventions from the start. It is not an adoption/migration workflow for existing applications, existing tests, existing CI, or existing dependency manifests.
 
 ## Model
 
@@ -12,12 +14,13 @@ Plan / Epic
       -> SDET RED -> developer GREEN -> SDET rerun -> reviewer final audit
 ```
 
-Use one backlog for features, bugs, chores, and spikes. The orchestrator executes only ready `feature` and `bug` tickets mapped to one tracer slice. `chore` and `spike` tickets remain draft planning records until converted.
+Use one backlog for features, bugs, chores, and spikes. The orchestrator executes only ready `feature` and `bug` tickets mapped to one tracer test case. `chore` and `spike` tickets remain draft planning records until converted.
 
 ## Commands
 
 | Command | Purpose |
 |---|---|
+| `/init-project <prd-or-plan>` | Initializes or repairs the Project Adapter only after the Greenfield Gate confirms an empty/docs-only product repo. |
 | `/plan-to-tickets [plan-file] [plan-id optional]` | Converts or repairs plans/bugs/ask-me output into TDD-ready plan and ticket files. |
 | `/engineering/orchestrator` | Shows TDD status, review/ready tickets, plans, checkpoints, and PR post-step state. |
 | `/engineering/orchestrator [ticket-id]` | Runs one ready feature/bug ticket through strict TDD. |
@@ -52,13 +55,9 @@ id: TICKET-20260516-001
 plan_id: PLAN-20260516-catalogue-search
 type: feature
 status: ready
-feature: CATALOGUE
-slice_id: AC-004-001
+test_case_id: CATALOGUE-004
 priority: 1
 source_plan: docs/plans/catalogue-search.md
-test_file: test/specs/catalogue.spec.js
-expected_outcome: User sees the new visible behavior.
-test_interface: e2e
 red_expectation: The acceptance test fails because the behavior is missing.
 green_expectation: The same acceptance test passes after minimal implementation.
 ---
@@ -109,7 +108,7 @@ Commit convention:
 | `.opencode/state.example/orchestrator-progress.json` | Tracked example orchestrator state shape. |
 | `.opencode/state.example/ticket-progress.json` | Tracked example ticket state shape. |
 | `.opencode/state.example/checkpoints.json` | Tracked example checkpoints shape. |
-| `.opencode/state/feature-manifest.json` | Generated feature-to-slice map. |
+| `.opencode/state/test-case-manifest.json` | Generated feature-to-test case map. |
 
 Runtime state uses `schemaVersion: 2`. Unknown or old versions block with `invalid progress state`; old state is not auto-migrated.
 

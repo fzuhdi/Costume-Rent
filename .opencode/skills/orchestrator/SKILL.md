@@ -16,7 +16,7 @@ Workers:
 
 ## Core Rule
 
-One executable ticket equals one tracer bullet and exactly one acceptance criterion.
+One executable ticket equals one tracer bullet and exactly one `test_case_id`.
 
 - Execute only `type: feature` or `type: bug` tickets.
 - `chore` and `spike` remain backlog records unless converted into mapped feature/bug tickets.
@@ -31,7 +31,7 @@ One executable ticket equals one tracer bullet and exactly one acceptance criter
 | `.opencode/state/orchestrator-progress.json` | Current TDD phase, ticket, branch, checkpoints, RED evidence |
 | `.opencode/state/ticket-progress.json` | Plan/ticket runtime status and PR post-step state |
 | `.opencode/state/checkpoints.json` | Recorded checkpoint SHAs |
-| `.opencode/state/feature-manifest.json` | Feature -> AC slice map plus implementation/test hints |
+| `.opencode/state/test-case-manifest.json` | Feature -> AC test case map plus implementation/test hints |
 | `.opencode/state.example/*.json` | Tracked versioned example shapes |
 
 Runtime state must include `schemaVersion: 2`. Missing state may be initialized from examples. Existing state with missing, unknown, or old `schemaVersion` blocks with `invalid progress state`; do not migrate it.
@@ -76,7 +76,7 @@ Forbidden:
 
 - `red-writing -> green-building` without `RED_STATUS: failing_expected`.
 - Any developer edit to the recorded SDET acceptance test during GREEN or refactor.
-- Treating a Playwright-green run as successful when `node scripts/quality-gate.mjs` fails.
+- Treating a targeted test run as successful when the project-configured quality gate fails.
 - Continuing plan mode after a dirty/disputed blocked ticket.
 - Auto-stash, auto-reset, auto-checkout discard, or force push.
 - Auto-PR for partial plans.
@@ -93,20 +93,16 @@ id: TICKET-YYYYMMDD-001
 plan_id: PLAN-YYYYMMDD-short-title
 type: feature
 status: ready
-feature: CATALOGUE
-slice_id: AC-004-001
+test_case_id: CATALOGUE-004
 priority: 1
 source_plan: docs/plans/example.md
-test_file: test/specs/catalogue.spec.js
-expected_outcome: One visible outcome.
-test_interface: e2e
 red_expectation: The new acceptance test fails for the expected product-behavior reason.
 green_expectation: The same acceptance test passes after the minimal implementation.
 ```
 
-`test_interface` is `e2e | api`. If SDET believes it is wrong, block for ticket repair instead of silently changing interface.
+`test_case_id` resolves feature, criterion, expected outcome, test type, spec files, and targeted command inputs through `.opencode/state/test-case-manifest.json`.
 
-If ticket intent conflicts with `docs/ACCEPTANCE_CRITERIA.md`, block as `ticket-ambiguous`.
+If ticket intent conflicts with `docs/acceptance/*.md`, block as `ticket-ambiguous`.
 
 ## Plan Contract
 
@@ -126,14 +122,14 @@ Whole plan success means all review tickets became ready or complete, all execut
 Plan completion regression policy:
 
 - Run impacted-spec regression only after all planned executable/review tickets are complete; do not run it after every ticket.
-- Derive impacted specs from completed tickets' `test_file` fields and the feature manifest. The orchestrator or reviewer may add full spec files when the diff touches shared behavior.
+- Derive impacted specs from completed tickets' `test_case_id` values and the test-case manifest. The orchestrator or reviewer may add full spec files when the diff touches shared behavior.
 - Run each impacted spec file as a full spec, not only the completed ticket grep.
-- If any mapped AC in an impacted spec fails, the plan remains `in_progress` and the failure must create or update a same-plan `status: review` bug ticket deduped by `slice_id`.
+- If any mapped test case in an impacted spec fails, the plan remains `in_progress` and the failure must create or update a same-plan `status: review` bug ticket deduped by `test_case_id`.
 - Existing/known failures in an impacted spec still block the plan. There is no baseline exemption.
 - Unmapped, setup, or environment-looking failures block plan completion and do not create product bug tickets.
 - Reviewer audits generated `review` bug tickets before they become executable. If reviewer rejects one as test/setup noise, block for SDET/test repair and rerun impacted regression after repair.
 - After generated bug tickets complete, rerun impacted-spec regression before plan completion.
-- Use runtime default `maxRegressionCycles: 3`. Exhausting the cycle budget blocks/escalates the plan with failing slice IDs and regression evidence.
+- Use runtime default `maxRegressionCycles: 3`. Exhausting the cycle budget blocks/escalates the plan with failing test case IDs and regression evidence.
 
 ## Branch And Commits
 
@@ -160,10 +156,10 @@ Create real checkpoint commits before RED and after valid RED. Record SHAs in `.
 
 1. Run manifest check and rebuild if needed:
    ```bash
-   node .opencode/scripts/build-manifest.mjs --check
-   node .opencode/scripts/build-manifest.mjs
+   node .opencode/scripts/build-test-case-manifest.mjs --check
+   node .opencode/scripts/build-test-case-manifest.mjs
    ```
-2. Load `feature-manifest.json`, ticket progress, orchestrator progress, and checkpoints. Initialize missing runtime state from `.opencode/state.example/*.json` with `schemaVersion: 2`.
+2. Load `test-case-manifest.json`, ticket progress, orchestrator progress, and checkpoints. Initialize missing runtime state from `.opencode/state.example/*.json` with `schemaVersion: 2`.
 3. Determine mode:
    - `TICKET-YYYYMMDD-NNN` -> Ticket mode.
    - `PLAN-YYYYMMDD-*` -> Plan mode.
@@ -177,14 +173,14 @@ Always include:
 
 ```text
 FEATURE: {feature-id}
-SLICE_ID: {slice-id}
-DEFERRED_SLICE_IDS: [...]
+TEST_CASE_ID: {test case-id}
+DEFERRED_TEST_CASE_IDS: [...]
 TICKET_ID: {ticket-id}
 TICKET_FILE: docs/tickets/{ticket-id}.md
 TICKET_TYPE: feature | bug
 TICKET_ACCEPTANCE_CRITERION: {single criterion}
-EXPECTED_OUTCOME: {frontmatter value}
-TEST_INTERFACE: e2e | api
+EXPECTED_OUTCOME: {manifest value}
+TEST_INTERFACE: {project-configured test type}
 RED_EXPECTATION: {frontmatter value}
 GREEN_EXPECTATION: {frontmatter value}
 ```
@@ -215,7 +211,7 @@ In parallel when useful:
 
 SDET must return `TEST_FILE`, `TEST_TITLE`, `RED_STATUS`, `RED_FAILURE_SUMMARY`, and `TEST_COMMAND`. Commit non-empty RED changes as `test(tdd): red <ticket-id>` when a failing expected RED is produced.
 
-After any SDET edit under `test/**`, run `node scripts/quality-gate.mjs`. If it fails, block before RED validation; do not continue to audit or GREEN.
+After any SDET edit under adapter-declared test roots, run the project-configured quality gate when one is configured. If it fails, block before RED validation; do not continue to audit or GREEN.
 
 ### red-validating
 
@@ -230,7 +226,7 @@ RED setup/environment failures block. Do not start GREEN.
 
 ### already-green-audit
 
-Run `node scripts/quality-gate.mjs` before invoking reviewer. If it fails, block with the gate findings.
+Run the project-configured quality gate before invoking reviewer when one is configured. If it fails, block with the gate findings.
 
 Invoke `reviewer MODE: already-green-audit`.
 
@@ -265,11 +261,11 @@ Do not commit failed GREEN work. Commit non-empty app-code changes as `feat(tdd)
 
 Invoke `sdet MODE: run-green`. SDET reruns only the recorded RED test and must not edit tests.
 
-- `SLICE_STATUS: verified` and recorded developer `REFACTOR_NEEDED: no` -> ensure verified GREEN changes are committed, then `final-review`.
-- `SLICE_STATUS: verified` and recorded developer `REFACTOR_NEEDED: yes` with no refactor used yet -> ensure verified GREEN changes are committed, then `refactoring`.
-- `SLICE_STATUS: verified` after the one allowed refactor pass -> ensure refactor changes are committed, then `final-review`.
-- `SLICE_STATUS: open` -> increment iteration; if below `maxIterations`, `green-building`, otherwise `escalated`.
-- `SLICE_STATUS: todo` or setup block -> blocked.
+- `TEST_CASE_STATUS: verified` and recorded developer `REFACTOR_NEEDED: no` -> ensure verified GREEN changes are committed, then `final-review`.
+- `TEST_CASE_STATUS: verified` and recorded developer `REFACTOR_NEEDED: yes` with no refactor used yet -> ensure verified GREEN changes are committed, then `refactoring`.
+- `TEST_CASE_STATUS: verified` after the one allowed refactor pass -> ensure refactor changes are committed, then `final-review`.
+- `TEST_CASE_STATUS: open` -> increment iteration; if below `maxIterations`, `green-building`, otherwise `escalated`.
+- `TEST_CASE_STATUS: todo` or setup block -> blocked.
 
 ### refactoring
 
@@ -279,11 +275,11 @@ Invoke `developer MODE: refactor` at most once. Refactor is app-code-only, bound
 
 Before invoking reviewer, require a clean worktree. GREEN and refactor changes must already be committed so the reviewer can audit the full implementation diff from the after-RED checkpoint. If app/test changes are still uncommitted, block instead of invoking reviewer.
 
-Run `node scripts/quality-gate.mjs` before final-review. If it fails, block with the gate findings even when targeted tests pass.
+Run the project-configured quality gate before final-review when one is configured. If it fails, block with the gate findings even when targeted tests pass.
 
 Invoke `reviewer MODE: final-review` with after-RED checkpoint SHA.
 
-Reviewer checks minimal scope, no sibling ACs, and no changes to the SDET RED test since after-RED. Rejection is binding; developer fixes or the ticket escalates at `maxIterations`. There is no reviewer override.
+Reviewer checks minimal scope, no sibling test cases, and no changes to the SDET RED test since after-RED. Rejection is binding; developer fixes or the ticket escalates at `maxIterations`. There is no reviewer override.
 
 ### ticket-complete
 
@@ -293,8 +289,8 @@ Update ticket frontmatter to `complete`, update runtime state, and commit durabl
 
 This state runs only in plan mode, after all planned review/executable tickets are complete and before durable plan completion.
 
-1. Run `node scripts/quality-gate.mjs`. If it fails, block with gate findings.
-2. Build the impacted spec list from completed ticket `test_file` fields plus manifest/reviewer shared-impact additions.
+1. Run the project-configured quality gate when one is configured. If it fails, block with gate findings.
+2. Build the impacted spec list from completed ticket `test_case_id` values plus manifest/reviewer shared-impact additions.
 3. Increment runtime `regression.cycle` and block/escalate if it exceeds runtime `regression.maxRegressionCycles` (default `3`).
 4. Run every impacted spec as a full spec and produce Playwright JSON results. Example from `test/`:
    ```bash
@@ -312,7 +308,7 @@ This state runs only in plan mode, after all planned review/executable tickets a
 
 Update plan frontmatter/status summary to `complete` and commit `docs(tdd): complete <plan-id>`. This is allowed only after `regression-gating` passes.
 
-Run `node scripts/quality-gate.mjs` before plan completion. A plan cannot be complete while the gate fails or impacted-spec regression has open failures.
+Run the project-configured quality gate before plan completion when one is configured. A plan cannot be complete while the gate fails or impacted-spec regression has open failures.
 
 Push and create PR:
 

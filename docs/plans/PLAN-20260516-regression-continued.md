@@ -7,7 +7,7 @@ source_plan: inline-user-request
 # Remaining Feature Regression Testing
 
 ## Outcome
-Extend regression coverage to all remaining features (CATALOGUE, RENT, CLIENT, NOTIFICATION, SETTINGS, NAVIGATION, API) by verifying existing product behavior against `docs/ACCEPTANCE_CRITERIA.md` through automated Playwright tests.
+Extend regression coverage to all remaining features (CATALOGUE, RENT, CLIENT, NOTIFICATION, SETTINGS, NAVIGATION, API) by verifying existing product behavior against `docs/acceptance/*.md` through automated Playwright tests.
 
 ## Baseline Test Evidence
 - AUTH regression (PLAN-20260516-regression-testing) completed: 3 tickets, all already-green.
@@ -15,8 +15,8 @@ Extend regression coverage to all remaining features (CATALOGUE, RENT, CLIENT, N
 - All remaining features have existing Playwright test specs (except API which is `test/api/`).
 
 ## Regression Strategy
-- One slice-level ticket per acceptance criterion, starting with the first criterion for each feature.
-- Prefer existing Playwright tests as the regression interface; add or repair tests only when a slice has no reliable coverage.
+- One test case-level ticket per acceptance criterion, starting with the first criterion for each feature.
+- Prefer existing Playwright tests as the regression interface; add or repair tests only when a test case has no reliable coverage.
 - Features processed in order: CATALOGUE, RENT, CLIENT, NOTIFICATION, SETTINGS, NAVIGATION, API.
 
 ## Tickets
@@ -29,13 +29,13 @@ Extend regression coverage to all remaining features (CATALOGUE, RENT, CLIENT, N
 - TICKET-20260516-010 - complete - feature - API health endpoint
 
 ## Draft Ticket Roadmap
-- CATALOGUE: remaining AC-003-002 to AC-008-007 (name/quantity display, pagination, add/edit/detail/delete, images, search/filter, available qty)
-- RENT: remaining AC-009-002 to AC-014-006 (status filter, create, detail, edit, mark returned, delete, inline client, overdue, qty sync)
-- CLIENT: remaining AC-015-002 to AC-017-005 (name/phone display, detail, edit, rent counts, search, overdue indicator, delete)
-- NOTIFICATION: remaining AC-018-002 to AC-020-005 (alert display, due-soon, bell dropdown, visual distinction, count sync)
-- SETTINGS: remaining AC-021-002 to AC-024-003 (form display, edit name/tagline/logo, persistence, save feedback)
-- NAVIGATION: remaining AC-025-002 to AC-027-002 (sidebar links, direct URL, 404, responsive, theme toggle)
-- API: remaining AC-028-002 to AC-042-005 (all public, auth, protected endpoints, pagination, validation, CRUD)
+- CATALOGUE: remaining CATALOGUE-002 to CATALOGUE-008 (name/quantity display, pagination, add/edit/detail/delete, images, search/filter, available qty)
+- RENT: remaining RENT-002 to RENT-014 (status filter, create, detail, edit, mark returned, delete, inline client, overdue, qty sync)
+- CLIENT: remaining CLIENT-002 to CLIENT-017 (name/phone display, detail, edit, rent counts, search, overdue indicator, delete)
+- NOTIFICATION: remaining NOTIFICATION-002 to NOTIFICATION-020 (alert display, due-soon, bell dropdown, visual distinction, count sync)
+- SETTINGS: remaining SETTINGS-002 to SETTINGS-009 (form display, edit name/tagline/logo, persistence, save feedback)
+- NAVIGATION: remaining NAVIGATION-002 to NAVIGATION-009 (sidebar links, direct URL, 404, responsive, theme toggle)
+- API: remaining API-002 to CLIENT-042 (all public, auth, protected endpoints, pagination, validation, CRUD)
 
 ## Status Summary
 - draft: 0

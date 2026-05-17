@@ -57,28 +57,25 @@ Use `status: ready` only when a `feature` or `bug` ticket has all required TDD f
 
 A ready executable ticket must have:
 
-- exactly one acceptance criterion
-- concrete `feature` and `slice_id`
-- `expected_outcome`
-- `test_interface: e2e | api`
+- exactly one `test_case_id`
 - `red_expectation`
 - `green_expectation`
 - no prerequisite ticket dependency
-- no conflict with `docs/ACCEPTANCE_CRITERIA.md`
+- no conflict with `docs/acceptance/*.md`
 
 If any required field is missing, keep the ticket `draft` with open questions. Do not invent product decisions.
 
-## Feature And Slice Mapping
+## Test Case Mapping
 
 Before writing tickets:
 
-1. Run or rely on `.opencode/scripts/build-manifest.mjs` if `.opencode/state/feature-manifest.json` is stale or missing.
-2. Read `docs/ACCEPTANCE_CRITERIA.md` and `.opencode/state/feature-manifest.json`.
-3. Map each executable ticket to the nearest existing `feature` and `slice_id`.
+1. Run or rely on `.opencode/scripts/build-test-case-manifest.mjs` if `.opencode/state/test-case-manifest.json` is stale or missing.
+2. Read `docs/acceptance/*.md` and `.opencode/state/test-case-manifest.json`.
+3. Map each executable ticket to exactly one existing `test_case_id`, or create a clear new acceptance section before ticketing.
 
-If no slice matches cleanly, set `status: draft`, `slice_id: TBD`, and include the missing AC/slice recommendation in `## Open Questions`.
+If no test case matches cleanly, set `status: draft`, `test_case_id: TBD`, and include the missing test case recommendation in `## Open Questions`.
 
-If a source requirement conflicts with `docs/ACCEPTANCE_CRITERIA.md`, do not choose a winner silently. Create or repair the ticket as `status: review` or `status: draft` with the conflict called out.
+If a source requirement conflicts with `docs/acceptance/*.md`, do not choose a winner silently. Create or repair the ticket as `status: review` or `status: draft` with the conflict called out.
 
 ## Plan File Template
 
@@ -120,27 +117,17 @@ id: TICKET-YYYYMMDD-001
 plan_id: PLAN-YYYYMMDD-short-title
 type: feature
 status: ready
-feature: CATALOGUE
-slice_id: AC-004-001
+test_case_id: CATALOGUE-004
 priority: 1
 source_plan: docs/plans/example.md
-test_file: test/specs/catalogue.spec.js
-expected_outcome: User sees the new visible behavior.
-test_interface: e2e
 red_expectation: The acceptance test fails because the behavior is missing.
 green_expectation: The same acceptance test passes after the minimal implementation.
 ---
 
 # {short ticket title}
 
-## Expected Outcome
-{one sentence describing the visible user/system outcome}
-
-## Acceptance Criterion
-- {single observable criterion for this tracer ticket}
-
-## Public Test Interface
-`e2e` or `api`, with one sentence explaining why this is the highest useful public interface.
+## Acceptance Mapping
+Criterion, expected outcome, test type, and spec files resolve from `.opencode/state/test-case-manifest.json` by `test_case_id`.
 
 ## RED Expectation
 {the specific expected failing behavior before implementation}
@@ -154,20 +141,19 @@ green_expectation: The same acceptance test passes after the minimal implementat
 3. {observable result}
 
 ## Definition Of Ready
-- Feature and slice are mapped.
-- Exactly one acceptance criterion is present.
-- Expected outcome, public test interface, RED expectation, and GREEN expectation are present.
+- Exactly one `test_case_id` maps to the Test Case Manifest.
+- RED expectation and GREEN expectation are present.
 - Deferred work is explicit.
 - No prerequisite ticket dependency remains.
 
 ## Definition Of Done
-- SDET RED test exists and includes `slice_id`.
+- SDET RED test exists and includes `test_case_id`.
 - RED failed for the expected reason or already-green coverage was reviewer-approved.
 - GREEN passes the same recorded test.
 - Final reviewer audit approved scope and test integrity.
 
 ## Targeted Test
-`cd test && npx playwright test --grep "{slice_id}"`
+Use the project-configured `commands.test_case` template from `.opencode/project.json` with the manifest entry for `test_case_id`.
 
 ## Deferred Work
 - {sibling behavior not included in this ticket}
