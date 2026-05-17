@@ -12,11 +12,13 @@ import CostumeListView from '../components/CostumeListView';
 import CostumeCardView from '../components/CostumeCardView';
 import CustomPagination from '../components/CustomPagination';
 
+const isMobileViewport = () => typeof window !== 'undefined' && window.innerWidth < 640;
+
 const CataloguePage = () => {
   const navigate = useNavigate();
   const [costumes, setCostumes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('list');
+  const [view, setView] = useState(() => (isMobileViewport() ? 'grid' : 'list'));
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [regionFilter, setRegionFilter] = useState('');
@@ -28,6 +30,8 @@ const CataloguePage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [expandedKeys, setExpandedKeys] = useState(new Set([]));
+  const [isMobile, setIsMobile] = useState(isMobileViewport);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -36,6 +40,21 @@ const CataloguePage = () => {
 
   useEffect(() => {
     fetchFilters();
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = isMobileViewport();
+      setIsMobile(mobile);
+
+      if (!mobile) {
+        setIsMobileFiltersOpen(false);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
@@ -92,6 +111,8 @@ const CataloguePage = () => {
     setExpandedKeys(keys);
   };
 
+  const showFilterControls = !isMobile || isMobileFiltersOpen;
+
   return (
     <Card>
       <Card.Header className="flex flex-col gap-4 px-6 py-5">
@@ -110,101 +131,117 @@ const CataloguePage = () => {
         <Separator />
 
         {/* Filters + View toggle */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
-          <Input
-            placeholder="Cari kostum..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            aria-label="Cari kostum"
-            className="w-full sm:w-[200px]"
-          />
-          <Select
-            placeholder="Semua Wilayah"
-            value={regionFilter || null}
-            onChange={(key) => {
-              setRegionFilter(key ? String(key) : '');
-              setPage(1);
-            }}
-            className="w-full sm:w-[160px]"
-            aria-label="Filter Wilayah"
-          >
-            <Select.Trigger>
-              <Select.Value />
-              <Select.Indicator />
-            </Select.Trigger>
-            <Select.Popover>
-              <ListBox>
-                <ListBox.Item id="" textValue="Semua Wilayah">
-                  Semua Wilayah
-                  <ListBox.ItemIndicator />
-                </ListBox.Item>
-                {regions.map((r) => (
-                  <ListBox.Item key={String(r.id)} id={String(r.id)} textValue={r.name}>
-                    {r.name}
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
-                ))}
-              </ListBox>
-            </Select.Popover>
-          </Select>
-          <Select
-            placeholder="Semua Kategori"
-            value={categoryFilter || null}
-            onChange={(key) => {
-              setCategoryFilter(key ? String(key) : '');
-              setPage(1);
-            }}
-            className="w-full sm:w-[160px]"
-            aria-label="Filter Kategori"
-          >
-            <Select.Trigger>
-              <Select.Value />
-              <Select.Indicator />
-            </Select.Trigger>
-            <Select.Popover>
-              <ListBox>
-                <ListBox.Item id="" textValue="Semua Kategori">
-                  Semua Kategori
-                  <ListBox.ItemIndicator />
-                </ListBox.Item>
-                {categories.map((c) => (
-                  <ListBox.Item key={String(c.id)} id={String(c.id)} textValue={c.name}>
-                    {c.name}
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
-                ))}
-              </ListBox>
-            </Select.Popover>
-          </Select>
+        <div className="flex flex-col gap-3 w-full">
+          {isMobile && (
+            <Button
+              variant="outline"
+              className="sm:hidden w-full justify-center"
+              aria-label={isMobileFiltersOpen ? 'Sembunyikan filter katalog' : 'Buka filter katalog'}
+              onPress={() => setIsMobileFiltersOpen((open) => !open)}
+            >
+              <Filter size={16} />
+              {isMobileFiltersOpen ? 'Sembunyikan Filter' : 'Buka Filter'}
+            </Button>
+          )}
 
-          <div className="flex-1" />
+          {showFilterControls && (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
+              <Input
+                placeholder="Cari kostum..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                aria-label="Cari kostum"
+                className="w-full sm:w-[200px]"
+              />
+              <Select
+                placeholder="Semua Wilayah"
+                value={regionFilter || null}
+                onChange={(key) => {
+                  setRegionFilter(key ? String(key) : '');
+                  setPage(1);
+                }}
+                className="w-full sm:w-[160px]"
+                aria-label="Filter Wilayah"
+              >
+                <Select.Trigger>
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    <ListBox.Item id="" textValue="Semua Wilayah">
+                      Semua Wilayah
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                    {regions.map((r) => (
+                      <ListBox.Item key={String(r.id)} id={String(r.id)} textValue={r.name}>
+                        {r.name}
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
+              </Select>
+              <Select
+                placeholder="Semua Kategori"
+                value={categoryFilter || null}
+                onChange={(key) => {
+                  setCategoryFilter(key ? String(key) : '');
+                  setPage(1);
+                }}
+                className="w-full sm:w-[160px]"
+                aria-label="Filter Kategori"
+              >
+                <Select.Trigger>
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    <ListBox.Item id="" textValue="Semua Kategori">
+                      Semua Kategori
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                    {categories.map((c) => (
+                      <ListBox.Item key={String(c.id)} id={String(c.id)} textValue={c.name}>
+                        {c.name}
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
+              </Select>
 
-          <ButtonGroup>
-            <Button
-              isIconOnly
-              variant={view === 'list' ? 'primary' : 'outline'}
-              aria-label="Tampilkan tampilan list"
-              onPress={() => setView('list')}
-            >
-              <AlignLeft size={18} />
-            </Button>
-            <Button
-              isIconOnly
-              variant={view === 'table' ? 'primary' : 'outline'}
-              aria-label="Tampilkan tampilan tabel"
-              onPress={() => setView('table')}
-            >
-              <List size={18} />
-            </Button>
-            <Button
-              isIconOnly
-              variant={view === 'grid' ? 'primary' : 'outline'}
-              aria-label="Tampilkan tampilan grid"
-              onPress={() => setView('grid')}
-            >
-              <Grid size={18} />
-            </Button>
-          </ButtonGroup>
+              <div className="flex-1" />
+
+              <ButtonGroup>
+                <Button
+                  isIconOnly
+                  variant={view === 'list' ? 'primary' : 'outline'}
+                  aria-label="Tampilkan tampilan list"
+                  onPress={() => setView('list')}
+                >
+                  <AlignLeft size={18} />
+                </Button>
+                <Button
+                  isIconOnly
+                  variant={view === 'table' ? 'primary' : 'outline'}
+                  aria-label="Tampilkan tampilan tabel"
+                  onPress={() => setView('table')}
+                >
+                  <List size={18} />
+                </Button>
+                <Button
+                  isIconOnly
+                  variant={view === 'grid' ? 'primary' : 'outline'}
+                  aria-label="Tampilkan tampilan grid"
+                  onPress={() => setView('grid')}
+                >
+                  <Grid size={18} />
+                </Button>
+              </ButtonGroup>
+            </div>
+          )}
         </div>
         
 

@@ -19,7 +19,7 @@ Refresh the existing authenticated staff/admin Costume Rental Management UI into
 ## Tickets
 - TICKET-20260517-001 - complete - feature - Mobile bottom tabs provide core admin navigation
 - TICKET-20260517-002 - complete - feature - Responsive admin shell has no horizontal body scroll
-- TICKET-20260517-003 - ready - feature - Mobile catalogue uses collapsible filters and inventory cards
+- TICKET-20260517-003 - complete - feature - Mobile catalogue uses collapsible filters and inventory cards
 - TICKET-20260517-004 - ready - feature - Costume detail and form are mobile usable
 - TICKET-20260517-005 - ready - feature - Rental history uses mobile cards
 - TICKET-20260517-006 - ready - feature - Rental detail and form are mobile usable
@@ -32,10 +32,10 @@ Refresh the existing authenticated staff/admin Costume Rental Management UI into
 ## Status Summary
 - draft: 0
 - review: 0
-- ready: 9
+- ready: 8
 - in_progress: 0
 - blocked: 0
-- complete: 2
+- complete: 3
 
 ## Execution
 `/engineering/orchestrator PLAN-20260517-staff-admin-mobile-first-ui-refresh`

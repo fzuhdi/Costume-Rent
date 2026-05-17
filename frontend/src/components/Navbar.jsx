@@ -44,7 +44,11 @@ const NavbarComponent = () => {
         
         {/* LEFT: Hamburger (Mobile) & Breadcrumbs (Desktop) */}
         <div className="flex items-center gap-4">
-          <button className="md:hidden p-2 text-[var(--muted)]" onClick={openMobile}>
+          <button
+            className="md:hidden p-2 text-[var(--muted)]"
+            onClick={openMobile}
+            aria-label="Buka menu navigasi"
+          >
             <Menu size={22} />
           </button>
           <div className="hidden md:flex items-center gap-2 text-sm ml-2">
