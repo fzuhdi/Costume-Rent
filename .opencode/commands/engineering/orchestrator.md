@@ -1,6 +1,5 @@
 ---
 description: Show runnable plans or dispatch one strict TDD ticket/plan run. Usage /engineering/orchestrator [ticket-id|plan-id]
-agent: orchestrator
 ---
 
 Load the orchestrator skill (`.opencode/skills/orchestrator/SKILL.md`).
