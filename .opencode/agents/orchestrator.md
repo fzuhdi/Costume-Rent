@@ -14,6 +14,12 @@ permission:
     "git rebase*": deny
     "git merge*": deny
     "git cherry-pick*": deny
+    "git push --force*": deny
+    "git push -f*": deny
+    "git clean*": deny
+    "git restore*": deny
+    "git stash*": deny
+    "git checkout --*": deny
   task:
     "sdet": allow
     "developer": allow
@@ -99,7 +105,7 @@ Write runtime state to `.opencode/state/orchestrator-progress.json`, `.opencode/
 ## Checkpoint Commits
 
 - Pre-RED checkpoint: `git commit --allow-empty -m "checkpoint(tdd): pre-red <ticket-id>"`
-- After valid RED: checkpoint commit of RED changes
+- After valid RED: `git commit -m "test(tdd): red <ticket-id>"`
 - After GREEN: `git commit -m "feat(tdd): green <ticket-id>"` or `fix(tdd): green <ticket-id>"`
 - After refactor: `git commit -m "refactor(tdd): <ticket-id>"` (optional)
 - Ticket complete: `git commit -m "docs(tdd): complete <ticket-id>"`

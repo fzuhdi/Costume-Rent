@@ -8,15 +8,18 @@ permission:
     "docs/plans/**": allow
     ".opencode/state/*.json": allow
     ".opencode/state.example/*": allow
-    "test/**": allow
-    "backend/**": allow
-    "frontend/**": allow
   bash:
     "*": allow
     "git reset --hard*": deny
     "git rebase*": deny
     "git merge*": deny
     "git cherry-pick*": deny
+    "git push --force*": deny
+    "git push -f*": deny
+    "git clean*": deny
+    "git restore*": deny
+    "git stash*": deny
+    "git checkout --*": deny
   task:
     "sdet": allow
     "developer": allow
@@ -29,7 +32,7 @@ permission:
 
 # Orchestrator - TDD FSM Engine
 
-This template renders `.opencode/agents/orchestrator.md`. Replace `{{orchestrator_edit_permissions}}` from `.opencode/project.json` so adapter-declared code roots, test roots, ticket files, plan files, and state files are allowed.
+Template for `.opencode/agents/orchestrator.md`. Permissions are hard-coded; use `.opencode/project.json` `agent_permissions.orchestrator` as the source of truth for edit scope.
 
 ## Quick Start
 
