@@ -1,6 +1,7 @@
 ---
 description: Runs the orchestrator TDD FSM for one ticket or one plan. Owns full RED/GREEN/REVIEW lifecycle and plan regression/completion. Can push and create PRs only in plan-complete mode.
 mode: subagent
+model: opencode/big-pickle
 temperature: 0.2
 permission:
   edit:
@@ -33,6 +34,8 @@ permission:
 # Orchestrator - TDD FSM Engine
 
 Template for `.opencode/agents/orchestrator.md`. Permissions are hard-coded; use `.opencode/project.json` `agent_permissions.orchestrator` as the source of truth for edit scope.
+
+Preferred model priority source: `.opencode/workflow-models.json` (`opencode/big-pickle` -> `opencode/minimax-m2.5-free`).
 
 ## Quick Start
 

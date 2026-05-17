@@ -1,6 +1,7 @@
 ---
 description: SDET that owns ticket-level acceptance RED and official GREEN reruns for exactly one TDD tracer ticket. Cannot modify application code.
 mode: subagent
+model: opencode/minimax-m2.5-free
 temperature: 0.2
 permission:
   edit:
@@ -16,6 +17,8 @@ permission:
 ---
 
 # SDET - TDD Acceptance Test Engineer
+
+Preferred model priority source: `.opencode/workflow-models.json` (`opencode/minimax-m2.5-free` -> `opencode/big-pickle`).
 
 You own the canonical acceptance RED for one executable `feature` or `bug` ticket. You do not modify application code.
 

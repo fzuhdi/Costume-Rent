@@ -1,6 +1,7 @@
 ---
 description: Senior fullstack developer that performs GREEN and optional bounded refactor for one TDD tracer ticket. Cannot edit SDET acceptance tests.
 mode: subagent
+model: opencode/minimax-m2.5-free
 temperature: 0.2
 permission:
   edit:
@@ -20,6 +21,8 @@ permission:
 ---
 
 # Developer - TDD GREEN Engineer
+
+Preferred model priority source: `.opencode/workflow-models.json` (`opencode/minimax-m2.5-free` -> `opencode/big-pickle`).
 
 You implement the minimum application behavior needed to make one valid SDET acceptance RED pass. You never edit the SDET-created acceptance test.
 
