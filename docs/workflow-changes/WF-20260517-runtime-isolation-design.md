@@ -10,6 +10,7 @@ Define a reliable execution model for this repo across different model providers
 - `docs/adr/0003-ticket-and-workflow-workspaces.md`
 - `.opencode/README.md`
 - `.opencode/knowledge/runbook.md`
+- `.opencode/scripts/runtime-slot.mjs`
 
 ## Previous Constraints
 - `test/playwright.config.js` hardcoded `baseURL: 'http://localhost:5173'`.
@@ -46,12 +47,14 @@ Implemented runtime variables:
 - Vite config: `VITE_DEV_PORT`, `PORT`, `VITE_PROXY_TARGET`.
 - Playwright config: `PW_BASE_URL`, `PW_OUTPUT_DIR`, `PW_JSON_OUTPUT`, `PW_HTML_REPORT`, plus `PLAYWRIGHT_*` aliases.
 - The frontend service uses a named `node_modules` volume and only runs `npm ci` when the cache is missing or its recorded lockfile hash differs from `package-lock.json`.
+- Runtime slot acquisition is implemented by `.opencode/scripts/runtime-slot.mjs`; it writes ignored runtime registry state to `.opencode/state/runtime-slots.json`.
 
 Process isolation contract:
 - No two workflow engines may share a checkout.
 - No two processes may share `.opencode/state/`.
 - No two processes may share `test-results/`.
 - Dependency directories may be reused only when the relevant lockfile hash matches and the dependency/install approval policy is satisfied.
+- Unknown port owners are never killed automatically. The launcher can reuse healthy registered slots and can clean known stale registered Compose projects only when explicitly invoked with `--cleanup-known-stale` or `cleanup --yes`.
 
 ## Source Of Truth
 - Workspace and execution policy: `docs/adr/0003-ticket-and-workflow-workspaces.md`
@@ -71,5 +74,5 @@ no - documentation-only workflow update
 
 ## Review Notes
 - This change defines the current default as one long-lived Compose dev stack per active checkout.
-- Runtime configuration is now parameterized, but advanced parallel mode still requires the coordinator to allocate non-overlapping slots and launch each process from its own worktree root.
+- Runtime configuration is now parameterized, and the slot launcher allocates non-overlapping runtime slots for process-specific stacks.
 - Dependency installation remains approval-gated and is not implied by runtime-stack isolation.

@@ -56,6 +56,7 @@ Advanced isolated worktrees require a process slot that provides runtime variabl
 - Each Compose stack must set a unique project name plus `BUSANA_CONTAINER_PREFIX`, `FRONTEND_HOST_PORT`, `BACKEND_HOST_PORT`, `SQLITE_WEB_HOST_PORT`, `BUSANA_DB_VOLUME`, and `BUSANA_FRONTEND_NODE_MODULES_VOLUME`.
 - Empty or stale frontend dependency volumes cause the Compose frontend service to run `npm ci`; this remains subject to explicit dependency/install approval before the service is started or recreated.
 - The Vite dev server accepts `VITE_DEV_PORT`, `PORT`, and `VITE_PROXY_TARGET`; the default remains compatible with the Compose service network.
+- Runtime slot acquisition should use `node .opencode/scripts/runtime-slot.mjs acquire --target <id>`. The launcher records slots in ignored `.opencode/state/runtime-slots.json`, reuses a healthy registered stack, can recreate only a known stale registered Compose project when explicitly requested, and never kills unknown port owners.
 
 Recommended workspace root:
 

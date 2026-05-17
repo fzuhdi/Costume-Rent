@@ -50,6 +50,8 @@ For default stable mode, prefer `docker compose -f docker-compose.dev.yml up -d 
 
 Advanced parallel mode is not the current default. When used, each process must run from its own worktree and provide unique values for `BUSANA_CONTAINER_PREFIX`, `FRONTEND_HOST_PORT`, `BACKEND_HOST_PORT`, `SQLITE_WEB_HOST_PORT`, `BUSANA_DB_VOLUME`, `BUSANA_FRONTEND_NODE_MODULES_VOLUME`, `PW_BASE_URL`, `PW_OUTPUT_DIR`, `PW_JSON_OUTPUT`, and `PW_HTML_REPORT`.
 
+Use `node .opencode/scripts/runtime-slot.mjs acquire --target <plan-or-ticket-id>` to assign those values. The launcher uses the `+100` slot formula, records reservations in `.opencode/state/runtime-slots.json`, skips unknown port owners, and only cleans a known stale Compose project when invoked with `--cleanup-known-stale`.
+
 ## TDD Flow
 
 ```text

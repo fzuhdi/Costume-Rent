@@ -125,7 +125,15 @@ For advanced ticket worktrees, reuse, copy, or junction dependency directories o
 
 Advanced isolated runtime stacks require per-process runtime isolation, not only a second container. Each process must have its own worktree, Compose project name, host-port allocation, Playwright base URL, and output paths.
 
-Example slot 1 PowerShell setup:
+Acquire a slot from the worktree root:
+
+```bash
+node .opencode/scripts/runtime-slot.mjs acquire --target TICKET-YYYYMMDD-001
+```
+
+The launcher uses the `+100` formula: slot 1 is frontend `5273`, backend `8181`, sqlite-web `8180`. It records slots in `.opencode/state/runtime-slots.json`, reuses a healthy registered stack, skips unknown port owners, and only recreates a known stale registered Compose project when run with `--cleanup-known-stale`.
+
+Example slot 1 PowerShell environment emitted by the launcher:
 
 ```powershell
 $env:BUSANA_CONTAINER_PREFIX = "busana_ticket001"
