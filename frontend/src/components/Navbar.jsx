@@ -37,8 +37,8 @@ const NavbarComponent = () => {
   const formattedPath = currentPath.charAt(0).toUpperCase() + currentPath.slice(1);
 
   return (
-    <nav className="fixed top-0 right-0 z-40 border-b border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md transition-all duration-300 w-full"
-      style={{ paddingLeft: `var(--sidebar-width${isCollapsed ? '-collapsed' : ''})` }}>
+    <nav className="fixed top-0 right-0 z-40 border-b border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md transition-all duration-300 w-full pl-0 md:pl-[var(--sidebar-width)]"
+      style={{ paddingLeft: isCollapsed ? 'var(--sidebar-width-collapsed)' : undefined }}>
       
       <header className="flex h-[var(--navbar-height)] items-center justify-between px-4 sm:px-8 relative">
         
