@@ -164,4 +164,27 @@ test.describe('Navigation & UI', () => {
     await expect(sidebarPage.peminjamanLink).toBeVisible();
     await expect(sidebarPage.klienLink).toBeVisible();
   });
+
+  // NAVIGATION-015: Responsive Admin Shell Has No Horizontal Body Scroll
+  test('[NAVIGATION-015] - Responsive Admin Shell Has No Horizontal Body Scroll', async ({ page }) => {
+    const viewports = [
+      { width: 320, height: 568 },
+      { width: 375, height: 667 },
+      { width: 390, height: 844 },
+      { width: 768, height: 1024 },
+      { width: 1280, height: 720 }
+    ];
+
+    for (const { width, height } of viewports) {
+      await page.setViewportSize({ width, height });
+      await page.waitForTimeout(200);
+
+      const body = page.locator('body');
+      const scrollWidth = await body.evaluate(el => el.scrollWidth);
+      const clientWidth = await body.evaluate(el => el.clientWidth);
+
+      expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+      expect(scrollWidth).toBeLessThanOrEqual(width + 1);
+    }
+  });
 });
