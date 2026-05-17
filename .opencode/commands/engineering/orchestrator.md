@@ -1,6 +1,6 @@
 ---
 description: Show runnable plans or dispatch one strict TDD ticket/plan run. Usage /engineering/orchestrator [ticket-id|plan-id]
-agent: build
+agent: orchestrator
 ---
 
 Load the orchestrator skill (`.opencode/skills/orchestrator/SKILL.md`).
@@ -24,9 +24,9 @@ If `$1` is empty:
 Otherwise:
 
 1. Read only the targeted plan/ticket inputs needed to prepare dispatch.
-2. Dispatch exactly one `task(subagent_type: "orchestrator")` with `MODE: run-ticket` or `MODE: run-plan` and the required fields from the orchestrator skill.
-3. Wait for the orchestrator subagent to return `OUTCOME: success | partial | blocked`.
-4. Summarize the orchestrator subagent result for the user.
-5. If orchestrator subagent dispatch is unavailable or denied, stop and report a blocked workflow handoff. Do NOT manually execute the FSM or simulate `sdet`, `developer`, `reviewer`, or `explore`.
+2. This command is already running as the `orchestrator` agent. Execute the requested `MODE: run-ticket` or `MODE: run-plan` directly using the orchestrator skill FSM.
+3. Dispatch only the worker subagents required by the FSM (`sdet`, `developer`, `reviewer`, `explore`).
+4. Return `OUTCOME: success | partial | blocked` and summarize the result for the user.
+5. If worker subagent dispatch is unavailable or denied, stop and report a blocked workflow handoff. Do NOT manually execute or simulate `sdet`, `developer`, `reviewer`, or `explore`.
 
 You are NOT allowed to skip RED, let developer edit the SDET test, override reviewer rejection, manually simulate worker roles, merge tickets, or auto-reset dirty work.

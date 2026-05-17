@@ -266,7 +266,7 @@ function buildWorkflowModelEnv(summary) {
 }
 
 function launchWindow(repoRoot, target, title, selectedModel, summary) {
-  const manualCommand = `opencode run --interactive --title "${title}" --model "${selectedModel}" --command engineering/orchestrator --dir "${repoRoot}" "${target}"`;
+  const manualCommand = `opencode run --interactive --title "${title}" --agent orchestrator --model "${selectedModel}" --command engineering/orchestrator --dir "${repoRoot}" "${target}"`;
 
   if (process.platform !== 'win32') {
     fail(`Coordinator TUI launching currently supports Windows only. Run this manually: ${manualCommand}`);
@@ -328,6 +328,8 @@ function runTui(repoRoot, target, targetType, title, selectedModel, summary) {
     'run',
     '--title',
     title,
+    '--agent',
+    'orchestrator',
     '--model',
     selectedModel,
     '--command',
