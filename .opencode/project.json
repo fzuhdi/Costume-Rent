@@ -171,6 +171,29 @@
         "backend/**",
         "frontend/**"
       ]
+    },
+    "orchestrator": {
+      "read": [
+        "docs/tickets/**",
+        "docs/acceptance/**",
+        "docs/plans/**",
+        ".opencode/state/*.json",
+        ".opencode/state.example/*.json",
+        ".opencode/skills/**",
+        ".opencode/project.json",
+        "test/**",
+        "backend/**",
+        "frontend/**"
+      ],
+      "write": [
+        "docs/tickets/**",
+        "docs/plans/**",
+        ".opencode/state/*.json",
+        ".opencode/state.example/*"
+      ],
+      "deny": [
+        ".opencode/opencode.json"
+      ]
     }
   }
 }
