@@ -535,4 +535,29 @@ test.describe('Catalogue Management (Costume Management)', () => {
     }
     expect(true).toBe(true); // Test passes if no crash
   });
-});
+
+  // CATALOGUE-035: Mobile catalogue uses collapsible filters and inventory cards
+  test('[CATALOGUE-035] - Mobile catalogue uses collapsible filters and inventory cards', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    const cataloguePage = new CataloguePage(page);
+    await cataloguePage.goto();
+    await cataloguePage.assertPageLoaded();
+
+    const filterToggle = page.getByRole('button', { name: /buka filter|tampilkan filter|filter katalog/i });
+    await expect(filterToggle).toBeVisible();
+
+    await expect(cataloguePage.searchInput).not.toBeVisible();
+
+    await filterToggle.click();
+
+    await expect(cataloguePage.searchInput).toBeVisible();
+    await expect(cataloguePage.regionFilter).toBeVisible();
+    await expect(cataloguePage.categoryFilter).toBeVisible();
+    await expect(cataloguePage.galleryViewButton).toBeVisible();
+
+    const firstCard = page.locator('a[href*="/catalogue/"] img, a[href*="/catalogue/"] text=/No Image/i').first();
+    await expect(firstCard).toBeVisible();
+    await expect(page.locator('a[href*="/catalogue/"]').first()).toContainText(/tersedia|unit/i);
+  });
+  });
