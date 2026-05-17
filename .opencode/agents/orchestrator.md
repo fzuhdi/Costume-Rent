@@ -159,6 +159,7 @@ NOTES:
 ## Hard Rules
 
 - Follow the orchestrator skill FSM exactly. Do not redesign the lifecycle.
+- If dispatch to `sdet`, `developer`, `reviewer`, or `explore` is unavailable or denied, return `OUTCOME: blocked`; do not simulate those workers yourself.
 - Do not edit SDET acceptance tests directly (delegate to sdet).
 - Do not edit application code directly (delegate to developer).
 - Do not reset, rebase, merge, or cherry-pick.
