@@ -536,7 +536,7 @@ test.describe('Catalogue Management (Costume Management)', () => {
     expect(true).toBe(true); // Test passes if no crash
   });
 
-  // CATALOGUE-035: Mobile catalogue uses collapsible filters and inventory cards
+// CATALOGUE-035: Mobile catalogue uses collapsible filters and inventory cards
   test('[CATALOGUE-035] - Mobile catalogue uses collapsible filters and inventory cards', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
 
@@ -568,4 +568,94 @@ test.describe('Catalogue Management (Costume Management)', () => {
 
     await expect(firstCard).toContainText(/tersedia|unit/i);
   });
+
+  // CATALOGUE-036: Mobile costume detail and form pages are usable without horizontal scrolling
+  test('[CATALOGUE-036] - Mobile costume detail and create/edit form pages are usable without horizontal scrolling', async ({ page }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    const cataloguePage = new CataloguePage(page);
+    await cataloguePage.goto();
+    await cataloguePage.assertPageLoaded();
+
+    // Navigate to costume detail page
+    await cataloguePage.clickFirstCostume();
+    await expect(page).toHaveURL(/\/catalogue\/\d+$/);
+
+    // === TEST COSTUME DETAIL PAGE ===
+    // Verify no horizontal scroll on detail page
+    const detailBody = page.locator('body');
+    const detailScrollWidth = await detailBody.evaluate(el => el.scrollWidth);
+    const detailClientWidth = await detailBody.evaluate(el => el.clientWidth);
+    expect(detailScrollWidth).toBeLessThanOrEqual(detailClientWidth);
+
+    // Verify images are visible without scrolling
+    const detailImages = page.locator('img');
+    const imageCount = await detailImages.count();
+    if (imageCount > 0) {
+      // At least one image should be visible in the viewport
+      const firstImage = detailImages.first();
+      await expect(firstImage).toBeVisible();
+    }
+
+    // Verify stock/quantity information is visible
+    const bodyText = await page.locator('body').textContent();
+    expect(bodyText).toMatch(/tersedia|quantity|jumlah|stock/i);
+
+    // Verify edit button is visible without scrolling
+    const editButton = page.getByRole('button', { name: /edit/i });
+    await expect(editButton).toBeVisible();
+
+    // Verify delete button is visible without scrolling
+    const deleteButton = page.getByRole('button', { name: /hapus/i });
+    await expect(deleteButton).toBeVisible();
+
+    // === TEST CREATE FORM PAGE ===
+    // Navigate to create new costume form
+    await page.goto('/catalogue/new');
+    const formPage = new CatalogueFormPage(page);
+    await formPage.assertFormLoaded();
+
+    // Verify no horizontal scroll on form page
+    const formBody = page.locator('body');
+    const formScrollWidth = await formBody.evaluate(el => el.scrollWidth);
+    const formClientWidth = await formBody.evaluate(el => el.clientWidth);
+    expect(formScrollWidth).toBeLessThanOrEqual(formClientWidth);
+
+    // Verify form fields are visible without scrolling
+    await expect(formPage.nameInput).toBeVisible();
+    await expect(formPage.regionSelect).toBeVisible();
+    await expect(formPage.categorySelect).toBeVisible();
+    await expect(formPage.quantityInput).toBeVisible();
+
+    // Verify validation works - try to submit empty form
+    await formPage.submit();
+    // Should stay on form page (not redirect) due to validation error
+    await expect(page).toHaveURL(/\/catalogue\/new/);
+
+    // Verify cancel button is visible without scrolling
+    const cancelButton = page.getByRole('button', { name: /batal/i });
+    await expect(cancelButton).toBeVisible();
+
+    // Verify save/submit button is visible without scrolling
+    await expect(formPage.submitButton).toBeVisible();
+
+    // === TEST EDIT FORM PAGE ===
+    // Go back to detail page and click edit
+    await page.goto('/catalogue');
+    await cataloguePage.clickFirstCostume();
+    await page.getByRole('button', { name: /edit/i }).click();
+    await expect(page).toHaveURL(/\/catalogue\/\d+\/edit/);
+    await formPage.assertFormLoaded();
+
+    // Verify no horizontal scroll on edit form page
+    const editBody = page.locator('body');
+    const editScrollWidth = await editBody.evaluate(el => el.scrollWidth);
+    const editClientWidth = await editBody.evaluate(el => el.clientWidth);
+    expect(editScrollWidth).toBeLessThanOrEqual(editClientWidth);
+
+    // Verify form fields are visible without scrolling on edit page
+    await expect(formPage.nameInput).toBeVisible();
+    await expect(formPage.submitButton).toBeVisible();
   });
+});
