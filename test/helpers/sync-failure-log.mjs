@@ -22,7 +22,7 @@
  *   - PASSED + last status was [open]      → append [verified] (auto)
  *   - PASSED + no prior status             → no entry (clean run, nothing to log)
  *
- * Exits 1 if any AC's latest status is [open] or [todo] (signals orchestrator).
+ * Exits 1 if any test cases latest status is [open] or [todo] (signals orchestrator).
  */
 
 import fs   from 'fs';
@@ -53,33 +53,12 @@ const log     = (msg) => console.log(msg);
 const verbose = (msg) => { if (VERBOSE) console.log(`  [verbose] ${msg}`); };
 const dryLog  = (msg) => { if (DRY_RUN) console.log(`  [dry-run] ${msg}`); };
 
-// ── AC → Feature map (canonical — must match docs/ACCEPTANCE_CRITERIA.md) ───
-
-const AC_FEATURE_MAP = [
-  { from:  1, to:  2,  feature: 'AUTH'         },
-  { from:  3, to:  8,  feature: 'CATALOGUE'    },
-  { from:  9, to: 14,  feature: 'RENT'         },
-  { from: 15, to: 17,  feature: 'CLIENT'       },
-  { from: 18, to: 20,  feature: 'NOTIFICATION' },
-  { from: 21, to: 24,  feature: 'SETTINGS'     },
-  { from: 25, to: 27,  feature: 'NAVIGATION'   },
-  { from: 28, to: 30,  feature: 'API'          },
-];
-
-function featureFromAC(ac) {
-  const num   = parseInt(ac.replace(/^AC-/, '').split('-')[0], 10);
-  const entry = AC_FEATURE_MAP.find(e => num >= e.from && num <= e.to);
-  return entry ? entry.feature : 'UNKNOWN';
-}
+// ?? test_case_id parsing ?????????????????????????????????????????????????????
 
 function parseTestTitle(title) {
-  const acMatch = title.match(/\[?AC-(\d{3})(?:-(\d{3}))?\]?/i);
-  const ac = acMatch
-    ? acMatch[2]
-      ? `AC-${acMatch[1]}-${acMatch[2]}`
-      : `AC-${acMatch[1]}`
-    : null;
-  const feature = ac ? featureFromAC(ac) : 'UNKNOWN';
+  const idMatch = title.match(/\[([A-Z][A-Z0-9_]*-\d{3})\]/);
+  const ac = idMatch ? idMatch[1] : null;
+  const feature = ac ? ac.split('-')[0] : 'UNKNOWN';
   return { ac, feature };
 }
 
@@ -146,16 +125,16 @@ function readFailures(feature) {
 }
 
 /**
- * Determine the latest status marker for each AC ID by scanning the markdown.
- * Latest entry wins (file is read top-to-bottom; last match per AC ID is current).
+ * Determine the latest status marker for each test_case_id by scanning the markdown.
+ * Latest entry wins (file is read top-to-bottom; last match per test_case_id is current).
  *
  * Returns: Map<ac_id, 'open' | 'verified' | 'sdet-fault' | 'todo'>
  */
 function parseLatestStatuses(content) {
   const statuses = new Map();
   if (!content) return statuses;
-  // Match lines like:  - **AC-014-001** [open] ...
-  const lineRe = /^\s*-\s*\*\*(AC-\d{3}(?:-\d{3})?)\*\*\s*\[(open|verified|sdet-fault|todo)\]/gm;
+  // Match lines like:  - **LEGACY-014-001** [open] ...
+  const lineRe = /^\s*-\s*\*\*([A-Z][A-Z0-9_]*-\d{3})\*\*\s*\[(open|verified|sdet-fault|todo)\]/gm;
   let match;
   while ((match = lineRe.exec(content)) !== null) {
     statuses.set(match[1], match[2]); // last match wins
@@ -271,7 +250,7 @@ function main() {
   for (const test of allTests) {
     const { ac, feature } = parseTestTitle(test.title);
     if (!ac || feature === 'UNKNOWN') {
-      verbose(`  - SKIP (no AC ID) — ${test.title}`);
+      verbose(`  - SKIP (no test_case_id) — ${test.title}`);
       summary.ignored++;
       continue;
     }

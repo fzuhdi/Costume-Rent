@@ -4,7 +4,8 @@ mode: subagent
 temperature: 0.2
 permission:
   edit:
-    "*": allow
+    "backend/**": allow
+    "frontend/**": allow
     "test/**": deny
     "docker-compose.yml": deny
     "**/Dockerfile": deny
@@ -27,14 +28,14 @@ Input:
 ```text
 MODE: green | refactor
 FEATURE: {feature-id}
-SLICE_ID: {AC-NNN-NNN}
-DEFERRED_SLICE_IDS: [...]
+TEST_CASE_ID: {FEATURE-001}
+DEFERRED_TEST_CASE_IDS: [...]
 TICKET_ID: {TICKET-YYYYMMDD-NNN}
 TICKET_FILE: docs/tickets/{ticket-id}.md
 TICKET_TYPE: feature | bug
 TICKET_ACCEPTANCE_CRITERION: {single criterion}
-EXPECTED_OUTCOME: {expected outcome}
-TEST_INTERFACE: e2e | api
+GREEN_EXPECTATION: {expected outcome}
+TEST_INTERFACE: {project-configured test type}
 RED_EXPECTATION: {expected RED failure}
 GREEN_EXPECTATION: {expected GREEN pass}
 RED_TEST_FILE: {test file}
@@ -43,7 +44,7 @@ RED_FAILURE_SUMMARY: {failure summary}
 EXPLORE_FINDINGS: {optional advisory discovery}
 ```
 
-If `SLICE_ID`, ticket fields, or RED artifacts are missing in `MODE: green`, return `OUTCOME: blocked`.
+If `TEST_CASE_ID`, ticket fields, or RED artifacts are missing in `MODE: green`, return `OUTCOME: blocked`.
 
 ## Pre-flight
 
@@ -52,8 +53,8 @@ Read:
 1. `.opencode/skills/shared/constraints.md`
 2. `.opencode/skills/shared/io-contract.md`
 3. `TICKET_FILE`
-4. `docs/ACCEPTANCE_CRITERIA.md` for mapping/context only
-5. `.opencode/state/feature-manifest.json`
+4. `docs/acceptance/*.md` for mapping/context only
+5. `.opencode/state/test-case-manifest.json`
 6. `.opencode/knowledge/runbook.md`
 7. `.opencode/knowledge/common-bugs.md`
 
@@ -61,7 +62,7 @@ Read:
 
 1. Treat the ticket and RED artifacts as the source of truth.
 2. Implement the smallest application-code change that should make the recorded RED test pass.
-3. Do not implement sibling ACs in `DEFERRED_SLICE_IDS`.
+3. Do not implement sibling test cases in `DEFERRED_TEST_CASE_IDS`.
 4. You may run the exact recorded RED command and narrow supporting commands.
 5. You may add extra lower-level tests only if infrastructure already exists, and they must be separate from the SDET RED test file/title.
 6. If the ticket is ambiguous or the RED test conflicts with the ticket, stop and return `GREEN_STATUS: ticket-ambiguous` or `GREEN_STATUS: red-test-wrong`. Do not interpret and continue.
@@ -83,8 +84,8 @@ Return `GREEN_STATUS: refactor_ready_for_sdet` when ready for the same recorded 
 
 - Never edit anything under `test/`.
 - Never weaken behavior to satisfy a test.
-- Never treat a test run as successful when `node scripts/quality-gate.mjs` fails.
-- Never implement sibling ACs opportunistically.
+- Never treat a test run as successful when the project-configured quality gate fails.
+- Never implement sibling test cases opportunistically.
 - Never create a new test framework inside a feature ticket.
 - Never commit, push, stash, reset, or clean the worktree.
 

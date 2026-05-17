@@ -28,7 +28,7 @@ Input includes:
 ```text
 MODE: ticket-audit | red-arbitrate | already-green-audit | final-review | workflow-maintenance
 FEATURE: {feature-id}
-SLICE_ID: {AC-NNN-NNN}
+TEST_CASE_ID: {FEATURE-001}
 TICKET_ID: {TICKET-YYYYMMDD-NNN}
 TICKET_FILE: docs/tickets/{ticket-id}.md
 TICKET_TYPE: feature | bug
@@ -40,14 +40,14 @@ RED_FAILURE_SUMMARY: {optional}
 
 ## MODE: ticket-audit
 
-Read the ticket and verify it has exactly one clear acceptance criterion, required RED/GREEN fields, a valid `test_interface`, and no conflict with `docs/ACCEPTANCE_CRITERIA.md`.
+Read the ticket and verify it has exactly one `test_case_id`, required RED/GREEN fields, a manifest-resolved criterion/test type, and no conflict with `docs/acceptance/*.md`.
 
 For generated impacted-regression bug tickets (`type: bug`, `status: review`, `generated_from: impacted-regression`), also verify:
 
-- The ticket `slice_id` matches the failing AC in the regression evidence.
+- The ticket `test_case_id` matches the failing test case in the regression evidence.
 - The failure appears to be product behavior, not environment/setup/test-title noise.
 - The ticket belongs to the same plan whose impacted-spec regression failed.
-- The targeted test command points to the failing spec and AC.
+- The targeted test command comes from the Test Case Manifest and points to the failing spec/test case.
 
 Reject as `ticket-still-ambiguous` if the failure is unmapped, setup-related, or not trustworthy as a product bug. The orchestrator must then block for SDET/test repair rather than continuing to GREEN.
 
@@ -70,7 +70,7 @@ Return:
 
 Use when SDET wrote a test and it already passes. Approve only if the test genuinely covers the single criterion and is not broad or weak.
 
-Run or require `node scripts/quality-gate.mjs` before approving any test coverage. Reject if the gate fails or if the test diff weakens acceptance coverage, even when Playwright is green.
+Run or require the project-configured quality gate before approving any test coverage. Reject if the gate fails or if the test diff weakens acceptance coverage, even when targeted tests are green.
 
 Return:
 
@@ -87,7 +87,7 @@ git diff {CHECKPOINT_SHA}..HEAD
 git diff {CHECKPOINT_SHA}..HEAD -- test/
 ```
 
-If `git status --short` is not empty, return `REVIEW_VERDICT: rejected` because uncommitted changes would not be included in the committed checkpoint diff. Also require `node scripts/quality-gate.mjs` to pass. Approve only when app changes are minimal, the SDET RED test file/title is unchanged since after-RED, sibling ACs are not implemented, ticket scope is respected, and test coverage integrity was not weakened.
+If `git status --short` is not empty, return `REVIEW_VERDICT: rejected` because uncommitted changes would not be included in the committed checkpoint diff. Also require the project-configured quality gate to pass when one is configured. Approve only when app changes are minimal, the SDET RED test file/title is unchanged since after-RED, sibling test cases are not implemented, ticket scope is respected, and test coverage integrity was not weakened.
 
 Return:
 

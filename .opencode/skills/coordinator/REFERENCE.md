@@ -92,7 +92,7 @@ The coordinator is above the existing workflow engine but below the user. It sch
 
 Lower-level rules remain binding, including:
 
-- one executable acceptance slice per ticket
+- one executable acceptance test case per ticket
 - validation before implementation
 - developer does not edit SDET-owned acceptance tests
 - reviewer rejection is binding

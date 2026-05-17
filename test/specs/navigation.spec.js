@@ -19,8 +19,8 @@ test.describe('Navigation & UI', () => {
     await expect(page.locator('body')).not.toBeEmpty();
   });
 
-  // AC-025: Sidebar Navigation
-  test('[AC-025-001] - Katalog menu links to /catalogue', async ({ page }) => {
+  // NAVIGATION: Sidebar Navigation
+  test('[NAVIGATION-001] - Katalog menu links to /catalogue', async ({ page }) => {
     const sidebarPage = new SidebarPage(page);
     await sidebarPage.clickPeminjaman();
     await expect(page).toHaveURL(/\/rents/);
@@ -29,29 +29,29 @@ test.describe('Navigation & UI', () => {
     await expect(sidebarPage.katalogLink).toHaveClass(/bg-\[var\(--primary\)\]\/15/);
   });
 
-  test('[AC-025-002] - Peminjaman menu links to /rents', async ({ page }) => {
+  test('[NAVIGATION-002] - Peminjaman menu links to /rents', async ({ page }) => {
     const sidebarPage = new SidebarPage(page);
     await sidebarPage.clickPeminjaman();
     await expect(page).toHaveURL(/\/rents/);
     await expect(sidebarPage.peminjamanLink).toHaveClass(/bg-\[var\(--primary\)\]\/15/);
   });
 
-  test('[AC-025-003] - Klien menu links to /clients', async ({ page }) => {
+  test('[NAVIGATION-003] - Klien menu links to /clients', async ({ page }) => {
     const sidebarPage = new SidebarPage(page);
     await sidebarPage.clickKlien();
     await expect(page).toHaveURL(/\/clients/);
     await expect(sidebarPage.klienLink).toHaveClass(/bg-\[var\(--primary\)\]\/15/);
   });
 
-  test('[AC-025-004] - Pengaturan menu links to /settings', async ({ page }) => {
+  test('[NAVIGATION-004] - Pengaturan menu links to /settings', async ({ page }) => {
     const sidebarPage = new SidebarPage(page);
     await sidebarPage.clickPengaturan();
     await expect(page).toHaveURL(/\/settings/);
     await expect(sidebarPage.pengaturanLink).toHaveClass(/bg-\[var\(--primary\)\]\/15/);
   });
 
-  // AC-026: Direct URL Access
-  test('[AC-026-001] - All routes accessible via direct URL when authenticated', async ({ page }) => {
+  // NAVIGATION: Direct URL Access
+  test('[NAVIGATION-005] - All routes accessible via direct URL when authenticated', async ({ page }) => {
     await page.goto('/catalogue');
     await expect(page).toHaveURL(/\/catalogue/);
     await page.goto('/rents');
@@ -62,7 +62,7 @@ test.describe('Navigation & UI', () => {
     await expect(page).toHaveURL(/\/settings/);
   });
 
-  test('[AC-026-002] - Unauthenticated access redirects to login', async ({ page, context }) => {
+  test('[NAVIGATION-006] - Unauthenticated access redirects to login', async ({ page, context }) => {
     await context.clearCookies();
     await page.goto('/catalogue');
     await expect(page).toHaveURL(/\/login/);
@@ -72,13 +72,13 @@ test.describe('Navigation & UI', () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test('[AC-026-003] - 404 page for unknown routes', async ({ page }) => {
+  test('[NAVIGATION-007] - 404 page for unknown routes', async ({ page }) => {
     await page.goto('/nonexistent-page-xyz');
     await expect(page.locator('body')).toContainText(/404|not found|tidak ditemukan/i);
   });
 
-  // AC-027: Responsive Design
-  test('[AC-027-001] - Usable on desktop viewport', async ({ page }) => {
+  // NAVIGATION: Responsive Design
+  test('[NAVIGATION-008] - Usable on desktop viewport', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await expect(page.locator('aside').first()).toBeVisible();
     const body = page.locator('body');
@@ -87,15 +87,15 @@ test.describe('Navigation & UI', () => {
     expect(layout).toBeTruthy();
   });
 
-  test('[AC-027-002] - Usable on mobile viewport', async ({ page }) => {
+  test('[NAVIGATION-009] - Usable on mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await expect(page.locator('body')).toBeVisible();
     const bodyText = await page.locator('body').textContent();
     expect(bodyText.length).toBeGreaterThan(0);
   });
 
-  // AC-025-005: Active sidebar link is highlighted
-  test('[AC-025-005] - Active sidebar link is highlighted', async ({ page }) => {
+  // NAVIGATION-010: Active sidebar link is highlighted
+  test('[NAVIGATION-010] - Active sidebar link is highlighted', async ({ page }) => {
     const sidebarPage = new SidebarPage(page);
     await sidebarPage.clickPeminjaman();
     await expect(page).toHaveURL(/\/rents/);
@@ -104,15 +104,15 @@ test.describe('Navigation & UI', () => {
     expect(className).toMatch(/bg-\[var\(--primary\)\]\/15/);
   });
 
-  // AC-026-004: 404 page has link back to catalogue
-  test('[AC-026-004] - 404 page has link back to catalogue', async ({ page }) => {
+  // NAVIGATION-011: 404 page has link back to catalogue
+  test('[NAVIGATION-011] - 404 page has link back to catalogue', async ({ page }) => {
     await page.goto('/nonexistent-page-xyz');
     const catalogueLink = page.locator('a[href="/catalogue"], button:has-text("Katalog")').first();
     await expect(catalogueLink).toBeVisible();
   });
 
-  // AC-027-003: Dark mode toggle switches theme (AC-041)
-  test('[AC-027-003] - Dark mode toggle switches theme', async ({ page }) => {
+  // NAVIGATION-012: Dark mode toggle switches theme (NAVIGATION)
+  test('[NAVIGATION-012] - Dark mode toggle switches theme', async ({ page }) => {
     const navbarPage = new (require('../pages/NavbarPage.js')).NavbarPage(page);
     // Click theme toggle
     await navbarPage.toggleTheme();
@@ -125,8 +125,8 @@ test.describe('Navigation & UI', () => {
     await navbarPage.assertDarkMode(false);
   });
 
-  // AC-027-004: Dark mode preference persists on reload (AC-041)
-  test('[AC-027-004] - Dark mode preference persists on reload', async ({ page }) => {
+  // NAVIGATION-013: Dark mode preference persists on reload (NAVIGATION)
+  test('[NAVIGATION-013] - Dark mode preference persists on reload', async ({ page }) => {
     const navbarPage = new (require('../pages/NavbarPage.js')).NavbarPage(page);
     await navbarPage.toggleTheme();
     const theme = await page.evaluate(() => localStorage.getItem('heroui-theme'));

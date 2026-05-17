@@ -51,7 +51,7 @@ Substantial workflow changes should document:
 
 - Parse `.opencode/opencode.json` after config edits.
 - Check changed JavaScript helpers with `node --check`.
-- Run `node scripts/quality-gate.mjs` after quality-gate, test-helper, or acceptance-policy changes.
+- Run the project-configured quality gate after quality-gate, test-helper, or acceptance-policy changes when a gate is configured.
 - Grep for stale names after renames.
 - Grep for duplicate policy when adding workflow docs.
 

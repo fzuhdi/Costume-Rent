@@ -12,8 +12,8 @@ test.describe('Notifications', () => {
     await expect(page.locator('body')).not.toBeEmpty();
   });
 
-  // AC-018: Overdue Rental Alerts
-  test('[AC-018-001] - Badge shows count of overdue rentals', async ({ page }) => {
+  // NOTIFICATION: Overdue Rental Alerts
+  test('[NOTIFICATION-001] - Badge shows count of overdue rentals', async ({ page }) => {
     const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await expect(notificationBell).toBeVisible();
     const badge = notificationBell.locator('[data-slot="badge"]');
@@ -25,7 +25,7 @@ test.describe('Notifications', () => {
     }
   });
 
-  test('[AC-018-002] - Alert displays for rentals past end date', async ({ page }) => {
+  test('[NOTIFICATION-002] - Alert displays for rentals past end date', async ({ page }) => {
     const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await notificationBell.click();
     const dropdown = page.locator('.max-h-80');
@@ -36,8 +36,8 @@ test.describe('Notifications', () => {
     expect(hasOverdueText || hasPastDueText).toBeTruthy();
   });
 
-  // AC-019: Due Soon Reminders
-  test('[AC-019-001] - Reminder for rentals due within 3 days', async ({ page }) => {
+  // NOTIFICATION: Due Soon Reminders
+  test('[NOTIFICATION-003] - Reminder for rentals due within 3 days', async ({ page }) => {
     const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await notificationBell.click();
     const dropdown = page.locator('.max-h-80');
@@ -47,15 +47,15 @@ test.describe('Notifications', () => {
     expect(hasDueSoonText || dropdown).toBeTruthy();
   });
 
-  test('[AC-019-002] - Notification displayed in navbar', async ({ page }) => {
+  test('[NOTIFICATION-004] - Notification displayed in navbar', async ({ page }) => {
     const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await expect(notificationBell).toBeVisible();
     const bellIcon = notificationBell.locator('svg');
     await expect(bellIcon).toBeVisible();
   });
 
-  // AC-020: Notification Bell
-  test('[AC-020-001] - Click bell shows notification dropdown', async ({ page }) => {
+  // NOTIFICATION: Notification Bell
+  test('[NOTIFICATION-005] - Click bell shows notification dropdown', async ({ page }) => {
     const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await notificationBell.click();
     const dropdown = page.locator('.max-h-80');
@@ -64,7 +64,7 @@ test.describe('Notifications', () => {
     await expect(heading).toBeVisible();
   });
 
-  test('[AC-020-002] - List of overdue and due soon rentals', async ({ page }) => {
+  test('[NOTIFICATION-006] - List of overdue and due soon rentals', async ({ page }) => {
     const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await notificationBell.click();
     const dropdown = page.locator('.max-h-80');
@@ -75,8 +75,8 @@ test.describe('Notifications', () => {
     expect(hasItems || false).toBeTruthy();
   });
 
-  // AC-018-003: Badge count matches API count
-  test('[AC-018-003] - Badge count matches API count', async ({ page }) => {
+  // NOTIFICATION-007: Badge count matches API count
+  test('[NOTIFICATION-007] - Badge count matches API count', async ({ page }) => {
     // Get count from API
     const token = await page.evaluate(() => localStorage.getItem('token'));
     const response = await page.evaluate(async (token) => {
@@ -99,8 +99,8 @@ test.describe('Notifications', () => {
     }
   });
 
-  // AC-018-004: Badge hidden when count is 0
-  test('[AC-018-004] - Badge hidden when count is 0', async ({ page }) => {
+  // NOTIFICATION-008: Badge hidden when count is 0
+  test('[NOTIFICATION-008] - Badge hidden when count is 0', async ({ page }) => {
     const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     const badge = notificationBell.locator('[data-slot="badge"]');
     const isVisible = await badge.isVisible().catch(() => false);
@@ -113,8 +113,8 @@ test.describe('Notifications', () => {
     }
   });
 
-  // AC-020-003: Notification item shows client name and rent_end date
-  test('[AC-020-003] - Notification item shows client name and rent_end date', async ({ page }) => {
+  // NOTIFICATION-009: Notification item shows client name and rent_end date
+  test('[NOTIFICATION-009] - Notification item shows client name and rent_end date', async ({ page }) => {
     const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await notificationBell.click();
     const dropdown = page.locator('.max-h-80');
@@ -127,8 +127,8 @@ test.describe('Notifications', () => {
     }
   });
 
-  // AC-020-004: Overdue items are visually distinct from due_soon
-  test('[AC-020-004] - Overdue items are visually distinct from due_soon', async ({ page }) => {
+  // NOTIFICATION-010: Overdue items are visually distinct from due_soon
+  test('[NOTIFICATION-010] - Overdue items are visually distinct from due_soon', async ({ page }) => {
     const notificationBell = page.locator('button[aria-label="Notifikasi"]');
     await notificationBell.click();
     const dropdown = page.locator('.max-h-80');

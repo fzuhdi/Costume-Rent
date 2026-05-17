@@ -24,14 +24,14 @@ Input:
 ```text
 MODE: red | run-green
 FEATURE: {feature-id}
-SLICE_ID: {AC-NNN-NNN}
-DEFERRED_SLICE_IDS: [...]
+TEST_CASE_ID: {FEATURE-001}
+DEFERRED_TEST_CASE_IDS: [...]
 TICKET_ID: {TICKET-YYYYMMDD-NNN}
 TICKET_FILE: docs/tickets/{ticket-id}.md
 TICKET_TYPE: feature | bug
 TICKET_ACCEPTANCE_CRITERION: {single criterion}
-EXPECTED_OUTCOME: {expected outcome}
-TEST_INTERFACE: e2e | api
+EXPECTED_OUTCOME: {manifest expected outcome}
+TEST_INTERFACE: {project-configured test type}
 RED_EXPECTATION: {expected RED failure}
 GREEN_EXPECTATION: {expected GREEN pass}
 RECORDED_TEST_FILE: {for run-green}
@@ -47,16 +47,16 @@ Read:
 1. `.opencode/skills/shared/constraints.md`
 2. `.opencode/skills/shared/io-contract.md`
 3. `TICKET_FILE`
-4. `docs/ACCEPTANCE_CRITERIA.md` for mapping/context only
-5. `.opencode/state/feature-manifest.json`
+4. `docs/acceptance/*.md` for mapping/context only
+5. `.opencode/state/test-case-manifest.json`
 
 ## MODE: red
 
 1. Write exactly one primary acceptance test for the ticket criterion. Helper/setup code is allowed.
 2. Use `TEST_INTERFACE` exactly. If it is wrong for the behavior, return `RED_STATUS: blocked` with reason `test interface mismatch`.
-3. The test title must include `SLICE_ID`.
+3. The test title must include `TEST_CASE_ID`.
 4. Run the targeted RED command.
-5. If any file under `test/**` changed, run `node scripts/quality-gate.mjs` from the repo root. If it fails, return `RED_STATUS: blocked` with the gate findings.
+5. If any adapter-declared test root changed, run the project-configured quality gate when one is configured. If it fails, return `RED_STATUS: blocked` with the gate findings.
 6. Return:
    - `RED_STATUS: failing_expected` only when the test fails for the expected product-behavior reason.
    - `RED_STATUS: already_green` only when the test genuinely covers the criterion and already passes.
@@ -79,9 +79,9 @@ Test state rules:
 
 1. Do not edit tests.
 2. Rerun only the recorded acceptance test using `RECORDED_TEST_FILE` and `RECORDED_TEST_TITLE`.
-3. Return `SLICE_STATUS: verified` only when that exact test passes.
-4. Return `SLICE_STATUS: open` when product behavior still fails.
-5. Return `SLICE_STATUS: todo` when setup/environment prevents validation.
+3. Return `TEST_CASE_STATUS: verified` only when that exact test passes.
+4. Return `TEST_CASE_STATUS: open` when product behavior still fails.
+5. Return `TEST_CASE_STATUS: todo` when setup/environment prevents validation.
 
 ## Hard Prohibitions
 

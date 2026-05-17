@@ -50,18 +50,18 @@ async function createTestClient(request, token) {
   return null;
 }
 
-test.describe('AC-028 to AC-040: API Endpoints', () => {
+test.describe('API Endpoints', () => {
 
-  // ── AC-028: Public Endpoints ───────────────────────────────────
+  // ── API: Public Endpoints ───────────────────────────────────
 
-  test('[AC-028-001] - GET /api/health returns 200', async ({ request }) => {
+  test('[API-001] - GET /api/health returns 200', async ({ request }) => {
     const response = await request.get('/api/health');
     expect(response.status()).toBe(200);
     const body = await response.json();
     expect(body.status).toBe('ok');
   });
 
-  test('[AC-028-002] - GET /api/settings returns 200 without auth', async ({ request }) => {
+  test('[API-002] - GET /api/settings returns 200 without auth', async ({ request }) => {
     const response = await request.get('/api/settings');
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -69,7 +69,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(body).toHaveProperty('app_tagline');
   });
 
-  test('[AC-028-003] - GET /api/regions returns array (public)', async ({ request }) => {
+  test('[API-003] - GET /api/regions returns array (public)', async ({ request }) => {
     const response = await request.get('/api/regions');
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -80,14 +80,14 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  test('[AC-028-004] - POST /api/regions without auth returns 401', async ({ request }) => {
+  test('[API-004] - POST /api/regions without auth returns 401', async ({ request }) => {
     const response = await request.post('/api/regions', {
       data: { name: 'Test Region' }
     });
     expect(response.status()).toBe(401);
   });
 
-  test('[AC-028-005] - POST /api/regions with auth creates region', async ({ request }) => {
+  test('[API-005] - POST /api/regions with auth creates region', async ({ request }) => {
     const token = await getToken(request);
     const response = await request.post('/api/regions', {
       headers: { Authorization: `Bearer ${token}` },
@@ -99,7 +99,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(body).toHaveProperty('name');
   });
 
-  test('[AC-028-006] - POST /api/regions duplicate name returns error', async ({ request }) => {
+  test('[API-006] - POST /api/regions duplicate name returns error', async ({ request }) => {
     const token = await getToken(request);
     // First create a region
     const name = 'API_REGION_AC028_DUPLICATE_' + Date.now();
@@ -117,7 +117,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(body.message || body.error).toMatch(/duplicate|already exists|sudah/i);
   });
 
-  test('[AC-028-007] - GET /api/categories returns array (public)', async ({ request }) => {
+  test('[API-007] - GET /api/categories returns array (public)', async ({ request }) => {
     const response = await request.get('/api/categories');
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -128,16 +128,16 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  test('[AC-028-008] - POST /api/categories without auth returns 401', async ({ request }) => {
+  test('[API-008] - POST /api/categories without auth returns 401', async ({ request }) => {
     const response = await request.post('/api/categories', {
       data: { name: 'Test Category' }
     });
     expect(response.status()).toBe(401);
   });
 
-  // ── AC-029: Authentication Endpoints ──────────────────────────────
+  // ── API: Authentication Endpoints ──────────────────────────────
 
-  test('[AC-029-001] - POST /api/auth/login with valid credentials', async ({ request }) => {
+  test('[API-009] - POST /api/auth/login with valid credentials', async ({ request }) => {
     const response = await request.post('/api/auth/login', {
       data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD }
     });
@@ -147,21 +147,21 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(body.token.length).toBeGreaterThan(0);
   });
 
-  test('[AC-029-002] - POST /api/auth/login with wrong password', async ({ request }) => {
+  test('[API-010] - POST /api/auth/login with wrong password', async ({ request }) => {
     const response = await request.post('/api/auth/login', {
       data: { email: ADMIN_EMAIL, password: 'wrongpassword' }
     });
     expect(response.status()).toBe(401);
   });
 
-  test('[AC-029-003] - POST /api/auth/login with unknown email', async ({ request }) => {
+  test('[API-011] - POST /api/auth/login with unknown email', async ({ request }) => {
     const response = await request.post('/api/auth/login', {
       data: { email: 'unknown@test.com', password: 'test123' }
     });
     expect(response.status()).toBe(401);
   });
 
-  test('[AC-029-004] - GET /api/auth/me with token', async ({ request }) => {
+  test('[API-012] - GET /api/auth/me with token', async ({ request }) => {
     const token = await getToken(request);
     const response = await request.get('/api/auth/me', {
       headers: { Authorization: `Bearer ${token}` }
@@ -171,12 +171,12 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(body).toHaveProperty('email');
   });
 
-  test('[AC-029-005] - GET /api/auth/me without token', async ({ request }) => {
+  test('[API-013] - GET /api/auth/me without token', async ({ request }) => {
     const response = await request.get('/api/auth/me');
     expect(response.status()).toBe(401);
   });
 
-  test('[AC-029-006] - POST /api/auth/logout with token', async ({ request }) => {
+  test('[API-014] - POST /api/auth/logout with token', async ({ request }) => {
     const token = await getToken(request);
     const response = await request.post('/api/auth/logout', {
       headers: { Authorization: `Bearer ${token}` }
@@ -184,14 +184,14 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(response.status()).toBe(200);
   });
 
-  test('[AC-029-007] - POST /api/auth/logout without token', async ({ request }) => {
+  test('[API-015] - POST /api/auth/logout without token', async ({ request }) => {
     const response = await request.post('/api/auth/logout');
     expect(response.status()).toBe(401);
   });
 
-  // ── AC-030: Protected Endpoints - Costumes ─────────────────────
+  // ── API: Protected Endpoints - Costumes ─────────────────────
 
-  test('[AC-030-001] - GET /api/costumes returns paginated list', async ({ request }) => {
+  test('[API-016] - GET /api/costumes returns paginated list', async ({ request }) => {
     const response = await request.get('/api/costumes');
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -205,28 +205,28 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  test('[AC-030-002] - GET /api/costumes with search param', async ({ request }) => {
+  test('[API-017] - GET /api/costumes with search param', async ({ request }) => {
     const response = await request.get('/api/costumes?search=test');
     expect(response.status()).toBe(200);
     const body = await response.json();
     expect(body).toHaveProperty('data');
   });
 
-  test('[AC-030-003] - GET /api/costumes pagination', async ({ request }) => {
+  test('[API-018] - GET /api/costumes pagination', async ({ request }) => {
     const response = await request.get('/api/costumes?page=1&limit=2');
     expect(response.status()).toBe(200);
     const body = await response.json();
     expect(body.data.length).toBeLessThanOrEqual(2);
   });
 
-  test('[AC-030-004] - GET /api/costumes limit capped at 100', async ({ request }) => {
+  test('[API-019] - GET /api/costumes limit capped at 100', async ({ request }) => {
     const response = await request.get('/api/costumes?limit=999');
     expect(response.status()).toBe(200);
     const body = await response.json();
     expect(body.data.length).toBeLessThanOrEqual(100);
   });
 
-  test('[AC-030-005] - GET /api/costumes/search with auth', async ({ request }) => {
+  test('[API-020] - GET /api/costumes/search with auth', async ({ request }) => {
     const token = await getToken(request);
     const response = await request.get('/api/costumes/search?q=a', {
       headers: { Authorization: `Bearer ${token}` }
@@ -239,7 +239,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  test('[AC-030-006] - GET /api/costumes/:id returns detail', async ({ request }) => {
+  test('[API-021] - GET /api/costumes/:id returns detail', async ({ request }) => {
     const token = await getToken(request);
     // Get first costume from list
     const listResponse = await request.get('/api/costumes');
@@ -254,26 +254,26 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  test('[AC-030-007] - GET /api/costumes/:id not found', async ({ request }) => {
+  test('[API-022] - GET /api/costumes/:id not found', async ({ request }) => {
     const response = await request.get('/api/costumes/99999999');
     expect(response.status()).toBe(404);
   });
 
-  test('[AC-030-008] - GET /api/costumes/abc invalid ID', async ({ request }) => {
+  test('[API-023] - GET /api/costumes/abc invalid ID', async ({ request }) => {
     const response = await request.get('/api/costumes/abc');
     expect(response.status()).toBe(400);
     const body = await response.json();
     expect(body.message || body.error).toMatch(/invalid|tidak valid/i);
   });
 
-  test('[AC-030-009] - POST /api/costumes without auth returns 401', async ({ request }) => {
+  test('[API-024] - POST /api/costumes without auth returns 401', async ({ request }) => {
     const response = await request.post('/api/costumes', {
       data: { name: 'Test', quantity: 1 }
     });
     expect(response.status()).toBe(401);
   });
 
-  test('[AC-030-010] - POST /api/costumes with auth and valid body', async ({ request }) => {
+  test('[API-025] - POST /api/costumes with auth and valid body', async ({ request }) => {
     const token = await getToken(request);
     const response = await request.post('/api/costumes', {
       headers: { Authorization: `Bearer ${token}` },
@@ -288,7 +288,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(body).toHaveProperty('id');
   });
 
-  test('[AC-030-011] - POST /api/costumes missing name returns 400', async ({ request }) => {
+  test('[API-026] - POST /api/costumes missing name returns 400', async ({ request }) => {
     const token = await getToken(request);
     const response = await request.post('/api/costumes', {
       headers: { Authorization: `Bearer ${token}` },
@@ -297,14 +297,14 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(response.status()).toBe(400);
   });
 
-  test('[AC-030-012] - PUT /api/costumes/:id without auth returns 401', async ({ request }) => {
+  test('[API-027] - PUT /api/costumes/:id without auth returns 401', async ({ request }) => {
     const response = await request.put('/api/costumes/1', {
       data: { name: 'Updated' }
     });
     expect(response.status()).toBe(401);
   });
 
-  test('[AC-030-013] - PUT /api/costumes/:id updates fields', async ({ request }) => {
+  test('[API-028] - PUT /api/costumes/:id updates fields', async ({ request }) => {
     const token = await getToken(request);
     const costumeId = await createTestCostume(request, token);
     if (costumeId) {
@@ -318,12 +318,12 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  test('[AC-030-014] - DELETE /api/costumes/:id without auth returns 401', async ({ request }) => {
+  test('[API-029] - DELETE /api/costumes/:id without auth returns 401', async ({ request }) => {
     const response = await request.delete('/api/costumes/1');
     expect(response.status()).toBe(401);
   });
 
-  test('[AC-030-015] - DELETE /api/costumes/:id with auth', async ({ request }) => {
+  test('[API-030] - DELETE /api/costumes/:id with auth', async ({ request }) => {
     const token = await getToken(request);
     const costumeId = await createTestCostume(request, token);
     if (costumeId) {
@@ -334,14 +334,14 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  // ── AC-030: Protected Endpoints - Clients ────────────────────────
+  // ── API: Protected Endpoints - Clients ────────────────────────
 
-  test('[AC-030-016] - GET /api/clients without auth returns 401', async ({ request }) => {
+  test('[API-031] - GET /api/clients without auth returns 401', async ({ request }) => {
     const response = await request.get('/api/clients');
     expect(response.status()).toBe(401);
   });
 
-  test('[AC-030-017] - GET /api/clients with auth returns paginated', async ({ request }) => {
+  test('[API-032] - GET /api/clients with auth returns paginated', async ({ request }) => {
     const token = await getToken(request);
     const response = await request.get('/api/clients', {
       headers: { Authorization: `Bearer ${token}` }
@@ -357,7 +357,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  test('[AC-030-018] - GET /api/clients/search with auth', async ({ request }) => {
+  test('[API-033] - GET /api/clients/search with auth', async ({ request }) => {
     const token = await getToken(request);
     const response = await request.get('/api/clients/search?q=test', {
       headers: { Authorization: `Bearer ${token}` }
@@ -367,7 +367,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(Array.isArray(body)).toBe(true);
   });
 
-  test('[AC-030-019] - GET /api/clients/:id with auth', async ({ request }) => {
+  test('[API-034] - GET /api/clients/:id with auth', async ({ request }) => {
     const token = await getToken(request);
     const listResponse = await request.get('/api/clients', {
       headers: { Authorization: `Bearer ${token}` }
@@ -384,7 +384,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  test('[AC-030-020] - GET /api/clients/99999999 returns 404', async ({ request }) => {
+  test('[API-035] - GET /api/clients/99999999 returns 404', async ({ request }) => {
     const token = await getToken(request);
     const response = await request.get('/api/clients/99999999', {
       headers: { Authorization: `Bearer ${token}` }
@@ -392,7 +392,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(response.status()).toBe(404);
   });
 
-  test('[AC-030-021] - POST /api/clients with auth creates client', async ({ request }) => {
+  test('[API-036] - POST /api/clients with auth creates client', async ({ request }) => {
     const token = await getToken(request);
     const response = await request.post('/api/clients', {
       headers: { Authorization: `Bearer ${token}` },
@@ -407,7 +407,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(body).toHaveProperty('id');
   });
 
-  test('[AC-030-022] - GET /api/clients/:id/rents with auth', async ({ request }) => {
+  test('[API-037] - GET /api/clients/:id/rents with auth', async ({ request }) => {
     const token = await getToken(request);
     const listResponse = await request.get('/api/clients', {
       headers: { Authorization: `Bearer ${token}` }
@@ -424,7 +424,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  test('[AC-030-039] - GET /api/clients/abc invalid ID returns 400', async ({ request }) => {
+  test('[API-038] - GET /api/clients/abc invalid ID returns 400', async ({ request }) => {
     const token = await getToken(request);
     const response = await request.get('/api/clients/abc', {
       headers: { Authorization: `Bearer ${token}` }
@@ -432,14 +432,14 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(response.status()).toBe(400);
   });
 
-  // ── AC-030: Protected Endpoints - Rentals ────────────────────────
+  // ── API: Protected Endpoints - Rentals ────────────────────────
 
-  test('[AC-030-023] - GET /api/rents without auth returns 401', async ({ request }) => {
+  test('[API-039] - GET /api/rents without auth returns 401', async ({ request }) => {
     const response = await request.get('/api/rents');
     expect(response.status()).toBe(401);
   });
 
-  test('[AC-030-024] - GET /api/rents with auth returns paginated', async ({ request }) => {
+  test('[API-040] - GET /api/rents with auth returns paginated', async ({ request }) => {
     const token = await getToken(request);
     const response = await request.get('/api/rents', {
       headers: { Authorization: `Bearer ${token}` }
@@ -455,7 +455,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  test('[AC-030-025] - GET /api/rents?status=active', async ({ request }) => {
+  test('[API-041] - GET /api/rents?status=active', async ({ request }) => {
     const token = await getToken(request);
     const response = await request.get('/api/rents?status=active', {
       headers: { Authorization: `Bearer ${token}` }
@@ -467,7 +467,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  test('[AC-030-026] - POST /api/rents with valid payload', async ({ request }) => {
+  test('[API-042] - POST /api/rents with valid payload', async ({ request }) => {
     const token = await getToken(request);
     // Get a client
     const clientResponse = await request.get('/api/clients', {
@@ -500,7 +500,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  test('[AC-030-027] - POST /api/rents missing guarantee_type returns 400', async ({ request }) => {
+  test('[API-043] - POST /api/rents missing guarantee_type returns 400', async ({ request }) => {
     const token = await getToken(request);
     const today = new Date().toISOString().split('T')[0];
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -516,7 +516,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect([400, 422]).toContain(response.status());
   });
 
-  test('[AC-030-028] - POST /api/rents missing rent_start returns 400', async ({ request }) => {
+  test('[API-044] - POST /api/rents missing rent_start returns 400', async ({ request }) => {
     const token = await getToken(request);
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
     const response = await request.post('/api/rents', {
@@ -530,7 +530,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect([400, 422]).toContain(response.status());
   });
 
-  test('[AC-030-029] - POST /api/rents empty items returns 400', async ({ request }) => {
+  test('[API-045] - POST /api/rents empty items returns 400', async ({ request }) => {
     const token = await getToken(request);
     const today = new Date().toISOString().split('T')[0];
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -546,7 +546,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect([400, 422]).toContain(response.status());
   });
 
-  test('[AC-030-030] - POST /api/rents rent_end before rent_start', async ({ request }) => {
+  test('[API-046] - POST /api/rents rent_end before rent_start', async ({ request }) => {
     const token = await getToken(request);
     const today = new Date().toISOString().split('T')[0];
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -564,7 +564,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(body.message || body.error).toMatch(/rent_end must be after rent_start/i);
   });
 
-  test('[AC-030-031] - POST /api/rents quantity exceeds available', async ({ request }) => {
+  test('[API-047] - POST /api/rents quantity exceeds available', async ({ request }) => {
     const token = await getToken(request);
     // Get a costume and check its available quantity
     const costumeResponse = await request.get('/api/costumes');
@@ -595,7 +595,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  test('[AC-030-032] - POST /api/rents invalid costume_id', async ({ request }) => {
+  test('[API-048] - POST /api/rents invalid costume_id', async ({ request }) => {
     const token = await getToken(request);
     const today = new Date().toISOString().split('T')[0];
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -613,7 +613,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(body.message || body.error).toMatch(/costume not found/i);
   });
 
-  test('[AC-030-033] - PUT /api/rents/:id/return with auth', async ({ request }) => {
+  test('[API-049] - PUT /api/rents/:id/return with auth', async ({ request }) => {
     const token = await getToken(request);
     // Create a rental first
     const clientResponse = await request.get('/api/clients', {
@@ -652,7 +652,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  test('[AC-030-034] - DELETE /api/rents/:id with auth', async ({ request }) => {
+  test('[API-050] - DELETE /api/rents/:id with auth', async ({ request }) => {
     const token = await getToken(request);
     // Create a rental first
     const clientResponse = await request.get('/api/clients', {
@@ -689,7 +689,7 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  test('[AC-030-039] - GET /api/rents/abc invalid ID returns 400', async ({ request }) => {
+  test('[API-051] - GET /api/rents/abc invalid ID returns 400', async ({ request }) => {
     const token = await getToken(request);
     const response = await request.get('/api/rents/abc', {
       headers: { Authorization: `Bearer ${token}` }
@@ -697,14 +697,14 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(response.status()).toBe(400);
   });
 
-  // ── AC-030: Notifications ──────────────────────────────────────────
+  // ── API: Notifications ──────────────────────────────────────────
 
-  test('[AC-030-035] - GET /api/notifications without auth returns 401', async ({ request }) => {
+  test('[API-052] - GET /api/notifications without auth returns 401', async ({ request }) => {
     const response = await request.get('/api/notifications');
     expect(response.status()).toBe(401);
   });
 
-  test('[AC-030-036] - GET /api/notifications with auth', async ({ request }) => {
+  test('[API-053] - GET /api/notifications with auth', async ({ request }) => {
     const token = await getToken(request);
     const response = await request.get('/api/notifications', {
       headers: { Authorization: `Bearer ${token}` }
@@ -724,16 +724,16 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     }
   });
 
-  // ── AC-030: Settings ─────────────────────────────────────────────────
+  // ── API: Settings ─────────────────────────────────────────────────
 
-  test('[AC-030-037] - PUT /api/settings without auth returns 401', async ({ request }) => {
+  test('[API-054] - PUT /api/settings without auth returns 401', async ({ request }) => {
     const response = await request.put('/api/settings', {
       data: { app_name: 'Test' }
     });
     expect(response.status()).toBe(401);
   });
 
-  test('[AC-030-038] - PUT /api/settings with auth updates app_name', async ({ request }) => {
+  test('[API-055] - PUT /api/settings with auth updates app_name', async ({ request }) => {
     const token = await getToken(request);
     const newName = 'API_SETTINGS_AC030_UPDATE_' + Date.now();
     const response = await request.put('/api/settings', {
@@ -747,9 +747,9 @@ test.describe('AC-028 to AC-040: API Endpoints', () => {
     expect(body.app_name).toBe(newName);
   });
 
-  // ── AC-040: Duplicate Category ────────────────────────────────────
+  // ── API: Duplicate Category ────────────────────────────────────
 
-  test('[AC-040-001] - POST /api/categories duplicate name returns error', async ({ request }) => {
+  test('[API-056] - POST /api/categories duplicate name returns error', async ({ request }) => {
     const token = await getToken(request);
     const name = 'API_CATEGORY_AC040_DUPLICATE_' + Date.now();
     // First create

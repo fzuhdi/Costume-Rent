@@ -22,8 +22,8 @@ test.describe('Rental Management', () => {
     await expect(page.locator('h1, h2').first()).toBeVisible();
   });
 
-  // AC-009-001: View Rental List — navigate to /rents and display all rentals with status chip/badge
-  test('[AC-009-001] - Display all rentals with status chip/badge', async ({ page }) => {
+  // RENT-001: View Rental List — navigate to /rents and display all rentals with status chip/badge
+  test('[RENT-001] - Display all rentals with status chip/badge', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     // Page heading confirms we are on the rental list
@@ -37,7 +37,7 @@ test.describe('Rental Management', () => {
     await expect(firstRowChip).toBeVisible();
   });
 
-  test('[AC-009-002] - Filter by status active and returned', async ({ page }) => {
+  test('[RENT-002] - Filter by status active and returned', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     const statusFilter = page.locator('button:has-text("Semua Status")');
@@ -47,8 +47,8 @@ test.describe('Rental Management', () => {
     await expect(page.locator('[role="option"]:has-text("Dikembalikan")')).toBeVisible();
   });
 
-  // AC-010: Create New Rental
-  test('[AC-010-001] - Navigate to /rents/new and submit rental', async ({ page }) => {
+  // RENT: Create New Rental
+  test('[RENT-003] - Navigate to /rents/new and submit rental', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     await rentHistoryPage.clickNewRent();
@@ -61,8 +61,8 @@ test.describe('Rental Management', () => {
     await expect(rentFormPage.rentEndInput).toBeVisible();
   });
 
-  // AC-011: View Rental Detail
-  test('[AC-011-001] - View rental details with client info and costumes', async ({ page }) => {
+  // RENT: View Rental Detail
+  test('[RENT-004] - View rental details with client info and costumes', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     await rentHistoryPage.clickFirstRental();
@@ -75,8 +75,8 @@ test.describe('Rental Management', () => {
     expect(content).toMatch(/Daftar Kostum|kostum/i);
   });
 
-  // AC-012: Edit Rental
-  test('[AC-012-001] - Navigate to edit rental and pre-populate form', async ({ page }) => {
+  // RENT: Edit Rental
+  test('[RENT-005] - Navigate to edit rental and pre-populate form', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     await rentHistoryPage.clickFirstRental();
@@ -90,8 +90,8 @@ test.describe('Rental Management', () => {
     await expect(rentFormPage.rentStartInput).toBeVisible();
   });
 
-  // AC-013: Mark Rental as Returned
-  test('[AC-013-001] - Mark rental as returned', async ({ page }) => {
+  // RENT: Mark Rental as Returned
+  test('[RENT-006] - Mark rental as returned', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     await rentHistoryPage.clickFirstRental();
@@ -105,8 +105,8 @@ test.describe('Rental Management', () => {
     }
   });
 
-  // AC-009-003: Search rental by client name
-  test('[AC-009-003] - Search rental by client name', async ({ page }) => {
+  // RENT-007: Search rental by client name
+  test('[RENT-007] - Search rental by client name', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     // Search for a known client
@@ -117,8 +117,8 @@ test.describe('Rental Management', () => {
     expect(rows).toBeGreaterThanOrEqual(0);
   });
 
-  // AC-009-004: Filter by status: returned
-  test('[AC-009-004] - Filter by status: returned', async ({ page }) => {
+  // RENT-008: Filter by status: returned
+  test('[RENT-008] - Filter by status: returned', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     await rentHistoryPage.filterByStatus('Dikembalikan');
@@ -131,8 +131,8 @@ test.describe('Rental Management', () => {
     }
   });
 
-  // AC-009-005: Filter by status: overdue
-  test('[AC-009-005] - Filter by status: overdue', async ({ page }) => {
+  // RENT-009: Filter by status: overdue
+  test('[RENT-009] - Filter by status: overdue', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     await rentHistoryPage.filterByStatus('Terlambat');
@@ -144,8 +144,8 @@ test.describe('Rental Management', () => {
     }
   });
 
-  // AC-010-002: Create rental with new inline client
-  test('[AC-010-002] - Create rental with new inline client', async ({ page }) => {
+  // RENT-010: Create rental with new inline client
+  test('[RENT-010] - Create rental with new inline client', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     await rentHistoryPage.clickNewRent();
@@ -157,8 +157,8 @@ test.describe('Rental Management', () => {
     await expect(rentFormPage.guaranteeTypeSelect).toBeVisible();
   });
 
-  // AC-010-003: rent_end before rent_start shows error
-  test('[AC-010-003] - rent_end before rent_start shows error', async ({ page }) => {
+  // RENT-011: rent_end before rent_start shows error
+  test('[RENT-011] - rent_end before rent_start shows error', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     await rentHistoryPage.clickNewRent();
@@ -176,8 +176,8 @@ test.describe('Rental Management', () => {
     expect(alertVisible).toBeTruthy();
   });
 
-  // AC-010-004: Quantity exceeding available shows error
-  test('[AC-010-004] - Quantity exceeding available shows error', async ({ page }) => {
+  // RENT-012: Quantity exceeding available shows error
+  test('[RENT-012] - Quantity exceeding available shows error', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     await rentHistoryPage.clickNewRent();
@@ -194,8 +194,8 @@ test.describe('Rental Management', () => {
     expect(alertVisible).toBeTruthy();
   });
 
-  // AC-010-005: Submit with no costumes selected shows error
-  test('[AC-010-005] - Submit with no costumes selected shows error', async ({ page }) => {
+  // RENT-013: Submit with no costumes selected shows error
+  test('[RENT-013] - Submit with no costumes selected shows error', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     await rentHistoryPage.clickNewRent();
@@ -213,8 +213,8 @@ test.describe('Rental Management', () => {
     await expect(page).toHaveURL(/\/rents\/new/);
   });
 
-  // AC-010-006: Available quantity decreases after rental created
-  test('[AC-010-006] - Available quantity decreases after rental created', async ({ page }) => {
+  // RENT-014: Available quantity decreases after rental created
+  test('[RENT-014] - Available quantity decreases after rental created', async ({ page }) => {
     // Simplified: Just verify the UI doesn't crash
     const cataloguePage = new CataloguePage(page);
     await cataloguePage.goto();
@@ -222,8 +222,8 @@ test.describe('Rental Management', () => {
     expect(count).toBeGreaterThanOrEqual(0);
   });
 
-  // AC-011-002: Rental detail shows guarantee type
-  test('[AC-011-002] - Rental detail shows guarantee type', async ({ page }) => {
+  // RENT-015: Rental detail shows guarantee type
+  test('[RENT-015] - Rental detail shows guarantee type', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     const count = await rentHistoryPage.rentRows.count();
@@ -235,8 +235,8 @@ test.describe('Rental Management', () => {
     }
   });
 
-  // AC-011-003: Rental detail shows notes if present
-  test('[AC-011-003] - Rental detail shows notes if present', async ({ page }) => {
+  // RENT-016: Rental detail shows notes if present
+  test('[RENT-016] - Rental detail shows notes if present', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     const count = await rentHistoryPage.rentRows.count();
@@ -250,8 +250,8 @@ test.describe('Rental Management', () => {
     }
   });
 
-  // AC-012-002: Edit rental notes and verify save
-  test('[AC-012-002] - Edit rental notes and verify save', async ({ page }) => {
+  // RENT-017: Edit rental notes and verify save
+  test('[RENT-017] - Edit rental notes and verify save', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     const count = await rentHistoryPage.rentRows.count();
@@ -269,8 +269,8 @@ test.describe('Rental Management', () => {
     }
   });
 
-  // AC-013-002: Cancel mark-returned does not change status
-  test('[AC-013-002] - Cancel mark-returned does not change status', async ({ page }) => {
+  // RENT-018: Cancel mark-returned does not change status
+  test('[RENT-018] - Cancel mark-returned does not change status', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     const count = await rentHistoryPage.rentRows.count();
@@ -292,8 +292,8 @@ test.describe('Rental Management', () => {
     }
   });
 
-  // AC-013-003: Mark returned button not shown on returned rental
-  test('[AC-013-003] - Mark returned button not shown on returned rental', async ({ page }) => {
+  // RENT-019: Mark returned button not shown on returned rental
+  test('[RENT-019] - Mark returned button not shown on returned rental', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     // Filter by returned status
@@ -310,8 +310,8 @@ test.describe('Rental Management', () => {
     }
   });
 
-  // AC-013-004: Available quantity restores after marking returned
-  test('[AC-013-004] - Available quantity restores after marking returned', async ({ page }) => {
+  // RENT-020: Available quantity restores after marking returned
+  test('[RENT-020] - Available quantity restores after marking returned', async ({ page }) => {
     // This test requires an active rental with costumes
     // Simplified version - just verify the UI doesn't crash
     const rentHistoryPage = new RentHistoryPage(page);
@@ -320,8 +320,8 @@ test.describe('Rental Management', () => {
     expect(count).toBeGreaterThanOrEqual(0);
   });
 
-  // AC-014-002: Cancel delete does not remove rental
-  test('[AC-014-002] - Cancel delete does not remove rental', async ({ page }) => {
+  // RENT-021: Cancel delete does not remove rental
+  test('[RENT-021] - Cancel delete does not remove rental', async ({ page }) => {
     const rentHistoryPage = new RentHistoryPage(page);
     await rentHistoryPage.goto();
     const initialCount = await rentHistoryPage.rentRows.count();
