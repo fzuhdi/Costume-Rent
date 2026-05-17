@@ -107,11 +107,41 @@ For tracer-test case workflow, use targeted `--grep` runs during RED/GREEN. Afte
 
 Do not run `npm install`, `npm ci`, `npx playwright install`, package-manager add/update commands, or browser/runtime installers without explicit user approval. Missing `node_modules` or Playwright browser caches are setup blocks until approved.
 
+Default runtime stack for executable frontend tests:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d backend frontend
+```
+
+Keep that stack alive for the full ticket or plan run. Prefer restarting the Compose frontend service if it becomes unhealthy. Do not treat repeated host `npx vite` restarts and ad-hoc port-kill loops as the normal workflow path.
+
+The frontend dev service uses a named `node_modules` volume and runs `npm ci` only when that cache is missing or its recorded lockfile hash differs from `package-lock.json`. This is still an installer path: agents must ask approval before first-starting or recreating a frontend service when that install will run.
+
 ## Workspaces
 
 Coordinator-managed executable tickets use the default single-checkout orchestrator unless advanced isolated worktrees are explicitly viable. Substantial workflow-maintenance changes use isolated Git worktrees unless the user accepts the current checkout. See `docs/adr/0003-ticket-and-workflow-workspaces.md` for the durable policy.
 
 For advanced ticket worktrees, reuse, copy, or junction dependency directories only when the relevant lockfile hash matches. If manifests or lockfiles change, pause concurrent work, ask user approval, install once in a controlled workspace, and refresh the shared cache keyed by lockfile hash.
+
+Advanced isolated runtime stacks require per-process runtime isolation, not only a second container. Each process must have its own worktree, Compose project name, host-port allocation, Playwright base URL, and output paths.
+
+Example slot 1 PowerShell setup:
+
+```powershell
+$env:BUSANA_CONTAINER_PREFIX = "busana_ticket001"
+$env:FRONTEND_HOST_PORT = "5273"
+$env:BACKEND_HOST_PORT = "8181"
+$env:SQLITE_WEB_HOST_PORT = "8180"
+$env:BUSANA_DB_VOLUME = "busana_db_ticket001"
+$env:BUSANA_FRONTEND_NODE_MODULES_VOLUME = "busana_frontend_node_modules_ticket001"
+$env:PW_BASE_URL = "http://localhost:5273"
+$env:PW_OUTPUT_DIR = "test-results-ticket001"
+$env:PW_JSON_OUTPUT = "test-results-ticket001/results.json"
+$env:PW_HTML_REPORT = "playwright-report-ticket001"
+docker compose -p ticket001 -f docker-compose.dev.yml up -d backend frontend
+```
+
+Run Playwright from that same shell so it inherits the process-specific `PW_*` variables.
 
 Useful commands:
 

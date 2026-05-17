@@ -39,6 +39,17 @@ When approval is needed, the agent reports the package/tool, version when known,
 
 In isolated worktrees, dependency directories may be reused, copied, or junctioned only when they match the relevant lockfile hash. If manifests or lockfiles must change, pause concurrent ticket execution, ask approval, install once in a controlled workspace, and refresh the shared cache for that lockfile hash.
 
+## Runtime Reliability
+
+This repo has two runtime modes:
+
+- Default stable mode: one orchestrator, one checkout, one long-lived dev stack, one Playwright base URL.
+- Advanced parallel mode: one worktree and one isolated runtime stack per executable process.
+
+For default stable mode, prefer `docker compose -f docker-compose.dev.yml up -d backend frontend` and keep that stack alive for the full ticket or plan run. Do not rely on repeated host-level `npx vite` restarts between RED and GREEN loops. If the frontend dependency volume is missing or stale, the Compose frontend service may run `npm ci`; agents must still ask before starting or recreating that service when an install will run.
+
+Advanced parallel mode is not the current default. When used, each process must run from its own worktree and provide unique values for `BUSANA_CONTAINER_PREFIX`, `FRONTEND_HOST_PORT`, `BACKEND_HOST_PORT`, `SQLITE_WEB_HOST_PORT`, `BUSANA_DB_VOLUME`, `BUSANA_FRONTEND_NODE_MODULES_VOLUME`, `PW_BASE_URL`, `PW_OUTPUT_DIR`, `PW_JSON_OUTPUT`, and `PW_HTML_REPORT`.
+
 ## TDD Flow
 
 ```text
@@ -97,7 +108,7 @@ Coordinator plan mode is the preferred entry point for targeted plan runs. By de
 - Ticket branch: `tdd/{ticket-id}`.
 - Branches are created only from a clean worktree.
 - No auto-stash, auto-reset, or dirty-work discard.
-- Coordinator-managed tickets use the default single-checkout orchestrator unless advanced isolated worktrees are explicitly viable per `docs/adr/0003-ticket-and-workflow-workspaces.md`.
+- Coordinator-managed tickets use the default single-checkout orchestrator unless advanced isolated worktrees and process-specific runtime slots are explicitly viable per `docs/adr/0003-ticket-and-workflow-workspaces.md`.
 - Substantial workflow changes use isolated workspaces per `docs/adr/0003-ticket-and-workflow-workspaces.md` unless the user explicitly accepts using the current checkout.
 - Worker agents run from the item workspace root. Do not dispatch worker subagents across absolute paths into another worktree.
 
