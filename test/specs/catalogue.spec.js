@@ -556,8 +556,16 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await expect(cataloguePage.categoryFilter).toBeVisible();
     await expect(cataloguePage.galleryViewButton).toBeVisible();
 
-    const firstCard = page.locator('a[href*="/catalogue/"] img, a[href*="/catalogue/"] text=/No Image/i').first();
+    const firstCard = page.locator('a[href*="/catalogue/"]').first();
     await expect(firstCard).toBeVisible();
-    await expect(page.locator('a[href*="/catalogue/"]').first()).toContainText(/tersedia|unit/i);
+
+    const firstCardImage = firstCard.locator('img').first();
+    if (await firstCardImage.count()) {
+      await expect(firstCardImage).toBeVisible();
+    } else {
+      await expect(firstCard.getByText(/No Image/i)).toBeVisible();
+    }
+
+    await expect(firstCard).toContainText(/tersedia|unit/i);
   });
   });
