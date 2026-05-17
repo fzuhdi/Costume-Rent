@@ -11,8 +11,16 @@ Tiny project memory. Skills/subagents/knowledge/commands load on demand.
 ## Key commands
 - `/init-project` — initialize/repair Project Adapter, acceptance skeleton, manifests, rendered agents, and pointers after the Greenfield Gate passes.
 - `/plan-to-tickets` — create TDD tickets with `test_case_id`.
+- `/coordinator` — ask for a target, dynamically ask for a model, then launch a new orchestrator TUI window for one plan/ticket.
 - `/engineering/orchestrator` — show runnable plans with empty args, or execute one target ticket/plan through the TDD FSM.
 - `/productivity/start`, `/productivity/status` — resume and inspect workflow state.
+
+## Workflow model defaults
+- Source of truth: `.opencode/workflow-models.json`
+- `developer`: `opencode/minimax-m2.5-free` -> `opencode/big-pickle`
+- `sdet`: `opencode/minimax-m2.5-free` -> `opencode/big-pickle`
+- `orchestrator`: `opencode/big-pickle` -> `opencode/minimax-m2.5-free`
+- `reviewer`: `opencode/big-pickle` -> `opencode/minimax-m2.5-free`
 
 ## Guardrails
 - Workflow maintenance must not edit `backend/**` or `frontend/**`.

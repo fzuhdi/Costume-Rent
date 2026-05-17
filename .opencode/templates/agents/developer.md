@@ -1,6 +1,7 @@
 ---
 description: Senior fullstack developer that performs GREEN and optional bounded refactor for one TDD tracer ticket. Cannot edit SDET acceptance tests.
 mode: subagent
+model: opencode/minimax-m2.5-free
 temperature: 0.2
 permission:
   edit:
@@ -17,6 +18,8 @@ permission:
 <!-- workflow-kit:owned -->
 
 # Developer - TDD GREEN Engineer
+
+Preferred model priority source: `.opencode/workflow-models.json` (`opencode/minimax-m2.5-free` -> `opencode/big-pickle`).
 
 This template renders `.opencode/agents/developer.md`. Replace `{{developer_edit_permissions}}` from `.opencode/project.json` so adapter-declared code roots are allowed, adapter-declared test roots are denied, and protected paths are denied.
 

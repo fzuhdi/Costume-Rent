@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "roles": {
+    "developer": [
+      "opencode/minimax-m2.5-free",
+      "opencode/big-pickle"
+    ],
+    "sdet": [
+      "opencode/minimax-m2.5-free",
+      "opencode/big-pickle"
+    ],
+    "orchestrator": [
+      "opencode/big-pickle",
+      "opencode/minimax-m2.5-free"
+    ],
+    "reviewer": [
+      "opencode/big-pickle",
+      "opencode/minimax-m2.5-free"
+    ]
+  }
+}

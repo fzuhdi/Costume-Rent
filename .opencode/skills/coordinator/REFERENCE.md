@@ -2,17 +2,19 @@
 
 ## Execution Model
 
-Use the coordinator checkout for scheduling only. A single orchestrator subagent is dispatched for the target plan or ticket by default. For plans, the orchestrator subagent handles ticket discovery, sequencing, regression, and plan completion internally.
+Use the coordinator checkout for scheduling only. A single orchestrator TUI window is launched for the target plan or ticket by default. For plans, the launched orchestrator session handles ticket discovery, sequencing, regression, and plan completion internally.
+
+Model priority defaults for workflow roles live in `.opencode/workflow-models.json`.
 
 ```text
 route arguments
 -> targeted read (plan or ticket)
--> dispatch task(subagent_type: "orchestrator") with MODE: run-plan or run-ticket
--> wait for OUTCOME: success, partial, or blocked
--> summarize aggregate status
+-> launch `opencode run --interactive --command engineering/orchestrator ...` in a new window
+-> pass the user-selected `--model provider/model`
+-> report handoff details and keep later status checks read-only
 ```
 
-Only one orchestrator subagent runs at a time in the default single-checkout mode. The orchestrator subagent runs in the same checkout but in its own agent context, managing its own state files, checkpoint commits, subagent dispatches, and plan completion. Isolated worktrees are advanced mode only and follow `docs/adr/0003-ticket-and-workflow-workspaces.md`.
+Only one orchestrator TUI window runs at a time in the default single-checkout mode. The launched orchestrator session runs in the same checkout but in its own OpenCode CLI session, managing its own state files, checkpoint commits, subagent dispatches, and plan completion. Isolated worktrees are advanced mode only and follow `docs/adr/0003-ticket-and-workflow-workspaces.md`.
 
 ## Argument Routing
 
@@ -24,6 +26,14 @@ Route before discovery:
 4. Unknown or malformed args: ask one clarification question. Do not broad-scan to guess.
 
 Targeted mode may read runtime state files to detect active or blocked runs, but it must not scan all plans/tickets unless the user chose a status scan.
+
+For every executable launch, discover models dynamically with:
+
+```text
+node .opencode/scripts/launch-orchestrator-tui.mjs --mode list-models --format json
+```
+
+Ask the user to choose a model from that discovered list. Recommend the orchestrator default resolved from `.opencode/workflow-models.json`.
 
 ## Discovery Procedure
 
@@ -44,7 +54,7 @@ Queue order:
 4. Workflow-maintenance changes requested by the user.
 5. Blocked or ambiguous items are report-only unless the user asks to repair planning artifacts.
 
-The orchestrator subagent handles internal ticket sequencing, dependency ordering, regression, and plan completion.
+The launched orchestrator session handles internal ticket sequencing, dependency ordering, regression, and plan completion.
 
 ## Dependency And Installer Approval
 
@@ -55,9 +65,16 @@ The coordinator must not repair setup by installing packages or browsers on its 
 - In advanced isolated-worktree mode, prefer reusing, copying, or junctioning an existing dependency directory only when the relevant lockfile hash matches.
 - If dependency manifests or lockfiles must change, pause concurrent ticket execution, ask approval, run the install once in a controlled workspace, and refresh the shared cache keyed by lockfile hash.
 
-## Orchestrator Subagent Dispatch
+## Orchestrator TUI Launch
 
-Dispatch `task(subagent_type: "orchestrator")` with one of two modes.
+Launch `node .opencode/scripts/launch-orchestrator-tui.mjs --target <id> --model <provider/model>` after targeted validation.
+
+Resolved workflow default priorities:
+
+- `developer`: `opencode/minimax-m2.5-free` -> `opencode/big-pickle`
+- `sdet`: `opencode/minimax-m2.5-free` -> `opencode/big-pickle`
+- `orchestrator`: `opencode/big-pickle` -> `opencode/minimax-m2.5-free`
+- `reviewer`: `opencode/big-pickle` -> `opencode/minimax-m2.5-free`
 
 ### Plan Target
 
@@ -67,7 +84,7 @@ PLAN_ID: {plan-id}
 PLAN_FILE: docs/plans/{plan-id}.md
 ```
 
-The orchestrator subagent:
+The launched orchestrator session:
 - Loads the plan and discovers all tickets with matching `plan_id`.
 - Audits `review` tickets first via `reviewer MODE: ticket-audit`.
 - Runs ready feature/bug tickets through full TDD lifecycle sequentially, ordered by priority and dependency.
@@ -91,13 +108,13 @@ RED_EXPECTATION: {frontmatter value}
 GREEN_EXPECTATION: {frontmatter value}
 ```
 
-The orchestrator subagent runs the full per-ticket TDD lifecycle (RED, GREEN, review) and stops at ticket-complete.
+The launched orchestrator session runs the full per-ticket TDD lifecycle (RED, GREEN, review) and stops at ticket-complete.
 
-### Return Values
+### Session Cleanup
 
-- `OUTCOME: success` — ticket or plan completed successfully.
-- `OUTCOME: partial` — progress was made but not complete. The subagent left state files for resumption.
-- `OUTCOME: blocked` — blocked or escalated. Report the block reason and stop.
+- Each launch uses a unique OpenCode session title and a user-chosen model from the discovered list.
+- If the target reaches `ticket-complete` or `plan-complete`, the launcher deletes that session with `opencode session delete <session-id>` after the TUI exits.
+- If the run is partial, blocked, escalated, or crashes, the launcher preserves the session for debugging and prints the title or session id.
 
 ## Launch Rules
 
@@ -106,16 +123,17 @@ Before launching any lower-level run:
 - Require a clean worktree.
 - Confirm no runtime state indicates a different active run.
 - Confirm the target plan or ticket still exists.
-- Confirm `task(subagent_type: "orchestrator")` is permitted in `.opencode/opencode.json`.
-- Prefer the existing dispatch format already used by the repository.
+- Confirm `wt.exe`, `opencode`, and the launcher script are available.
+- Confirm the chosen model still exists in `opencode models` output.
+- Use the repository launcher instead of dispatching `task(subagent_type: "orchestrator")` directly from coordinator.
 
 ## Stop Conditions
 
 Stop immediately and report if any of these occur:
 
 - Dirty worktree before or after a lower-level run.
-- Orchestrator subagent returns `OUTCOME: blocked`.
-- Orchestrator subagent leaves the worktree dirty.
+- Launcher cannot open the new orchestrator TUI window.
+- The launched orchestrator session leaves the worktree dirty.
 - The user asks to pause, inspect, commit, push, or change strategy.
 
 ## Relationship To Other Workflow Rules

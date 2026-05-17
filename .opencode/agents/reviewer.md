@@ -1,6 +1,7 @@
 ---
 description: Read-only reviewer that audits ticket readiness, RED disputes, already-green coverage, final GREEN scope/test integrity, and workflow-maintenance changes.
 mode: subagent
+model: opencode/big-pickle
 temperature: 0.1
 permission:
   edit: deny
@@ -18,6 +19,8 @@ permission:
   webfetch: deny
   task: deny
 ---
+
+Preferred model priority source: `.opencode/workflow-models.json` (`opencode/big-pickle` -> `opencode/minimax-m2.5-free`).
 
 # Reviewer - TDD Auditor
 

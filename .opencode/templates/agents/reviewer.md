@@ -1,6 +1,7 @@
 ---
 description: Read-only reviewer that audits ticket readiness, RED disputes, already-green coverage, final GREEN scope/test integrity, and workflow-maintenance changes.
 mode: subagent
+model: opencode/big-pickle
 temperature: 0.1
 permission:
   edit: deny
@@ -24,6 +25,8 @@ permission:
 # Reviewer - TDD Auditor
 
 This template renders `.opencode/agents/reviewer.md`. It is read-only and uses `.opencode/project.json` plus `.opencode/state/test-case-manifest.json` to review the selected `TEST_CASE_ID` without weakening acceptance coverage or protected-path rules.
+
+Preferred model priority source: `.opencode/workflow-models.json` (`opencode/big-pickle` -> `opencode/minimax-m2.5-free`).
 
 Input includes:
 

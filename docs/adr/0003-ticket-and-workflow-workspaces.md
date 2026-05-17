@@ -10,14 +10,16 @@ Workflow-platform changes should not be made casually in the coordinator checkou
 
 ## Decision
 
-### Single-Checkout Sequential Subagent Execution (Default)
-For normal operation, the coordinator dispatches one orchestrator subagent per target plan or ticket via `task(subagent_type: "orchestrator")`. The orchestrator subagent runs in the same checkout but in its own OpenCode agent context, managing its own state files, checkpoint commits, subagent dispatches, and plan completion.
+### Single-Checkout Sequential Orchestrator TUI Launch (Default)
+For normal operation, the coordinator launches one orchestrator TUI per target plan or ticket via `opencode run --interactive --command engineering/orchestrator`. The launched orchestrator session runs in the same checkout but in its own OpenCode CLI session, managing its own state files, checkpoint commits, subagent dispatches, and plan completion.
 
 - The coordinator checkout is for scheduling, discovery, and aggregate reporting.
-- The orchestrator subagent is the single workflow engine for one plan or ticket run.
-- Only one orchestrator subagent runs at a time (sequential execution).
+- The launched orchestrator session is the single workflow engine for one plan or ticket run.
+- Only one orchestrator TUI window runs at a time per checkout (sequential execution).
 - Ticket branches and plan branches are created in the coordinator checkout.
 - Plan-completion regression runs from the plan branch after all tickets complete.
+- Successful launched sessions delete their own OpenCode session by title after the TUI exits; partial or blocked runs keep the session for debugging.
+- Coordinator executable launches dynamically discover available models, ask the user to choose one, and recommend the orchestrator default from `.opencode/workflow-models.json`.
 
 ### Stable Runtime Stack (Default Runtime Mode)
 The default runtime for executable work is one long-lived development stack for the active checkout, not repeated host-level Vite restarts between RED and GREEN loops.
@@ -39,7 +41,7 @@ Isolated Git worktrees remain an option for advanced use cases where the model/p
 - Ticket branches merge back into the plan branch sequentially.
 - Each executed ticket gets a dedicated workspace and branch.
 - Worker agents must run from the active item workspace root.
-- The coordinator must not run multiple workflow engines in the same checkout concurrently (this rule applies to the single-checkout subagent approach).
+- The coordinator must not run multiple workflow engines in the same checkout concurrently (this rule applies to the single-checkout TUI-launch approach).
 - The coordinator must not dispatch worker subagents from one project root with absolute paths into another worktree.
 - Dependency directories may be reused, copied, or junctioned into ticket worktrees only when they match the relevant lockfile hash.
 - Dependency manifest or lockfile changes stop parallel ticket execution; the agent must ask user approval before editing dependency files or running installers, then install once in a controlled workspace and refresh the shared cache keyed by lockfile hash.
@@ -65,8 +67,8 @@ Recommended workspace root:
 ```
 
 ## Consequences
-- Single-checkout subagent execution eliminates branch/worktree setup overhead.
-- The orchestrator subagent context isolates state, reducing shared-state collisions in the checkout.
+- Single-checkout TUI launching eliminates branch/worktree setup overhead.
+- The launched orchestrator CLI session isolates state, reducing shared-state collisions in the checkout.
 - A stable long-lived Compose dev stack is the reliable default for test execution on this repo, especially on Windows hosts.
 - True parallel ticket execution is not available unless the model/provider supports concurrent requests.
 - Isolated worktrees remain available as the mechanism for true parallel execution when the provider makes it viable.
@@ -74,4 +76,4 @@ Recommended workspace root:
 - Worktree dependency reuse avoids repeated installs but does not authorize automatic dependency or browser installation.
 
 ## Supersedes
-This refines ADR 0001 and ADR 0002. Their single-checkout sequential plan behavior still applies inside one checkout's orchestrator subagent execution. The parallel worktree fan-out from the original ADR 0003 is superseded by single-checkout sequential subagent dispatch, with isolated worktrees retained as a documented advanced option.
+This refines ADR 0001 and ADR 0002. Their single-checkout sequential plan behavior still applies inside one checkout's launched orchestrator session. The parallel worktree fan-out from the original ADR 0003 is superseded by single-checkout sequential orchestrator TUI launching, with isolated worktrees retained as a documented advanced option.

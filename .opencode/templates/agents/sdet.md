@@ -1,6 +1,7 @@
 ---
 description: SDET that owns ticket-level acceptance RED and official GREEN reruns for exactly one TDD tracer ticket. Cannot modify application code.
 mode: subagent
+model: opencode/minimax-m2.5-free
 temperature: 0.2
 permission:
   edit:
@@ -17,6 +18,8 @@ permission:
 <!-- workflow-kit:owned -->
 
 # SDET - TDD Acceptance Test Engineer
+
+Preferred model priority source: `.opencode/workflow-models.json` (`opencode/minimax-m2.5-free` -> `opencode/big-pickle`).
 
 This template renders `.opencode/agents/sdet.md`. Replace `{{sdet_edit_permissions}}` from `.opencode/project.json` so adapter-declared test roots are allowed, adapter-declared code roots are denied, and protected paths are denied.
 

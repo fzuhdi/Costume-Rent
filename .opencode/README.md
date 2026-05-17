@@ -22,7 +22,7 @@ Use one backlog for features, bugs, chores, and spikes. The orchestrator execute
 |---|---|
 | `/init-project <prd-or-plan>` | Initializes or repairs the Project Adapter only after the Greenfield Gate confirms an empty/docs-only product repo. |
 | `/plan-to-tickets [plan-file] [plan-id optional]` | Converts or repairs plans/bugs/ask-me output into TDD-ready plan and ticket files. |
-| `/coordinator [plan-id|ticket-id]` | Arg-first coordinator entry point. Empty args ask for a target before scanning; explicit targets dispatch one orchestrator subagent by default. |
+| `/coordinator [plan-id|ticket-id]` | Arg-first coordinator entry point. Every executable launch asks you to choose from dynamically discovered models before opening a new orchestrator TUI window. |
 | `/engineering/orchestrator` | Shows TDD status plus runnable `ready` and `in_progress` plans with exact launch commands. |
 | `/engineering/orchestrator [ticket-id]` | Dispatches one orchestrator subagent to run one ready feature/bug ticket through strict TDD. |
 | `/engineering/orchestrator [plan-id]` | Dispatches one orchestrator subagent to audit review tickets and run one plan sequentially. |
@@ -104,7 +104,7 @@ Draft chore/spike backlog records do not block PR creation.
 
 When invoked without arguments, `/engineering/orchestrator` remains read-only and lists runnable plans, not individual ticket launch commands.
 
-Coordinator plan mode is the preferred entry point for targeted plan runs. By default it reads only the target plan and its tickets, then dispatches one orchestrator subagent for the full plan in the same checkout. Advanced isolated-worktree fan-out is available only when the environment supports true parallel child OpenCode sessions; it must keep ticket branch integration, dependency-changing work, and impacted regression sequential.
+Coordinator plan mode is the preferred entry point for targeted plan runs. By default it reads only the target plan and its tickets, discovers models with `opencode models`, asks the user which discovered model to use, recommends the orchestrator default from `.opencode/workflow-models.json`, and then launches one visible `opencode run --interactive --model <chosen-model> --command engineering/orchestrator` session for the full plan in the same checkout. That launched session deletes its own OpenCode session only after successful completion; partial or blocked runs preserve the session for debugging. Advanced isolated-worktree fan-out is available only when the environment supports true parallel child OpenCode sessions; it must keep ticket branch integration, dependency-changing work, and impacted regression sequential.
 
 ## Branches And Commits
 
@@ -112,9 +112,20 @@ Coordinator plan mode is the preferred entry point for targeted plan runs. By de
 - Ticket branch: `tdd/{ticket-id}`.
 - Branches are created only from a clean worktree.
 - No auto-stash, auto-reset, or dirty-work discard.
-- Coordinator-managed tickets use the default single-checkout orchestrator unless advanced isolated worktrees and process-specific runtime slots are explicitly viable per `docs/adr/0003-ticket-and-workflow-workspaces.md`.
+- Coordinator-managed tickets use the default single-checkout visible orchestrator TUI launcher unless advanced isolated worktrees and process-specific runtime slots are explicitly viable per `docs/adr/0003-ticket-and-workflow-workspaces.md`.
 - Substantial workflow changes use isolated workspaces per `docs/adr/0003-ticket-and-workflow-workspaces.md` unless the user explicitly accepts using the current checkout.
 - Worker agents run from the item workspace root. Do not dispatch worker subagents across absolute paths into another worktree.
+
+## Workflow Models
+
+Workflow role model priority defaults live in `.opencode/workflow-models.json`.
+
+- `developer`: `opencode/minimax-m2.5-free` -> `opencode/big-pickle`
+- `sdet`: `opencode/minimax-m2.5-free` -> `opencode/big-pickle`
+- `orchestrator`: `opencode/big-pickle` -> `opencode/minimax-m2.5-free`
+- `reviewer`: `opencode/big-pickle` -> `opencode/minimax-m2.5-free`
+
+`/coordinator` discovers available models dynamically on every executable run, asks the user to choose one for the launched orchestrator TUI session, and recommends the resolved orchestrator default from that priority file.
 
 Commit convention:
 
