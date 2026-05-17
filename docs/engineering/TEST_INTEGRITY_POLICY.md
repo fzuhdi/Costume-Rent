@@ -21,6 +21,16 @@ Allowed test repairs:
 
 When product behavior is missing, keep the test failing and create or select a product ticket. Do not hide the failure with `skip`, `fixme`, broad filters, or weakened assertions.
 
+## Regression Bug Tickets
+
+Plan-completion impacted regression is a hard gate. After all planned tickets complete, full impacted spec files must pass before the plan is marked complete.
+
+- Failed mapped ACs in impacted specs create or update same-plan `status: review` bug tickets.
+- Bug tickets are deduped by `slice_id`; repeated failures append evidence to the same non-complete ticket.
+- Completed bug tickets may be followed by a new regression ticket if the same slice fails again later.
+- Generated bug tickets must be reviewer-audited before becoming executable.
+- Unmapped, setup, or environment failures block completion and must not become product bug tickets.
+
 ## Test State Policy
 
 Acceptance tests must be additive and self-scoped by default.

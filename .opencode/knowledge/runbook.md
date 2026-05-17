@@ -103,7 +103,19 @@ cd test && npx playwright test --headed --slow-mo 500   # debug
 cd test && npx playwright show-report                   # HTML report
 ```
 
-For tracer-slice workflow, the orchestrator records targeted run results in `.opencode/state/feature-{id}/failures.md`. Use `npm run test` for full regression checkpoints, not for every slice.
+For tracer-slice workflow, use targeted `--grep` runs during RED/GREEN. After a plan's tickets complete, run the full impacted spec files before plan completion. If impacted regression fails, run `node helpers/sync-regression-bugs.mjs --plan <plan-id>` from `test/` to create/update same-plan `review` bug tickets.
+
+## Workspaces
+
+Coordinator-managed executable tickets and substantial workflow-maintenance changes use isolated Git worktrees. See `docs/adr/0003-ticket-and-workflow-workspaces.md` for the durable policy.
+
+Useful commands:
+
+```bash
+git worktree list
+git worktree add ../Costume-Rent-workspaces/TICKET-YYYYMMDD-001 -b tdd/TICKET-YYYYMMDD-001 tdd/PLAN-YYYYMMDD-name
+git worktree add ../Costume-Rent-workspaces/WF-YYYYMMDD-name -b workflow/WF-YYYYMMDD-name main
+```
 
 ---
 

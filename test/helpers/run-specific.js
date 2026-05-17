@@ -7,11 +7,7 @@ if (!keyword) {
   process.exit(1);
 }
 
-try {
-  execSync(
-    `npx playwright test --grep "${keyword}"`,
-    { stdio: "inherit" }
-  );
-} catch (e) {
-  // ignore test failure
-}
+execSync(
+  `npx playwright test --grep "${keyword}"`,
+  { stdio: "inherit" }
+);

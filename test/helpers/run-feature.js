@@ -7,15 +7,7 @@ if (!feature) {
   process.exit(1);
 }
 
-try {
-  execSync(
-    `npx playwright test test/specs/${feature}.spec.js`,
-    { stdio: "inherit" }
-  );
-} catch (e) {
-  // ignore test failure
-}
-
-execSync(`node helpers/sync-failure-log.mjs`, {
-  stdio: "inherit",
-});
+execSync(
+  `npx playwright test specs/${feature}.spec.js`,
+  { stdio: "inherit" }
+);

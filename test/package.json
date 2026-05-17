@@ -4,9 +4,9 @@
   "description": "Playwright tests for Costume Rental with Page Object Model",
   "scripts": {
     "test": "npx playwright test",
-    "test:sync-failures": "node helpers/sync-failure-log.mjs",
-    "test:dry": "node helpers/sync-failure-log.mjs --dry-run",
-    "test:verbose": "node helpers/sync-failure-log.mjs --verbose",
+    "regression:sync-bugs": "node helpers/sync-regression-bugs.mjs",
+    "regression:sync-bugs:dry": "node helpers/sync-regression-bugs.mjs --dry-run",
+    "legacy:sync-failures": "node helpers/sync-failure-log.mjs",
     "quality:integrity": "node ../scripts/quality-gate.mjs",
     "quality:e2e": "npx playwright test",
     "quality:full": "node ../scripts/quality-gate.mjs && npx playwright test",

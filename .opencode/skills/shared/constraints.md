@@ -10,6 +10,9 @@ These constraints apply to ALL workflow agents (developer, sdet, reviewer).
 - Acceptance tests must be additive and self-scoped. Do not require global clean DB state, reset/truncate/drop data, or mutate records the test did not create.
 - Test-created records must use `E2E_...` for browser tests and `API_...` for API tests.
 - Run `node scripts/quality-gate.mjs` after any `test/**` edit and before final review/commit. If it fails, stop and report the findings.
+- A plan is not complete until full impacted specs pass. Mapped impacted-regression failures become same-plan `review` bug tickets; unmapped/setup failures block without product bug tickets.
+- Substantial workflow-maintenance changes use `workflow-engineer`, `docs/workflow-changes/*.md`, reviewer `MODE: workflow-maintenance`, and isolated workspaces per ADR 0003.
+- Use `write-a-skill` whenever creating or modifying skills.
 - Never push to `main`/`master`. Never use `--no-verify`. Never use `--force` on shared branches.
 - Always log meaningful actions (file changes, fixes, decisions) to `.opencode/logs/YYYY-MM-DD.md`.
 
@@ -33,6 +36,6 @@ These constraints apply to ALL workflow agents (developer, sdet, reviewer).
 - Forbidden patterns: `docs/engineering/FORBIDDEN_PATTERNS.md`
 - Review checklist: `docs/engineering/REVIEW_CHECKLIST.md`
 - Quality gates: `docs/engineering/QUALITY_GATES.md`
-- Failure log format: `.opencode/skills/shared/io-contract.md`
+- Workflow I/O contract: `.opencode/skills/shared/io-contract.md`
 - Operational runbook: `.opencode/knowledge/runbook.md`
 - Known recurring bugs: `.opencode/knowledge/common-bugs.md`

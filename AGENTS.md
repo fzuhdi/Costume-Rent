@@ -22,12 +22,16 @@ Go + Gin · React 19 + Vite + HeroUI v3 + Tailwind v4 · SQLite (`glebarez/sqlit
 | `docs/adr/0001-tdd-orchestrator-execution.md` | TDD execution workflow decision |
 | `docs/adr/0002-tdd-branching-commits-prs.md` | TDD branch/commit/PR decision |
 | `.opencode/skills/orchestrator/SKILL.md` | Strict TDD FSM definition |
+| `.opencode/skills/coordinator/SKILL.md` | User-facing coordinator for multiple tickets/plans and workflow-maintenance sequencing |
+| `.opencode/skills/workflow-maintenance/SKILL.md` | Workflow-platform maintenance rules; use `write-a-skill` for skill changes |
 | `.opencode/skills/plan-to-tickets/SKILL.md` | Converts/repairs plans/PRDs/bugs into TDD-ready tickets |
-| `.opencode/agents/{developer,sdet,reviewer}.md` | Subagents |
+| `.opencode/agents/{developer,sdet,reviewer,workflow-engineer}.md` | Subagents |
 | `.opencode/skills/shared/{constraints,io-contract}.md` | Shared contracts |
+| `docs/adr/0003-ticket-and-workflow-workspaces.md` | Isolated workspace policy for tickets and workflow changes |
+| `docs/workflow-changes/*.md` | Substantial workflow-maintenance change records |
 | `docs/engineering/TEST_INTEGRITY_POLICY.md` | Acceptance-test integrity contract |
 | `docs/engineering/FORBIDDEN_PATTERNS.md` | Patterns the quality gate rejects |
-| `docs/engineering/QUALITY_GATES.md` | Tiered quality gate commands and checkpoints |
+| `docs/engineering/QUALITY_GATES.md` | Tiered quality gate commands, checkpoints, and plan-completion regression policy |
 | `docs/engineering/REVIEW_CHECKLIST.md` | Repo-specific review checklist |
 | `.opencode/knowledge/runbook.md` | Operational guide |
 | `.opencode/knowledge/common-bugs.md` | Recurring bugs (read when user reports a bug) |
@@ -43,7 +47,8 @@ Go + Gin · React 19 + Vite + HeroUI v3 + Tailwind v4 · SQLite (`glebarez/sqlit
 - Status / "where are we" → run `/productivity/status` or `/productivity/start`.
 - Bug report / "X doesn't work" → consult `common-bugs.md` first.
 - Plan / PRD / bug batch to work items → run `/plan-to-tickets [plan-file]`.
-- Continue / resume / build / fix a feature → run `/engineering/orchestrator [ticket-id]` for one ready feature/bug ticket, or `/engineering/orchestrator [plan-id]` to audit review tickets and execute all ready feature/bug tickets in one plan.
+- Continue / resume / build / fix feature work → use `coordinator` unless the user explicitly invokes `/engineering/orchestrator`; direct worker commands are debug-only.
+- Multiple tickets/plans or workflow refactoring → use `coordinator`; substantial workflow refactors route to `workflow-engineer` and reviewer `MODE: workflow-maintenance`.
 - General code question → answer directly, load only what you need.
 
 ## Logging (lightweight)
@@ -64,4 +69,4 @@ Then prune: `ls -t .opencode/logs/*.md | tail -n +4 | xargs -r rm -f`
 `pread64` build error → `CGO_ENABLED=0` + `glebarez/sqlite` · `useAuth not exported` → add hook export · infinite reload → fetch notifications only when `isAuthenticated` · DB `out of memory` → mount volume to `/app/` not the file · Docker stale → `build --no-cache` · HeroUI syntax → see `heroui-v3-patterns.md`.
 
 ## Test integrity
-A green suite is invalid if acceptance coverage was weakened. Run `node scripts/quality-gate.mjs` after any `test/**` edit and before final review/commit. Product gaps must stay as honest failures or become explicit tickets; do not hide them with skips, weak assertions, or broad suppressions.
+A green suite is invalid if acceptance coverage was weakened. Run `node scripts/quality-gate.mjs` after any `test/**` edit and before final review/commit. Product gaps must stay as honest failures or become explicit tickets; do not hide them with skips, weak assertions, or broad suppressions. A plan is not complete until full impacted specs pass; mapped impacted-regression failures become same-plan `review` bug tickets and keep the plan `in_progress`.

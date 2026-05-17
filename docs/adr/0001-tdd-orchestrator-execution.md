@@ -18,7 +18,7 @@ Executable `feature` and `bug` tickets use a strict RED/GREEN workflow.
 - SDET is the official GREEN test gate and reruns the recorded RED test after developer work.
 - Reviewer runs after SDET passes on the happy path.
 - Reviewer arbitrates invalid REDs, already-green coverage, ticket ambiguity, and final scope/test-integrity review.
-- Plan mode executes tickets sequentially; no cross-ticket RED pipelining in the shared worktree.
+- Plan mode executes tickets sequentially inside one workspace; coordinator-managed multi-ticket execution uses isolated workspaces per ADR 0003.
 - Optional refactor is bounded to one app-code-only pass after GREEN, followed by the same SDET targeted rerun and final review.
 
 ## Consequences

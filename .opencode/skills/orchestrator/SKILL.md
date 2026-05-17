@@ -38,7 +38,7 @@ Runtime state must include `schemaVersion: 2`. Missing state may be initialized 
 
 ## TDD States
 
-`idle | selecting-ticket | ticket-audit | red-writing | red-validating | red-arbitrating | already-green-audit | green-building | green-testing | refactoring | final-review | ticket-complete | plan-complete | blocked | escalated`
+`idle | selecting-ticket | ticket-audit | red-writing | red-validating | red-arbitrating | already-green-audit | green-building | green-testing | refactoring | final-review | ticket-complete | regression-gating | plan-complete | blocked | escalated`
 
 Default `maxIterations: 4`.
 
@@ -48,7 +48,8 @@ Allowed happy path:
 selecting-ticket -> red-writing -> red-validating -> green-building -> green-testing -> final-review -> ticket-complete
 ticket-complete -> selecting-ticket     (plan mode only)
 ticket-complete -> STOP                 (ticket mode)
-selecting-ticket -> plan-complete       (plan mode, all executable/review tickets complete)
+selecting-ticket -> regression-gating   (plan mode, all executable/review tickets complete)
+regression-gating -> plan-complete      (impacted specs pass)
 ```
 
 Allowed exception paths:
@@ -58,6 +59,7 @@ selecting-ticket -> ticket-audit        (status: review ticket)
 ticket-audit -> selecting-ticket        (ticket-ready or ticket-still-ambiguous)
 red-validating -> already-green-audit   (RED passes but covers criterion)
 already-green-audit -> ticket-complete  (coverage approved)
+regression-gating -> selecting-ticket   (impacted regression created same-plan review bug tickets)
 red-validating -> red-arbitrating       (wrong reason, ticket ambiguity, or SDET/developer dispute)
 red-arbitrating -> red-writing          (red-test-wrong)
 red-arbitrating -> blocked              (ticket-ambiguous)
@@ -78,6 +80,7 @@ Forbidden:
 - Continuing plan mode after a dirty/disputed blocked ticket.
 - Auto-stash, auto-reset, auto-checkout discard, or force push.
 - Auto-PR for partial plans.
+- Marking a plan complete before impacted-spec regression passes.
 
 ## Ticket Contract
 
@@ -118,7 +121,19 @@ Ready tickets must be independently executable. Dependent work stays `draft` unt
 
 Plan mode continues past clean audit-only blocks, but the whole plan does not succeed while any review/executable ticket is blocked or escalated. If RED/GREEN/refactor leaves dirty or disputed changes, stop the plan.
 
-Whole plan success means all review tickets became ready or complete, all executable feature/bug tickets are complete, and no executable/review ticket is blocked or escalated. Draft chore/spike records do not block PR creation.
+Whole plan success means all review tickets became ready or complete, all executable feature/bug tickets are complete, impacted-spec regression passes, and no executable/review ticket is blocked or escalated. Draft chore/spike records do not block PR creation.
+
+Plan completion regression policy:
+
+- Run impacted-spec regression only after all planned executable/review tickets are complete; do not run it after every ticket.
+- Derive impacted specs from completed tickets' `test_file` fields and the feature manifest. The orchestrator or reviewer may add full spec files when the diff touches shared behavior.
+- Run each impacted spec file as a full spec, not only the completed ticket grep.
+- If any mapped AC in an impacted spec fails, the plan remains `in_progress` and the failure must create or update a same-plan `status: review` bug ticket deduped by `slice_id`.
+- Existing/known failures in an impacted spec still block the plan. There is no baseline exemption.
+- Unmapped, setup, or environment-looking failures block plan completion and do not create product bug tickets.
+- Reviewer audits generated `review` bug tickets before they become executable. If reviewer rejects one as test/setup noise, block for SDET/test repair and rerun impacted regression after repair.
+- After generated bug tickets complete, rerun impacted-spec regression before plan completion.
+- Use runtime default `maxRegressionCycles: 3`. Exhausting the cycle budget blocks/escalates the plan with failing slice IDs and regression evidence.
 
 ## Branch And Commits
 
@@ -274,11 +289,30 @@ Reviewer checks minimal scope, no sibling ACs, and no changes to the SDET RED te
 
 Update ticket frontmatter to `complete`, update runtime state, and commit durable completion with the nearest `feat/fix/refactor/coverage` commit if not already committed. In ticket mode, stop. In plan mode, return to `selecting-ticket`.
 
+### regression-gating
+
+This state runs only in plan mode, after all planned review/executable tickets are complete and before durable plan completion.
+
+1. Run `node scripts/quality-gate.mjs`. If it fails, block with gate findings.
+2. Build the impacted spec list from completed ticket `test_file` fields plus manifest/reviewer shared-impact additions.
+3. Increment runtime `regression.cycle` and block/escalate if it exceeds runtime `regression.maxRegressionCycles` (default `3`).
+4. Run every impacted spec as a full spec and produce Playwright JSON results. Example from `test/`:
+   ```bash
+   npx playwright test specs/catalogue.spec.js specs/rental.spec.js
+   ```
+5. If impacted specs pass, continue to `plan-complete`.
+6. If impacted specs fail, run:
+   ```bash
+   node helpers/sync-regression-bugs.mjs --plan <plan-id> --results test-results/results.json --run-command "npx playwright test <impacted-specs>"
+   ```
+7. The sync helper must create/update same-plan `status: review` bug tickets and leave the plan `in_progress`. Return to `selecting-ticket` so reviewer audits and executes generated bugs.
+8. If the helper reports unmapped/setup failures, block the plan; do not create product bug tickets for untrusted failures.
+
 ### plan-complete
 
-Update plan frontmatter/status summary to `complete` and commit `docs(tdd): complete <plan-id>`.
+Update plan frontmatter/status summary to `complete` and commit `docs(tdd): complete <plan-id>`. This is allowed only after `regression-gating` passes.
 
-Run `node scripts/quality-gate.mjs` before plan completion. A plan cannot be complete while the gate fails.
+Run `node scripts/quality-gate.mjs` before plan completion. A plan cannot be complete while the gate fails or impacted-spec regression has open failures.
 
 Push and create PR:
 

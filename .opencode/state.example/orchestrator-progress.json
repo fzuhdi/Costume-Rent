@@ -24,5 +24,12 @@
     "greenCommitSha": null,
     "refactorCommitSha": null
   },
+  "regression": {
+    "cycle": 0,
+    "maxRegressionCycles": 3,
+    "impactedSpecs": [],
+    "lastResultsPath": null,
+    "lastSyncSummary": null
+  },
   "completedSlices": []
 }

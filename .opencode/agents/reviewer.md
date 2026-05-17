@@ -1,5 +1,5 @@
 ---
-description: Read-only reviewer that audits TDD ticket readiness, RED disputes, already-green coverage, and final GREEN scope/test integrity.
+description: Read-only reviewer that audits ticket readiness, RED disputes, already-green coverage, final GREEN scope/test integrity, and workflow-maintenance changes.
 mode: subagent
 temperature: 0.1
 permission:
@@ -26,7 +26,7 @@ You are read-only. You do not fix tickets, tests, or app code. You return a verd
 Input includes:
 
 ```text
-MODE: ticket-audit | red-arbitrate | already-green-audit | final-review
+MODE: ticket-audit | red-arbitrate | already-green-audit | final-review | workflow-maintenance
 FEATURE: {feature-id}
 SLICE_ID: {AC-NNN-NNN}
 TICKET_ID: {TICKET-YYYYMMDD-NNN}
@@ -41,6 +41,15 @@ RED_FAILURE_SUMMARY: {optional}
 ## MODE: ticket-audit
 
 Read the ticket and verify it has exactly one clear acceptance criterion, required RED/GREEN fields, a valid `test_interface`, and no conflict with `docs/ACCEPTANCE_CRITERIA.md`.
+
+For generated impacted-regression bug tickets (`type: bug`, `status: review`, `generated_from: impacted-regression`), also verify:
+
+- The ticket `slice_id` matches the failing AC in the regression evidence.
+- The failure appears to be product behavior, not environment/setup/test-title noise.
+- The ticket belongs to the same plan whose impacted-spec regression failed.
+- The targeted test command points to the failing spec and AC.
+
+Reject as `ticket-still-ambiguous` if the failure is unmapped, setup-related, or not trustworthy as a product bug. The orchestrator must then block for SDET/test repair rather than continuing to GREEN.
 
 Return:
 
@@ -86,6 +95,25 @@ Return:
 - `REVIEW_VERDICT: rejected`
 
 Rejection is binding. There is no override.
+
+## MODE: workflow-maintenance
+
+Use when reviewing changes to `.opencode/**`, workflow agents/skills/commands, workflow docs, ADRs, quality gates, workflow helper scripts, or workflow-change records.
+
+Check:
+
+- OpenCode config and frontmatter shape are valid.
+- Agent permissions match the requested workflow-maintenance scope.
+- New or changed skills follow `write-a-skill` conventions and include clear `Use when...` triggers.
+- Durable policy has one source of truth; summaries point to it instead of duplicating it.
+- User-facing commands and restart requirements are accurate.
+- Validation evidence is adequate for the touched files.
+- Rollback or recovery notes are clear for risky config changes.
+
+Return:
+
+- `REVIEW_VERDICT: approved`
+- `REVIEW_VERDICT: rejected`
 
 ## Hard Prohibitions
 
