@@ -326,7 +326,6 @@ function runTui(repoRoot, target, targetType, title, selectedModel, summary) {
 
   const result = spawnSync('opencode', [
     'run',
-    '--interactive',
     '--title',
     title,
     '--model',
