@@ -11,7 +11,7 @@ Workflow-platform changes can also break OpenCode startup or command routing, so
 ## Decision
 The coordinator checkout is for scheduling, discovery, and aggregate reporting. Executable ticket work and substantial workflow-maintenance work use isolated Git worktrees.
 
-- Plan branches start from the recorded base branch, usually `main`.
+- Plan integration branches start from the recorded base branch, usually `main`.
 - Ticket branches start from the plan integration branch when the ticket has `plan_id`.
 - Standalone ticket branches may start from the recorded base branch.
 - Each executed ticket gets a dedicated workspace and branch.
@@ -19,6 +19,7 @@ The coordinator checkout is for scheduling, discovery, and aggregate reporting. 
 - Ticket branches merge back into the plan branch sequentially.
 - Plan-completion regression runs from the integrated plan branch after ticket branches are merged.
 - The coordinator must not run multiple workflow engines in the same checkout concurrently.
+- Worker agents must run from the active item workspace root. The coordinator must not dispatch worker subagents from one project root with absolute paths into another worktree, because that crosses OpenCode permission boundaries.
 
 Recommended workspace root:
 
@@ -41,7 +42,7 @@ Recommended workflow-change workspace:
 ## Consequences
 This adds branch/worktree setup overhead but prevents shared-state collisions and makes recovery clearer.
 
-Parallel ticket execution is possible only when each active ticket has its own workspace. Integration back to the plan branch remains sequential so merge conflicts and impacted regression failures are handled deterministically.
+Parallel ticket execution is the coordinator default for explicit plan targets only when each active ticket has its own workspace and child OpenCode session rooted at that workspace. The coordinator runs at most 3 ticket workspaces in parallel. Independent tickets are scheduled before tickets with declared dependencies, and dependency eligibility is recomputed between batches. Integration back to the plan branch remains sequential so merge conflicts and impacted regression failures are handled deterministically.
 
 ## Supersedes
 This refines ADR 0001 and ADR 0002. Their single-checkout sequential plan behavior still applies inside one workspace, but coordinator-managed multi-ticket execution now requires isolated ticket workspaces.

@@ -44,6 +44,11 @@
       "description": "Initialize or repair the greenfield-only Workflow Kit Project Adapter. Usage /init-project <prd-or-plan>",
       "template": "Load .opencode/skills/init-project/SKILL.md. Raw arguments: **$ARGUMENTS**. Enforce the Greenfield Gate first: block existing product code, tests, dependency manifests, or CI configs. For empty/docs-only product repos, initialize or repair .opencode/project.json, docs/acceptance skeleton, generated test-case manifest, rendered agent permissions, and AGENTS.md pointers. Do not migrate existing .claude, dependency, CI, or test-runner configuration.",
       "agent": "build"
+    },
+    "coordinator": {
+      "description": "Coordinate workflow runs safely. Usage /coordinator [plan-id|ticket-id]",
+      "template": "Load the coordinator skill (.opencode/skills/coordinator/SKILL.md).\n\nRaw arguments: **$ARGUMENTS**\n\nArgument contract:\n- If $1 is empty: ask the user which plan or ticket to execute before scanning plans/tickets. Offer a targeted status scan as a separate option.\n- If $1 is a PLAN-YYYYMMDD-* id: use targeted plan mode. Read only that plan and its tickets, then fan out ready executable tickets into one ticket workspace per ticket unless the user explicitly asks for sequential plan mode. Run at most 3 ticket orchestrators at once, and always schedule independent tickets before tickets that declare dependencies.\n- If $1 is a TICKET-YYYYMMDD-NNN id: use targeted ticket mode. Read only that ticket and its manifest entry.\n\nDo not call developer, sdet, or reviewer directly. Do not dispatch subagents against absolute paths outside the active project root. Lower-level orchestration must run from inside each item workspace root via /engineering/orchestrator TICKET-ID. If child OpenCode sessions cannot be launched from those roots, stop after printing the exact per-workspace commands.",
+      "agent": "build"
     }
   },
   "compaction": {

@@ -22,6 +22,7 @@ Use one backlog for features, bugs, chores, and spikes. The orchestrator execute
 |---|---|
 | `/init-project <prd-or-plan>` | Initializes or repairs the Project Adapter only after the Greenfield Gate confirms an empty/docs-only product repo. |
 | `/plan-to-tickets [plan-file] [plan-id optional]` | Converts or repairs plans/bugs/ask-me output into TDD-ready plan and ticket files. |
+| `/coordinator [plan-id|ticket-id]` | Arg-first coordinator entry point. Empty args ask for a target before scanning; explicit plans fan out ready tickets into isolated ticket workspaces with max parallel 3. |
 | `/engineering/orchestrator` | Shows TDD status, review/ready tickets, plans, checkpoints, and PR post-step state. |
 | `/engineering/orchestrator [ticket-id]` | Runs one ready feature/bug ticket through strict TDD. |
 | `/engineering/orchestrator [plan-id]` | Audits review tickets and runs all ready executable tickets for one plan sequentially. |
@@ -80,6 +81,8 @@ When invoked with a `PLAN_ID`, the orchestrator:
 
 Draft chore/spike backlog records do not block PR creation.
 
+Coordinator plan mode is different: `/coordinator PLAN-...` reads only the target plan and its tickets, then runs ready executable tickets in parallel item workspaces when child OpenCode sessions can be launched from those workspace roots. It runs at most 3 ticket orchestrators at once, schedules independent tickets before dependency-bearing tickets, and keeps ticket branch integration plus impacted regression sequential.
+
 ## Branches And Commits
 
 - Plan branch: `tdd/{plan-id}`.
@@ -87,6 +90,7 @@ Draft chore/spike backlog records do not block PR creation.
 - Branches are created only from a clean worktree.
 - No auto-stash, auto-reset, or dirty-work discard.
 - Coordinator-managed tickets and substantial workflow changes use isolated workspaces per `docs/adr/0003-ticket-and-workflow-workspaces.md`.
+- Worker agents run from the item workspace root. Do not dispatch worker subagents across absolute paths into another worktree.
 
 Commit convention:
 
