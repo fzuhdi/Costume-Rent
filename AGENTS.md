@@ -11,7 +11,7 @@ Tiny project memory. Skills/subagents/knowledge/commands load on demand.
 ## Key commands
 - `/init-project` — initialize/repair Project Adapter, acceptance skeleton, manifests, rendered agents, and pointers after the Greenfield Gate passes.
 - `/plan-to-tickets` — create TDD tickets with `test_case_id`.
-- `/engineering/orchestrator` — execute one ready ticket through the TDD FSM.
+- `/engineering/orchestrator` — show runnable plans with empty args, or execute one target ticket/plan through the TDD FSM.
 - `/productivity/start`, `/productivity/status` — resume and inspect workflow state.
 
 ## Guardrails

@@ -23,9 +23,9 @@ Use one backlog for features, bugs, chores, and spikes. The orchestrator execute
 | `/init-project <prd-or-plan>` | Initializes or repairs the Project Adapter only after the Greenfield Gate confirms an empty/docs-only product repo. |
 | `/plan-to-tickets [plan-file] [plan-id optional]` | Converts or repairs plans/bugs/ask-me output into TDD-ready plan and ticket files. |
 | `/coordinator [plan-id|ticket-id]` | Arg-first coordinator entry point. Empty args ask for a target before scanning; explicit targets dispatch one orchestrator subagent by default. |
-| `/engineering/orchestrator` | Shows TDD status, review/ready tickets, plans, checkpoints, and PR post-step state. |
-| `/engineering/orchestrator [ticket-id]` | Runs one ready feature/bug ticket through strict TDD. |
-| `/engineering/orchestrator [plan-id]` | Audits review tickets and runs all ready executable tickets for one plan sequentially. |
+| `/engineering/orchestrator` | Shows TDD status plus runnable `ready` and `in_progress` plans with exact launch commands. |
+| `/engineering/orchestrator [ticket-id]` | Dispatches one orchestrator subagent to run one ready feature/bug ticket through strict TDD. |
+| `/engineering/orchestrator [plan-id]` | Dispatches one orchestrator subagent to audit review tickets and run one plan sequentially. |
 | `/productivity/start` | Reads TDD progress/logs and recommends the safest recovery or next action. |
 | `/productivity/status` | Reports current TDD workflow status without invoking subagents. |
 
@@ -91,7 +91,7 @@ Ticket status enum: `draft | review | ready | in_progress | blocked | complete`.
 
 ## Plan Execution
 
-When invoked with a `PLAN_ID`, the orchestrator:
+When invoked with a `PLAN_ID`, the direct orchestrator command dispatches one orchestrator subagent, and that subagent:
 
 1. Requires a clean worktree and creates/resumes `tdd/{plan-id}`.
 2. Audits `status: review` tickets first.
@@ -101,6 +101,8 @@ When invoked with a `PLAN_ID`, the orchestrator:
 6. Pushes the branch and creates a PR only after whole-plan success.
 
 Draft chore/spike backlog records do not block PR creation.
+
+When invoked without arguments, `/engineering/orchestrator` remains read-only and lists runnable plans, not individual ticket launch commands.
 
 Coordinator plan mode is the preferred entry point for targeted plan runs. By default it reads only the target plan and its tickets, then dispatches one orchestrator subagent for the full plan in the same checkout. Advanced isolated-worktree fan-out is available only when the environment supports true parallel child OpenCode sessions; it must keep ticket branch integration, dependency-changing work, and impacted regression sequential.
 

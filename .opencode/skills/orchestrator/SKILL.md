@@ -75,6 +75,7 @@ ANY -> escalated                        (malformed state, dirty disputed work, m
 Forbidden:
 
 - `red-writing -> green-building` without `RED_STATUS: failing_expected`.
+- Manually simulating `sdet`, `developer`, `reviewer`, or `explore` when worker dispatch is unavailable or denied.
 - Any developer edit to the recorded SDET acceptance test during GREEN or refactor.
 - Treating a targeted test run as successful when the project-configured quality gate fails.
 - Running dependency installers, package-manager add/update commands, browser installers, or runtime installers without explicit user approval.
@@ -337,7 +338,7 @@ If clean, persist durable blocked status and commit `docs(tdd): block <ticket-id
 
 ## Standard Report
 
-For `/productivity/start`, `/productivity/status`, and empty `/engineering/orchestrator`, report:
+For `/productivity/start` and `/productivity/status`, report:
 
 - Current plan, ticket, branch, and base branch.
 - Current TDD phase and iteration.
@@ -348,3 +349,11 @@ For `/productivity/start`, `/productivity/status`, and empty `/engineering/orche
 - PR state if plan is complete but push or `gh pr create` failed.
 
 Recommend the safest next step: resume RED validation, continue GREEN, rerun SDET, resolve dirty worktree, audit review tickets, run the next ready ticket, or rerun failed PR creation.
+
+For empty `/engineering/orchestrator`, report the same runtime state plus a runnable plan launcher list:
+
+- Existing plans with `status: ready` or `status: in_progress`.
+- For each listed plan: plan id, title, current status, and a short ticket summary such as `review/ready/in_progress/blocked/complete` counts.
+- The exact launch command for each plan: `/engineering/orchestrator <plan-id>`.
+- Do not enumerate individual ready ticket launch commands in this mode unless the user explicitly asked for ticket-level execution choices.
+- If no runnable plans exist, say so explicitly and recommend `/productivity/status` or `/plan-to-tickets` as appropriate.

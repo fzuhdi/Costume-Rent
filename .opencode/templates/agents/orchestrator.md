@@ -77,6 +77,7 @@ Return per `.opencode/skills/shared/io-contract.md` with `OUTCOME: success | par
 
 ## Hard Rules
 
+- If dispatch to `sdet`, `developer`, `reviewer`, or `explore` is unavailable or denied, return `OUTCOME: blocked`; do not simulate those workers yourself.
 - Do not edit SDET acceptance tests or application code directly. Delegate to sdet/developer.
 - Do not reset, rebase, merge, or cherry-pick.
 - Do not disable quality gates.
