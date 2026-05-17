@@ -31,5 +31,17 @@ node scripts/quality-gate.mjs
 - Before reviewer final-review.
 - Before committing TDD coverage or plan completion.
 - Before treating a Playwright-green run as successful.
+- Before plan-completion impacted-spec regression.
 
 If Playwright passes but `quality:integrity` fails, the result is failed.
+
+## Plan-Completion Regression
+
+After all planned executable/review tickets are complete, the orchestrator must run the full impacted spec files before marking the plan complete.
+
+- Impacted specs are derived from completed ticket `test_file` fields plus manifest/reviewer shared-impact additions.
+- Regression runs full spec files, not only targeted `--grep` slices.
+- Any failed mapped AC in an impacted spec blocks plan completion, including known/pre-existing failures.
+- Failed mapped ACs are synced into same-plan `status: review` bug tickets with `node helpers/sync-regression-bugs.mjs --plan <plan-id>` from `test/`.
+- Unmapped/setup/environment failures block without creating product bug tickets.
+- The plan remains `in_progress` until impacted specs pass.

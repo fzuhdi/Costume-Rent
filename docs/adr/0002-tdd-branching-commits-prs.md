@@ -11,6 +11,7 @@ TDD execution uses dedicated branches, real checkpoint commits, and machine-pars
 
 - The orchestrator creates a TDD branch only from a clean worktree.
 - Plan mode uses `tdd/{plan-id}`; ticket mode uses `tdd/{ticket-id}`.
+- Coordinator-managed ticket branches start from the plan branch when the ticket has `plan_id`, per ADR 0003.
 - Existing branches resume only when runtime state records the same plan or ticket.
 - The base branch is recorded when the TDD branch is created and used as the PR base.
 - Checkpoint commits are real commits and are pushed with the PR branch.

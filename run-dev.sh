@@ -1,6 +1,16 @@
 #!/bin/bash
-echo "Starting services..."
-# Build services defined in docker-compose.dev.yml
-docker compose -f docker-compose.dev.yml down -v
-docker compose -f docker-compose.dev.yml build
-docker compose -f docker-compose.dev.yml up -d
+set -euo pipefail
+
+COMPOSE_FILE="docker-compose.dev.yml"
+
+echo "Starting development services..."
+
+if [[ "${1:-}" == "--reset" ]]; then
+  echo "Resetting containers and Docker volumes..."
+  docker compose -f "$COMPOSE_FILE" down -v
+else
+  echo "Keeping existing Docker volumes. Use './run-dev.sh --reset' to wipe them."
+fi
+
+docker compose -f "$COMPOSE_FILE" up -d --build
+docker compose -f "$COMPOSE_FILE" ps

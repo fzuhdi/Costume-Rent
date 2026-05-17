@@ -23,6 +23,7 @@
       "developer": "allow",
       "sdet": "allow",
       "reviewer": "allow",
+      "workflow-engineer": "allow",
       "explore": "allow",
       "general": "allow"
     }

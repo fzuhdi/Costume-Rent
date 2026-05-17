@@ -25,6 +25,8 @@ Use one backlog for features, bugs, chores, and spikes. The orchestrator execute
 | `/productivity/start` | Reads TDD progress/logs and recommends the safest recovery or next action. |
 | `/productivity/status` | Reports current TDD workflow status without invoking subagents. |
 
+The `coordinator` skill is the preferred user-facing entry point for multiple tickets/plans and workflow-maintenance sequencing. Direct `developer`, `sdet`, and `reviewer` commands are debug-only for normal users.
+
 ## TDD Flow
 
 ```text
@@ -85,6 +87,7 @@ Draft chore/spike backlog records do not block PR creation.
 - Ticket branch: `tdd/{ticket-id}`.
 - Branches are created only from a clean worktree.
 - No auto-stash, auto-reset, or dirty-work discard.
+- Coordinator-managed tickets and substantial workflow changes use isolated workspaces per `docs/adr/0003-ticket-and-workflow-workspaces.md`.
 
 Commit convention:
 
@@ -114,6 +117,7 @@ Runtime state uses `schemaVersion: 2`. Unknown or old versions block with `inval
 
 - `docs/adr/0001-tdd-orchestrator-execution.md`
 - `docs/adr/0002-tdd-branching-commits-prs.md`
+- `docs/adr/0003-ticket-and-workflow-workspaces.md`
 
 ## Restart Note
 
