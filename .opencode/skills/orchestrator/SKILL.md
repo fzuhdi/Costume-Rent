@@ -123,7 +123,7 @@ Plan mode processes, in order:
 1. `status: review` tickets for the plan via `reviewer MODE: ticket-audit`.
 2. Approved ready `feature`/`bug` tickets sorted by priority then id.
 
-Ready tickets must be independently executable. New tickets declare same-plan prerequisites in `depends_on`; dependent work stays `draft` until rewritten or every prerequisite ticket is complete. The parallel plan launcher excludes `ready` tickets with unmet `depends_on` and reports the blocking prerequisite ids.
+Ready tickets must be independently executable. New tickets declare same-plan prerequisites in `depends_on`; dependent work stays `draft` until rewritten or every prerequisite ticket is complete. The parallel plan prepare/handoff helper excludes `ready` tickets with unmet `depends_on` and reports the blocking prerequisite ids.
 
 Plan mode continues past clean audit-only blocks, but the whole plan does not succeed while any review/executable ticket is blocked or escalated. If RED/GREEN/refactor leaves dirty or disputed changes, stop the plan.
 
@@ -325,7 +325,7 @@ Update ticket frontmatter to `complete`, update runtime state, and commit durabl
 
 This state runs only in plan mode, after all planned review/executable tickets are complete and before durable plan completion.
 
-Default coordinator plan launch fans out independent ready tracer tickets through `.opencode/scripts/launch-parallel-plan.mjs --parallel 3`; this orchestrator skill still owns the strict ticket FSM inside each isolated ticket worktree and the serialized integration/regression rules after ticket branches complete.
+Default coordinator plan launch prepares independent ready tracer tickets through `.opencode/scripts/launch-parallel-plan.mjs --parallel 3 --json`, then dispatches orchestrator tasks with per-worktree handoff prompts. This orchestrator skill still owns the strict ticket FSM inside each isolated ticket worktree and the serialized integration/regression rules after ticket branches complete.
 
 1. Ensure a current successful quality gate covers the plan diff before regression. Run the configured gate when coverage is missing or stale; block on failure.
 2. Build the impacted spec list from completed ticket `test_case_id` values plus manifest/reviewer shared-impact additions.
@@ -378,10 +378,10 @@ For `/productivity/start` and `/productivity/status`, report:
 
 Recommend the safest next step: resume RED validation, continue GREEN, run deterministic GREEN rerun, resolve dirty worktree, audit review tickets, run the next ready ticket, or rerun failed PR creation.
 
-For empty `/engineering/orchestrator`, report the same runtime state plus a runnable plan launcher list:
+For empty `/engineering/orchestrator`, report the same runtime state plus runnable plan commands:
 
 - Existing plans with `status: ready` or `status: in_progress`.
 - For each listed plan: plan id, title, current status, and a short ticket summary such as `review/ready/in_progress/blocked/complete` counts.
-- The exact launch command for each plan: `/engineering/orchestrator <plan-id>`.
-- Do not enumerate individual ready ticket launch commands in this mode unless the user explicitly asked for ticket-level execution choices.
+- The exact command for each plan: `/engineering/orchestrator <plan-id>`.
+- Do not enumerate individual ready ticket commands in this mode unless the user explicitly asked for ticket-level execution choices.
 - If no runnable plans exist, say so explicitly and recommend `/productivity/status` or `/plan-to-tickets` as appropriate.

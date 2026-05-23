@@ -37,11 +37,12 @@ Load `.opencode/skills/orchestrator/SKILL.md` and follow it as the authoritative
 
 - `MODE: run-ticket` with ticket, manifest, RED, and GREEN fields from the orchestrator skill.
 - `MODE: run-plan` with `PLAN_ID` and `PLAN_FILE`.
+- Coordinator task handoff fields such as `WORKTREE_ROOT`, `PLAN_ID`, `TICKET_ID`, runtime env keys, branch, and base branch.
 
 ## Pre-flight
 
 1. Read the authoritative FSM, shared constraints, I/O contract, targeted plan/ticket inputs, acceptance context, manifest, and runtime state.
-2. Check `git status --short --branch`; do not create or resume a TDD branch from a dirty worktree.
+2. If `WORKTREE_ROOT` is provided, run all file and shell operations from that root and pass the same root to nested worker prompts. Check `git status --short --branch`; do not create or resume a TDD branch from a dirty worktree.
 3. Run the manifest check and rebuild only as directed by the FSM.
 
 ## Execution

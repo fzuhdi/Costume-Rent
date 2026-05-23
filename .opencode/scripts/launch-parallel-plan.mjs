@@ -17,9 +17,9 @@ const requiredRuntimeFiles = ['.env', 'frontend/package-lock.json', 'test/packag
 const optionalRuntimeFiles = ['backend/.env', 'frontend/.env'];
 
 function usage() {
-  return `Usage: node .opencode/scripts/launch-parallel-plan.mjs --target PLAN-* [--parallel 3] [--dry-run] [--json] [--workspace-root <path>] [--no-start-runtime] [--no-launch]
+  return `Usage: node .opencode/scripts/launch-parallel-plan.mjs --target PLAN-* [--parallel 3] [--dry-run] [--json] [--workspace-root <path>] [--no-start-runtime] [--prepare-only]
 
-Launches up to three ready executable tickets for a plan in isolated git worktrees and runtime slots. Each ticket gets its own branch, .opencode/state, Compose project, host ports, Playwright base URL, and orchestrator TUI.`;
+Prepares up to three ready executable tickets for a plan in isolated git worktrees and runtime slots. Each ticket gets its own branch, .opencode/state, Compose project, host ports, Playwright base URL, and structured handoff for coordinator task dispatch.`;
 }
 
 function parseArgs(argv) {
@@ -30,7 +30,7 @@ function parseArgs(argv) {
     json: false,
     workspaceRoot: null,
     startRuntime: true,
-    launch: true,
+    prepareOnly: false,
     help: false,
   };
 
@@ -57,8 +57,8 @@ function parseArgs(argv) {
       continue;
     }
 
-    if (token === '--no-launch') {
-      values.launch = false;
+    if (token === '--prepare-only') {
+      values.prepareOnly = true;
       continue;
     }
 
@@ -434,7 +434,7 @@ function ensureTestDependencyLink(dispatch, report, values) {
 
   const worktreeLockHash = fs.existsSync(worktreeLock) ? sha256File(worktreeLock) : sha256File(rootLock);
   if (sha256File(rootLock) !== worktreeLockHash) {
-    report.blockers.push(`test/package-lock.json differs for ${dispatch.ticketId}; install/update dependencies once in a controlled workspace before launch.`);
+    report.blockers.push(`test/package-lock.json differs for ${dispatch.ticketId}; install/update dependencies once in a controlled workspace before preparation.`);
     dispatch.status = 'blocked';
     report.checks.push({ name: 'test-dependencies', status: 'failed', detail: `${dispatch.ticketId}: lock hash mismatch` });
     return false;
@@ -619,35 +619,41 @@ function startRuntime(dispatch, report, values) {
   return true;
 }
 
-function launchTicket(dispatch, report, values) {
-  const launcher = path.join(dispatch.worktree, '.opencode', 'scripts', 'launch-orchestrator-tui.mjs');
-  dispatch.launchCommand = `node .opencode/scripts/launch-orchestrator-tui.mjs --target ${dispatch.ticketId}`;
+function buildOrchestratorPrompt(dispatch) {
+  const envLines = Object.keys(dispatch.env)
+    .sort()
+    .map(key => `${key}=${dispatch.env[key]}`)
+    .join('\n');
 
-  if (!values.launch) {
-    dispatch.launchAction = 'skipped';
-    report.checks.push({ name: 'orchestrator-launch', status: 'passed', detail: `${dispatch.ticketId}: skipped` });
-    return true;
-  }
+  return `Load .opencode/skills/orchestrator/SKILL.md and run MODE: run-ticket for the assigned ticket.\n\nWORKTREE_ROOT: ${dispatch.worktree}\nPLAN_ID: ${dispatch.planId}\nTICKET_ID: ${dispatch.ticketId}\nTICKET_FILE: ${dispatch.ticketFile}\nTICKET_TYPE: ${dispatch.ticketType}\nTEST_CASE_ID: ${dispatch.testCaseId}\nBRANCH: ${dispatch.branch}\nBASE_BRANCH: ${dispatch.planBranch}\nRUNTIME_SLOT: ${dispatch.slot}\nCOMPOSE_PROJECT: ${dispatch.project}\nCOMPOSE_COMMAND: ${dispatch.composeCommand}\nRUNTIME_ENV_KEYS:\n${envLines}\n\nRun every file and shell operation under WORKTREE_ROOT. When dispatching nested worker subagents, include this same WORKTREE_ROOT and instruct them to run all file and shell operations there. Use only the runtime env keys and values above; do not inspect or include secret env file contents in prompts or summaries. If WORKTREE_ROOT is dirty before starting, block and report it. Return per .opencode/skills/shared/io-contract.md.`;
+}
 
-  if (values.dryRun) {
-    dispatch.launchAction = 'dry-run-launch';
-    report.checks.push({ name: 'orchestrator-launch', status: 'passed', detail: `${dispatch.ticketId}: dry-run` });
-    return true;
-  }
-
-  const env = { ...process.env, ...dispatch.env };
-  const result = runCapture(process.execPath, [launcher, '--repo-root', dispatch.worktree, '--target', dispatch.ticketId], { cwd: dispatch.worktree, env });
-  if (!result.ok) {
-    report.blockers.push(`Failed to launch orchestrator for ${dispatch.ticketId}: ${result.stderr || result.error || result.stdout}`);
-    dispatch.status = 'blocked';
-    report.checks.push({ name: 'orchestrator-launch', status: 'failed', detail: dispatch.ticketId });
-    return false;
-  }
-
-  dispatch.launchAction = 'launched';
-  dispatch.launchOutput = result.stdout.trim();
-  report.checks.push({ name: 'orchestrator-launch', status: 'passed', detail: dispatch.ticketId });
-  return true;
+function attachTaskHandoff(dispatch) {
+  dispatch.status = 'prepared';
+  dispatch.dispatchStatus = 'prepared';
+  dispatch.task = {
+    subagentType: 'orchestrator',
+    subagent_type: 'orchestrator',
+    description: `Run orchestrator FSM for ${dispatch.ticketId} in prepared worktree`,
+    taskDescription: `Run orchestrator FSM for ${dispatch.ticketId} in prepared worktree`,
+    command: `/coordinator ${dispatch.planId}`,
+    commandContext: {
+      worktreeRoot: dispatch.worktree,
+      planId: dispatch.planId,
+      ticketId: dispatch.ticketId,
+      ticketFile: dispatch.ticketFile,
+      branch: dispatch.branch,
+      baseBranch: dispatch.planBranch,
+      runtimeSlot: dispatch.slot,
+      composeProject: dispatch.project,
+      composeCommand: dispatch.composeCommand,
+      runtimeEnvKeys: dispatch.env,
+    },
+  };
+  dispatch.task.command_context = dispatch.task.commandContext;
+  dispatch.task.prompt = buildOrchestratorPrompt(dispatch);
+  dispatch.task.orchestratorPrompt = dispatch.task.prompt;
+  dispatch.task.orchestrator_prompt = dispatch.task.prompt;
 }
 
 function makeDispatch(planId, planBranch, ticket, index, workspaceRoot) {
@@ -668,15 +674,14 @@ function makeDispatch(planId, planBranch, ticket, index, workspaceRoot) {
     worktree,
     env,
     composeCommand: `docker compose -p ${project} -f docker-compose.dev.yml up -d backend frontend`,
-    launchCommand: null,
     status: 'planned',
   };
 }
 
 function buildReport(values) {
   const report = {
-    runner: 'parallel-plan-launcher',
-    mode: values.dryRun ? 'parallel-plan-dry-run' : 'parallel-plan-launch',
+    runner: 'parallel-plan-prepare-handoff',
+    mode: values.dryRun ? 'parallel-plan-dry-run' : 'parallel-plan-prepare',
     target: values.target,
     outcome: 'status',
     exitCode: null,
@@ -696,7 +701,7 @@ function buildReport(values) {
   ensureProjectRoot(report);
 
   if (!values.target || !/^PLAN-\d{8}-[A-Za-z0-9-]+$/.test(values.target)) {
-    report.blockers.push('Parallel launcher requires --target PLAN-YYYYMMDD-name.');
+    report.blockers.push('Parallel prepare/handoff requires --target PLAN-YYYYMMDD-name.');
   }
 
   if (!Number.isInteger(values.parallel) || values.parallel < 1 || values.parallel > maxParallel) {
@@ -705,7 +710,7 @@ function buildReport(values) {
 
   const clean = gitClean(root);
   if (!clean.ok) report.blockers.push(clean.error);
-  else if (clean.dirty.length && !values.dryRun) report.blockers.push(`Coordinator checkout must be clean before parallel launch: ${clean.dirty.join(', ')}`);
+  else if (clean.dirty.length && !values.dryRun) report.blockers.push(`Coordinator checkout must be clean before parallel prepare/handoff: ${clean.dirty.join(', ')}`);
   else if (clean.dirty.length) report.warnings.push(`Coordinator checkout is dirty (${clean.dirty.length} path(s)); dry-run only.`);
   report.checks.push({ name: 'coordinator-worktree', status: clean.ok && !clean.dirty.length ? 'passed' : values.dryRun ? 'warning' : 'blocked', detail: clean.ok ? `${clean.dirty.length} dirty path(s)` : clean.error });
 
@@ -758,11 +763,11 @@ function buildReport(values) {
   report.dependencyBlockedTickets = dependencyBlockedTickets;
 
   if (reviewTickets.length) {
-    report.blockers.push(`Plan has review tickets that must be audited before parallel executable launch: ${reviewTickets.map(ticket => ticket.id).join(', ')}`);
+    report.blockers.push(`Plan has review tickets that must be audited before parallel executable prepare/handoff: ${reviewTickets.map(ticket => ticket.id).join(', ')}`);
   }
 
   if (!readyTickets.length) {
-    report.blockers.push(`Plan ${values.target} has no ready executable tickets to launch.`);
+    report.blockers.push(`Plan ${values.target} has no ready executable tickets to prepare.`);
   } else if (!independentReadyTickets.length && dependencyBlockedTickets.length) {
     const details = dependencyBlockedTickets
       .map(item => `${item.ticketId} waits for ${item.unmet.join(', ')}`)
@@ -791,8 +796,8 @@ function buildReport(values) {
     if (!bootstrapState(dispatch, report, values)) continue;
     if (!acquireSlot(dispatch, report, values)) continue;
     if (!startRuntime(dispatch, report, values)) continue;
-    if (!launchTicket(dispatch, report, values)) continue;
-    dispatch.status = values.dryRun ? 'ready-dry-run' : 'launched';
+    attachTaskHandoff(dispatch);
+    if (values.dryRun) dispatch.status = 'ready-dry-run';
   }
 
   return finishReport(report);
@@ -802,7 +807,7 @@ function finishReport(report) {
   if (report.blockers.length) {
     report.outcome = 'blocked';
     report.exitCode = 1;
-    report.nextStep = 'Resolve blockers before launching parallel tracer tickets.';
+    report.nextStep = 'Resolve blockers before preparing parallel tracer-ticket task handoffs.';
     return report;
   }
 
@@ -816,13 +821,13 @@ function finishReport(report) {
   report.outcome = report.mode.endsWith('dry-run') ? 'ready' : 'success';
   report.exitCode = 0;
   report.nextStep = report.mode.endsWith('dry-run')
-    ? `Dry run only. Re-run without --dry-run to launch ${report.dispatches.length} isolated ticket workflow(s).`
-    : `Launched ${report.dispatches.length} isolated ticket workflow(s). Monitor each orchestrator TUI and merge completed ticket branches back into the plan branch sequentially.`;
+    ? `Dry run only. Re-run without --dry-run to prepare ${report.dispatches.length} isolated ticket task handoff(s).`
+    : `Prepared ${report.dispatches.length} isolated ticket workflow(s). Coordinator must dispatch each dispatch.task with subagent_type=orchestrator, then merge completed ticket branches back into the plan branch sequentially.`;
   return report;
 }
 
 function printText(report) {
-  console.log(`Parallel Plan Launcher: ${report.outcome}`);
+  console.log(`Parallel Plan Prepare/Handoff: ${report.outcome}`);
   console.log(`TARGET: ${report.target}`);
   console.log(`PARALLEL_LIMIT: ${report.parallelLimit}`);
   console.log(`WORKSPACE_ROOT: ${report.workspaceRoot || 'none'}`);
@@ -837,6 +842,7 @@ function printText(report) {
     console.log(`- ${dispatch.ticketId}: slot=${dispatch.slot} branch=${dispatch.branch} url=${dispatch.env.PW_BASE_URL} status=${dispatch.status}`);
     console.log(`  worktree=${dispatch.worktree}`);
     console.log(`  compose=${dispatch.composeCommand}`);
+    if (dispatch.task) console.log(`  task=${dispatch.task.subagentType}: ${dispatch.task.description}`);
   }
   if (report.blockers.length) {
     console.log('');

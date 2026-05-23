@@ -11,10 +11,10 @@ Workflow-platform changes should not be made casually in the coordinator checkou
 ## Decision
 
 ### Max-3 Parallel Plan Launch (Default Plan Mode)
-For normal plan operation, the coordinator launches up to three independent ready executable tracer tickets in parallel. Each ticket gets its own git worktree, TDD branch, runtime slot, Compose project, Playwright base URL, artifact paths, and `.opencode/state/`. The parent checkout schedules and observes only; each launched ticket orchestrator owns that ticket's RED/GREEN/review loop.
+For normal plan operation, the coordinator prepares up to three independent ready executable tracer tickets in parallel and dispatches one orchestrator task for each prepared handoff. Each ticket gets its own git worktree, TDD branch, runtime slot, Compose project, Playwright base URL, artifact paths, and `.opencode/state/`. The parent checkout schedules and observes only; each orchestrator task owns that ticket's RED/GREEN/review loop.
 
 - The coordinator checkout is for scheduling, discovery, slot assignment, worktree creation, and aggregate reporting.
-- Plan launch uses `node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3`.
+- Plan preparation uses `node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3 --json`, then the coordinator dispatches returned `dispatch.task` handoffs with subagent type `orchestrator`.
 - The launcher selects up to three independent `status: ready` executable tickets by priority/id order.
 - Tickets may declare same-plan prerequisites in frontmatter as `depends_on: [TICKET-YYYYMMDD-NNN]`. Missing `depends_on` is treated as empty for legacy tickets.
 - A ready ticket with unmet `depends_on` is excluded from the current parallel batch and reported with the prerequisite ids. If no independent ready tickets remain, plan launch blocks instead of launching dependent work early.
@@ -23,11 +23,10 @@ For normal plan operation, the coordinator launches up to three independent read
 - Ticket branches start from the plan integration branch `tdd/{plan-id}` and use `tdd/{ticket-id}`.
 - Ticket branches merge back into the plan branch sequentially after ticket completion.
 - Plan-completion regression runs from the plan branch after completed ticket branches are integrated.
-- Successful launched ticket sessions delete their own OpenCode session by title after the TUI exits; partial or blocked runs keep the session for debugging.
-- Coordinator executable launches use the orchestrator default from `.opencode/workflow-models.json`; they ask for a model only when the user requests an override or no configured default is available.
+- Orchestrator task prompts must include `WORKTREE_ROOT` and instruct nested worker prompts to use the same root.
 
 ### Single-Ticket Launch (Default Ticket Mode)
-For standalone ticket operation, the coordinator launches one orchestrator TUI for the target ticket via `opencode run --command engineering/orchestrator`. This uses the active checkout or the ticket worktree selected by the parallel plan launcher.
+For standalone ticket operation, the coordinator dispatches one orchestrator task for the target ticket. This uses the active clean checkout or a prepared ticket worktree.
 
 - Do not launch multiple orchestrators in the same checkout.
 - Do not dispatch worker subagents across worktree roots.

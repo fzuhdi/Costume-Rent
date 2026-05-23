@@ -9,14 +9,14 @@
 
 ## Execution Model
 
-The coordinator checkout schedules only. By default, plan targets launch up to three visible orchestrator TUI windows for ready executable tracer tickets, each in its own git worktree and Docker Compose runtime slot. Ticket targets launch one visible orchestrator TUI window. Each launched ticket session manages its own state files, checkpoint commits, subagent dispatches, ticket completion, and ticket branch output.
+The coordinator checkout schedules only. By default, plan targets deterministically prepare up to three ready executable tracer tickets, each in its own git worktree and Docker Compose runtime slot, then dispatch one `orchestrator` task per prepared handoff. Ticket targets dispatch one `orchestrator` task in the active clean worktree. Each orchestrator task manages its own state files, checkpoint commits, worker subagent dispatches, ticket completion, and ticket branch output.
 
 ```text
 route arguments
 -> targeted read
--> resolve default model from `.opencode/workflow-models.json`
--> for plans: launch `node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3`
--> for tickets: launch `opencode run --interactive --command engineering/orchestrator ...`
+-> for plans: prepare `node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3 --json`
+-> dispatch each returned `dispatch.task` via task(subagent_type="orchestrator")
+-> for tickets: dispatch one orchestrator task for the active clean worktree
 -> report handoff details
 ```
 
@@ -36,26 +36,31 @@ Before launch:
 - Require a clean worktree.
 - Confirm no runtime state indicates a different active run.
 - Confirm the target exists.
-- Confirm `opencode`, Docker, and the relevant launcher script are available. Launchers report manual commands if Windows Terminal is unavailable.
-- Let the launcher resolve the orchestrator model from `.opencode/workflow-models.json`. Use `--mode list-models --format json` and ask the user only when an override is requested or no configured default is available.
+- Confirm Docker and the relevant prepare script are available for plan targets.
+- Do not include secret env file contents in task prompts or summaries; pass only runtime env keys/values emitted by the prepare script.
 
-Launch plan targets with:
-
-```text
-node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3
-```
-
-Launch ticket targets with:
+Prepare plan targets with:
 
 ```text
-node .opencode/scripts/launch-orchestrator-tui.mjs --target <id> --model <provider/model>
+node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3 --json
 ```
 
-Omit `--model` for the configured orchestrator default.
+The prepare script creates or reuses `../Costume-Rent-workspaces/<plan-id>/<ticket-id>` worktrees, reserves slot 1-3 ports, starts `docker compose -p <ticket-project> -f docker-compose.dev.yml up -d backend frontend` unless `--no-start-runtime` is supplied, and returns `dispatches[].task` objects. It selects only independent ready tickets: tickets with unmet `depends_on` prerequisites are skipped and reported until the prerequisite tickets are complete. It blocks on review tickets, malformed or cross-plan dependency declarations, dirty coordinator checkout, dirty reused worktrees, slot conflicts, or missing runtime setup.
 
-The parallel plan launcher creates or reuses `../Costume-Rent-workspaces/<plan-id>/<ticket-id>` worktrees, reserves slot 1-3 ports, starts `docker compose -p <ticket-project> -f docker-compose.dev.yml up -d backend frontend`, then launches one orchestrator TUI per ticket. It launches only independent ready tickets: tickets with unmet `depends_on` prerequisites are skipped and reported until the prerequisite tickets are complete. It blocks on review tickets, malformed or cross-plan dependency declarations, dirty coordinator checkout, dirty reused worktrees, slot conflicts, missing runtime setup, or launch failures.
+For every successful non-dry-run dispatch, call the task tool with:
 
-Ticket launchers keep partial, blocked, escalated, or crashed sessions for debugging and clean up only successful ticket sessions.
+```text
+subagent_type: orchestrator
+description: dispatch.task.description
+command: dispatch.task.command
+prompt: dispatch.task.prompt
+```
+
+Do not rewrite the generated prompt. It is the handoff contract and includes `WORKTREE_ROOT`, `PLAN_ID`, `TICKET_ID`, runtime env keys, branch/base branch, and nested-worker root instructions.
+
+For single-ticket targets, dispatch one `orchestrator` task from the active clean root with the same prompt shape: include `WORKTREE_ROOT`, `TICKET_ID`, optional `PLAN_ID`, branch/base branch when known, runtime env keys in scope, and the instruction to run all file/shell operations under `WORKTREE_ROOT` and pass it to nested worker prompts.
+
+Task failures or blocked/partial orchestrator returns are reported as workflow blockers; the coordinator does not simulate the FSM.
 
 ## Queue Rules
 
@@ -69,4 +74,4 @@ Queue order:
 
 ## Stop Conditions
 
-Stop and report dirty worktrees, launcher failures, dirty work left by a launched run, or explicit user pause/inspection requests. Dependency and installer blocks follow `.opencode/skills/shared/constraints.md`.
+Stop and report dirty worktrees, prepare/handoff failures, dirty work left by an orchestrator task, or explicit user pause/inspection requests. Dependency and installer blocks follow `.opencode/skills/shared/constraints.md`.

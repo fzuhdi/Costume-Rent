@@ -117,17 +117,17 @@ Installer approval and dependency-cache reuse rules are owned by `.opencode/skil
 
 ## Workspaces
 
-Coordinator-managed plan execution uses max-3 isolated tracer-ticket worktrees by default. The launcher fills those slots only with independent ready tickets; ready tickets with unmet `depends_on` prerequisites are reported and wait for a later batch. Single-ticket targets still launch one orchestrator for one worktree/checkout. Substantial workflow-maintenance changes use isolated Git worktrees unless the user accepts the current checkout. See `docs/adr/0003-ticket-and-workflow-workspaces.md` for workspace policy and `.opencode/skills/shared/constraints.md` for dependency-cache rules.
+Coordinator-managed plan execution uses max-3 isolated tracer-ticket worktrees by default. The prepare/handoff script fills those slots only with independent ready tickets; ready tickets with unmet `depends_on` prerequisites are reported and wait for a later batch. The coordinator then dispatches one orchestrator task per prepared worktree. Single-ticket targets dispatch one orchestrator task for one worktree/checkout. Substantial workflow-maintenance changes use isolated Git worktrees unless the user accepts the current checkout. See `docs/adr/0003-ticket-and-workflow-workspaces.md` for workspace policy and `.opencode/skills/shared/constraints.md` for dependency-cache rules.
 
 Parallel runtime stacks require per-process runtime isolation, not only extra containers. Each process must have its own worktree, Compose project name, host-port allocation, Playwright base URL, and output paths.
 
-Launch the next parallel batch for a plan from the coordinator checkout:
+Prepare the next parallel batch for a plan from the coordinator checkout, then dispatch returned `dispatch.task` handoffs:
 
 ```bash
-node .opencode/scripts/launch-parallel-plan.mjs --target PLAN-YYYYMMDD-name --parallel 3
+node .opencode/scripts/launch-parallel-plan.mjs --target PLAN-YYYYMMDD-name --parallel 3 --json
 ```
 
-Preview without creating worktrees, reserving slots, starting Docker, or launching OpenCode windows:
+Preview without creating worktrees, reserving slots, or starting Docker:
 
 ```bash
 node .opencode/scripts/launch-parallel-plan.mjs --target PLAN-YYYYMMDD-name --parallel 3 --dry-run --json
@@ -139,9 +139,9 @@ Acquire a slot from the worktree root:
 node .opencode/scripts/runtime-slot.mjs acquire --target TICKET-YYYYMMDD-001
 ```
 
-The launcher uses the `+100` formula: slot 1 is frontend `5273`, backend `8181`, sqlite-web `8180`. It records slots in `.opencode/state/runtime-slots.json`, reuses a healthy registered stack, skips unknown port owners, and only recreates a known stale registered Compose project when run with `--cleanup-known-stale`.
+The runtime-slot helper uses the `+100` formula: slot 1 is frontend `5273`, backend `8181`, sqlite-web `8180`. It records slots in `.opencode/state/runtime-slots.json`, reuses a healthy registered stack, skips unknown port owners, and only recreates a known stale registered Compose project when run with `--cleanup-known-stale`.
 
-Example slot 1 PowerShell environment emitted by the launcher:
+Example slot 1 PowerShell environment emitted by the prepare/handoff helper:
 
 ```powershell
 $env:BUSANA_CONTAINER_PREFIX = "busana_ticket001"
