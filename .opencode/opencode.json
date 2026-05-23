@@ -20,14 +20,14 @@
       "init-project": "allow"
     },
     "task": {
+      "*": "deny",
       "explore": "allow",
       "general": "allow",
       "developer": "allow",
       "sdet": "allow",
       "reviewer": "allow",
       "workflow-engineer": "allow",
-      "orchestrator": "allow",
-      "*": "deny"
+      "orchestrator": "allow"
     }
   },
   "skills": {
