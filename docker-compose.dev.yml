@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: ${BUSANA_CONTAINER_PREFIX:-busana}_backend
     restart: unless-stopped
-    env_file: .env.production
+    env_file: ${BUSANA_BACKEND_ENV_FILE:-.env}
     environment:
       - APP_ENV=development
     ports:

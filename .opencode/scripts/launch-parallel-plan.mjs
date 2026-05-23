@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import process from 'node:process';
 import { spawnSync } from 'node:child_process';
@@ -12,6 +13,9 @@ const slotStep = 100;
 const basePorts = { frontend: 5173, backend: 8081, sqlite: 8080 };
 const executableTypes = new Set(['feature', 'bug']);
 const ticketIdPattern = /^TICKET-\d{8}-\d{3}$/;
+const requiredRuntimeFiles = ['.env', 'frontend/package-lock.json', 'test/package-lock.json'];
+const optionalRuntimeFiles = ['backend/.env', 'frontend/.env'];
+const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
 function usage() {
   return `Usage: node .opencode/scripts/launch-parallel-plan.mjs --target PLAN-* [--parallel 3] [--dry-run] [--json] [--workspace-root <path>] [--no-start-runtime] [--no-launch]
@@ -138,6 +142,14 @@ function runInherit(command, args, options = {}) {
   });
 
   return !result.error && result.status === 0;
+}
+
+function sha256File(filePath) {
+  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function ensureDirFor(filePath) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
 }
 
 function parseScalar(value) {
@@ -353,6 +365,138 @@ function ensureWorktree(dispatch, report, values) {
 
   dispatch.worktreeAction = 'created';
   report.checks.push({ name: 'worktree', status: 'passed', detail: `${dispatch.ticketId}: created` });
+  return true;
+}
+
+function copyRuntimeFiles(dispatch, report, values) {
+  const copied = [];
+  const missingRequired = [];
+
+  for (const relativePath of requiredRuntimeFiles) {
+    const source = path.join(root, relativePath);
+    const target = path.join(dispatch.worktree, relativePath);
+    if (!fs.existsSync(source)) {
+      missingRequired.push(relativePath);
+      continue;
+    }
+    if (!values.dryRun) {
+      ensureDirFor(target);
+      fs.copyFileSync(source, target);
+    }
+    copied.push(relativePath);
+  }
+
+  for (const relativePath of optionalRuntimeFiles) {
+    const source = path.join(root, relativePath);
+    const target = path.join(dispatch.worktree, relativePath);
+    if (!fs.existsSync(source)) continue;
+    if (!values.dryRun) {
+      ensureDirFor(target);
+      fs.copyFileSync(source, target);
+    }
+    copied.push(relativePath);
+  }
+
+  const composePath = path.join(dispatch.worktree, 'docker-compose.dev.yml');
+  if (fs.existsSync(composePath) && fs.readFileSync(composePath, 'utf8').includes('env_file: .env.production')) {
+    const source = path.join(root, '.env');
+    const target = path.join(dispatch.worktree, '.env.production');
+    if (fs.existsSync(source)) {
+      if (!values.dryRun) fs.copyFileSync(source, target);
+      copied.push('.env.production (compat alias from .env)');
+    }
+  }
+
+  dispatch.runtimeFiles = copied;
+  if (missingRequired.length) {
+    report.blockers.push(`Missing required runtime setup file(s) in coordinator checkout: ${missingRequired.join(', ')}`);
+    dispatch.status = 'blocked';
+    report.checks.push({ name: 'runtime-files', status: 'failed', detail: `${dispatch.ticketId}: missing ${missingRequired.join(', ')}` });
+    return false;
+  }
+
+  report.checks.push({ name: 'runtime-files', status: 'passed', detail: `${dispatch.ticketId}: ${values.dryRun ? 'dry-run ' : ''}${copied.join(', ')}` });
+  return true;
+}
+
+function ensureTestDependencyLink(dispatch, report, values) {
+  const sourceNodeModules = path.join(root, 'test', 'node_modules');
+  const sourceBin = path.join(sourceNodeModules, '.bin', process.platform === 'win32' ? 'playwright.cmd' : 'playwright');
+  const rootLock = path.join(root, 'test', 'package-lock.json');
+  const worktreeLock = path.join(dispatch.worktree, 'test', 'package-lock.json');
+  const targetNodeModules = path.join(dispatch.worktree, 'test', 'node_modules');
+
+  if (!fs.existsSync(rootLock) || (!fs.existsSync(worktreeLock) && !values.dryRun)) {
+    report.blockers.push(`Missing test/package-lock.json for ${dispatch.ticketId}; cannot prove reusable test dependencies.`);
+    dispatch.status = 'blocked';
+    report.checks.push({ name: 'test-dependencies', status: 'failed', detail: `${dispatch.ticketId}: missing lockfile` });
+    return false;
+  }
+
+  const worktreeLockHash = fs.existsSync(worktreeLock) ? sha256File(worktreeLock) : sha256File(rootLock);
+  if (sha256File(rootLock) !== worktreeLockHash) {
+    report.blockers.push(`test/package-lock.json differs for ${dispatch.ticketId}; install/update dependencies once in a controlled workspace before launch.`);
+    dispatch.status = 'blocked';
+    report.checks.push({ name: 'test-dependencies', status: 'failed', detail: `${dispatch.ticketId}: lock hash mismatch` });
+    return false;
+  }
+
+  if (!fs.existsSync(sourceBin)) {
+    report.blockers.push('Missing root test/node_modules Playwright runner. Approval required before running `cd test && npm ci`.');
+    dispatch.status = 'blocked';
+    report.checks.push({ name: 'test-dependencies', status: 'failed', detail: `${dispatch.ticketId}: missing root test/node_modules` });
+    return false;
+  }
+
+  if (fs.existsSync(targetNodeModules)) {
+    dispatch.testDependenciesAction = 'reused-existing';
+    report.checks.push({ name: 'test-dependencies', status: 'passed', detail: `${dispatch.ticketId}: existing node_modules` });
+    return true;
+  }
+
+  if (values.dryRun) {
+    dispatch.testDependenciesAction = 'dry-run-link';
+    report.checks.push({ name: 'test-dependencies', status: 'passed', detail: `${dispatch.ticketId}: dry-run link root test/node_modules` });
+    return true;
+  }
+
+  ensureDirFor(targetNodeModules);
+  const linkType = process.platform === 'win32' ? 'junction' : 'dir';
+  fs.symlinkSync(sourceNodeModules, targetNodeModules, linkType);
+  dispatch.testDependenciesAction = 'linked-root-cache';
+  report.checks.push({ name: 'test-dependencies', status: 'passed', detail: `${dispatch.ticketId}: linked root test/node_modules` });
+  return true;
+}
+
+function ensurePlaywrightBrowsers(dispatch, report, values) {
+  if (values.dryRun) {
+    dispatch.playwrightBrowsersAction = 'dry-run-check';
+    report.checks.push({ name: 'playwright-browsers', status: 'passed', detail: `${dispatch.ticketId}: dry-run` });
+    return true;
+  }
+
+  const env = { ...process.env, ...dispatch.env };
+  const result = runCapture(npxCommand, ['--no-install', 'playwright', 'install', '--dry-run', 'chromium'], { cwd: path.join(dispatch.worktree, 'test'), env });
+  const output = `${result.stdout}\n${result.stderr}`.trim();
+  if (!result.ok) {
+    report.blockers.push(`Could not inspect Playwright browser cache for ${dispatch.ticketId}. Approval may be required for \`cd test && npx --no-install playwright install chromium\`: ${output || result.error}`);
+    dispatch.status = 'blocked';
+    report.checks.push({ name: 'playwright-browsers', status: 'failed', detail: dispatch.ticketId });
+    return false;
+  }
+
+  const installLocations = [...output.matchAll(/^\s*Install location:\s*(.+)$/gm)].map(match => match[1].trim());
+  const missingLocations = installLocations.filter(location => !fs.existsSync(location));
+  if (!installLocations.length || missingLocations.length) {
+    const detail = missingLocations.length ? ` Missing cache path(s): ${missingLocations.join(', ')}` : '';
+    report.blockers.push(`Playwright Chromium cache is incomplete for ${dispatch.ticketId}. Approval required before running \`cd test && npx --no-install playwright install chromium\` because it may consume bandwidth.${detail}`);
+    dispatch.status = 'blocked';
+    report.checks.push({ name: 'playwright-browsers', status: 'blocked', detail: `${dispatch.ticketId}: chromium cache incomplete` });
+    return false;
+  }
+
+  dispatch.playwrightBrowsersAction = 'cache-ready';
+  report.checks.push({ name: 'playwright-browsers', status: 'passed', detail: `${dispatch.ticketId}: chromium cache ready` });
   return true;
 }
 
@@ -634,6 +778,9 @@ function buildReport(values) {
 
   for (const dispatch of report.dispatches) {
     if (!ensureWorktree(dispatch, report, values)) continue;
+    if (!copyRuntimeFiles(dispatch, report, values)) continue;
+    if (!ensureTestDependencyLink(dispatch, report, values)) continue;
+    if (!ensurePlaywrightBrowsers(dispatch, report, values)) continue;
     if (!bootstrapState(dispatch, report, values)) continue;
     if (!acquireSlot(dispatch, report, values)) continue;
     if (!startRuntime(dispatch, report, values)) continue;
