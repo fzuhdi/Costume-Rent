@@ -1,7 +1,7 @@
 ---
 description: Senior fullstack developer that performs GREEN and optional bounded refactor for one TDD tracer ticket. Cannot edit SDET acceptance tests.
 mode: subagent
-model: openai/gpt-5.3-codex
+model: opencode/big-pickle
 temperature: 0.2
 permission:
   edit:
