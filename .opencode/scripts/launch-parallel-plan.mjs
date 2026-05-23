@@ -15,7 +15,6 @@ const executableTypes = new Set(['feature', 'bug']);
 const ticketIdPattern = /^TICKET-\d{8}-\d{3}$/;
 const requiredRuntimeFiles = ['.env', 'frontend/package-lock.json', 'test/package-lock.json'];
 const optionalRuntimeFiles = ['backend/.env', 'frontend/.env'];
-const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
 function usage() {
   return `Usage: node .opencode/scripts/launch-parallel-plan.mjs --target PLAN-* [--parallel 3] [--dry-run] [--json] [--workspace-root <path>] [--no-start-runtime] [--no-launch]
@@ -476,7 +475,15 @@ function ensurePlaywrightBrowsers(dispatch, report, values) {
   }
 
   const env = { ...process.env, ...dispatch.env };
-  const result = runCapture(npxCommand, ['--no-install', 'playwright', 'install', '--dry-run', 'chromium'], { cwd: path.join(dispatch.worktree, 'test'), env });
+  const playwrightCli = path.join(dispatch.worktree, 'test', 'node_modules', '@playwright', 'test', 'cli.js');
+  if (!fs.existsSync(playwrightCli)) {
+    report.blockers.push(`Missing Playwright CLI for ${dispatch.ticketId}. Approval required before running \`cd test && npm ci\`.`);
+    dispatch.status = 'blocked';
+    report.checks.push({ name: 'playwright-browsers', status: 'failed', detail: `${dispatch.ticketId}: missing CLI` });
+    return false;
+  }
+
+  const result = runCapture(process.execPath, [playwrightCli, 'install', '--dry-run', 'chromium'], { cwd: path.join(dispatch.worktree, 'test'), env });
   const output = `${result.stdout}\n${result.stderr}`.trim();
   if (!result.ok) {
     report.blockers.push(`Could not inspect Playwright browser cache for ${dispatch.ticketId}. Approval may be required for \`cd test && npx --no-install playwright install chromium\`: ${output || result.error}`);
