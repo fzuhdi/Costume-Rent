@@ -21,13 +21,14 @@ Allowed test repairs:
 
 When product behavior is missing, keep the test failing and create or select a product ticket. Do not hide the failure with `skip`, `fixme`, broad filters, or weakened assertions.
 
-## Regression Bug Tickets
+## Regression Failures
 
 Plan-completion impacted regression is a hard gate. After all planned tickets complete, full impacted spec files must pass before the plan is marked complete.
 
-- Failed mapped test cases in impacted specs create or update same-plan `status: review` bug tickets.
-- Bug tickets are deduped by `test_case_id`; repeated failures append evidence to the same non-complete ticket.
-- Completed bug tickets may be followed by a new regression ticket if the same test case fails again later.
+- Failed mapped test cases in impacted specs block plan completion with evidence and a rerun command.
+- Same-plan `status: review` bug tickets are created or updated only when regression bug sync is explicitly enabled by the plan, runtime state, or user.
+- Generated bug tickets are deduped by `test_case_id`; repeated failures append evidence to the same non-complete ticket.
+- Completed generated bug tickets may be followed by a new regression ticket if the same test case fails again later.
 - Generated bug tickets must be reviewer-audited before becoming executable.
 - Unmapped, setup, or environment failures block completion and must not become product bug tickets.
 

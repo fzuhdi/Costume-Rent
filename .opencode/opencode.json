@@ -16,8 +16,7 @@
   "permission": {
     "skill": {
       "orchestrator": "allow",
-      "*": "allow",
-      "init-project": "allow"
+      "*": "allow"
     },
     "task": {
       "*": "deny",
@@ -41,14 +40,9 @@
       "template": "Load the plan-to-tickets skill (.opencode/skills/plan-to-tickets/SKILL.md).\n\nRaw arguments: **$ARGUMENTS**\n\nInterpret arguments as:\n- Plan file: $1\n- Optional plan id: $2\n\nRun the skill with:\n- PLAN_FILE: $1\n- PLAN_ID: $2\n- RAW_ARGUMENTS: $ARGUMENTS\n\nCreate or update only planning artifacts such as docs/plans/*.md and docs/tickets/*.md. Preserve in_progress and complete tickets. Repaired ambiguous tickets must be set to status: review. Do not invoke the orchestrator or any engineering subagent.",
       "agent": "build"
     },
-    "init-project": {
-      "description": "Initialize or repair the greenfield-only Workflow Kit Project Adapter. Usage /init-project <prd-or-plan>",
-      "template": "Load .opencode/skills/init-project/SKILL.md. Raw arguments: **$ARGUMENTS**. Enforce the Greenfield Gate first: block existing product code, tests, dependency manifests, or CI configs. For empty/docs-only product repos, initialize or repair .opencode/project.json, docs/acceptance skeleton, generated test-case manifest, rendered agent permissions, and AGENTS.md pointers. Do not migrate existing .claude, dependency, CI, or test-runner configuration.",
-      "agent": "build"
-    },
     "coordinator": {
       "description": "Coordinate workflow runs safely. Usage /coordinator [plan-id|ticket-id]",
-      "template": "Load the coordinator skill (.opencode/skills/coordinator/SKILL.md).\n\nRaw arguments: **$ARGUMENTS**\n\nArgument contract:\n- If $1 is empty: ask the user which plan or ticket to execute before scanning plans/tickets. Offer a targeted status scan as a separate option. If the user chooses executable work, run `node .opencode/scripts/launch-orchestrator-tui.mjs --mode list-models --format json`, ask which discovered model to use, recommend the orchestrator workflow default resolved from `.opencode/workflow-models.json`, then continue with the chosen model.\n- If $1 is a PLAN-YYYYMMDD-* id: use targeted plan mode. Read only that plan and its tickets, validate a clean worktree, run `node .opencode/scripts/launch-orchestrator-tui.mjs --mode list-models --format json`, ask which discovered model to use, recommend the orchestrator workflow default, then launch `node .opencode/scripts/launch-orchestrator-tui.mjs --target $1 --model <chosen-model>`.\n- If $1 is a TICKET-YYYYMMDD-NNN id: use targeted ticket mode. Read only that ticket and its manifest entry, validate a clean worktree, run `node .opencode/scripts/launch-orchestrator-tui.mjs --mode list-models --format json`, ask which discovered model to use, recommend the orchestrator workflow default, then launch `node .opencode/scripts/launch-orchestrator-tui.mjs --target $1 --model <chosen-model>`.\n\nDo not call developer, sdet, reviewer, or explore directly. Do not dispatch subagents against absolute paths outside the active project root. For explicit targets, launch the visible orchestrator CLI/TUI window and report the handoff details including the chosen model and resolved role defaults. If launcher invocation fails, stop and print the exact manual `opencode run --interactive --model ... --command engineering/orchestrator ...` command. Do not manually execute the orchestrator FSM in the coordinator session.",
+      "template": "Load the coordinator skill (.opencode/skills/coordinator/SKILL.md).\n\nRaw arguments: **$ARGUMENTS**\n\nRoute arguments per the coordinator skill:\n- Empty args: ask for a target or explicit status scan before broad discovery.\n- PLAN-YYYYMMDD-* or TICKET-YYYYMMDD-NNN: use targeted mode, read only directly related inputs, require a clean worktree, then launch `node .opencode/scripts/launch-orchestrator-tui.mjs --target $1` with the configured orchestrator default model. Ask for a model only when the user requested an override or no default resolves.\n\nDo not call worker subagents directly, dispatch across roots, or manually execute the orchestrator FSM if launch fails. Report the handoff or exact manual recovery command.",
       "agent": "build"
     }
   },

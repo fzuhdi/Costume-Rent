@@ -9,14 +9,14 @@ Raw arguments: **$ARGUMENTS**
 
 Interpret arguments as one of these modes:
 
-- Empty: run Startup + Standard Report, then show existing `status: ready` or `status: in_progress` plans the user can run next. Do not list individual ticket commands in this mode.
+- Empty: run `node .opencode/scripts/workflow-runner.mjs --json`, summarize the read-only status report, then show existing `status: ready` or `status: in_progress` plans the user can run next. Do not list individual ticket commands in this mode.
 - Ticket: `$1` is a ready feature/bug `TICKET-YYYYMMDD-NNN` id from `docs/tickets/`.
 - Plan: `$1` is a `PLAN-YYYYMMDD-*` id; audit review tickets and execute all ready feature/bug tickets for that plan sequentially.
 
 If `$1` is empty:
 
-1. Run Startup + Standard Report.
-2. Report the active runtime plan/ticket if present.
+1. Run `node .opencode/scripts/workflow-runner.mjs --json`.
+2. Report the active runtime plan/ticket if present from the runner output.
 3. List runnable plans only (`status: ready` or `status: in_progress`) with their recommended launch commands:
    - `/engineering/orchestrator PLAN-YYYYMMDD-name`
 4. Do NOT invoke any subagents.

@@ -2,6 +2,8 @@
 
 Every workflow subagent must end with one parseable final message. The orchestrator reads literal field names.
 
+`.opencode/scripts/workflow-runner.mjs --validate-worker-output ...` deterministically validates the required fields, allowed enums, and target ticket/test-case alignment for captured worker final messages.
+
 ## Base Return
 
 ```text
@@ -42,7 +44,9 @@ RED_FAILURE_SUMMARY: {why it failed, or why already green/blocked}
 PAGES_CREATED_OR_UPDATED: [path, ...] | none
 ```
 
-## SDET GREEN Rerun Extension
+## GREEN Rerun Extension
+
+Produced by `.opencode/scripts/workflow-runner.mjs --run-green`. Legacy `sdet MODE: run-green` outputs, if used for manual debugging, must use the same fields.
 
 ```text
 TEST_CASE_STATUS: verified | open | todo
@@ -58,7 +62,7 @@ FAILURE_SUMMARY: {one-line symptom, or "none"}
 ## Developer GREEN Extension
 
 ```text
-GREEN_STATUS: ready_for_sdet | ticket-ambiguous | red-test-wrong | blocked
+GREEN_STATUS: ready_for_green_rerun | ticket-ambiguous | red-test-wrong | blocked
 ROOT_CAUSE: {one-line cause}
 TARGETED_TEST_COMMAND: {command run, or "not run - reason"}
 REFACTOR_NEEDED: yes | no
@@ -68,7 +72,7 @@ DEFERRED_TEST_CASE_IDS_UNTOUCHED: true | false
 ## Developer Refactor Extension
 
 ```text
-GREEN_STATUS: refactor_ready_for_sdet | blocked
+GREEN_STATUS: refactor_ready_for_green_rerun | blocked
 REFACTOR_SUMMARY: {what changed and why}
 TESTS_CHANGED: false
 ```

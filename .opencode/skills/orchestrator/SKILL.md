@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Deterministic TDD FSM for feature/bug ticket execution. Runs one ticket or all review/ready tickets for one plan via SDET RED, developer GREEN, SDET rerun, and reviewer audit. Use for /engineering/orchestrator, /productivity/start, /productivity/status, or continuing TDD feature work.
+description: Deterministic TDD FSM for feature/bug ticket execution. Runs one ticket or all review/ready tickets for one plan via SDET RED, developer GREEN, deterministic GREEN rerun, and reviewer audit. Use for /engineering/orchestrator, /productivity/start, /productivity/status, or continuing TDD feature work.
 ---
 
 # Orchestrator - TDD Workflow Engine
@@ -9,7 +9,8 @@ You are a finite state machine. Do not improvise. The build-first workflow is re
 
 Workers:
 
-- `sdet` owns ticket-level acceptance RED and official GREEN reruns.
+- `sdet` owns ticket-level acceptance RED.
+- `.opencode/scripts/workflow-runner.mjs --run-green` owns official GREEN reruns.
 - `developer` implements minimal GREEN and optional bounded refactor.
 - `reviewer` is read-only and audits ticket readiness, invalid RED disputes, already-green coverage, and final scope/test integrity.
 - `explore` may run read-only discovery in parallel with SDET RED; its result is advisory and never blocks GREEN after valid RED.
@@ -28,13 +29,13 @@ One executable ticket equals one tracer bullet and exactly one `test_case_id`.
 
 | File | Purpose |
 |---|---|
-| `.opencode/state/orchestrator-progress.json` | Current TDD phase, ticket, branch, checkpoints, RED evidence |
-| `.opencode/state/ticket-progress.json` | Plan/ticket runtime status and PR post-step state |
-| `.opencode/state/checkpoints.json` | Recorded checkpoint SHAs |
+| `.opencode/state/orchestrator-progress.json` | Authoritative active-run phase, ticket, branch, checkpoints, RED evidence |
+| `.opencode/state/ticket-progress.json` | Plan/ticket summary, audit evidence, and PR post-step state |
+| `.opencode/state/checkpoints.json` | Checkpoint SHA ledger |
 | `.opencode/state/test-case-manifest.json` | Feature -> AC test case map plus implementation/test hints |
 | `.opencode/state.example/*.json` | Tracked versioned example shapes |
 
-Runtime state must include `schemaVersion: 2`. Missing state may be initialized from examples. Existing state with missing, unknown, or old `schemaVersion` blocks with `invalid progress state`; do not migrate it.
+Runtime state must include `schemaVersion: 2`. Missing state may be initialized from examples. Existing state with missing, unknown, or old `schemaVersion` blocks with `invalid progress state`; do not migrate it. Treat `orchestrator-progress.json` as the active-run source of truth; ticket-progress and checkpoints must agree with it or the run blocks for stale-state reconciliation.
 
 ## TDD States
 
@@ -59,14 +60,14 @@ selecting-ticket -> ticket-audit        (status: review ticket)
 ticket-audit -> selecting-ticket        (ticket-ready or ticket-still-ambiguous)
 red-validating -> already-green-audit   (RED passes but covers criterion)
 already-green-audit -> ticket-complete  (coverage approved)
-regression-gating -> selecting-ticket   (impacted regression created same-plan review bug tickets)
+regression-gating -> selecting-ticket   (opted-in impacted regression created same-plan review bug tickets)
 red-validating -> red-arbitrating       (wrong reason, ticket ambiguity, or SDET/developer dispute)
 red-arbitrating -> red-writing          (red-test-wrong)
 red-arbitrating -> blocked              (ticket-ambiguous)
 red-arbitrating -> green-building       (red-approved)
 green-testing -> green-building         (product behavior still fails and iteration < maxIterations)
 green-building -> red-arbitrating       (developer disputes RED or ticket)
-green-testing -> refactoring            (SDET pass and developer requested bounded refactor)
+green-testing -> refactoring            (deterministic GREEN pass and developer requested bounded refactor)
 refactoring -> green-testing            (same recorded test rerun)
 ANY -> blocked                          (clean ticket/setup/ambiguity block)
 ANY -> escalated                        (malformed state, dirty disputed work, max iterations, worker contract failure)
@@ -75,6 +76,7 @@ ANY -> escalated                        (malformed state, dirty disputed work, m
 Forbidden:
 
 - `red-writing -> green-building` without `RED_STATUS: failing_expected`.
+- Advancing the FSM on malformed worker output that fails deterministic contract validation.
 - Manually simulating `sdet`, `developer`, `reviewer`, or `explore` when worker dispatch is unavailable or denied.
 - Any developer edit to the recorded SDET acceptance test during GREEN or refactor.
 - Treating a targeted test run as successful when the project-configured quality gate fails.
@@ -83,17 +85,11 @@ Forbidden:
 - Auto-stash, auto-reset, auto-checkout discard, or force push.
 - Auto-PR for partial plans.
 - Marking a plan complete before impacted-spec regression passes.
+- Generating same-plan regression bug tickets unless the plan, runtime state, or user explicitly opts in.
 
 ## Dependency And Installer Approval
 
-Dependency and tool installation is user-approved setup work, not an automatic repair.
-
-- If a command fails because dependencies, Playwright browsers, runtime tool caches, or other generated setup artifacts are missing, block and ask the user before running any installer.
-- If a ticket appears to require adding, updating, or removing a dependency, stop parallel ticket work, ask the user before editing manifests or lockfiles, and continue only after approval.
-- The approval request must include the package or tool, requested version when known, why it is needed, affected manifest/lockfile or cache, the exact command to run, and the fallback if denied.
-- In isolated worktrees, reuse or copy dependency directories only when the relevant lockfile hash matches. Do not run installs independently in each worktree.
-- After approval, run the install once in a controlled workspace and treat the resulting dependency cache as keyed by the lockfile hash.
-- Record the approval, command, and affected files/caches in runtime state or the final return summary.
+Dependency and tool installation is user-approved setup work, not automatic repair. Follow `.opencode/skills/shared/constraints.md`: block before dependency edits, package-manager add/update commands, Playwright/browser installs, runtime installers, or cache repair commands; ask with the exact command and fallback; record approved actions in state or the final summary.
 
 ## Ticket Contract
 
@@ -137,11 +133,12 @@ Plan completion regression policy:
 - Run impacted-spec regression only after all planned executable/review tickets are complete; do not run it after every ticket.
 - Derive impacted specs from completed tickets' `test_case_id` values and the test-case manifest. The orchestrator or reviewer may add full spec files when the diff touches shared behavior.
 - Run each impacted spec file as a full spec, not only the completed ticket grep.
-- If any mapped test case in an impacted spec fails, the plan remains `in_progress` and the failure must create or update a same-plan `status: review` bug ticket deduped by `test_case_id`.
+- If any mapped test case in an impacted spec fails, the plan remains `in_progress` and blocks by default with evidence and rerun command.
+- Mapped regression failures create or update same-plan `status: review` bug tickets only when `regression_bug_sync: true` is present in plan frontmatter, runtime state explicitly enables it, or the user explicitly approves it for this run. Deduplicate generated tickets by `test_case_id`.
 - Existing/known failures in an impacted spec still block the plan. There is no baseline exemption.
 - Unmapped, setup, or environment-looking failures block plan completion and do not create product bug tickets.
 - Reviewer audits generated `review` bug tickets before they become executable. If reviewer rejects one as test/setup noise, block for SDET/test repair and rerun impacted regression after repair.
-- After generated bug tickets complete, rerun impacted-spec regression before plan completion.
+- After opted-in generated bug tickets complete, rerun impacted-spec regression before plan completion.
 - Use runtime default `maxRegressionCycles: 3`. Exhausting the cycle budget blocks/escalates the plan with failing test case IDs and regression evidence.
 
 ## Branch And Commits
@@ -198,6 +195,15 @@ RED_EXPECTATION: {frontmatter value}
 GREEN_EXPECTATION: {frontmatter value}
 ```
 
+## Quality Gate Checkpoints
+
+Use `docs/engineering/QUALITY_GATES.md` as the gate source of truth. A successful gate is current only when no gate-relevant files changed since it ran.
+
+- Gate-relevant changes include adapter-declared test roots, product code being reviewed, quality-gate helpers, and engineering test-policy docs.
+- Record gate command, exit code, timestamp, and covered diff summary in runtime state or the final report.
+- Do not rerun the broad project-configured gate solely because the FSM advanced state when a current successful gate already covers the same diff.
+- If there is no current successful gate for the relevant diff, run the project-configured gate and block on failure.
+
 ## State Execution
 
 ### selecting-ticket
@@ -224,7 +230,9 @@ In parallel when useful:
 
 SDET must return `TEST_FILE`, `TEST_TITLE`, `RED_STATUS`, `RED_FAILURE_SUMMARY`, and `TEST_COMMAND`. Commit non-empty RED changes as `test(tdd): red <ticket-id>` when a failing expected RED is produced.
 
-After any SDET edit under adapter-declared test roots, run the project-configured quality gate when one is configured. If it fails, block before RED validation; do not continue to audit or GREEN.
+Validate worker outputs deterministically before advancing state. Use `.opencode/scripts/workflow-runner.mjs --target <ticket-id> --validate-worker-output sdet-red --output-file <path> --json` when the worker response was captured to a file or needs contract checking outside the orchestrator prompt loop.
+
+After any SDET edit under adapter-declared test roots, ensure a current successful quality gate covers the test diff. Run the configured gate when coverage is missing or stale. If it fails, block before RED validation; do not continue to audit or GREEN.
 
 ### red-validating
 
@@ -237,9 +245,11 @@ Parse SDET RED result:
 
 RED setup/environment failures block. Do not start GREEN. Missing dependencies or missing browser/runtime caches require explicit user approval before any install command is run.
 
+Deterministic helper note: `.opencode/scripts/workflow-runner.mjs --target <ticket-id> --run-ticket --output-file <sdet-output> --json` may advance the happy path from `red-writing` to `green-building` once the SDET final message is captured. The runner now owns the post-RED quality-gate check, RED commit, and after-RED checkpoint recording for this path.
+
 ### already-green-audit
 
-Run the project-configured quality gate before invoking reviewer when one is configured. If it fails, block with the gate findings.
+Ensure a current successful quality gate covers the already-green test/coverage diff before invoking reviewer. Run the configured gate when coverage is missing or stale; block on failure.
 
 Invoke `reviewer MODE: already-green-audit`.
 
@@ -258,27 +268,37 @@ Invoke `reviewer MODE: red-arbitrate` with SDET evidence and any developer dispu
 
 Invoke `developer MODE: green`. Pass RED artifacts and advisory explore findings if available.
 
-Developer may run the exact recorded targeted RED command and narrow supporting commands, but SDET remains the official pass/fail gate. Developer may author extra tests only in existing infrastructure and never modify the SDET RED test file/title.
+Developer may run the exact recorded targeted RED command and narrow supporting commands, but `.opencode/scripts/workflow-runner.mjs --run-green` remains the official pass/fail gate. Developer may author extra tests only in existing infrastructure and never modify the SDET RED test file/title.
 
 Parse:
 
-- `GREEN_STATUS: ready_for_sdet` -> `green-testing`.
+- `GREEN_STATUS: ready_for_green_rerun` -> `green-testing`.
 - `GREEN_STATUS: ticket-ambiguous` or `red-test-wrong` -> `red-arbitrating`.
 - `GREEN_STATUS: blocked` -> blocked/escalated depending on cleanliness.
 
-Record the developer's `REFACTOR_NEEDED: yes | no` value in runtime state before dispatching SDET. Do not ask SDET to decide refactor need.
+Validate developer final messages deterministically before advancing state when the response was captured to a file or contract integrity is in doubt: `.opencode/scripts/workflow-runner.mjs --target <ticket-id> --validate-worker-output developer-green --output-file <path> --json`.
 
-Do not commit failed GREEN work. Commit non-empty app-code changes as `feat(tdd): green <ticket-id>` or `fix(tdd): green <ticket-id>` only after SDET verifies the recorded RED test. This commit must happen before `final-review`; if a refactor will run, commit GREEN before entering `refactoring`.
+Record the developer's `REFACTOR_NEEDED: yes | no` value in runtime state before deterministic GREEN rerun. Do not ask the verifier to decide refactor need.
+
+Do not commit failed GREEN work. Commit non-empty app-code changes as `feat(tdd): green <ticket-id>` or `fix(tdd): green <ticket-id>` only after the deterministic GREEN rerun verifies the recorded RED test. This commit must happen before `final-review`; if a refactor will run, commit GREEN before entering `refactoring`.
 
 ### green-testing
 
-Invoke `sdet MODE: run-green`. SDET reruns only the recorded RED test and must not edit tests.
+Run the deterministic GREEN rerun helper. It reruns only the recorded RED test and must not edit tests or invoke a subagent.
+
+```bash
+node .opencode/scripts/workflow-runner.mjs --target <ticket-id> --run-green --json
+```
+
+The runner emits the GREEN rerun fields from `.opencode/skills/shared/io-contract.md`.
 
 - `TEST_CASE_STATUS: verified` and recorded developer `REFACTOR_NEEDED: no` -> ensure verified GREEN changes are committed, then `final-review`.
 - `TEST_CASE_STATUS: verified` and recorded developer `REFACTOR_NEEDED: yes` with no refactor used yet -> ensure verified GREEN changes are committed, then `refactoring`.
 - `TEST_CASE_STATUS: verified` after the one allowed refactor pass -> ensure refactor changes are committed, then `final-review`.
 - `TEST_CASE_STATUS: open` -> increment iteration; if below `maxIterations`, `green-building`, otherwise `escalated`.
 - `TEST_CASE_STATUS: todo` or setup block -> blocked.
+
+Deterministic helper note: `.opencode/scripts/workflow-runner.mjs --target <ticket-id> --run-ticket --json` may advance the happy path through `green-testing`, `refactoring`, `final-review`, and `ticket-complete` when the required worker outputs are captured to files. The runner now owns GREEN/refactor commit creation and may skip the final reviewer only when deterministic checks prove code-root-only changes since after-RED and the configured quality gate passes.
 
 ### refactoring
 
@@ -288,11 +308,13 @@ Invoke `developer MODE: refactor` at most once. Refactor is app-code-only, bound
 
 Before invoking reviewer, require a clean worktree. GREEN and refactor changes must already be committed so the reviewer can audit the full implementation diff from the after-RED checkpoint. If app/test changes are still uncommitted, block instead of invoking reviewer.
 
-Run the project-configured quality gate before final-review when one is configured. If it fails, block with the gate findings even when targeted tests pass.
+Ensure a current successful quality gate covers the implementation/test diff before final-review. Run the configured gate when coverage is missing or stale; block on failure even when targeted tests pass.
 
-Invoke `reviewer MODE: final-review` with after-RED checkpoint SHA.
+Invoke `reviewer MODE: final-review` with after-RED checkpoint SHA when deterministic reviewer-skip conditions are not satisfied.
 
-Reviewer checks minimal scope, no sibling test cases, and no changes to the SDET RED test since after-RED. Rejection is binding; developer fixes or the ticket escalates at `maxIterations`. There is no reviewer override.
+Validate reviewer final messages deterministically before advancing state when needed: `.opencode/scripts/workflow-runner.mjs --target <ticket-id> --validate-worker-output reviewer --output-file <path> --json`.
+
+Reviewer checks minimal scope, no sibling test cases, and no changes to the SDET RED test since after-RED. Rejection is binding; developer fixes or the ticket escalates at `maxIterations`. There is no reviewer override. If the runner proves there are only code-root changes since after-RED, the recorded RED test stayed unchanged, and the configured quality gate passes, the final reviewer may be skipped on the deterministic happy path.
 
 ### ticket-complete
 
@@ -302,7 +324,7 @@ Update ticket frontmatter to `complete`, update runtime state, and commit durabl
 
 This state runs only in plan mode, after all planned review/executable tickets are complete and before durable plan completion.
 
-1. Run the project-configured quality gate when one is configured. If it fails, block with gate findings.
+1. Ensure a current successful quality gate covers the plan diff before regression. Run the configured gate when coverage is missing or stale; block on failure.
 2. Build the impacted spec list from completed ticket `test_case_id` values plus manifest/reviewer shared-impact additions.
 3. Increment runtime `regression.cycle` and block/escalate if it exceeds runtime `regression.maxRegressionCycles` (default `3`).
 4. Run every impacted spec as a full spec and produce Playwright JSON results. Example from `test/`:
@@ -310,18 +332,21 @@ This state runs only in plan mode, after all planned review/executable tickets a
    npx playwright test specs/catalogue.spec.js specs/rental.spec.js
    ```
 5. If impacted specs pass, continue to `plan-complete`.
-6. If impacted specs fail, run:
-   ```bash
-   node helpers/sync-regression-bugs.mjs --plan <plan-id> --results test-results/results.json --run-command "npx playwright test <impacted-specs>"
-   ```
-7. The sync helper must create/update same-plan `status: review` bug tickets and leave the plan `in_progress`. Return to `selecting-ticket` so reviewer audits and executes generated bugs.
-8. If the helper reports unmapped/setup failures, block the plan; do not create product bug tickets for untrusted failures.
+6. If impacted specs fail and regression bug sync is not explicitly enabled, block with mapped/unmapped failure evidence and the exact rerun command.
+7. If impacted specs fail and regression bug sync is explicitly enabled, run:
+    ```bash
+    node helpers/sync-regression-bugs.mjs --plan <plan-id> --results test-results/results.json --run-command "npx playwright test <impacted-specs>"
+    ```
+8. The sync helper creates or updates same-plan `status: review` bug tickets and leaves the plan `in_progress`. Return to `selecting-ticket` so reviewer audits and executes generated bugs.
+9. If the helper reports unmapped/setup failures, block the plan; do not create product bug tickets for untrusted failures.
+
+Deterministic helper note: `.opencode/scripts/workflow-runner.mjs --target <plan-id> --run-plan --json` may own review-ticket audit handoff, ready-ticket sequencing, impacted-spec regression, optional regression bug sync, and plan completion for the deterministic path while still consuming captured reviewer outputs where needed.
 
 ### plan-complete
 
 Update plan frontmatter/status summary to `complete` and commit `docs(tdd): complete <plan-id>`. This is allowed only after `regression-gating` passes.
 
-Run the project-configured quality gate before plan completion when one is configured. A plan cannot be complete while the gate fails or impacted-spec regression has open failures.
+Before plan completion, reuse the current successful quality gate from `regression-gating` when it covers the same diff. Run the configured gate only if completion edits or other gate-relevant changes made that result stale. A plan cannot be complete while the gate fails or impacted-spec regression has open failures.
 
 Push and create PR:
 
@@ -348,7 +373,7 @@ For `/productivity/start` and `/productivity/status`, report:
 - Plan/ticket counts by `draft | review | ready | in_progress | blocked | complete`.
 - PR state if plan is complete but push or `gh pr create` failed.
 
-Recommend the safest next step: resume RED validation, continue GREEN, rerun SDET, resolve dirty worktree, audit review tickets, run the next ready ticket, or rerun failed PR creation.
+Recommend the safest next step: resume RED validation, continue GREEN, run deterministic GREEN rerun, resolve dirty worktree, audit review tickets, run the next ready ticket, or rerun failed PR creation.
 
 For empty `/engineering/orchestrator`, report the same runtime state plus a runnable plan launcher list:
 

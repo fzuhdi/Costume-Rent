@@ -13,8 +13,8 @@ These constraints apply to ALL workflow agents (developer, sdet, reviewer).
 - A green suite is invalid if acceptance coverage was weakened. Product gaps must remain honest failures or become explicit product tickets.
 - Acceptance tests must be additive and self-scoped. Do not require global clean DB state, reset/truncate/drop data, or mutate records the test did not create.
 - Test-created records must use `E2E_...` for browser tests and `API_...` for API tests.
-- Run the project-configured quality gate after edits to adapter-declared test roots and before final review/commit when a gate is configured. If it fails, stop and report the findings.
-- A plan is not complete until full impacted specs pass. Mapped impacted-regression failures become same-plan `review` bug tickets; unmapped/setup failures block without product bug tickets.
+- Run the project-configured quality gate after edits to adapter-declared test roots and before final review/commit when no current successful gate covers the relevant diff. If it fails, stop and report the findings.
+- A plan is not complete until full impacted specs pass. Mapped impacted-regression failures block by default and become same-plan `review` bug tickets only when explicitly enabled; unmapped/setup failures block without product bug tickets.
 - Substantial workflow-maintenance changes use `workflow-engineer`, `docs/workflow-changes/*.md`, reviewer `MODE: workflow-maintenance`, and isolated workspaces per ADR 0003.
 - Use `write-a-skill` whenever creating or modifying skills.
 - Never push to `main`/`master`. Never use `--no-verify`. Never use `--force` on shared branches.
