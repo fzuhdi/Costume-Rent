@@ -104,6 +104,7 @@ type: feature
 status: ready
 test_case_id: CATALOGUE-004
 priority: 1
+depends_on: []
 source_plan: docs/plans/example.md
 red_expectation: The new acceptance test fails for the expected product-behavior reason.
 green_expectation: The same acceptance test passes after the minimal implementation.
@@ -122,7 +123,7 @@ Plan mode processes, in order:
 1. `status: review` tickets for the plan via `reviewer MODE: ticket-audit`.
 2. Approved ready `feature`/`bug` tickets sorted by priority then id.
 
-Ready tickets must be independently executable. Dependent work stays `draft` until rewritten or its prerequisite is complete.
+Ready tickets must be independently executable. New tickets declare same-plan prerequisites in `depends_on`; dependent work stays `draft` until rewritten or every prerequisite ticket is complete. The parallel plan launcher excludes `ready` tickets with unmet `depends_on` and reports the blocking prerequisite ids.
 
 Plan mode continues past clean audit-only blocks, but the whole plan does not succeed while any review/executable ticket is blocked or escalated. If RED/GREEN/refactor leaves dirty or disputed changes, stop the plan.
 
@@ -323,6 +324,8 @@ Update ticket frontmatter to `complete`, update runtime state, and commit durabl
 ### regression-gating
 
 This state runs only in plan mode, after all planned review/executable tickets are complete and before durable plan completion.
+
+Default coordinator plan launch fans out independent ready tracer tickets through `.opencode/scripts/launch-parallel-plan.mjs --parallel 3`; this orchestrator skill still owns the strict ticket FSM inside each isolated ticket worktree and the serialized integration/regression rules after ticket branches complete.
 
 1. Ensure a current successful quality gate covers the plan diff before regression. Run the configured gate when coverage is missing or stale; block on failure.
 2. Build the impacted spec list from completed ticket `test_case_id` values plus manifest/reviewer shared-impact additions.

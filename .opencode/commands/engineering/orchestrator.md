@@ -11,7 +11,7 @@ Interpret arguments as one of these modes:
 
 - Empty: run `node .opencode/scripts/workflow-runner.mjs --json`, summarize the read-only status report, then show existing `status: ready` or `status: in_progress` plans the user can run next. Do not list individual ticket commands in this mode.
 - Ticket: `$1` is a ready feature/bug `TICKET-YYYYMMDD-NNN` id from `docs/tickets/`.
-- Plan: `$1` is a `PLAN-YYYYMMDD-*` id; audit review tickets and execute all ready feature/bug tickets for that plan sequentially.
+- Plan: `$1` is a `PLAN-YYYYMMDD-*` id; this direct command runs inside one worktree. For default max-3 parallel tracer execution, use `/coordinator $1` or `node .opencode/scripts/launch-parallel-plan.mjs --target $1 --parallel 3`.
 
 If `$1` is empty:
 

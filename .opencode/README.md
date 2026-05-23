@@ -31,13 +31,14 @@ Executable tickets are ready `feature` or `bug` items mapped to exactly one `tes
 | Command | Purpose |
 |---|---|
 | `/plan-to-tickets [plan-file] [plan-id optional]` | Converts or repairs plans, bugs, ask-me output, or PRDs into TDD-ready plan and ticket files. |
-| `/coordinator [plan-id|ticket-id]` | Preferred user-facing launcher for targeted workflow runs; uses configured model defaults unless overridden. |
+| `/coordinator [plan-id|ticket-id]` | Preferred user-facing launcher; plan targets fan out up to 3 independent ready tracer tickets in isolated worktrees/runtime slots, ticket targets launch one orchestrator. |
 | `/engineering/orchestrator` | Shows TDD status and runnable plans without invoking subagents. |
 | `/engineering/orchestrator [ticket-id]` | Runs one ticket through the strict TDD FSM. |
-| `/engineering/orchestrator [plan-id]` | Runs review/ready tickets for one plan sequentially, then completes plan-level gates. |
+| `/engineering/orchestrator [plan-id]` | Runs one plan inside the current worktree; use `/coordinator <plan-id>` for default max-3 parallel tracer execution. |
 | `/productivity/start` | Reads progress and recommends the safest recovery or next action. |
 | `/productivity/status` | Reports current TDD workflow status without invoking subagents. |
 | `node .opencode/scripts/workflow-runner.mjs --target <plan-id|ticket-id> --dry-run` | Preview-only deterministic preflight; validates state and reports the next step without invoking subagents. |
+| `node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3 --dry-run --json` | Plans or launches up to 3 independent ready executable tickets in isolated worktrees, Docker Compose runtime slots, and orchestrator TUI windows. |
 | `node .opencode/scripts/workflow-runner.mjs --target <ticket-id> --run-ticket --json` | Deterministic happy-path ticket runner; owns branch/checkpoint commits, quality-gate checks, GREEN verification, optional reviewer skip, and runtime-state advancement while still consuming captured worker outputs. |
 | `node .opencode/scripts/workflow-runner.mjs --target <plan-id> --run-plan --json` | Deterministic plan runner; sequences review/ready tickets through the runner-owned ticket path and gates plan completion on impacted-spec regression. |
 | `node .opencode/scripts/workflow-runner.mjs --target <ticket-id> --run-green --json` | Deterministic official GREEN rerun for the recorded RED test; replaces `sdet MODE: run-green`. |
@@ -47,8 +48,9 @@ Direct `developer`, `sdet`, and `reviewer` commands are debug-only for normal us
 
 ## Runtime Modes
 
-- Default stable mode: one orchestrator, one checkout, one long-lived dev stack, one Playwright base URL.
-- Advanced parallel mode: isolated worktree and runtime stack per executable process; see `docs/adr/0003-ticket-and-workflow-workspaces.md` and `.opencode/knowledge/runbook.md`.
+- Default plan mode: up to 3 independent ready tracer tickets run in parallel, each with an isolated worktree, branch, Compose project, host-port slot, Playwright base URL, and `.opencode/state/`. Tickets with unmet `depends_on` prerequisites wait for a later batch.
+- Default ticket mode: one orchestrator, one checkout/worktree, one long-lived dev stack, one Playwright base URL.
+- Parallel isolation details are in `docs/adr/0003-ticket-and-workflow-workspaces.md` and `.opencode/knowledge/runbook.md`.
 
 Dependency/install approval, runtime setup blocks, role boundaries, and test-state rules are defined in `.opencode/skills/shared/constraints.md`.
 

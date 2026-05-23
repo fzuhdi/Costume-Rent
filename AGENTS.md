@@ -10,7 +10,7 @@ Tiny project memory. Skills/subagents/knowledge/commands load on demand.
 
 ## Key commands
 - `/plan-to-tickets` — create TDD tickets with `test_case_id`.
-- `/coordinator` — ask for a target, use configured model defaults unless overridden, then launch a new orchestrator TUI window for one plan/ticket.
+- `/coordinator` — ask for a target, use configured model defaults unless overridden, launch plan targets as max-3 isolated independent tracer-ticket windows or ticket targets as one orchestrator TUI.
 - `/engineering/orchestrator` — show runnable plans with empty args, or execute one target ticket/plan through the TDD FSM.
 - `/productivity/start`, `/productivity/status` — resume and inspect workflow state.
 

@@ -51,7 +51,7 @@ Ticket status: `draft | review | ready | in_progress | blocked | complete`.
 
 Plan status: `draft | ready | in_progress | blocked | complete`.
 
-Use `status: ready` only when a `feature` or `bug` ticket has all required TDD fields and is independently executable. Use `status: review` for repaired ambiguous tickets that need reviewer audit before execution. Use `status: draft` for unclear, dependent, unmapped, chore, or spike work.
+Use `status: ready` only when a `feature` or `bug` ticket has all required TDD fields and is independently executable. Use `status: review` for repaired ambiguous tickets that need reviewer audit before execution. Use `status: draft` for unclear, dependent, unmapped, chore, spike, or work with unmet prerequisite tickets.
 
 ## Ready Ticket Requirements
 
@@ -60,7 +60,7 @@ A ready executable ticket must have:
 - exactly one `test_case_id`
 - `red_expectation`
 - `green_expectation`
-- no prerequisite ticket dependency
+- `depends_on` as a same-plan ticket-id list; it must be empty for independently executable ready tickets, or every listed ticket must already be `complete`
 - no conflict with `docs/acceptance/*.md`
 
 If any required field is missing, keep the ticket `draft` with open questions. Do not invent product decisions.
@@ -119,6 +119,7 @@ type: feature
 status: ready
 test_case_id: CATALOGUE-004
 priority: 1
+depends_on: []
 source_plan: docs/plans/example.md
 red_expectation: The acceptance test fails because the behavior is missing.
 green_expectation: The same acceptance test passes after the minimal implementation.
@@ -144,7 +145,7 @@ Criterion, expected outcome, test type, and spec files resolve from `.opencode/s
 - Exactly one `test_case_id` maps to the Test Case Manifest.
 - RED expectation and GREEN expectation are present.
 - Deferred work is explicit.
-- No prerequisite ticket dependency remains.
+- `depends_on` is empty, or every prerequisite ticket listed there is already complete.
 
 ## Definition Of Done
 - SDET RED test exists and includes `test_case_id`.

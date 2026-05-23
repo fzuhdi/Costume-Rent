@@ -32,5 +32,5 @@ Repair direct `/engineering/orchestrator` so explicit ticket/plan arguments disp
 yes - OpenCode must reload updated command, skill, and agent files.
 
 ## Review Notes
-- This change keeps the default single-checkout sequential plan model.
-- Parallel coordinator fan-out remains a separate concern; direct `/engineering/orchestrator PLAN-...` stays a valid single-orchestrator fallback.
+- This historical change kept the then-current single-checkout plan model; ADR 0003 now supersedes that default with max-3 isolated coordinator fan-out.
+- Direct `/engineering/orchestrator PLAN-...` stays a valid single-orchestrator fallback.

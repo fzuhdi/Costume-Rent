@@ -117,9 +117,21 @@ Installer approval and dependency-cache reuse rules are owned by `.opencode/skil
 
 ## Workspaces
 
-Coordinator-managed executable tickets use the default single-checkout orchestrator unless advanced isolated worktrees are explicitly viable. Substantial workflow-maintenance changes use isolated Git worktrees unless the user accepts the current checkout. See `docs/adr/0003-ticket-and-workflow-workspaces.md` for workspace policy and `.opencode/skills/shared/constraints.md` for dependency-cache rules.
+Coordinator-managed plan execution uses max-3 isolated tracer-ticket worktrees by default. The launcher fills those slots only with independent ready tickets; ready tickets with unmet `depends_on` prerequisites are reported and wait for a later batch. Single-ticket targets still launch one orchestrator for one worktree/checkout. Substantial workflow-maintenance changes use isolated Git worktrees unless the user accepts the current checkout. See `docs/adr/0003-ticket-and-workflow-workspaces.md` for workspace policy and `.opencode/skills/shared/constraints.md` for dependency-cache rules.
 
-Advanced isolated runtime stacks require per-process runtime isolation, not only a second container. Each process must have its own worktree, Compose project name, host-port allocation, Playwright base URL, and output paths.
+Parallel runtime stacks require per-process runtime isolation, not only extra containers. Each process must have its own worktree, Compose project name, host-port allocation, Playwright base URL, and output paths.
+
+Launch the next parallel batch for a plan from the coordinator checkout:
+
+```bash
+node .opencode/scripts/launch-parallel-plan.mjs --target PLAN-YYYYMMDD-name --parallel 3
+```
+
+Preview without creating worktrees, reserving slots, starting Docker, or launching OpenCode windows:
+
+```bash
+node .opencode/scripts/launch-parallel-plan.mjs --target PLAN-YYYYMMDD-name --parallel 3 --dry-run --json
+```
 
 Acquire a slot from the worktree root:
 
@@ -147,11 +159,11 @@ docker compose -p ticket001 -f docker-compose.dev.yml up -d backend frontend
 
 Run Playwright from that same shell so it inherits the process-specific `PW_*` variables.
 
-Useful commands:
+Manual worktree commands:
 
 ```bash
 git worktree list
-git worktree add ../Costume-Rent-workspaces/TICKET-YYYYMMDD-001 -b tdd/TICKET-YYYYMMDD-001 tdd/PLAN-YYYYMMDD-name
+git worktree add ../Costume-Rent-workspaces/PLAN-YYYYMMDD-name/TICKET-YYYYMMDD-001 -b tdd/TICKET-YYYYMMDD-001 tdd/PLAN-YYYYMMDD-name
 git worktree add ../Costume-Rent-workspaces/WF-YYYYMMDD-name -b workflow/WF-YYYYMMDD-name main
 ```
 

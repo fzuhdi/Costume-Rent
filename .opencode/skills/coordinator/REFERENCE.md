@@ -9,13 +9,14 @@
 
 ## Execution Model
 
-The coordinator checkout schedules only. By default it launches one visible orchestrator TUI window for the target plan or ticket. The launched session manages ticket discovery, sequencing, state files, checkpoint commits, subagent dispatches, regression, completion, and PR post-steps.
+The coordinator checkout schedules only. By default, plan targets launch up to three visible orchestrator TUI windows for ready executable tracer tickets, each in its own git worktree and Docker Compose runtime slot. Ticket targets launch one visible orchestrator TUI window. Each launched ticket session manages its own state files, checkpoint commits, subagent dispatches, ticket completion, and ticket branch output.
 
 ```text
 route arguments
 -> targeted read
 -> resolve default model from `.opencode/workflow-models.json`
--> launch `opencode run --interactive --command engineering/orchestrator ...`
+-> for plans: launch `node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3`
+-> for tickets: launch `opencode run --interactive --command engineering/orchestrator ...`
 -> report handoff details
 ```
 
@@ -35,10 +36,16 @@ Before launch:
 - Require a clean worktree.
 - Confirm no runtime state indicates a different active run.
 - Confirm the target exists.
-- Confirm `opencode` and the launcher script are available. The launcher reports a manual command if Windows Terminal is unavailable.
+- Confirm `opencode`, Docker, and the relevant launcher script are available. Launchers report manual commands if Windows Terminal is unavailable.
 - Let the launcher resolve the orchestrator model from `.opencode/workflow-models.json`. Use `--mode list-models --format json` and ask the user only when an override is requested or no configured default is available.
 
-Launch with:
+Launch plan targets with:
+
+```text
+node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3
+```
+
+Launch ticket targets with:
 
 ```text
 node .opencode/scripts/launch-orchestrator-tui.mjs --target <id> --model <provider/model>
@@ -46,7 +53,9 @@ node .opencode/scripts/launch-orchestrator-tui.mjs --target <id> --model <provid
 
 Omit `--model` for the configured orchestrator default.
 
-The launcher keeps partial, blocked, escalated, or crashed sessions for debugging and cleans up only successful ticket/plan sessions.
+The parallel plan launcher creates or reuses `../Costume-Rent-workspaces/<plan-id>/<ticket-id>` worktrees, reserves slot 1-3 ports, starts `docker compose -p <ticket-project> -f docker-compose.dev.yml up -d backend frontend`, then launches one orchestrator TUI per ticket. It launches only independent ready tickets: tickets with unmet `depends_on` prerequisites are skipped and reported until the prerequisite tickets are complete. It blocks on review tickets, malformed or cross-plan dependency declarations, dirty coordinator checkout, dirty reused worktrees, slot conflicts, missing runtime setup, or launch failures.
+
+Ticket launchers keep partial, blocked, escalated, or crashed sessions for debugging and clean up only successful ticket sessions.
 
 ## Queue Rules
 
