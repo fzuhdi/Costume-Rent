@@ -3,10 +3,12 @@
   "roles": {
     "developer": [
       "opencode/minimax-m2.5-free",
+      "opencode/gpt-5.3-codex",
       "opencode/big-pickle"
     ],
     "sdet": [
       "opencode/minimax-m2.5-free",
+      "opencode/gpt-5.3-codex",
       "opencode/big-pickle"
     ],
     "orchestrator": [

@@ -34,6 +34,7 @@ Targeted mode may read runtime state files to detect active or blocked runs. Exp
 Before launch:
 
 - Require a clean worktree.
+- Load `.opencode/skills/model-selector/SKILL.md` and follow its workflow so the user can confirm or change models for all agent roles.
 - Confirm no runtime state indicates a different active run.
 - Confirm the target exists.
 - Confirm Docker and the relevant prepare script are available for plan targets.

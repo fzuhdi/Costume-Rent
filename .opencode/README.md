@@ -11,6 +11,9 @@ This `.opencode` setup runs strict TDD tracer-ticket execution for plans and tic
 | Shared guardrails | `.opencode/skills/shared/constraints.md` |
 | Subagent return fields | `.opencode/skills/shared/io-contract.md` |
 | Model defaults | `.opencode/workflow-models.json` |
+| Model capability categories | `.opencode/model-capabilities.md` |
+| Model selection procedure | `.opencode/skills/model-selector/SKILL.md` |
+| Model resolver script | `.opencode/scripts/resolve-agent-models.mjs` |
 | Test integrity and quality gates | `docs/engineering/` |
 | Runtime recovery commands | `.opencode/knowledge/runbook.md` |
 

@@ -115,6 +115,28 @@ Keep that stack alive for the full ticket or plan run. Prefer restarting the Com
 
 Installer approval and dependency-cache reuse rules are owned by `.opencode/skills/shared/constraints.md`.
 
+## Model Resolution
+
+Check whether configured agent models are available and get recommendations:
+
+```bash
+node .opencode/scripts/resolve-agent-models.mjs --dry-run --json
+```
+
+Resolve and apply recommended models (updates `.opencode/agents/*.md`):
+
+```bash
+node .opencode/scripts/resolve-agent-models.mjs --write --json
+```
+
+Resolve for specific roles only:
+
+```bash
+node .opencode/scripts/resolve-agent-models.mjs --write --roles sdet,developer
+```
+
+Model capability categories are defined in `.opencode/model-capabilities.md`. Role preferences live in `.opencode/workflow-models.json`. After writing agent models, restart OpenCode.
+
 ## Workspaces
 
 Coordinator-managed plan execution uses max-3 isolated tracer-ticket worktrees by default. The prepare/handoff script fills those slots only with independent ready tickets; ready tickets with unmet `depends_on` prerequisites are reported and wait for a later batch. The coordinator then dispatches one orchestrator task per prepared worktree. Single-ticket targets dispatch one orchestrator task for one worktree/checkout. Substantial workflow-maintenance changes use isolated Git worktrees unless the user accepts the current checkout. See `docs/adr/0003-ticket-and-workflow-workspaces.md` for workspace policy and `.opencode/skills/shared/constraints.md` for dependency-cache rules.
