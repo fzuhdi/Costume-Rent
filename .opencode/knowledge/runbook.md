@@ -94,7 +94,7 @@ const fetchNotifications = useCallback(async () => {
 ---
 
 ## Testing
-Run from `test/` (this is required — never invoke playwright from project root):
+Run Playwright from `test/`:
 ```bash
 cd test && npx playwright test --grep "AUTH-001"      # tracer test case (default workflow)
 cd test && npx playwright test specs/{feature}.spec.js  # feature regression
@@ -103,9 +103,7 @@ cd test && npx playwright test --headed --slow-mo 500   # debug
 cd test && npx playwright show-report                   # HTML report
 ```
 
-For tracer-test case workflow, use targeted `--grep` runs during RED/GREEN. After a plan's tickets complete, run the full impacted spec files before plan completion. If impacted regression fails, run `node helpers/sync-regression-bugs.mjs --plan <plan-id>` from `test/` to create/update same-plan `review` bug tickets.
-
-Do not run `npm install`, `npm ci`, `npx playwright install`, package-manager add/update commands, or browser/runtime installers without explicit user approval. Missing `node_modules` or Playwright browser caches are setup blocks until approved.
+Tracer-test, impacted-regression, dependency/install, and setup-block rules are owned by `.opencode/skills/orchestrator/SKILL.md` and `.opencode/skills/shared/constraints.md`.
 
 Default runtime stack for executable frontend tests:
 
@@ -115,13 +113,11 @@ docker compose -f docker-compose.dev.yml up -d backend frontend
 
 Keep that stack alive for the full ticket or plan run. Prefer restarting the Compose frontend service if it becomes unhealthy. Do not treat repeated host `npx vite` restarts and ad-hoc port-kill loops as the normal workflow path.
 
-The frontend dev service uses a named `node_modules` volume and runs `npm ci` only when that cache is missing or its recorded lockfile hash differs from `package-lock.json`. This is still an installer path: agents must ask approval before first-starting or recreating a frontend service when that install will run.
+Installer approval and dependency-cache reuse rules are owned by `.opencode/skills/shared/constraints.md`.
 
 ## Workspaces
 
-Coordinator-managed executable tickets use the default single-checkout orchestrator unless advanced isolated worktrees are explicitly viable. Substantial workflow-maintenance changes use isolated Git worktrees unless the user accepts the current checkout. See `docs/adr/0003-ticket-and-workflow-workspaces.md` for the durable policy.
-
-For advanced ticket worktrees, reuse, copy, or junction dependency directories only when the relevant lockfile hash matches. If manifests or lockfiles change, pause concurrent work, ask user approval, install once in a controlled workspace, and refresh the shared cache keyed by lockfile hash.
+Coordinator-managed executable tickets use the default single-checkout orchestrator unless advanced isolated worktrees are explicitly viable. Substantial workflow-maintenance changes use isolated Git worktrees unless the user accepts the current checkout. See `docs/adr/0003-ticket-and-workflow-workspaces.md` for workspace policy and `.opencode/skills/shared/constraints.md` for dependency-cache rules.
 
 Advanced isolated runtime stacks require per-process runtime isolation, not only a second container. Each process must have its own worktree, Compose project name, host-port allocation, Playwright base URL, and output paths.
 

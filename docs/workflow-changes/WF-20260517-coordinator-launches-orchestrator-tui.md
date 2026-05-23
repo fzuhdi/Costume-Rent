@@ -19,10 +19,6 @@ Refactor `/coordinator` explicit plan and ticket targets to launch a visible orc
 - `.opencode/agents/sdet.md`
 - `.opencode/agents/orchestrator.md`
 - `.opencode/agents/reviewer.md`
-- `.opencode/templates/agents/developer.md`
-- `.opencode/templates/agents/sdet.md`
-- `.opencode/templates/agents/orchestrator.md`
-- `.opencode/templates/agents/reviewer.md`
 
 ## Source Of Truth
 - Coordinator command routing: `.opencode/opencode.json`

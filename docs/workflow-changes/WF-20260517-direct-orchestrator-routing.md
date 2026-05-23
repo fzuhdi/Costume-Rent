@@ -10,7 +10,6 @@ Repair direct `/engineering/orchestrator` so explicit ticket/plan arguments disp
 - `.opencode/commands/engineering/orchestrator.md`
 - `.opencode/skills/orchestrator/SKILL.md`
 - `.opencode/agents/orchestrator.md`
-- `.opencode/templates/agents/orchestrator.md`
 - `.opencode/README.md`
 - `AGENTS.md`
 

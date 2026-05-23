@@ -19,7 +19,7 @@ For normal operation, the coordinator launches one orchestrator TUI per target p
 - Ticket branches and plan branches are created in the coordinator checkout.
 - Plan-completion regression runs from the plan branch after all tickets complete.
 - Successful launched sessions delete their own OpenCode session by title after the TUI exits; partial or blocked runs keep the session for debugging.
-- Coordinator executable launches dynamically discover available models, ask the user to choose one, and recommend the orchestrator default from `.opencode/workflow-models.json`.
+- Coordinator executable launches use the orchestrator default from `.opencode/workflow-models.json`; they ask for a model only when the user requests an override or no configured default is available.
 
 ### Stable Runtime Stack (Default Runtime Mode)
 The default runtime for executable work is one long-lived development stack for the active checkout, not repeated host-level Vite restarts between RED and GREEN loops.

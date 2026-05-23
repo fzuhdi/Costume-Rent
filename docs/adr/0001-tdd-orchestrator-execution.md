@@ -15,11 +15,11 @@ Executable `feature` and `bug` tickets use a strict RED/GREEN workflow.
 - `explore` may run read-only discovery in parallel while SDET writes and validates RED.
 - Developer application-code work starts only after SDET returns `RED_STATUS: failing_expected`.
 - Developer must not edit the SDET acceptance test during GREEN.
-- SDET is the official GREEN test gate and reruns the recorded RED test after developer work.
-- Reviewer runs after SDET passes on the happy path.
+- `.opencode/scripts/workflow-runner.mjs --run-green` is the official GREEN test gate and reruns the recorded RED test after developer work.
+- Reviewer runs after deterministic GREEN verification passes on the happy path.
 - Reviewer arbitrates invalid REDs, already-green coverage, ticket ambiguity, and final scope/test-integrity review.
 - Plan mode executes tickets sequentially inside one workspace; coordinator-managed multi-ticket execution uses isolated workspaces per ADR 0003.
-- Optional refactor is bounded to one app-code-only pass after GREEN, followed by the same SDET targeted rerun and final review.
+- Optional refactor is bounded to one app-code-only pass after GREEN, followed by the same deterministic targeted rerun and final review.
 
 ## Consequences
 The workflow is slower than build-first execution but gives clearer behavioral proof and cleaner responsibility boundaries.
