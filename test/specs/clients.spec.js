@@ -176,6 +176,101 @@ test.describe('Client Management', () => {
     }
   });
 
+
+  // CLIENT-015: Client detail and form are usable on mobile
+  test('[CLIENT-015] - Client detail and create/edit form pages show contact info, rental history, validation, edit/save actions, and destructive actions in scannable mobile sections without horizontal scrolling', async ({ page }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    const clientListPage = new ClientListPage(page);
+    await clientListPage.goto();
+
+    // Ensure at least one client exists for detail page navigation
+    let count = await clientListPage.clientRows.count();
+    if (count === 0) {
+      await createE2EClientViaApi(page, 'MOBILE_015');
+      await clientListPage.goto();
+    }
+
+    // === TEST CLIENT DETAIL PAGE ===
+    await clientListPage.clickFirstClient();
+    await expect(page).toHaveURL(/\/clients\/\d+/);
+
+    const clientDetailPage = new ClientDetailPage(page);
+
+    // Verify no horizontal scroll on detail page
+    const detailBody = page.locator('body');
+    const detailScrollWidth = await detailBody.evaluate(el => el.scrollWidth);
+    const detailClientWidth = await detailBody.evaluate(el => el.clientWidth);
+    expect(detailScrollWidth).toBeLessThanOrEqual(detailClientWidth);
+
+    // Verify contact information is visible
+    await expect(clientDetailPage.clientName).toBeVisible();
+    await expect(clientDetailPage.clientPhone).toBeVisible();
+    await expect(clientDetailPage.clientAddress).toBeVisible();
+
+    // Verify rental history section is visible
+    const bodyText = await page.locator('body').textContent();
+    expect(bodyText).toMatch(/Riwayat Peminjaman/i);
+
+    // Verify edit button is visible
+    await expect(clientDetailPage.editButton).toBeVisible();
+
+    // Verify destructive action (delete) is accessible from detail page
+    const deleteButton = page.getByRole('button', { name: /hapus/i });
+    await expect(deleteButton).toBeVisible();
+
+    // === TEST CREATE FORM PAGE ===
+    await page.goto('/clients/new');
+    await expect(page).toHaveURL(/\/clients\/new/);
+
+    // Verify no horizontal scroll on form page
+    const formBody = page.locator('body');
+    const formScrollWidth = await formBody.evaluate(el => el.scrollWidth);
+    const formClientWidth = await formBody.evaluate(el => el.clientWidth);
+    expect(formScrollWidth).toBeLessThanOrEqual(formClientWidth);
+
+    // Verify form fields are visible
+    await expect(page.locator('input[name="name"]')).toBeVisible();
+    await expect(page.locator('input[name="phone"]')).toBeVisible();
+    await expect(page.locator('textarea[name="address"]')).toBeVisible();
+
+    // Verify validation works - submit empty form should stay on page
+    await page.locator('button[type="submit"]').click();
+    await expect(page).toHaveURL(/\/clients\/new/);
+
+    // Verify cancel button is visible
+    const cancelButton = page.getByRole('button', { name: /batal/i });
+    await expect(cancelButton).toBeVisible();
+
+    // Verify save button is visible
+    const saveButton = page.locator('button[type="submit"]');
+    await expect(saveButton).toBeVisible();
+
+    // === TEST EDIT FORM ON DETAIL PAGE ===
+    // Return to client list and navigate to detail
+    await page.goto('/clients');
+    await clientListPage.clickFirstClient();
+    await expect(page).toHaveURL(/\/clients\/\d+/);
+
+    // Click edit to switch to inline form
+    await clientDetailPage.clickEdit();
+
+    // Verify no horizontal scroll in edit mode
+    const editBody = page.locator('body');
+    const editScrollWidth = await editBody.evaluate(el => el.scrollWidth);
+    const editClientWidth = await editBody.evaluate(el => el.clientWidth);
+    expect(editScrollWidth).toBeLessThanOrEqual(editClientWidth);
+
+    // Verify edit form fields are visible
+    await expect(clientDetailPage.nameInput).toBeVisible();
+    await expect(clientDetailPage.phoneInput).toBeVisible();
+    await expect(clientDetailPage.addressInput).toBeVisible();
+
+    // Verify cancel and save buttons are visible in edit mode
+    await expect(clientDetailPage.cancelButton).toBeVisible();
+    await expect(clientDetailPage.saveButton).toBeVisible();
+  });
   // CLIENT: Delete client
   test('[CLIENT-013] - Delete client', async ({ page }) => {
     const client = await createE2EClientViaApi(page, 'AC042_DELETE');
