@@ -7,7 +7,7 @@ const ADMIN_EMAIL = 'admin@busana.com';
 const ADMIN_PASSWORD = 'admin123';
 
 async function createE2EClientViaApi(page, purpose) {
-  const name = `E2E_CLIENT_${purpose}_${Date.now()}`;
+  const name = `E2E_CLIENT__${purpose}_${Date.now()}`;
   const token = await page.evaluate(() => localStorage.getItem('token'));
 
   const result = await page.evaluate(async ({ token, name }) => {
@@ -186,5 +186,40 @@ test.describe('Client Management', () => {
     await page.waitForTimeout(500);
     const finalCount = await clientListPage.clientRows.count();
     expect(finalCount).toBeLessThan(initialCount);
+  });
+
+  // CLIENT-014: On a mobile viewport client list displays cards with name phone total rents active/overdue state detail action and delete action
+  test('[CLIENT-014] - On mobile viewport client list displays cards with name phone rents status and actions', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    const clientListPage = new ClientListPage(page);
+    const client = await createE2EClientViaApi(page, 'MOBILE_CARD');
+    await clientListPage.goto();
+
+    // Mobile must render client cards (not a table with horizontal scroll)
+    // Per criterion: cards show name, phone, total rents, active/overdue state, detail action, delete action
+    const mobileCards = page.locator('[data-testid="client-card"], [class*="client-card"]');
+    await expect(mobileCards.first()).toBeVisible();
+
+    const firstCard = mobileCards.first();
+
+    // 1. Name (as link to client detail page)
+    await expect(firstCard.locator('a[href*="/clients/"]')).toBeVisible();
+    await expect(firstCard).toContainText(client.name);
+
+    // 2. Phone number
+    await expect(firstCard).toContainText(/08\d{7,}/);
+
+    // 3. Total rents indicator
+    await expect(firstCard).toContainText(/total|sewa|pinjaman/i);
+
+    // 4. Active or overdue state (badge/chip/status indicator)
+    await expect(firstCard.locator('[class*="chip"], [class*="badge"], [class*="status"]')).toBeVisible();
+
+    // 5. Detail action (button or link to view client)
+    await expect(firstCard.getByRole('button', { name: /detail/i }).or(firstCard.locator('a[href*="/clients/"]').last())).toBeVisible();
+
+    // 6. Delete action (button)
+    await expect(firstCard.getByRole('button', { name: /hapus|delete/i })).toBeVisible();
   });
 });
