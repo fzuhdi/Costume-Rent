@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 2,
+  "checkpoints": [
+    {
+      "label": "after-red",
+      "sha": "0907de102f4063233c3baed4b945d6e6c5a15177",
+      "ticketId": "TICKET-20260517-011",
+      "testCaseId": "NOTIFICATION-011",
+      "timestamp": "2026-05-24T06:45:00.000Z"
+    },
+    {
+      "label": "green",
+      "sha": "ad1e4ab9d46cee3df641d86e9772417d1c7952e7",
+      "ticketId": "TICKET-20260517-011",
+      "testCaseId": "NOTIFICATION-011",
+      "timestamp": "2026-05-24T06:50:00.000Z"
+    }
+  ]
+}

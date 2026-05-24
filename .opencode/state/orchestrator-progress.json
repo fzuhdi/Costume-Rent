@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "currentPlan": "PLAN-20260517-staff-admin-mobile-first-ui-refresh",
+  "currentTicket": "TICKET-20260517-011",
+  "currentFeature": "NOTIFICATION",
+  "currentTestCase": "NOTIFICATION-011",
+  "status": "ticket-complete",
+  "iteration": 0,
+  "maxIterations": 4,
+  "branch": "tdd/TICKET-20260517-011",
+  "baseBranch": "tdd/PLAN-20260517-staff-admin-mobile-first-ui-refresh",
+  "lastCheckpointSha": "0907de102f4063233c3baed4b945d6e6c5a15177",
+  "red": {
+    "status": "failing_expected",
+    "testFile": "test/specs/notifications.spec.js",
+    "testTitle": "[NOTIFICATION-011] - Mobile notification popover is usable with empty and populated states, close control, and rent detail navigation",
+    "failureSummary": "Test fails because the close button aria-label=\"Tutup notifikasi\" is not matched by standard locator selectors, and the mobile popover lacks responsive width handling",
+    "preRedCheckpointSha": "5b904d8",
+    "afterRedCheckpointSha": "0907de102f4063233c3baed4b945d6e6c5a15177"
+  },
+  "green": {
+    "refactorNeeded": "no",
+    "refactorUsed": false,
+    "greenCommitSha": "ad1e4ab9d46cee3df641d86e9772417d1c7952e7",
+    "refactorCommitSha": null
+  },
+  "regression": {
+    "cycle": 0,
+    "maxRegressionCycles": 3,
+    "impactedSpecs": [],
+    "lastResultsPath": null,
+    "lastSyncSummary": null
+  },
+  "completedTestCases": ["NOTIFICATION-011"]
+}

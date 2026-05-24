@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 2,
+  "currentPlan": "PLAN-20260517-staff-admin-mobile-first-ui-refresh",
+  "currentTicket": "TICKET-20260517-011",
+  "currentFeature": "NOTIFICATION",
+  "currentTestCase": "NOTIFICATION-011",
+  "currentTicketType": "feature",
+  "status": "complete",
+  "branch": "tdd/TICKET-20260517-011",
+  "baseBranch": "tdd/PLAN-20260517-staff-admin-mobile-first-ui-refresh",
+  "pr": {
+    "state": "not_applicable",
+    "url": null,
+    "blockedReason": null,
+    "rerunCommand": null
+  },
+  "tickets": {
+    "TICKET-20260517-011": {
+      "status": "complete"
+    }
+  },
+  "greenTestSummary": {
+    "testCaseId": "NOTIFICATION-011",
+    "testCaseStatus": "verified",
+    "testsRun": 1,
+    "testsPassed": 1,
+    "testsFailed": 0,
+    "greenCommitSha": "ad1e4ab9d46cee3df641d86e9772417d1c7952e7"
+  }
+}
