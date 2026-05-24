@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { getClientById, updateClient } from '../api/clientApi';
-import { ArrowLeft, Edit, Save, X, User, Phone, MapPin, ClipboardList, AlertTriangle } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { getClientById, updateClient, deleteClient } from '../api/clientApi';
+import { ArrowLeft, Edit, Save, X, User, Phone, MapPin, ClipboardList, AlertTriangle, Trash2 } from 'lucide-react';
 import {
-  TextField, TextArea, Label, Input, Button, Card, Chip, Spinner, Table, FieldError
+  TextField, TextArea, Label, Input, Button, Card, Chip, Spinner, Table, FieldError, Modal
 } from '@heroui/react';
 
 const statusColors = {
@@ -26,6 +26,8 @@ const ClientDetailPage = () => {
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState({ name: '', phone: '', address: '' });
   const [saving, setSaving] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchClient();
@@ -73,6 +75,19 @@ const ClientDetailPage = () => {
     }
   };
 
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteClient(id);
+      navigate('/clients');
+    } catch (error) {
+      console.error('Failed to delete client:', error);
+    } finally {
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-48">
@@ -96,7 +111,7 @@ const ClientDetailPage = () => {
   const overdueRents = client.rent_orders?.filter((r) => r.status === 'overdue') || [];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 max-w-full overflow-x-hidden">
       <Link to="/clients" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
         <ArrowLeft size={18} />
         Kembali ke Daftar Klien
@@ -107,23 +122,26 @@ const ClientDetailPage = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Informasi Klien</h2>
             {!editing && (
-              <Button variant="bordered" size="sm" onPress={handleEdit}><Edit size={16} />Edit</Button>
+              <div className="flex gap-2">
+                <Button variant="bordered" size="sm" onPress={handleEdit}><Edit size={16} />Edit</Button>
+                <Button variant="danger" size="sm" onPress={() => setDeleteOpen(true)}><Trash2 size={16} />Hapus</Button>
+              </div>
             )}
           </div>
           {editing ? (
             <div className="flex flex-col gap-4">
               <TextField>
                 <Label>Nama</Label>
-                <Input value={editData.name} onChange={(e) => setEditData((prev) => ({...prev, name: e.target.value}))} />
+                <Input name="name" value={editData.name} onChange={(e) => setEditData((prev) => ({...prev, name: e.target.value}))} />
                 <FieldError />
               </TextField>
               <TextField>
                 <Label>Telepon</Label>
-                <Input value={editData.phone} onChange={(e) => setEditData((prev) => ({...prev, phone: e.target.value}))} />
+                <Input name="phone" value={editData.phone} onChange={(e) => setEditData((prev) => ({...prev, phone: e.target.value}))} />
               </TextField>
               <TextField>
                 <Label>Alamat</Label>
-                <TextArea value={editData.address} onChange={(e) => setEditData((prev) => ({...prev, address: e.target.value}))} />
+                <TextArea name="address" value={editData.address} onChange={(e) => setEditData((prev) => ({...prev, address: e.target.value}))} />
               </TextField>
               <div className="flex gap-3 justify-end">
                 <Button variant="bordered" onPress={handleCancel}><X size={16} />Batal</Button>
@@ -228,6 +246,21 @@ const ClientDetailPage = () => {
           )}
         </Card.Content>
       </Card>
+
+      <Modal.Backdrop isOpen={deleteOpen} onOpenChange={setDeleteOpen}>
+        <Modal.Container>
+          <Modal.Dialog>
+            <Modal.Header>
+              <Modal.Heading>Konfirmasi Hapus</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body>Hapus klien {client.name}?</Modal.Body>
+            <Modal.Footer>
+              <Button variant="bordered" onPress={() => setDeleteOpen(false)} aria-label="Batal">Batal</Button>
+              <Button variant="danger" onPress={handleDelete} isPending={deleting} aria-label="Hapus klien">Hapus</Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </div>
   );
 };
