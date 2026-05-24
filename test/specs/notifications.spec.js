@@ -143,4 +143,63 @@ test.describe('Notifications', () => {
     // At least one type should be visible if there are notifications
     expect(hasOverdue || hasDueSoon).toBeTruthy();
   });
+
+  // NOTIFICATION-011: Notification popover is usable on mobile
+  test('[NOTIFICATION-011] - Mobile notification popover is usable with empty and populated states, close control, and rent detail navigation', async ({ page }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Open the notification bell
+    const notificationBell = page.locator('button[aria-label="Notifikasi"]');
+    await expect(notificationBell).toBeVisible();
+    await notificationBell.click();
+
+    // Wait for popover to appear
+    const popover = page.locator('[role="dialog"], .max-h-80, [data-slot="popover-content"]').first();
+    await expect(popover).toBeVisible();
+
+    // --- VERIFY POPOVER IS NOT CLIPPED (within viewport) ---
+    const popoverBox = await popover.boundingBox();
+    expect(popoverBox).not.toBeNull();
+    if (popoverBox) {
+      expect(popoverBox.x).toBeGreaterThanOrEqual(0);
+      expect(popoverBox.x + popoverBox.width).toBeLessThanOrEqual(375);
+      expect(popoverBox.y).toBeGreaterThanOrEqual(0);
+      expect(popoverBox.y + popoverBox.height).toBeLessThanOrEqual(667);
+    }
+
+    // --- VERIFY CLOSE/DISMISS CONTROL EXISTS ---
+    const closeControl =
+      page.locator('button[aria-label="Tutup"], button[aria-label="Close"], button:has-text("Tutup"), [data-slot="close-button"], button:has(svg[data-slot="close-icon"])').first();
+    await expect(closeControl).toBeVisible();
+
+    // --- CHECK FOR EMPTY OR POPULATED STATE & RENT DETAIL NAVIGATION ---
+    const popoverContent = await popover.textContent();
+    const hasNotificationItems = popoverContent && popoverContent.trim().length > 3;
+
+    if (hasNotificationItems && popoverContent) {
+      const emptyStateText = /tidak ada notifikasi|no notifications|belum ada notifikasi/i;
+      const isPopulated = !emptyStateText.test(popoverContent);
+
+      if (isPopulated) {
+        // POPULATED STATE: navigate to rent detail
+        const notificationItems = page.locator('.max-h-80 a, .max-h-80 [role="button"], .max-h-80 button').first();
+        if (await notificationItems.isVisible().catch(() => false)) {
+          await notificationItems.click();
+          await expect(page).toHaveURL(/\/rents\/\d+/);
+        }
+      } else {
+        // EMPTY STATE
+        const emptyIndicator = page.locator('text=/tidak ada notifikasi|no notifications|belum ada notifikasi/i');
+        await expect(emptyIndicator).toBeVisible();
+      }
+    } else {
+      const emptyIndicator = page.locator('text=/tidak ada notifikasi|no notifications|belum ada notifikasi/i');
+      await expect(emptyIndicator).toBeVisible();
+    }
+
+    // --- VERIFY CLOSE CONTROL DISMISSES THE POPOVER ---
+    await closeControl.click();
+    await expect(popover).not.toBeVisible();
+  });
 });
