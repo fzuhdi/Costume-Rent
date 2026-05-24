@@ -9,6 +9,8 @@ permission:
     "docs/tickets/**": allow
     "docs/plans/**": allow
     ".opencode/state/*.json": allow
+    ".opencode/state/worker-outputs/**": allow
+    ".opencode/logs/workflow-runs/**": allow
     ".opencode/state.example/*": allow
   bash:
     "*": allow
@@ -30,9 +32,9 @@ permission:
   webfetch: allow
 ---
 
-# Orchestrator - TDD FSM Engine
+# Orchestrator - Runner Dispatcher
 
-Load `.opencode/skills/orchestrator/SKILL.md` and follow it as the authoritative FSM. Shared guardrails live in `.opencode/skills/shared/constraints.md`; return fields live in `.opencode/skills/shared/io-contract.md`; model defaults live in `.opencode/workflow-models.json`.
+Load `.opencode/skills/orchestrator/SKILL.md`. The deterministic runner, `.opencode/scripts/workflow-runner.mjs`, is the canonical state-transition engine. Shared guardrails live in `.opencode/skills/shared/constraints.md`; return fields live in `.opencode/skills/shared/io-contract.md`; model defaults live in `.opencode/workflow-models.json`.
 
 ## Input
 
@@ -48,7 +50,15 @@ Load `.opencode/skills/orchestrator/SKILL.md` and follow it as the authoritative
 
 ## Execution
 
-Delegate worker phases to `sdet`, `developer`, `reviewer`, and optional `explore` exactly as the FSM requires. Do not implement worker responsibilities inline.
+1. Run `node .opencode/scripts/workflow-runner.mjs --reconcile --json` and block on reconciliation blockers.
+2. Run the target-appropriate runner command for deterministic state advancement when no worker is needed.
+3. When a worker is needed, run `node .opencode/scripts/workflow-runner.mjs --target <id> --next-task --json`.
+4. Dispatch exactly the returned `nextTask.task` payload. Do not hand-write worker prompts.
+5. Save the worker final message under `.opencode/state/worker-outputs/` in the active `WORKTREE_ROOT`.
+6. Run `node .opencode/scripts/workflow-runner.mjs --target <id> --ingest-worker-output <saved-output-file> --json`.
+7. Repeat only while the runner reports a safe next step.
+
+Delegate worker phases to `sdet`, `developer`, `reviewer`, and optional `explore` only through runner-emitted task payloads. Do not implement worker responsibilities or runner state transitions inline.
 
 ## Return
 
@@ -58,5 +68,5 @@ Return per `.opencode/skills/shared/io-contract.md` with `OUTCOME: success | par
 
 - If worker dispatch is unavailable or denied, return `OUTCOME: blocked`; do not simulate workers.
 - Do not edit SDET tests or application code directly.
-- Do not bypass quality gates, final review, checkpoint/state recording, or plan regression gates required by the FSM.
+- Do not bypass reconciliation, quality gates, final review, checkpoint/state recording, or plan regression gates required by the runner.
 - Do not reset, rebase, merge, cherry-pick, clean, stash, force push, or discard dirty work.

@@ -142,18 +142,18 @@ try {
   if (launch.status !== 0) fail('launch-parallel-plan fixture dry-run failed', `${launch.stdout}\n${launch.stderr}`);
   const launchReport = JSON.parse(launch.stdout);
   const dispatchTask = launchReport.dispatches?.[0]?.task;
-  if (!dispatchTask?.prompt?.includes('WORKER_TASK_GENERATOR: node .opencode/scripts/build-worker-task.mjs')) {
-    fail('dispatch task prompt is missing worker task generator instruction', JSON.stringify(dispatchTask, null, 2));
+  if (!dispatchTask?.prompt?.includes('RUNNER: node .opencode/scripts/workflow-runner.mjs')) {
+    fail('dispatch task prompt is missing runner instruction', JSON.stringify(dispatchTask, null, 2));
   }
-  if (!dispatchTask.prompt.includes('do not hand-write worker task payloads')) {
-    fail('dispatch task prompt is missing deterministic worker payload rule', dispatchTask.prompt);
+  if (!dispatchTask.prompt.includes('--next-task') || !dispatchTask.prompt.includes('--ingest-worker-output')) {
+    fail('dispatch task prompt is missing runner handoff loop instructions', dispatchTask.prompt);
   }
   if (!dispatchTask.workerTaskGenerator?.examples?.review?.includes('--mode final-review')) {
     fail('dispatch worker examples must include final-review reviewer mode', JSON.stringify(dispatchTask.workerTaskGenerator, null, 2));
   }
   const examples = Object.values(dispatchTask.workerTaskGenerator?.examples || {}).join('\n');
-  if (examples.includes('--output-file') || examples.includes('.opencode/state/worker-outputs/')) {
-    fail('default dispatch examples must not advertise unpersisted worker output files', examples);
+  if (!dispatchTask.prompt.includes('.opencode/state/worker-outputs/')) {
+    fail('dispatch task prompt must tell orchestrator where to save worker outputs', dispatchTask.prompt);
   }
 } finally {
   fs.rmSync(fixtureRoot, { recursive: true, force: true });

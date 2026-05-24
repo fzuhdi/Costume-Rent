@@ -189,6 +189,8 @@
         "docs/tickets/**",
         "docs/plans/**",
         ".opencode/state/*.json",
+        ".opencode/state/worker-outputs/**",
+        ".opencode/logs/workflow-runs/**",
         ".opencode/state.example/*"
       ],
       "deny": [

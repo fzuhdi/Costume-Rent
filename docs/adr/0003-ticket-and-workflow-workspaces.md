@@ -21,8 +21,8 @@ For normal plan operation, the coordinator prepares up to three independent read
 - Malformed `depends_on` ids or references to tickets outside the plan block launch because dependency order cannot be proven.
 - Review tickets block parallel executable launch until they are audited.
 - Ticket branches start from the plan integration branch `tdd/{plan-id}` and use `tdd/{ticket-id}`.
-- Ticket branches merge back into the plan branch sequentially after ticket completion.
-- Plan-completion regression runs from the plan branch after completed ticket branches are integrated.
+- Completed ticket branches are integrated back into the plan branch only through an explicit serialized integration step. Until a runner-owned integration command performs that step, completion of a ticket branch does not imply the plan branch contains that ticket's changes.
+- Plan-completion regression runs from the plan branch only after completed ticket branches are explicitly integrated or manually merged and verified.
 - Orchestrator task prompts must include `WORKTREE_ROOT` and instruct nested worker prompts to use the same root.
 
 ### Single-Ticket Launch (Default Ticket Mode)
@@ -49,7 +49,7 @@ Isolated Git worktrees are mandatory for parallel plan execution.
 - Ticket branches start from the plan integration branch when the ticket has `plan_id`.
 - Standalone ticket branches may start from the recorded base branch.
 - Substantial workflow changes get a dedicated workspace and `workflow/{change-id}` branch.
-- Ticket branches merge back into the plan branch sequentially.
+- Ticket branches require explicit serialized integration back into the plan branch. The workflow must not imply automatic merge unless a deterministic integration command performs it and reports conflicts.
 - Each executed ticket gets a dedicated workspace and branch.
 - Worker agents must run from the active item workspace root.
 - The coordinator must not run multiple workflow engines in the same checkout concurrently.
@@ -78,9 +78,9 @@ Recommended workspace root:
 ```
 
 ## Consequences
-- Plan execution can run up to three tracer tickets at once without shared branches, state files, ports, or Playwright artifacts.
+- Plan execution can run up to three tracer tickets at once without shared working branches, state files, ports, or Playwright artifacts.
 - Parallel launch has higher setup cost than serial execution, but that cost is paid once per batch and is necessary for safe concurrency.
-- Ticket branches must be integrated back into the plan branch sequentially; merge conflicts and plan regression remain serialized.
+- Ticket branches must be explicitly integrated back into the plan branch sequentially; merge conflicts and plan regression remain serialized.
 - Parallel runtime stacks are available only when the coordinator assigns non-overlapping slots and launches each process from its own worktree root.
 - Worktree dependency reuse avoids repeated installs but does not authorize arbitrary dependency or browser installation.
 

@@ -45,8 +45,11 @@ function usage() {
        node .opencode/scripts/workflow-runner.mjs --target PLAN-* --run-plan [--dry-run] [--json] [--output-file <path>]
        node .opencode/scripts/workflow-runner.mjs --target TICKET-* --run-green [--dry-run] [--json] [--recorded-test-file <path>] [--recorded-test-title <title>]
        node .opencode/scripts/workflow-runner.mjs --target TICKET-* --validate-worker-output <sdet-red|developer-green|developer-refactor|reviewer> --output-file <path> [--json]
+       node .opencode/scripts/workflow-runner.mjs --reconcile [--target PLAN-*|TICKET-*] [--json]
+       node .opencode/scripts/workflow-runner.mjs --target PLAN-*|TICKET-* --next-task [--json]
+       node .opencode/scripts/workflow-runner.mjs --target PLAN-*|TICKET-* --ingest-worker-output <path> [--json]
 
-Default mode is read-only preflight. --run-ticket advances one happy-path ticket phase deterministically using captured worker output, git checkpoints/commits, quality gates, and runtime state. --run-plan sequences review/ready tickets for one plan and runs impacted-spec regression before completion. --run-green performs the deterministic official GREEN rerun for the recorded RED test; it invokes no subagents, edits no files, and never commits, pushes, or creates PRs. --validate-worker-output parses one worker final message from a file and validates required fields, enums, and ticket/test-case alignment.`;
+Default mode is read-only preflight. --reconcile compares durable workflow state ledgers and reports drift. --next-task emits the next worker task payload without invoking subagents. --ingest-worker-output is a clearer runner-owned alias for advancing the selected ticket/plan from a captured worker output file. --run-ticket advances one happy-path ticket phase deterministically using captured worker output, git checkpoints/commits, quality gates, and runtime state. --run-plan sequences review/ready tickets for one plan and runs impacted-spec regression before completion. --run-green performs the deterministic official GREEN rerun for the recorded RED test; it invokes no subagents, edits no files, and never commits, pushes, or creates PRs. --validate-worker-output parses one worker final message from a file and validates required fields, enums, and ticket/test-case alignment.`;
 }
 
 function parseArgs(argv) {
@@ -58,10 +61,13 @@ function parseArgs(argv) {
     runTicket: false,
     runPlan: false,
     runGreen: false,
+    reconcile: false,
+    nextTask: false,
     recordedTestFile: null,
     recordedTestTitle: null,
     validateWorkerOutput: null,
     outputFile: null,
+    ingestWorkerOutput: null,
     afterRedCheckpointSha: null,
   };
 
@@ -85,6 +91,16 @@ function parseArgs(argv) {
 
     if (token === '--run-green') {
       values.runGreen = true;
+      continue;
+    }
+
+    if (token === '--reconcile') {
+      values.reconcile = true;
+      continue;
+    }
+
+    if (token === '--next-task') {
+      values.nextTask = true;
       continue;
     }
 
@@ -160,6 +176,21 @@ function parseArgs(argv) {
 
     if (token.startsWith('--output-file=')) {
       values.outputFile = token.slice('--output-file='.length);
+      continue;
+    }
+
+    if (token === '--ingest-worker-output') {
+      const next = argv[index + 1];
+      if (!next || next.startsWith('--')) throw new Error('Missing value for --ingest-worker-output');
+      values.ingestWorkerOutput = next;
+      values.outputFile = next;
+      index += 1;
+      continue;
+    }
+
+    if (token.startsWith('--ingest-worker-output=')) {
+      values.ingestWorkerOutput = token.slice('--ingest-worker-output='.length);
+      values.outputFile = values.ingestWorkerOutput;
       continue;
     }
 
@@ -286,6 +317,47 @@ function runCapture(command, args, options = {}) {
 
 function addCheck(report, name, status, detail = '') {
   report.checks.push({ name, status, detail });
+}
+
+function shouldWriteRunTelemetry(values) {
+  return Boolean(!values.dryRun && (values.runTicket || values.runPlan || values.ingestWorkerOutput));
+}
+
+function writeRunTelemetry(report, values, startedAt) {
+  const endedAt = new Date().toISOString();
+  const runId = `${startedAt.replace(/[-:.TZ]/g, '').slice(0, 14)}-${process.pid}`;
+  const record = {
+    schemaVersion: 1,
+    runId,
+    startedAt,
+    endedAt,
+    mode: report.mode,
+    target: report.target,
+    targetType: report.targetType,
+    runtimePhase: report.runtime?.status || null,
+    outcome: report.outcome,
+    exitCode: Number.isInteger(report.exitCode) ? report.exitCode : (report.blockers.length ? 1 : 0),
+    blockerCount: report.blockers.length,
+    warningCount: report.warnings.length,
+    nextTaskRole: report.nextTask?.role || null,
+    nextTaskMode: report.nextTask?.mode || null,
+    workerOutputKind: report.workerOutput?.kind || null,
+    greenRerunStatus: report.greenRerun?.testCaseStatus || null,
+    reconciliationStatus: report.reconciliation?.status || null,
+  };
+
+  report.telemetry = { runId, written: false, path: null };
+  if (!shouldWriteRunTelemetry(values)) return;
+
+  const logDir = path.join(root, '.opencode', 'logs', 'workflow-runs');
+  const logPath = path.join(logDir, `${endedAt.slice(0, 10)}.jsonl`);
+  try {
+    fs.mkdirSync(logDir, { recursive: true });
+    fs.appendFileSync(logPath, `${JSON.stringify(record)}\n`, 'utf8');
+    report.telemetry = { runId, written: true, path: rel(logPath) };
+  } catch (error) {
+    report.warnings.push(`Failed to append workflow run telemetry: ${error.message}`);
+  }
 }
 
 function checkProjectRoot(report) {
@@ -475,6 +547,225 @@ function checkRuntimeState(report) {
   } : null;
 
   return { orchestrator, ticket, checkpoints };
+}
+
+function markdownFiles(dir) {
+  const fullDir = path.join(root, ...dir.split('/'));
+  if (!exists(fullDir)) return [];
+  return fs.readdirSync(fullDir, { withFileTypes: true })
+    .filter(entry => entry.isFile() && entry.name.endsWith('.md'))
+    .map(entry => path.join(fullDir, entry.name))
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function loadFrontmatterCollection(dir, report, label) {
+  const items = new Map();
+  for (const filePath of markdownFiles(dir)) {
+    const id = path.basename(filePath, '.md');
+    const parsed = parseFrontmatter(filePath);
+    if (!parsed.ok) {
+      report.warnings.push(`${label} ${rel(filePath)} skipped during reconciliation: ${parsed.error}`);
+      continue;
+    }
+    items.set(id, { id, file: rel(filePath), frontmatter: parsed.data });
+  }
+  return items;
+}
+
+function countStatuses(items, statuses) {
+  const counts = Object.fromEntries([...statuses].map(status => [status, 0]));
+  for (const item of items) {
+    const status = item.frontmatter.status;
+    if (Object.prototype.hasOwnProperty.call(counts, status)) counts[status] += 1;
+  }
+  return counts;
+}
+
+function extractPlanTicketRows(planFile) {
+  const text = readText(path.join(root, ...planFile.split('/')));
+  if (!text.ok) return [];
+  return [...text.value.matchAll(/^\s*-\s+(TICKET-\d{8}-\d{3})\s+-\s+([a-z_]+)\s+-\s+([a-z_]+)\s+-\s+(.+)$/gm)]
+    .map(match => ({ ticketId: match[1], status: match[2], type: match[3], title: match[4].trim() }));
+}
+
+function extractPlanStatusSummary(planFile) {
+  const text = readText(path.join(root, ...planFile.split('/')));
+  if (!text.ok) return {};
+  const summary = {};
+  for (const match of text.value.matchAll(/^\s*-\s+(draft|review|ready|in_progress|blocked|complete):\s+(\d+)\s*$/gm)) {
+    summary[match[1]] = Number(match[2]);
+  }
+  return summary;
+}
+
+function loadLeaseRegistryForReconcile(report) {
+  const leasePath = path.join(root, '.opencode', 'state', 'ticket-leases.json');
+  if (!exists(leasePath)) return { schemaVersion: 1, leases: {} };
+  const parsed = readJson(leasePath);
+  if (!parsed.ok) {
+    report.warnings.push(`Ticket lease registry skipped during reconciliation: ${parsed.error}`);
+    return { schemaVersion: 1, leases: {} };
+  }
+  if (parsed.value?.schemaVersion !== 1 || typeof parsed.value?.leases !== 'object' || parsed.value.leases === null) {
+    report.warnings.push('Ticket lease registry skipped during reconciliation: invalid schema');
+    return { schemaVersion: 1, leases: {} };
+  }
+  return parsed.value;
+}
+
+function normalizedLeaseStatus(lease) {
+  if (!lease || !lease.deadlineAt || !['running', 'deadline_expired'].includes(lease.status)) return lease?.status || null;
+  return Date.parse(lease.deadlineAt) <= Date.now() ? 'deadline_expired' : lease.status;
+}
+
+function addReconciliationItem(reconciliation, severity, code, message, targets = []) {
+  reconciliation.items.push({ severity, code, message, targets });
+}
+
+function reconcilePlanDocuments(reconciliation, plans, tickets) {
+  for (const plan of plans.values()) {
+    const planTickets = [...tickets.values()].filter(ticket => ticket.frontmatter.plan_id === plan.id);
+    const ticketsById = new Map(planTickets.map(ticket => [ticket.id, ticket]));
+    const rows = extractPlanTicketRows(plan.file);
+    const rowsById = new Map(rows.map(row => [row.ticketId, row]));
+
+    for (const row of rows) {
+      const ticket = ticketsById.get(row.ticketId);
+      if (!ticket) {
+        addReconciliationItem(reconciliation, 'blocker', 'plan-ticket-missing', `${plan.file} lists ${row.ticketId}, but no ticket frontmatter in this plan was found.`, [plan.id, row.ticketId]);
+        continue;
+      }
+      if (ticket.frontmatter.status !== row.status) {
+        addReconciliationItem(reconciliation, 'blocker', 'plan-ticket-status-drift', `${plan.file} lists ${row.ticketId} as ${row.status}, but ${ticket.file} frontmatter is ${ticket.frontmatter.status}.`, [plan.id, row.ticketId]);
+      }
+      if (ticket.frontmatter.type !== row.type) {
+        addReconciliationItem(reconciliation, 'blocker', 'plan-ticket-type-drift', `${plan.file} lists ${row.ticketId} as type ${row.type}, but ${ticket.file} frontmatter is ${ticket.frontmatter.type}.`, [plan.id, row.ticketId]);
+      }
+    }
+
+    for (const ticket of planTickets) {
+      if (!rowsById.has(ticket.id)) {
+        addReconciliationItem(reconciliation, 'warning', 'plan-ticket-row-missing', `${ticket.file} belongs to ${plan.id}, but ${plan.file} does not list it in the Tickets section.`, [plan.id, ticket.id]);
+      }
+    }
+
+    const expectedCounts = countStatuses(planTickets, TICKET_STATUSES);
+    const summaryCounts = extractPlanStatusSummary(plan.file);
+    for (const status of TICKET_STATUSES) {
+      if (summaryCounts[status] === undefined) continue;
+      if (summaryCounts[status] !== expectedCounts[status]) {
+        addReconciliationItem(reconciliation, 'blocker', 'plan-summary-count-drift', `${plan.file} summary says ${status}: ${summaryCounts[status]}, but ticket frontmatter count is ${expectedCounts[status]}.`, [plan.id]);
+      }
+    }
+  }
+}
+
+function reconcileTicketProgress(reconciliation, ticketProgress, tickets) {
+  const tracked = ticketProgress?.tickets || {};
+  for (const [ticketId, trackedValue] of Object.entries(tracked)) {
+    const ticket = tickets.get(ticketId);
+    if (!ticket) {
+      addReconciliationItem(reconciliation, 'warning', 'ticket-progress-missing-ticket', `.opencode/state/ticket-progress.json tracks ${ticketId}, but docs/tickets has no matching file.`, [ticketId]);
+      continue;
+    }
+    const trackedStatus = trackedValue?.status;
+    if (trackedStatus && trackedStatus !== ticket.frontmatter.status) {
+      addReconciliationItem(reconciliation, 'blocker', 'ticket-progress-status-drift', `.opencode/state/ticket-progress.json tracks ${ticketId} as ${trackedStatus}, but ${ticket.file} frontmatter is ${ticket.frontmatter.status}.`, [ticketId, ticket.frontmatter.plan_id]);
+    }
+  }
+}
+
+function reconcileActiveRuntime(reconciliation, orchestrator, tickets) {
+  if (!orchestrator?.currentTicket) return;
+  const activeTicket = tickets.get(orchestrator.currentTicket);
+  if (!activeTicket) {
+    addReconciliationItem(reconciliation, 'blocker', 'active-ticket-missing', `Runtime currentTicket ${orchestrator.currentTicket} has no docs/tickets file.`, [orchestrator.currentTicket, orchestrator.currentPlan]);
+    return;
+  }
+  const activeDone = ['ticket-complete', 'plan-complete', 'idle'].includes(orchestrator.status);
+  if (activeTicket.frontmatter.status === 'complete' && !activeDone) {
+    addReconciliationItem(reconciliation, 'blocker', 'active-ticket-complete-drift', `Runtime is in ${orchestrator.status} for ${orchestrator.currentTicket}, but ${activeTicket.file} is already complete.`, [orchestrator.currentTicket, orchestrator.currentPlan]);
+  }
+}
+
+function reconcileCheckpoints(reconciliation, orchestrator, checkpoints) {
+  const recorded = new Set(checkpoints?.checkpoints || []);
+  const expected = [
+    ['red.preRedCheckpointSha', orchestrator?.red?.preRedCheckpointSha],
+    ['red.afterRedCheckpointSha', orchestrator?.red?.afterRedCheckpointSha],
+  ].filter(([, sha]) => sha);
+  for (const [field, sha] of expected) {
+    if (!recorded.has(sha)) {
+      addReconciliationItem(reconciliation, 'blocker', 'checkpoint-ledger-drift', `Runtime ${field} ${sha} is absent from .opencode/state/checkpoints.json.`, [orchestrator?.currentTicket, orchestrator?.currentPlan].filter(Boolean));
+    }
+  }
+}
+
+function reconcileLeases(reconciliation, leases, tickets, orchestrator) {
+  for (const [ticketId, lease] of Object.entries(leases.leases || {})) {
+    const status = normalizedLeaseStatus(lease);
+    const ticket = tickets.get(ticketId);
+    if (!ticket) {
+      addReconciliationItem(reconciliation, 'warning', 'lease-ticket-missing', `Ticket lease registry tracks ${ticketId}, but docs/tickets has no matching file.`, [ticketId, lease.planId].filter(Boolean));
+      continue;
+    }
+    if (status === 'deadline_expired') {
+      addReconciliationItem(reconciliation, 'blocker', 'lease-expired', `Ticket lease for ${ticketId} is deadline_expired; run ticket-lease refresh/inspect before scheduling it again.`, [ticketId, lease.planId].filter(Boolean));
+    }
+    if (['running', 'deadline_expired', 'interrupted'].includes(status) && ticket.frontmatter.status === 'complete') {
+      addReconciliationItem(reconciliation, 'blocker', 'lease-complete-ticket-drift', `Ticket lease for ${ticketId} is ${status}, but ${ticket.file} is complete.`, [ticketId, lease.planId].filter(Boolean));
+    }
+    if (status === 'running' && orchestrator?.currentTicket && orchestrator.currentTicket !== ticketId && ticket.frontmatter.status !== 'complete') {
+      addReconciliationItem(reconciliation, 'warning', 'lease-not-active-runtime', `Ticket lease for ${ticketId} is running, while runtime currentTicket is ${orchestrator.currentTicket}.`, [ticketId, lease.planId].filter(Boolean));
+    }
+  }
+}
+
+function runReconciliation(report, state, values, strict = false) {
+  const reconciliation = {
+    status: 'passed',
+    strict,
+    target: values.target || null,
+    items: [],
+    blockerCount: 0,
+    blockingItemCount: 0,
+    warningCount: 0,
+  };
+
+  const plans = loadFrontmatterCollection('docs/plans', report, 'plan');
+  const tickets = loadFrontmatterCollection('docs/tickets', report, 'ticket');
+  const leases = loadLeaseRegistryForReconcile(report);
+
+  reconcilePlanDocuments(reconciliation, plans, tickets);
+  reconcileTicketProgress(reconciliation, state.ticket, tickets);
+  reconcileActiveRuntime(reconciliation, state.orchestrator, tickets);
+  reconcileCheckpoints(reconciliation, state.orchestrator, state.checkpoints);
+  reconcileLeases(reconciliation, leases, tickets, state.orchestrator);
+
+  reconciliation.blockerCount = reconciliation.items.filter(item => item.severity === 'blocker').length;
+  reconciliation.warningCount = reconciliation.items.filter(item => item.severity === 'warning').length;
+  const blockingItems = reconciliation.items
+    .filter(item => item.severity === 'blocker')
+    .filter(item => !values.target || item.targets.length === 0 || item.targets.includes(values.target));
+  reconciliation.blockingItemCount = blockingItems.length;
+  reconciliation.status = reconciliation.blockerCount ? 'blocked' : reconciliation.warningCount ? 'warning' : 'passed';
+  report.reconciliation = reconciliation;
+
+  if (reconciliation.blockerCount) {
+    const strictStatus = strict && blockingItems.length ? 'failed' : 'warning';
+    addCheck(report, 'state-reconciliation', strictStatus, `${reconciliation.blockerCount} blocker drift(s), ${reconciliation.warningCount} warning(s), ${blockingItems.length} target-blocking`);
+    const messages = (strict ? blockingItems : reconciliation.items.filter(item => item.severity === 'blocker'))
+      .map(item => item.message);
+    if (strict && blockingItems.length) report.blockers.push(...messages);
+    else report.warnings.push(...messages.map(message => `Reconciliation drift: ${message}`));
+  } else if (reconciliation.warningCount) {
+    addCheck(report, 'state-reconciliation', 'warning', `${reconciliation.warningCount} warning(s)`);
+    report.warnings.push(...reconciliation.items.map(item => `Reconciliation warning: ${item.message}`));
+  } else {
+    addCheck(report, 'state-reconciliation', 'passed', 'no drift detected');
+  }
+
+  return reconciliation;
 }
 
 function targetType(target) {
@@ -965,6 +1256,167 @@ function validateWorkerOutput(report, values, summary) {
   addCheck(report, 'worker-output-validation', 'passed', kind);
 }
 
+const WORKER_PHASES = {
+  'ticket-audit': { role: 'reviewer', mode: 'ticket-audit' },
+  'red-writing': { role: 'sdet', mode: 'red' },
+  'red-arbitrating': { role: 'reviewer', mode: 'red-arbitrate' },
+  'already-green-audit': { role: 'reviewer', mode: 'already-green-audit' },
+  'green-building': { role: 'developer', mode: 'green' },
+  refactoring: { role: 'developer', mode: 'refactor' },
+  'final-review': { role: 'reviewer', mode: 'final-review' },
+};
+
+function buildWorkerTaskPayload(report, summary, role, mode, state) {
+  const args = [
+    '.opencode/scripts/build-worker-task.mjs',
+    '--role', role,
+    '--mode', mode,
+    '--ticket-id', summary.id,
+    '--test-case-id', summary.testCaseId,
+    '--worktree-root', root,
+    '--ticket-file', summary.file,
+    '--json',
+  ];
+
+  if (summary.planId) args.push('--plan-id', summary.planId);
+  if (summary.ticketType) args.push('--ticket-type', summary.ticketType);
+  if (state?.orchestrator?.branch) args.push('--branch', state.orchestrator.branch);
+  if (state?.orchestrator?.baseBranch) args.push('--base-branch', state.orchestrator.baseBranch);
+  if (summary.testType) args.push('--test-interface', summary.testType);
+
+  const result = runCapture(process.execPath, args);
+  if (!result.ok) {
+    report.blockers.push(`Failed to build ${role} ${mode} task for ${summary.id}: ${result.stderr || result.stdout}`);
+    addCheck(report, 'next-task', 'failed', `${role}:${mode}`);
+    return null;
+  }
+
+  try {
+    return JSON.parse(result.stdout);
+  } catch (error) {
+    report.blockers.push(`Worker task generator returned invalid JSON for ${summary.id}: ${error.message}`);
+    addCheck(report, 'next-task', 'failed', 'invalid JSON');
+    return null;
+  }
+}
+
+function emitTicketNextTask(report, summary, state) {
+  const runtime = state.orchestrator;
+  const activeForTicket = runtime?.currentTicket === summary.id && runtime?.currentTestCase === summary.testCaseId;
+  const phase = activeForTicket && runtime?.status && runtime.status !== 'idle' ? runtime.status : null;
+
+  if (!phase) {
+    report.outcome = 'partial';
+    report.exitCode = 0;
+    report.nextStep = `No worker task yet. Initialize ${summary.id} with node .opencode/scripts/workflow-runner.mjs --target ${summary.id} --run-ticket --json, then request --next-task.`;
+    addCheck(report, 'next-task', 'passed', 'runner-initialization-required');
+    return;
+  }
+
+  if (phase === 'green-testing') {
+    report.outcome = 'partial';
+    report.exitCode = 0;
+    report.nextStep = `No worker task needed. Run deterministic GREEN verification: node .opencode/scripts/workflow-runner.mjs --target ${summary.id} --run-ticket --json`;
+    addCheck(report, 'next-task', 'passed', 'deterministic-green-rerun-required');
+    return;
+  }
+
+  if (phase === 'ticket-complete') {
+    report.outcome = 'complete';
+    report.exitCode = 0;
+    report.nextStep = `Ticket ${summary.id} is complete; no worker task is available.`;
+    addCheck(report, 'next-task', 'passed', 'ticket-complete');
+    return;
+  }
+
+  const worker = WORKER_PHASES[phase];
+  if (!worker) {
+    report.outcome = 'blocked';
+    report.exitCode = 1;
+    report.nextStep = `Runtime phase ${phase} has no deterministic worker task mapping yet.`;
+    addCheck(report, 'next-task', 'blocked', phase);
+    return;
+  }
+
+  const task = buildWorkerTaskPayload(report, summary, worker.role, worker.mode, state);
+  if (!task) {
+    report.outcome = 'blocked';
+    report.exitCode = 1;
+    report.nextStep = 'Fix next-task generation blockers before dispatching a worker.';
+    return;
+  }
+
+  report.nextTask = {
+    phase,
+    role: worker.role,
+    mode: worker.mode,
+    task,
+  };
+  report.outcome = 'success';
+  report.exitCode = 0;
+  report.nextStep = `Dispatch ${worker.role} ${worker.mode} for ${summary.id}, capture its final message, then run --ingest-worker-output <file>.`;
+  addCheck(report, 'next-task', 'passed', `${phase} -> ${worker.role}:${worker.mode}`);
+}
+
+function emitNextTask(report, values, state, manifest, planAnalysis) {
+  if (report.blockers.length) {
+    report.outcome = 'blocked';
+    report.exitCode = 1;
+    report.nextStep = 'Resolve blockers before emitting a worker task.';
+    return;
+  }
+
+  if (report.targetType === 'ticket') {
+    emitTicketNextTask(report, report.targetSummary, state);
+    return;
+  }
+
+  const runtime = state.orchestrator;
+  const activeForPlan = runtime?.currentPlan === values.target && runtime?.currentTicket && runtime.status !== 'idle' && runtime.status !== 'plan-complete';
+  if (activeForPlan) {
+    const activeTicket = loadTicket(runtime.currentTicket, report);
+    if (!activeTicket) {
+      report.outcome = 'blocked';
+      report.exitCode = 1;
+      report.nextStep = `Active plan ticket ${runtime.currentTicket} could not be loaded.`;
+      return;
+    }
+    validateTicket(activeTicket, manifest, report);
+    emitTicketNextTask(report, report.targetSummary, state);
+    return;
+  }
+
+  if (planAnalysis?.reviewTicket) {
+    const summary = selectPlanTicketSummary(planAnalysis.reviewTicket);
+    const task = buildWorkerTaskPayload(report, summary, 'reviewer', 'ticket-audit', state);
+    if (!task) {
+      report.outcome = 'blocked';
+      report.exitCode = 1;
+      report.nextStep = 'Fix next-task generation blockers before dispatching reviewer ticket-audit.';
+      return;
+    }
+    report.nextTask = { phase: 'ticket-audit', role: 'reviewer', mode: 'ticket-audit', task };
+    report.outcome = 'success';
+    report.exitCode = 0;
+    report.nextStep = `Dispatch reviewer ticket-audit for ${summary.id}, capture its final message, then run --ingest-worker-output <file>.`;
+    addCheck(report, 'next-task', 'passed', `ticket-audit -> reviewer:ticket-audit`);
+    return;
+  }
+
+  if (planAnalysis?.readyTicket) {
+    report.outcome = 'partial';
+    report.exitCode = 0;
+    report.nextStep = `No worker task yet. Initialize next plan ticket with node .opencode/scripts/workflow-runner.mjs --target ${values.target} --run-plan --json, then request --next-task.`;
+    addCheck(report, 'next-task', 'passed', 'runner-initialization-required');
+    return;
+  }
+
+  report.outcome = 'blocked';
+  report.exitCode = 1;
+  report.nextStep = `No worker task is available for ${values.target}.`;
+  addCheck(report, 'next-task', 'blocked', 'no runnable item');
+}
+
 function classifyGreenResult(result, counts, output) {
   if (SETUP_FAILURE_PATTERNS.some(pattern => pattern.test(output))) return 'todo';
   if (result.ok && counts.run !== null && counts.passed > 0 && counts.failed === 0 && counts.skipped === 0 && counts.flaky === 0) return 'verified';
@@ -988,6 +1440,18 @@ function gitHeadSha(short = true) {
   const args = short ? ['rev-parse', '--short', 'HEAD'] : ['rev-parse', 'HEAD'];
   const result = runCapture('git', args);
   return result.ok ? result.stdout.trim() : null;
+}
+
+function branchExists(branch) {
+  return runCapture('git', ['show-ref', '--verify', '--quiet', `refs/heads/${branch}`]).status === 0;
+}
+
+function branchMergedInto(branch, baseBranch) {
+  if (!branchExists(branch) || !branchExists(baseBranch)) return null;
+  const result = runCapture('git', ['merge-base', '--is-ancestor', branch, baseBranch]);
+  if (result.status === 0) return true;
+  if (result.status === 1) return false;
+  return null;
 }
 
 function appendCheckpoint(checkpointsState, sha) {
@@ -1474,6 +1938,18 @@ function runPlan(report, values, state, manifest, projectConfig, planAnalysis) {
   }
 
   if (planAnalysis.tickets.length > 0 && planAnalysis.tickets.every(ticket => !EXECUTABLE_TYPES.has(ticket.frontmatter.type) || ticket.frontmatter.status === 'complete')) {
+    const pendingIntegration = report.targetSummary?.pendingIntegrationTickets || [];
+    if (pendingIntegration.length) {
+      const details = pendingIntegration
+        .map(item => `${item.ticketId} (${item.branch}: ${item.mergedIntoPlan === null ? 'missing-or-unknown' : 'not-integrated'})`)
+        .join(', ');
+      report.outcome = 'blocked';
+      report.exitCode = 1;
+      report.nextStep = `Integrate completed ticket branch(es) into ${report.targetSummary.planBranch} before plan regression: ${details}.`;
+      addCheck(report, 'plan-integration', 'blocked', details);
+      return;
+    }
+
     if (!values.dryRun && !requireCleanExecutionWorktree(report, 'plan regression-gating')) {
       blockOnExecutionWorktree(report, 'Clean the worktree before entering plan regression-gating.');
       return;
@@ -1582,7 +2058,6 @@ function initTicketRunState(state, report, summary, values) {
   ticket.status = 'red-writing';
   ticket.branch = branch;
   ticket.baseBranch = baseBranch;
-  if (ticket.tickets?.[summary.id]) ticket.tickets[summary.id].status = 'in_progress';
 
   state.orchestrator = orchestrator;
   state.ticket = ticket;
@@ -1671,6 +2146,7 @@ function runTicket(report, values, state, manifest, projectConfig) {
     if (!preRedSha) return;
     state.orchestrator.red.preRedCheckpointSha = preRedSha;
     state.orchestrator.lastCheckpointSha = preRedSha;
+    appendCheckpoint(state.checkpoints, preRedSha);
     persistRuntimeState(state, report, values);
     persistCheckpointsState(state.checkpoints, values, report);
     return;
@@ -1698,16 +2174,59 @@ function runTicket(report, values, state, manifest, projectConfig) {
       return;
     }
 
+    const orchestrator = cloneState(state.orchestrator);
+    const ticket = cloneState(state.ticket);
+
+    if (fields.RED_STATUS === 'blocked') {
+      orchestrator.status = 'blocked';
+      orchestrator.red = {
+        ...orchestrator.red,
+        status: fields.RED_STATUS,
+        testFile: fields.TEST_FILE,
+        testTitle: fields.TEST_TITLE,
+        failureSummary: fields.RED_FAILURE_SUMMARY,
+      };
+      ticket.status = 'blocked';
+      state.orchestrator = orchestrator;
+      state.ticket = ticket;
+      persistRuntimeState(state, report, values);
+      report.outcome = 'blocked';
+      report.exitCode = 1;
+      report.nextStep = `SDET RED blocked ${summary.id}: ${fields.RED_FAILURE_SUMMARY}`;
+      addCheck(report, 'run-ticket-phase', 'blocked', `${phase}:blocked`);
+      return;
+    }
+
+    if (fields.RED_STATUS === 'already_green' || fields.RED_STATUS === 'failing_wrong_reason') {
+      orchestrator.status = fields.RED_STATUS === 'already_green' ? 'already-green-audit' : 'red-arbitrating';
+      orchestrator.red = {
+        ...orchestrator.red,
+        status: fields.RED_STATUS,
+        testFile: fields.TEST_FILE,
+        testTitle: fields.TEST_TITLE,
+        failureSummary: fields.RED_FAILURE_SUMMARY,
+      };
+      ticket.status = orchestrator.status;
+      state.orchestrator = orchestrator;
+      state.ticket = ticket;
+      persistRuntimeState(state, report, values);
+      report.outcome = 'partial';
+      report.exitCode = 0;
+      report.nextStep = fields.RED_STATUS === 'already_green'
+        ? `SDET reported already-green coverage. Dispatch reviewer already-green-audit via --next-task, then ingest reviewer output.`
+        : `SDET reported wrong-reason RED. Dispatch reviewer red-arbitrate via --next-task, then ingest reviewer output.`;
+      addCheck(report, 'run-ticket-phase', 'passed', `${phase} -> ${orchestrator.status}`);
+      return;
+    }
+
     if (fields.RED_STATUS !== 'failing_expected') {
       report.outcome = 'blocked';
       report.exitCode = 1;
-      report.nextStep = `SDET RED returned ${fields.RED_STATUS}. Non-happy-path arbitration remains on the orchestrator fallback for now.`;
+      report.nextStep = `SDET RED returned unsupported status ${fields.RED_STATUS}.`;
       addCheck(report, 'run-ticket-phase', 'blocked', `${phase}:${fields.RED_STATUS}`);
       return;
     }
 
-    const orchestrator = cloneState(state.orchestrator);
-    const ticket = cloneState(state.ticket);
     if (!runQualityGate(report, projectConfig, values, 'post-red gate')) {
       report.outcome = 'blocked';
       report.exitCode = 1;
@@ -1740,6 +2259,148 @@ function runTicket(report, values, state, manifest, projectConfig) {
     return;
   }
 
+  if (phase === 'already-green-audit') {
+    if (!values.outputFile) {
+      report.outcome = 'partial';
+      report.exitCode = 0;
+      report.nextStep = `Capture reviewer already-green-audit output for ${summary.id}, then rerun with --run-ticket --output-file <path>.`;
+      return;
+    }
+
+    const fields = validateWorkerOutputFile(report, 'reviewer', values.outputFile, summary);
+    if (!fields) {
+      report.outcome = 'blocked';
+      report.exitCode = 1;
+      report.nextStep = 'Reviewer already-green output failed deterministic validation.';
+      addCheck(report, 'run-ticket-phase', 'failed', phase);
+      return;
+    }
+
+    if (fields.REVIEW_VERDICT === 'coverage-approved') {
+      if (!values.dryRun && !requireDirtyPathsWithin(report, configuredTestRoots(projectConfig), 'already-green-audit')) {
+        blockOnExecutionWorktree(report, 'Only test-root changes are allowed before committing already-green coverage.');
+        return;
+      }
+      if (!runQualityGate(report, projectConfig, values, 'already-green coverage gate')) {
+        report.outcome = 'blocked';
+        report.exitCode = 1;
+        report.nextStep = 'Quality gate failed before already-green coverage completion.';
+        return;
+      }
+      const coverageSha = maybeCreateCommit(`test(tdd): coverage ${summary.id}`, configuredTestRoots(projectConfig), report, values);
+      if (!coverageSha) return;
+      state.orchestrator.lastCheckpointSha = coverageSha;
+      finalizeTicketComplete(state, summary, report, values);
+      addCheck(report, 'run-ticket-phase', report.blockers.length ? 'failed' : 'passed', 'already-green-audit -> ticket-complete');
+      return;
+    }
+
+    if (fields.REVIEW_VERDICT === 'coverage-rejected') {
+      const orchestrator = cloneState(state.orchestrator);
+      const ticket = cloneState(state.ticket);
+      orchestrator.status = 'red-arbitrating';
+      ticket.status = 'red-arbitrating';
+      state.orchestrator = orchestrator;
+      state.ticket = ticket;
+      persistRuntimeState(state, report, values);
+      report.outcome = 'partial';
+      report.exitCode = 0;
+      report.nextStep = `Reviewer rejected already-green coverage. Dispatch reviewer red-arbitrate or SDET repair via --next-task.`;
+      addCheck(report, 'run-ticket-phase', 'passed', 'already-green-audit -> red-arbitrating');
+      return;
+    }
+
+    report.outcome = 'blocked';
+    report.exitCode = 1;
+    report.nextStep = `Reviewer verdict ${fields.REVIEW_VERDICT} is not valid for already-green-audit.`;
+    addCheck(report, 'run-ticket-phase', 'blocked', `${phase}:${fields.REVIEW_VERDICT}`);
+    return;
+  }
+
+  if (phase === 'red-arbitrating') {
+    if (!values.outputFile) {
+      report.outcome = 'partial';
+      report.exitCode = 0;
+      report.nextStep = `Capture reviewer red-arbitrate output for ${summary.id}, then rerun with --run-ticket --output-file <path>.`;
+      return;
+    }
+
+    const fields = validateWorkerOutputFile(report, 'reviewer', values.outputFile, summary);
+    if (!fields) {
+      report.outcome = 'blocked';
+      report.exitCode = 1;
+      report.nextStep = 'Reviewer RED arbitration output failed deterministic validation.';
+      addCheck(report, 'run-ticket-phase', 'failed', phase);
+      return;
+    }
+
+    const orchestrator = cloneState(state.orchestrator);
+    const ticket = cloneState(state.ticket);
+    if (fields.REVIEW_VERDICT === 'red-test-wrong') {
+      orchestrator.status = 'red-writing';
+      ticket.status = 'red-writing';
+      state.orchestrator = orchestrator;
+      state.ticket = ticket;
+      persistRuntimeState(state, report, values);
+      report.outcome = 'partial';
+      report.exitCode = 0;
+      report.nextStep = `Reviewer found RED test wrong. Dispatch SDET RED repair via --next-task.`;
+      addCheck(report, 'run-ticket-phase', 'passed', 'red-arbitrating -> red-writing');
+      return;
+    }
+
+    if (fields.REVIEW_VERDICT === 'ticket-ambiguous') {
+      orchestrator.status = 'blocked';
+      ticket.status = 'blocked';
+      state.orchestrator = orchestrator;
+      state.ticket = ticket;
+      persistRuntimeState(state, report, values);
+      report.outcome = 'blocked';
+      report.exitCode = 1;
+      report.nextStep = `Reviewer found ticket ambiguity: ${fields.REASON}`;
+      addCheck(report, 'run-ticket-phase', 'blocked', 'red-arbitrating -> blocked');
+      return;
+    }
+
+    if (fields.REVIEW_VERDICT === 'red-approved') {
+      if (!values.dryRun && !requireDirtyPathsWithin(report, configuredTestRoots(projectConfig), 'red-arbitrating')) {
+        blockOnExecutionWorktree(report, 'Only test-root changes are allowed before committing reviewer-approved RED.');
+        return;
+      }
+      if (!runQualityGate(report, projectConfig, values, 'reviewer-approved RED gate')) {
+        report.outcome = 'blocked';
+        report.exitCode = 1;
+        report.nextStep = 'Quality gate failed after reviewer-approved RED changes; fix before GREEN.';
+        return;
+      }
+      const redCommitSha = maybeCreateCommit(`test(tdd): red ${summary.id}`, configuredTestRoots(projectConfig), report, values);
+      if (!redCommitSha) return;
+      orchestrator.status = 'green-building';
+      orchestrator.red = {
+        ...orchestrator.red,
+        afterRedCheckpointSha: redCommitSha,
+      };
+      orchestrator.lastCheckpointSha = redCommitSha;
+      ticket.status = 'green-building';
+      state.orchestrator = orchestrator;
+      state.ticket = ticket;
+      appendCheckpoint(state.checkpoints, redCommitSha);
+      persistRuntimeState(state, report, values);
+      persistCheckpointsState(state.checkpoints, values, report);
+      report.outcome = 'partial';
+      report.exitCode = 0;
+      report.nextStep = `Reviewer approved RED for ${summary.id}. Dispatch developer GREEN via --next-task.`;
+      addCheck(report, 'run-ticket-phase', 'passed', 'red-arbitrating -> green-building');
+      return;
+    }
+
+    report.outcome = 'blocked';
+    report.exitCode = 1;
+    report.nextStep = `Reviewer verdict ${fields.REVIEW_VERDICT} is not valid for red-arbitrating.`;
+    addCheck(report, 'run-ticket-phase', 'blocked', `${phase}:${fields.REVIEW_VERDICT}`);
+    return;
+  }
+
   if (phase === 'green-building') {
     if (!values.outputFile) {
       report.outcome = 'partial';
@@ -1763,9 +2424,37 @@ function runTicket(report, values, state, manifest, projectConfig) {
     }
 
     if (fields.GREEN_STATUS !== 'ready_for_green_rerun') {
+      const orchestrator = cloneState(state.orchestrator);
+      const ticket = cloneState(state.ticket);
+      if (fields.GREEN_STATUS === 'ticket-ambiguous' || fields.GREEN_STATUS === 'red-test-wrong') {
+        orchestrator.status = 'red-arbitrating';
+        ticket.status = 'red-arbitrating';
+        state.orchestrator = orchestrator;
+        state.ticket = ticket;
+        persistRuntimeState(state, report, values);
+        report.outcome = 'partial';
+        report.exitCode = 0;
+        report.nextStep = `Developer returned ${fields.GREEN_STATUS}. Dispatch reviewer red-arbitrate via --next-task.`;
+        addCheck(report, 'run-ticket-phase', 'passed', `green-building -> red-arbitrating`);
+        return;
+      }
+
+      if (fields.GREEN_STATUS === 'blocked') {
+        orchestrator.status = 'blocked';
+        ticket.status = 'blocked';
+        state.orchestrator = orchestrator;
+        state.ticket = ticket;
+        persistRuntimeState(state, report, values);
+        report.outcome = 'blocked';
+        report.exitCode = 1;
+        report.nextStep = `Developer GREEN blocked ${summary.id}: ${fields.ROOT_CAUSE}`;
+        addCheck(report, 'run-ticket-phase', 'blocked', `${phase}:blocked`);
+        return;
+      }
+
       report.outcome = 'blocked';
       report.exitCode = 1;
-      report.nextStep = `Developer GREEN returned ${fields.GREEN_STATUS}. Non-happy-path arbitration remains on the orchestrator fallback for now.`;
+      report.nextStep = `Developer GREEN returned unsupported status ${fields.GREEN_STATUS}.`;
       addCheck(report, 'run-ticket-phase', 'blocked', `${phase}:${fields.GREEN_STATUS}`);
       return;
     }
@@ -1896,9 +2585,16 @@ function runTicket(report, values, state, manifest, projectConfig) {
     }
 
     if (fields.GREEN_STATUS !== 'refactor_ready_for_green_rerun') {
+      const orchestrator = cloneState(state.orchestrator);
+      const ticket = cloneState(state.ticket);
+      orchestrator.status = 'blocked';
+      ticket.status = 'blocked';
+      state.orchestrator = orchestrator;
+      state.ticket = ticket;
+      persistRuntimeState(state, report, values);
       report.outcome = 'blocked';
       report.exitCode = 1;
-      report.nextStep = `Developer refactor returned ${fields.GREEN_STATUS}. Non-happy-path handling remains on the orchestrator fallback for now.`;
+      report.nextStep = `Developer refactor returned ${fields.GREEN_STATUS}; runner blocked the ticket.`;
       addCheck(report, 'run-ticket-phase', 'blocked', `${phase}:${fields.GREEN_STATUS}`);
       return;
     }
@@ -1957,9 +2653,16 @@ function runTicket(report, values, state, manifest, projectConfig) {
     }
 
     if (fields.REVIEW_VERDICT !== 'approved') {
+      const orchestrator = cloneState(state.orchestrator);
+      const ticket = cloneState(state.ticket);
+      orchestrator.status = 'blocked';
+      ticket.status = 'blocked';
+      state.orchestrator = orchestrator;
+      state.ticket = ticket;
+      persistRuntimeState(state, report, values);
       report.outcome = 'blocked';
       report.exitCode = 1;
-      report.nextStep = `Reviewer returned ${fields.REVIEW_VERDICT}. Non-happy-path fixes and disputes remain on the orchestrator fallback for now.`;
+      report.nextStep = `Reviewer returned ${fields.REVIEW_VERDICT}; runner blocked the ticket for explicit repair.`;
       addCheck(report, 'run-ticket-phase', 'blocked', `${phase}:${fields.REVIEW_VERDICT}`);
       return;
     }
@@ -1971,7 +2674,7 @@ function runTicket(report, values, state, manifest, projectConfig) {
 
   report.outcome = 'blocked';
   report.exitCode = 1;
-  report.nextStep = `Runtime phase ${phase} is not part of the deterministic run-ticket happy path yet. Use the orchestrator fallback for this path.`;
+  report.nextStep = `Runtime phase ${phase} is not part of the deterministic runner path yet. Block and extend the runner before dispatching more worker tasks.`;
   addCheck(report, 'run-ticket-phase', 'blocked', phase);
 }
 
@@ -2033,6 +2736,15 @@ function validatePlan(planId, manifest, report) {
   const reviewTicket = tickets.find(ticket => ticket.frontmatter.status === 'review');
   const readyTicket = tickets.find(ticket => ticket.frontmatter.status === 'ready' && EXECUTABLE_TYPES.has(ticket.frontmatter.type));
   const inProgressTicket = tickets.find(ticket => ticket.frontmatter.status === 'in_progress' && EXECUTABLE_TYPES.has(ticket.frontmatter.type));
+  const planBranch = `tdd/${planId}`;
+  const completedExecutableTickets = tickets.filter(ticket => ticket.frontmatter.status === 'complete' && EXECUTABLE_TYPES.has(ticket.frontmatter.type));
+  const pendingIntegrationTickets = completedExecutableTickets
+    .map(ticket => {
+      const branch = `tdd/${ticket.id}`;
+      const merged = branchMergedInto(branch, planBranch);
+      return { ticketId: ticket.id, branch, mergedIntoPlan: merged };
+    })
+    .filter(item => item.mergedIntoPlan !== true);
 
   report.targetSummary = {
     type: 'plan',
@@ -2044,10 +2756,17 @@ function validatePlan(planId, manifest, report) {
     nextReviewTicket: reviewTicket?.id ?? null,
     nextReadyTicket: readyTicket?.id ?? null,
     inProgressTicket: inProgressTicket?.id ?? null,
+    planBranch,
+    pendingIntegrationTickets,
   };
 
   addCheck(report, 'plan-load', 'passed', rel(filePath));
   addCheck(report, 'plan-contract', report.blockers.length ? 'checked' : 'passed', `${tickets.length} ticket(s)`);
+  if (pendingIntegrationTickets.length) {
+    addCheck(report, 'plan-integration', 'warning', `${pendingIntegrationTickets.length} completed ticket branch(es) not confirmed integrated`);
+  } else {
+    addCheck(report, 'plan-integration', 'passed', 'no pending completed ticket branches detected');
+  }
   return { frontmatter: fm, tickets, reviewTicket, readyTicket, inProgressTicket };
 }
 
@@ -2172,7 +2891,7 @@ function chooseNextStep(report, type, target, planAnalysis = null) {
 
   if (report.blockers.length) {
     report.outcome = 'blocked';
-    report.nextStep = 'Blocked. Resolve blockers before invoking SDET, developer, reviewer, or orchestrator execution.';
+    report.nextStep = 'Blocked. Resolve blockers before invoking SDET, developer, reviewer, or runner execution.';
     return;
   }
 
@@ -2190,7 +2909,7 @@ function chooseNextStep(report, type, target, planAnalysis = null) {
       if (runtime.status === 'green-testing') {
         report.nextStep = `Resume ${target} at green-testing with deterministic GREEN rerun: node .opencode/scripts/workflow-runner.mjs --target ${target} --run-green --json`;
       } else {
-        report.nextStep = `Resume ${target} at deterministic phase ${runtime.status}. Existing orchestrator fallback: /engineering/orchestrator ${target}`;
+        report.nextStep = `Resume ${target} at deterministic phase ${runtime.status}. Use --next-task when a worker is needed or --run-ticket for no-worker phases.`;
       }
       return;
     }
@@ -2203,7 +2922,7 @@ function chooseNextStep(report, type, target, planAnalysis = null) {
 
     if (summary.status === 'ready' || summary.status === 'in_progress') {
       report.outcome = 'ready';
-      report.nextStep = `Would start strict TDD for ${target}: pre-red checkpoint -> SDET RED -> deterministic RED validation -> developer GREEN. Existing orchestrator fallback: /engineering/orchestrator ${target}`;
+      report.nextStep = `Would start strict TDD for ${target}: run --run-ticket to create the pre-red checkpoint, then use --next-task for SDET RED.`;
       return;
     }
 
@@ -2225,7 +2944,7 @@ function chooseNextStep(report, type, target, planAnalysis = null) {
     if (runtime.status === 'green-testing') {
       report.nextStep = `Resume plan ${target} at active ticket ${runtime.currentTicket} with deterministic GREEN rerun: node .opencode/scripts/workflow-runner.mjs --target ${runtime.currentTicket} --run-green --json`;
     } else {
-      report.nextStep = `Resume plan ${target} at active ticket ${runtime.currentTicket}, phase ${runtime.status}. Existing orchestrator fallback: /engineering/orchestrator ${target}`;
+      report.nextStep = `Resume plan ${target} at active ticket ${runtime.currentTicket}, phase ${runtime.status}. Use --next-task when a worker is needed or --run-plan for no-worker phases.`;
     }
     return;
   }
@@ -2243,6 +2962,12 @@ function chooseNextStep(report, type, target, planAnalysis = null) {
   }
 
   if (summary.ticketTotal > 0 && summary.ticketCounts.complete === summary.ticketTotal) {
+    if (summary.pendingIntegrationTickets?.length) {
+      report.outcome = 'blocked';
+      report.nextStep = `Completed ticket branches must be explicitly integrated into ${summary.planBranch} before deterministic regression-gating: ${summary.pendingIntegrationTickets.map(item => item.ticketId).join(', ')}.`;
+      return;
+    }
+
     report.outcome = 'ready';
     report.nextStep = `All plan tickets are complete; would enter deterministic regression-gating for ${target}.`;
     return;
@@ -2255,7 +2980,13 @@ function chooseNextStep(report, type, target, planAnalysis = null) {
 function buildReport(values) {
   const report = {
     runner: 'workflow-runner',
-    mode: values.validateWorkerOutput
+    mode: values.ingestWorkerOutput
+      ? 'ingest-worker-output'
+      : values.nextTask
+        ? 'next-task'
+      : values.reconcile
+        ? 'reconcile'
+      : values.validateWorkerOutput
       ? 'worker-output-validation'
       : values.runTicket
         ? (values.dryRun ? 'run-ticket-dry-run' : 'run-ticket')
@@ -2277,16 +3008,31 @@ function buildReport(values) {
     targetSummary: null,
     greenRerun: null,
     workerOutput: null,
+    nextTask: null,
     planExecution: null,
+    reconciliation: null,
+    telemetry: null,
     nextStep: null,
-    notes: values.validateWorkerOutput
+    notes: values.ingestWorkerOutput
+      ? [
+          'Runner-owned worker-output ingestion: validates one captured worker final message and advances the selected ticket or plan phase when the deterministic path supports it.',
+          'This is an alias for the target-appropriate run-ticket or run-plan phase advancement path.',
+        ]
+      : values.nextTask ? [
+          'Runner-owned task emission: returns exactly one next worker task payload and invokes no subagents.',
+          'Dispatch remains external; the emitted payload is the handoff contract.',
+        ]
+      : values.reconcile ? [
+          'Deterministic state reconciliation: compares durable plan, ticket, runtime, checkpoint, and lease ledgers without invoking subagents.',
+        ]
+      : values.validateWorkerOutput
       ? [
           'Deterministic worker-output validation: parses one worker final message and validates its contract without invoking subagents.',
           'This slice validates contract shape and ticket/test-case alignment only; it does not yet execute ticket FSM phases.',
         ]
       : values.runTicket ? [
-          'Deterministic run-ticket happy path: advances one ticket phase at a time using runtime state, captured worker output, git checkpoints/commits, quality gates, and deterministic GREEN reruns.',
-          'Worker dispatch still remains external to the runner; captured worker outputs are the contract boundary.',
+          'Deterministic run-ticket mode: advances one ticket phase at a time using runtime state, captured worker output, git checkpoints/commits, quality gates, and deterministic GREEN reruns.',
+          'Worker dispatch remains external; --next-task emits payloads and captured worker outputs are ingested by the runner.',
         ]
       : values.runPlan ? [
           'Deterministic run-plan mode: sequences review/ready tickets for one plan, reuses the deterministic ticket runner, and gates completion on impacted-spec regression.',
@@ -2297,20 +3043,43 @@ function buildReport(values) {
           'Dirty implementation changes are allowed only for this targeted verification mode.',
         ] : [
           'Read-only preview: no subagents invoked and no files modified.',
-          'Existing LLM orchestrator remains the execution fallback for this slice.',
+          'Use --next-task when a worker handoff is needed and --ingest-worker-output after capturing the worker final message.',
         ],
   };
 
   checkProjectRoot(report);
   const projectConfig = checkProjectConfig(report);
-  checkWorktree(report, Boolean(values.target), values.runGreen, Boolean(values.validateWorkerOutput || values.runTicket || values.runPlan));
+  const executionTarget = Boolean(values.target && (values.runGreen || values.runTicket || values.runPlan || values.ingestWorkerOutput));
+  checkWorktree(report, executionTarget, values.runGreen, Boolean(values.runTicket || values.runPlan || values.ingestWorkerOutput));
   const manifest = checkManifest(report, Boolean(values.target));
   const state = checkRuntimeState(report);
   if (state?.checkpoints) state.checkpoints = state.checkpoints;
+  const strictReconciliation = Boolean(values.reconcile || values.runTicket || values.runPlan || values.runGreen || values.nextTask || values.ingestWorkerOutput);
+  runReconciliation(report, state, values, strictReconciliation);
+
+  if (values.reconcile && !values.target) {
+    const blockingCount = report.reconciliation?.blockingItemCount ?? report.reconciliation?.blockerCount ?? 0;
+    report.outcome = blockingCount ? 'blocked' : 'success';
+    report.exitCode = blockingCount ? 1 : 0;
+    report.nextStep = report.reconciliation?.blockerCount
+      ? 'Resolve reconciliation blockers before executable workflow dispatch.'
+      : 'State reconciliation passed. Provide --target PLAN-* or --target TICKET-* for item-specific preflight.';
+    return report;
+  }
 
   if (!values.target) {
-    if (values.runGreen || values.validateWorkerOutput || values.runTicket || values.runPlan) {
-      const missingTargetMode = values.runGreen ? '--run-green' : values.validateWorkerOutput ? '--validate-worker-output' : values.runTicket ? '--run-ticket' : '--run-plan';
+    if (values.runGreen || values.validateWorkerOutput || values.runTicket || values.runPlan || values.nextTask || values.ingestWorkerOutput) {
+      const missingTargetMode = values.runGreen
+        ? '--run-green'
+        : values.validateWorkerOutput
+          ? '--validate-worker-output'
+          : values.nextTask
+            ? '--next-task'
+            : values.ingestWorkerOutput
+              ? '--ingest-worker-output'
+              : values.runTicket
+                ? '--run-ticket'
+                : '--run-plan';
       report.blockers.push(`${missingTargetMode} requires --target ${values.runPlan ? 'PLAN-YYYYMMDD-name' : 'TICKET-YYYYMMDD-NNN'}.`);
       report.outcome = 'blocked';
       report.exitCode = 1;
@@ -2318,9 +3087,13 @@ function buildReport(values) {
         ? 'Provide --target TICKET-* to run deterministic GREEN rerun.'
         : values.validateWorkerOutput
           ? 'Provide --target TICKET-* to validate worker output.'
-          : values.runTicket
-            ? 'Provide --target TICKET-* to run one deterministic ticket phase.'
-            : 'Provide --target PLAN-* to run deterministic plan execution.';
+          : values.nextTask
+            ? 'Provide --target PLAN-* or TICKET-* to emit the next worker task.'
+            : values.ingestWorkerOutput
+              ? 'Provide --target PLAN-* or TICKET-* to ingest worker output.'
+              : values.runTicket
+                ? 'Provide --target TICKET-* to run one deterministic ticket phase.'
+                : 'Provide --target PLAN-* to run deterministic plan execution.';
       return report;
     }
 
@@ -2347,6 +3120,28 @@ function buildReport(values) {
     if (ticket) validateTicket(ticket, manifest, report);
   } else {
     planAnalysis = validatePlan(values.target, manifest, report);
+  }
+
+  if (values.reconcile) {
+    const blockingCount = report.reconciliation?.blockingItemCount ?? report.reconciliation?.blockerCount ?? 0;
+    report.outcome = blockingCount ? 'blocked' : 'success';
+    report.exitCode = blockingCount ? 1 : 0;
+    report.nextStep = blockingCount
+      ? `Resolve reconciliation blockers before running ${values.target}.`
+      : `State reconciliation passed for ${values.target}.`;
+    return report;
+  }
+
+  if (values.nextTask) {
+    emitNextTask(report, values, state, manifest, planAnalysis);
+    return report;
+  }
+
+  if (values.ingestWorkerOutput) {
+    state.checkpoints = readJson(path.join(root, '.opencode', 'state', 'checkpoints.json')).value || { schemaVersion: 2, checkpoints: [] };
+    if (type === 'ticket') runTicket(report, values, state, manifest, projectConfig);
+    else runPlan(report, values, state, manifest, projectConfig, planAnalysis);
+    return report;
   }
 
   if (values.runGreen) {
@@ -2391,6 +3186,7 @@ function printText(report) {
     if (report.targetSummary.testCaseId) console.log(`TEST_CASE_ID: ${report.targetSummary.testCaseId}`);
     if (report.targetSummary.nextReadyTicket) console.log(`NEXT_READY_TICKET: ${report.targetSummary.nextReadyTicket}`);
     if (report.targetSummary.nextReviewTicket) console.log(`NEXT_REVIEW_TICKET: ${report.targetSummary.nextReviewTicket}`);
+    if (report.targetSummary.pendingIntegrationTickets?.length) console.log(`PENDING_INTEGRATION: ${report.targetSummary.pendingIntegrationTickets.map(item => item.ticketId).join(', ')}`);
   }
 
   if (report.greenRerun) {
@@ -2408,6 +3204,20 @@ function printText(report) {
     console.log(`WORKER_OUTPUT_KIND: ${report.workerOutput.kind}`);
     console.log(`WORKER_OUTPUT_FILE: ${report.workerOutput.file}`);
     console.log(`WORKER_OUTPUT_FIELDS: ${report.workerOutput.parsedFields.join(', ') || 'none'}`);
+  }
+
+  if (report.nextTask) {
+    console.log(`NEXT_TASK_ROLE: ${report.nextTask.role}`);
+    console.log(`NEXT_TASK_MODE: ${report.nextTask.mode}`);
+    console.log(`NEXT_TASK_DESCRIPTION: ${report.nextTask.task.description}`);
+  }
+
+  if (report.reconciliation) {
+    console.log(`RECONCILIATION: ${report.reconciliation.status} blockers=${report.reconciliation.blockerCount} target_blocking=${report.reconciliation.blockingItemCount} warnings=${report.reconciliation.warningCount}`);
+  }
+
+  if (report.telemetry) {
+    console.log(`TELEMETRY: ${report.telemetry.written ? report.telemetry.path : 'not-written'}`);
   }
 
   console.log('');
@@ -2439,6 +3249,7 @@ function printText(report) {
 }
 
 try {
+  const startedAt = new Date().toISOString();
   const values = parseArgs(process.argv.slice(2));
 
   if (values.help) {
@@ -2447,6 +3258,7 @@ try {
   }
 
   const report = buildReport(values);
+  writeRunTelemetry(report, values, startedAt);
 
   if (values.json) console.log(JSON.stringify(report, null, 2));
   else printText(report);

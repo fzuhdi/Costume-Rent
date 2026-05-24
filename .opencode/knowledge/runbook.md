@@ -115,9 +115,35 @@ Keep that stack alive for the full ticket or plan run. Prefer restarting the Com
 
 Installer approval and dependency-cache reuse rules are owned by `.opencode/skills/shared/constraints.md`.
 
+## Workflow Runner
+
+Check durable workflow state before execution:
+
+```bash
+node .opencode/scripts/workflow-runner.mjs --reconcile --json
+```
+
+Preview a target and see reconciliation warnings, current phase, and next step:
+
+```bash
+node .opencode/scripts/workflow-runner.mjs --target TICKET-YYYYMMDD-001 --json
+```
+
+Emit the next worker task without invoking a subagent:
+
+```bash
+node .opencode/scripts/workflow-runner.mjs --target TICKET-YYYYMMDD-001 --next-task --json
+```
+
+After dispatching the returned worker task, save its final message under `.opencode/state/worker-outputs/` in the active worktree and ingest it:
+
+```bash
+node .opencode/scripts/workflow-runner.mjs --target TICKET-YYYYMMDD-001 --ingest-worker-output .opencode/state/worker-outputs/TICKET-YYYYMMDD-001-sdet-red.txt --json
+```
+
 ## Model Resolution
 
-Check whether configured agent models are available and get recommendations:
+Check whether configured agent models are available and get recommendations. The coordinator uses this as a cheap availability check and only loads `model-selector` when a configured model is unavailable, the user asks, or a model-related dispatch failure occurred:
 
 ```bash
 node .opencode/scripts/resolve-agent-models.mjs --dry-run --json
@@ -186,6 +212,8 @@ docker compose -p ticket001 -f docker-compose.dev.yml up -d backend frontend
 ```
 
 Run Playwright from that same shell so it inherits the process-specific `PW_*` variables.
+
+Completed parallel ticket branches require explicit serialized integration into the plan branch before plan regression. Do not assume a prepared or completed ticket worktree has already merged itself into the plan branch.
 
 Manual worktree commands:
 

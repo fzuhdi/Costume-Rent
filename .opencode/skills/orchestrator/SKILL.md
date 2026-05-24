@@ -1,11 +1,11 @@
 ---
 name: orchestrator
-description: Deterministic TDD FSM for feature/bug ticket execution. Runs one ticket or all review/ready tickets for one plan via SDET RED, developer GREEN, deterministic GREEN rerun, and reviewer audit. Use for /engineering/orchestrator, /productivity/start, /productivity/status, or continuing TDD feature work.
+description: Runner-dispatched strict TDD workflow for feature/bug ticket execution. Uses the deterministic workflow runner for state transitions and emits SDET, developer, and reviewer worker tasks only when needed. Use for /engineering/orchestrator, /productivity/start, /productivity/status, or continuing TDD feature work.
 ---
 
-# Orchestrator - TDD Workflow Engine
+# Orchestrator - Runner-Dispatched TDD Workflow
 
-You are a finite state machine. Do not improvise. The build-first workflow is removed; executable `feature` and `bug` tickets use strict TDD only.
+`.opencode/scripts/workflow-runner.mjs` is the canonical workflow engine. Do not improvise state transitions in prose. The build-first workflow is removed; executable `feature` and `bug` tickets use strict TDD only.
 
 Workers:
 
@@ -13,7 +13,7 @@ Workers:
 - `.opencode/scripts/workflow-runner.mjs --run-green` owns official GREEN reruns.
 - `developer` implements minimal GREEN and optional bounded refactor.
 - `reviewer` is read-only and audits ticket readiness, invalid RED disputes, already-green coverage, and final scope/test integrity.
-- `explore` may run read-only discovery in parallel with SDET RED; its result is advisory and never blocks GREEN after valid RED.
+- `explore` is advisory and opt-in. It never blocks GREEN after valid RED.
 
 ## Core Rule
 
@@ -21,7 +21,7 @@ One executable ticket equals one tracer bullet and exactly one `test_case_id`.
 
 - Execute only `type: feature` or `type: bug` tickets.
 - `chore` and `spike` remain backlog records unless converted into mapped feature/bug tickets.
-- Plan mode is sequential. Finish RED/GREEN/REVIEW for one ticket before starting the next.
+- Direct runner plan mode is sequential. Coordinator plan mode may prepare independent ready tickets in isolated worktrees, but plan integration/regression remains explicit and serialized.
 - Developer app-code editing starts only after SDET returns `RED_STATUS: failing_expected` or reviewer approves an already-green coverage test.
 - Developer must not edit the SDET acceptance test. If the test or ticket appears wrong, developer returns a dispute for reviewer arbitration.
 
@@ -33,9 +33,25 @@ One executable ticket equals one tracer bullet and exactly one `test_case_id`.
 | `.opencode/state/ticket-progress.json` | Plan/ticket summary, audit evidence, and PR post-step state |
 | `.opencode/state/checkpoints.json` | Checkpoint SHA ledger |
 | `.opencode/state/test-case-manifest.json` | Feature -> AC test case map plus implementation/test hints |
+| `.opencode/state/worker-outputs/` | Ignored captured worker final messages consumed by `--ingest-worker-output` |
+| `.opencode/logs/workflow-runs/*.jsonl` | Ignored deterministic runner telemetry for mutating runner invocations |
 | `.opencode/state.example/*.json` | Tracked versioned example shapes |
 
 Runtime state must include `schemaVersion: 2`. Missing state may be initialized from examples. Existing state with missing, unknown, or old `schemaVersion` blocks with `invalid progress state`; do not migrate it. Treat `orchestrator-progress.json` as the active-run source of truth; ticket-progress and checkpoints must agree with it or the run blocks for stale-state reconciliation.
+
+## Runner Procedure
+
+Normal orchestration is a deterministic runner loop:
+
+1. Run `node .opencode/scripts/workflow-runner.mjs --reconcile --json` and block on reconciliation blockers.
+2. Run `node .opencode/scripts/workflow-runner.mjs --target <plan-or-ticket> --json` for status or preflight.
+3. Run `node .opencode/scripts/workflow-runner.mjs --target <plan-or-ticket> --next-task --json` when a worker is needed.
+4. Dispatch exactly the returned `nextTask.task`; do not hand-write worker task payloads.
+5. Save the worker final message under `.opencode/state/worker-outputs/` in the active worktree.
+6. Run `node .opencode/scripts/workflow-runner.mjs --target <plan-or-ticket> --ingest-worker-output <saved-output-file> --json`.
+7. Repeat until the runner reports ticket completion, plan regression, blocked, or escalated.
+
+The prose states below document allowed behavior and recovery semantics; the runner owns executable state advancement.
 
 ## TDD States
 
@@ -224,10 +240,10 @@ Reviewer never edits ticket files directly.
 
 ### red-writing
 
-In parallel when useful:
+When the runner emits worker tasks:
 
 - Invoke `sdet MODE: red` to write one primary acceptance test and run the targeted RED validation command.
-- Invoke `explore` with medium thoroughness for read-only implementation discovery.
+- Invoke `explore` only when the user, ticket, or developer explicitly needs read-only implementation discovery.
 
 Nested worker dispatches must use deterministic task payload generation via `.opencode/scripts/build-worker-task.mjs --json`. Do not hand-write task payload JSON. Required payload keys are `subagent_type`, `description`, `command`, and `prompt`; required prompt markers are `WORKTREE_ROOT`, `TICKET_ID`, and `TEST_CASE_ID`.
 
@@ -248,7 +264,7 @@ Parse SDET RED result:
 
 RED setup/environment failures block. Do not start GREEN. Missing dependencies or missing browser/runtime caches require explicit user approval before any install command is run.
 
-Deterministic helper note: `.opencode/scripts/workflow-runner.mjs --target <ticket-id> --run-ticket --output-file <sdet-output> --json` may advance the happy path from `red-writing` to `green-building` once the SDET final message is captured. The runner now owns the post-RED quality-gate check, RED commit, and after-RED checkpoint recording for this path.
+Runner note: `.opencode/scripts/workflow-runner.mjs --target <ticket-id> --ingest-worker-output <sdet-output> --json` advances the supported RED path once the SDET final message is captured. The runner owns the post-RED quality-gate check, RED commit, and after-RED checkpoint recording.
 
 ### already-green-audit
 
@@ -301,7 +317,7 @@ The runner emits the GREEN rerun fields from `.opencode/skills/shared/io-contrac
 - `TEST_CASE_STATUS: open` -> increment iteration; if below `maxIterations`, `green-building`, otherwise `escalated`.
 - `TEST_CASE_STATUS: todo` or setup block -> blocked.
 
-Deterministic helper note: `.opencode/scripts/workflow-runner.mjs --target <ticket-id> --run-ticket --json` may advance the happy path through `green-testing`, `refactoring`, `final-review`, and `ticket-complete` when the required worker outputs are captured to files. The runner now owns GREEN/refactor commit creation and may skip the final reviewer only when deterministic checks prove code-root-only changes since after-RED and the configured quality gate passes.
+Runner note: `.opencode/scripts/workflow-runner.mjs --target <ticket-id> --run-ticket --json` advances deterministic no-worker phases. `.opencode/scripts/workflow-runner.mjs --target <ticket-id> --ingest-worker-output <worker-output> --json` consumes captured worker outputs. The runner owns GREEN/refactor commit creation and may skip the final reviewer only when deterministic checks prove code-root-only changes since after-RED and the configured quality gate passes.
 
 ### refactoring
 
@@ -327,7 +343,7 @@ Update ticket frontmatter to `complete`, update runtime state, and commit durabl
 
 This state runs only in plan mode, after all planned review/executable tickets are complete and before durable plan completion.
 
-Default coordinator plan launch prepares independent ready tracer tickets through `.opencode/scripts/launch-parallel-plan.mjs --parallel 3 --json`, then dispatches orchestrator tasks with per-worktree handoff prompts. This orchestrator skill still owns the strict ticket FSM inside each isolated ticket worktree and the serialized integration/regression rules after ticket branches complete.
+Default coordinator plan launch prepares independent ready tracer tickets through `.opencode/scripts/launch-parallel-plan.mjs --parallel 3 --json`, then dispatches orchestrator tasks with per-worktree handoff prompts. The runner owns the strict ticket FSM inside each isolated ticket worktree. Completed ticket branches require explicit serialized plan integration before final plan regression; do not imply automatic merge unless a runner-owned integration command performs it.
 
 1. Ensure a current successful quality gate covers the plan diff before regression. Run the configured gate when coverage is missing or stale; block on failure.
 2. Build the impacted spec list from completed ticket `test_case_id` values plus manifest/reviewer shared-impact additions.
@@ -345,7 +361,7 @@ Default coordinator plan launch prepares independent ready tracer tickets throug
 8. The sync helper creates or updates same-plan `status: review` bug tickets and leaves the plan `in_progress`. Return to `selecting-ticket` so reviewer audits and executes generated bugs.
 9. If the helper reports unmapped/setup failures, block the plan; do not create product bug tickets for untrusted failures.
 
-Deterministic helper note: `.opencode/scripts/workflow-runner.mjs --target <plan-id> --run-plan --json` may own review-ticket audit handoff, ready-ticket sequencing, impacted-spec regression, optional regression bug sync, and plan completion for the deterministic path while still consuming captured reviewer outputs where needed.
+Runner note: `.opencode/scripts/workflow-runner.mjs --target <plan-id> --run-plan --json` owns direct sequential review-ticket handling, ready-ticket sequencing, impacted-spec regression, optional regression bug sync, and plan completion for supported paths while still consuming captured reviewer outputs where needed.
 
 ### plan-complete
 

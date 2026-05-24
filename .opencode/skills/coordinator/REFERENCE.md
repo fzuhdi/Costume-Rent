@@ -9,7 +9,7 @@
 
 ## Execution Model
 
-The coordinator checkout schedules only. By default, plan targets deterministically prepare up to three ready executable tracer tickets, each in its own git worktree and Docker Compose runtime slot, then dispatch one `orchestrator` task per prepared handoff. Ticket targets dispatch one `orchestrator` task in the active clean worktree. Each orchestrator task manages its own state files, checkpoint commits, worker subagent dispatches, ticket completion, and ticket branch output.
+The coordinator checkout schedules only. By default, plan targets deterministically prepare up to three ready executable tracer tickets, each in its own git worktree and Docker Compose runtime slot, then dispatch one `orchestrator` task per prepared handoff. Ticket targets dispatch one `orchestrator` task in the active clean worktree. Each orchestrator task uses the deterministic runner for state files, checkpoint commits, worker subagent dispatches, ticket completion, and ticket branch output. Completed ticket branches still require explicit serialized integration before plan regression.
 
 ```text
 route arguments
@@ -34,7 +34,7 @@ Targeted mode may read runtime state files to detect active or blocked runs. Exp
 Before launch:
 
 - Require a clean worktree.
-- Load `.opencode/skills/model-selector/SKILL.md` and follow its workflow so the user can confirm or change models for all agent roles.
+- Run `node .opencode/scripts/resolve-agent-models.mjs --dry-run --json` and continue without user interruption when configured role models are available. Load `.opencode/skills/model-selector/SKILL.md` only when a configured model is unavailable, a prior dispatch failed because of model availability, or the user asks to review models.
 - Confirm no runtime state indicates a different active run.
 - Confirm the target exists.
 - Confirm Docker and the relevant prepare script are available for plan targets.

@@ -30,12 +30,12 @@ Use when the user asks to:
 
 ## Responsibilities
 
-The coordinator owns routing, cleanliness checks, deterministic preparation, orchestrator task dispatch, and aggregate status. Orchestrator subagents own execution, validation, implementation, audit, ticket completion, and ticket branch output. Plan integration/merge/regression remains deterministic and serialized after parallel ticket branches complete.
+The coordinator owns routing, cleanliness checks, deterministic preparation, orchestrator task dispatch, and aggregate status. Orchestrator subagents own runner-dispatched execution, validation, implementation, audit, ticket completion, and ticket branch output. Plan integration and regression remain explicit and serialized after parallel ticket branches complete; do not assume completed ticket branches were merged automatically.
 
 ## Workflow
 
 1. Check `git status --short --branch` and stop before executable work if dirty.
-2. Load `.opencode/skills/model-selector/SKILL.md` and follow its workflow to let the user choose models for all agent roles before every dispatch.
+2. Run `node .opencode/scripts/resolve-agent-models.mjs --dry-run --json` as a cheap availability check. Load `.opencode/skills/model-selector/SKILL.md` only when a configured model is unavailable, a prior dispatch failed because of model availability, or the user explicitly asks to review models.
 3. Route arguments before discovery:
    - Empty args: ask for a plan/ticket target or explicit status scan.
    - `PLAN-YYYYMMDD-*`: read only that plan plus tickets with matching `plan_id`.
@@ -60,3 +60,4 @@ For stuck tasks, check `.opencode/state/ticket-leases.json` via `node .opencode/
 - Do not manually execute the orchestrator FSM if task dispatch fails.
 - Do not assume an interrupted or deadline-expired subagent is dead; inspect the ticket lease and worktree before reusing that checkout.
 - Do not mark completion or create PRs unless lower-level completion and regression-gate rules are satisfied.
+- Do not block normal dispatch for interactive model review when the configured role models are available and the user did not ask to change them.

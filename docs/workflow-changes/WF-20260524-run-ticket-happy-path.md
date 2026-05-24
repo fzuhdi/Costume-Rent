@@ -23,7 +23,7 @@ Add a deterministic `--run-ticket` mode so `.opencode/scripts/workflow-runner.mj
 ## Source Of Truth
 - `.opencode/scripts/workflow-runner.mjs` owns deterministic run-ticket phase advancement for this slice.
 - `.opencode/skills/shared/io-contract.md` owns worker output fields and enums reused by the runner.
-- `.opencode/skills/orchestrator/SKILL.md` remains the full FSM source of truth and owns the fallback paths outside the happy path.
+- Superseded by `WF-20260524-runner-canonical-refactor`: `.opencode/scripts/workflow-runner.mjs` is now the canonical state-transition source of truth, while `.opencode/skills/orchestrator/SKILL.md` documents runner-dispatched behavior.
 
 ## Validation Plan
 - Run `node --check .opencode/scripts/workflow-runner.mjs`.

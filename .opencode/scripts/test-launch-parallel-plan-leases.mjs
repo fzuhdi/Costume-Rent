@@ -21,10 +21,11 @@ function runLaunch(extraArgs, leaseRegistry) {
     '--target', target,
     '--parallel', '1',
     '--lease-minutes', '45',
-    '--dry-run',
-    '--json',
-    '--lease-registry', leaseRegistry,
-    ...extraArgs,
+      '--dry-run',
+      '--json',
+      '--lease-registry', leaseRegistry,
+      '--workspace-root', path.join(path.dirname(leaseRegistry), 'workspaces'),
+      ...extraArgs,
   ], {
     cwd: root,
     encoding: 'utf8',
@@ -119,11 +120,11 @@ try {
 
   const refillReport = runLaunch([], leaseRegistry);
   const refillSelected = refillReport.selectedTickets.join(',');
-  if (refillSelected !== 'TICKET-20260517-007') {
+  if (refillSelected !== 'TICKET-20260517-010') {
     fail('Expected unsafe leased tickets to be skipped and next ready ticket to refill slot.', JSON.stringify({ selectedTickets: refillReport.selectedTickets, leaseBlockedTickets: refillReport.leaseBlockedTickets }, null, 2));
   }
-  if (refillReport.leaseBlockedTickets.length !== 2) {
-    fail('Expected two lease-blocked tickets.', JSON.stringify(refillReport.leaseBlockedTickets, null, 2));
+  if (refillReport.leaseBlockedTickets.length !== 1) {
+    fail('Expected one lease-blocked ticket.', JSON.stringify(refillReport.leaseBlockedTickets, null, 2));
   }
 
   const replaceReport = runLaunch(['--replace-lease'], leaseRegistry);
