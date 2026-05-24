@@ -214,10 +214,10 @@ test.describe('Client Management', () => {
     await expect(firstCard).toContainText(/total|sewa|pinjaman/i);
 
     // 4. Active or overdue state (badge/chip/status indicator)
-    await expect(firstCard.locator('[class*="chip"], [class*="badge"], [class*="status"]')).toBeVisible();
+    await expect(firstCard.locator('[data-slot="chip"]')).toBeVisible();
 
     // 5. Detail action (button or link to view client)
-    await expect(firstCard.getByRole('button', { name: /detail/i }).or(firstCard.locator('a[href*="/clients/"]').last())).toBeVisible();
+    await expect(firstCard.getByRole('button', { name: /detail/i }).or(firstCard.locator('a[href*="/clients/"]').last()).first()).toBeVisible();
 
     // 6. Delete action (button)
     await expect(firstCard.getByRole('button', { name: /hapus|delete/i })).toBeVisible();

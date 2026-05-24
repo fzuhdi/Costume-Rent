@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getClients, deleteClient } from '../api/clientApi';
-import { Search, Trash2 } from 'lucide-react';
+import { Search, Trash2, Eye } from 'lucide-react';
 import {
   Input, Button, Chip,
   Table, Spinner, Modal, Card, Separator
 } from '@heroui/react';
 import CustomPagination from '../components/CustomPagination';
+
+const isMobileViewport = () => typeof window !== 'undefined' && window.innerWidth < 640;
 
 const ClientListPage = () => {
   const navigate = useNavigate();
@@ -21,6 +23,13 @@ const ClientListPage = () => {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(isMobileViewport);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(isMobileViewport());
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -93,6 +102,53 @@ const ClientListPage = () => {
           <div className="text-center py-12">
             <h3 className="text-lg font-semibold">Tidak ada klien</h3>
             <p className="text-sm text-[var(--muted)]">Klien akan muncul setelah membuat peminjaman</p>
+          </div>
+        ) : isMobile ? (
+          <div className="flex flex-col gap-3 px-4 pb-4">
+            {clients.map((client) => (
+              <div key={client.id} data-testid="client-card" className="rounded-lg border border-[var(--border)] bg-[var(--background)] p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <Link to={`/clients/${client.id}`} className="text-base font-semibold text-[var(--primary)] hover:underline">
+                    {client.name}
+                  </Link>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="bordered"
+                      size="sm"
+                      isIconOnly
+                      aria-label={`Detail klien ${client.name}`}
+                      onPress={() => navigate(`/clients/${client.id}`)}
+                    >
+                      <Eye size={16} />
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      isIconOnly
+                      aria-label="Hapus klien"
+                      onPress={() => { setSelectedClientId(client.id); setIsDeleteOpen(true); }}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-sm text-[var(--muted)] mb-1">{client.phone || '-'}</div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[var(--muted)]">Total: {client.total_rents} pinjaman</span>
+                  <span>
+                    {client.has_overdue && (
+                      <Chip size="sm" variant="soft" color="danger">Ada Terlambat</Chip>
+                    )}
+                    {client.active_rents > 0 && !client.has_overdue && (
+                      <Chip size="sm" variant="secondary">{client.active_rents} Aktif</Chip>
+                    )}
+                    {client.active_rents === 0 && (
+                      <Chip size="sm" variant="secondary">Tidak Ada Aktif</Chip>
+                    )}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <Table aria-label="Client list">
