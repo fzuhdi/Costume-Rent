@@ -47,6 +47,48 @@
     --input-bg:           #1f2937;
     --input-border:       #4b5563;
   }
+
+  /* Respect system dark mode preference (for playwright's emulateMedia colorScheme) */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary:            #818cf8;
+      --primary-hover:      #6366f1;
+      --primary-active:     #4f46e5;
+      --primary-foreground: #ffffff;
+      --success:            #4ade80;
+      --warning:            #fbbf24;
+      --danger:             #f87171;
+      --secondary:          #22d3ee;
+      --background:         #111827;
+      --surface:            #1f2937;
+      --foreground:         #f9fafb;
+      --muted:              #9ca3af;
+      --border:             #374151;
+      --input-bg:           #1f2937;
+      --input-border:       #4b5563;
+    }
+  }
+  /* Explicit theme classes override media query */
+  @media (prefers-color-scheme: dark) {
+    :root.light,
+    :root[data-theme="light"] {
+      --primary:            #4f46e5;
+      --primary-hover:      #4338ca;
+      --primary-active:     #3730a3;
+      --primary-foreground: #ffffff;
+      --success:            #16a34a;
+      --warning:            #d97706;
+      --danger:             #dc2626;
+      --secondary:          #0891b2;
+      --background:         #f9fafb;
+      --surface:            #ffffff;
+      --foreground:         #111827;
+      --muted:              #6b7280;
+      --border:             #e5e7eb;
+      --input-bg:           #ffffff;
+      --input-border:       #d1d5db;
+    }
+  }
 }
 
 html {

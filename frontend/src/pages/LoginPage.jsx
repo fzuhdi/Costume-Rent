@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { SettingsContext } from '../context/SettingsContext';
@@ -10,9 +10,16 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useContext(AuthContext);
+  const { login, logout, isAuthenticated } = useContext(AuthContext);
   const { settings } = useContext(SettingsContext);
   const navigate = useNavigate();
+
+  // Logout any authenticated user visiting the login page
+  useEffect(() => {
+    if (isAuthenticated) {
+      logout();
+    }
+  }, [isAuthenticated, logout]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,7 +37,7 @@ const LoginPage = () => {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center bg-gray-50"
+      className="min-h-screen flex items-center justify-center bg-[var(--background)]"
       aria-label="Login page"
     >
       <Card className="w-full max-w-md mx-4" aria-label="Login form">
