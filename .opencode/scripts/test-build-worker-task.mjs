@@ -1,0 +1,162 @@
+#!/usr/bin/env node
+
+import process from 'node:process';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+const cwd = process.cwd();
+
+function fail(message, details = '') {
+  console.error(message);
+  if (details) console.error(details);
+  process.exit(1);
+}
+
+function run(args) {
+  const result = spawnSync(process.execPath, ['.opencode/scripts/build-worker-task.mjs', ...args], {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: false,
+  });
+  if (result.status !== 0) fail('build-worker-task failed', `${result.stdout}\n${result.stderr}`);
+  return JSON.parse(result.stdout);
+}
+
+function runRaw(args) {
+  return spawnSync(process.execPath, ['.opencode/scripts/build-worker-task.mjs', ...args], {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: false,
+  });
+}
+
+const task = run([
+  '--role', 'sdet',
+  '--mode', 'red',
+  '--ticket-id', 'TICKET-20260517-010',
+  '--test-case-id', 'SETTINGS-014',
+  '--worktree-root', '.\\tmp-worktree',
+  '--plan-id', 'PLAN-20260517-staff-admin-mobile-first-ui-refresh',
+  '--json',
+]);
+
+for (const key of ['subagent_type', 'description', 'prompt']) {
+  if (!task[key]) fail(`missing required key: ${key}`, JSON.stringify(task, null, 2));
+}
+for (const marker of ['WORKTREE_ROOT', 'TICKET_ID', 'TEST_CASE_ID', 'MODE: red', 'TICKET_FILE', 'TICKET_ACCEPTANCE_CRITERION', 'EXPECTED_OUTCOME', 'GREEN_EXPECTATION']) {
+  if (!task.prompt.includes(marker)) fail(`prompt missing marker: ${marker}`, task.prompt);
+}
+
+const finalReviewTask = run([
+  '--role', 'reviewer',
+  '--mode', 'final-review',
+  '--ticket-id', 'TICKET-20260517-010',
+  '--test-case-id', 'SETTINGS-014',
+  '--worktree-root', '.\\tmp-worktree',
+  '--json',
+]);
+if (!finalReviewTask.prompt.includes('MODE: final-review')) fail('final-review mode was not preserved', finalReviewTask.prompt);
+
+const exploreTask = run([
+  '--role', 'explore',
+  '--mode', 'explore',
+  '--ticket-id', 'TICKET-20260517-010',
+  '--test-case-id', 'SETTINGS-014',
+  '--worktree-root', '.\\tmp-worktree',
+  '--json',
+]);
+if (exploreTask.prompt.includes('.opencode/agents/explore.md')) fail('explore prompt should not reference a project agent file', exploreTask.prompt);
+if (!exploreTask.prompt.includes('built-in explore subagent')) fail('explore prompt should identify the built-in subagent contract', exploreTask.prompt);
+
+const invalidMode = runRaw([
+  '--role', 'reviewer',
+  '--mode', 'green',
+  '--ticket-id', 'TICKET-20260517-010',
+  '--test-case-id', 'SETTINGS-014',
+  '--worktree-root', '.\\tmp-worktree',
+  '--json',
+]);
+if (invalidMode.status === 0) fail('invalid reviewer mode should fail');
+
+const unsupportedReviewerMode = runRaw([
+  '--role', 'reviewer',
+  '--mode', 'review',
+  '--ticket-id', 'TICKET-20260517-010',
+  '--test-case-id', 'SETTINGS-014',
+  '--worktree-root', '.\\tmp-worktree',
+  '--json',
+]);
+if (unsupportedReviewerMode.status === 0) fail('unsupported reviewer review mode should fail');
+
+console.log('build-worker-task schema tests passed');
+
+function writeFile(filePath, text) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, text);
+}
+
+function runFixtureGit(fixtureRoot, args) {
+  const result = spawnSync('git', args, {
+    cwd: fixtureRoot,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: false,
+  });
+  if (result.status !== 0) fail(`fixture git ${args.join(' ')} failed`, `${result.stdout}\n${result.stderr}`);
+}
+
+const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'worker-task-launch-fixture-'));
+try {
+  const planId = 'PLAN-20260524-worker-task-fixture';
+  writeFile(path.join(fixtureRoot, '.opencode/scripts/launch-parallel-plan.mjs'), fs.readFileSync(path.join(cwd, '.opencode/scripts/launch-parallel-plan.mjs'), 'utf8'));
+  writeFile(path.join(fixtureRoot, '.opencode/opencode.json'), '{}\n');
+  writeFile(path.join(fixtureRoot, '.opencode/project.json'), '{}\n');
+  writeFile(path.join(fixtureRoot, '.env'), 'FIXTURE=true\n');
+  writeFile(path.join(fixtureRoot, 'frontend/package-lock.json'), '{}\n');
+  writeFile(path.join(fixtureRoot, 'test/package-lock.json'), '{}\n');
+  writeFile(path.join(fixtureRoot, 'test/node_modules/.bin', process.platform === 'win32' ? 'playwright.cmd' : 'playwright'), 'fixture\n');
+  writeFile(path.join(fixtureRoot, 'docs/plans', `${planId}.md`), '---\nstatus: ready\n---\n\n# Fixture Plan\n');
+  writeFile(path.join(fixtureRoot, 'docs/tickets/TICKET-20260524-001.md'), `---\nplan_id: ${planId}\nstatus: ready\ntype: feature\npriority: 1\ntest_case_id: SETTINGS-014\n---\n\n# Fixture Ticket\n`);
+  runFixtureGit(fixtureRoot, ['init']);
+  runFixtureGit(fixtureRoot, ['add', '.']);
+  runFixtureGit(fixtureRoot, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'fixture']);
+
+  const launch = spawnSync(process.execPath, [
+    '.opencode/scripts/launch-parallel-plan.mjs',
+    '--target', planId,
+    '--parallel', '1',
+    '--dry-run',
+    '--json',
+    '--workspace-root', path.join(fixtureRoot, 'workspaces'),
+    '--lease-registry', path.join(fixtureRoot, '.opencode', 'tmp-worker-task-test-leases.json'),
+  ], {
+    cwd: fixtureRoot,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: false,
+  });
+  if (launch.status !== 0) fail('launch-parallel-plan fixture dry-run failed', `${launch.stdout}\n${launch.stderr}`);
+  const launchReport = JSON.parse(launch.stdout);
+  const dispatchTask = launchReport.dispatches?.[0]?.task;
+  if (!dispatchTask?.prompt?.includes('WORKER_TASK_GENERATOR: node .opencode/scripts/build-worker-task.mjs')) {
+    fail('dispatch task prompt is missing worker task generator instruction', JSON.stringify(dispatchTask, null, 2));
+  }
+  if (!dispatchTask.prompt.includes('do not hand-write worker task payloads')) {
+    fail('dispatch task prompt is missing deterministic worker payload rule', dispatchTask.prompt);
+  }
+  if (!dispatchTask.workerTaskGenerator?.examples?.review?.includes('--mode final-review')) {
+    fail('dispatch worker examples must include final-review reviewer mode', JSON.stringify(dispatchTask.workerTaskGenerator, null, 2));
+  }
+  const examples = Object.values(dispatchTask.workerTaskGenerator?.examples || {}).join('\n');
+  if (examples.includes('--output-file') || examples.includes('.opencode/state/worker-outputs/')) {
+    fail('default dispatch examples must not advertise unpersisted worker output files', examples);
+  }
+} finally {
+  fs.rmSync(fixtureRoot, { recursive: true, force: true });
+}
+
+console.log('launch prompt integration checks passed');

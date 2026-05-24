@@ -46,7 +46,7 @@ Prepare plan targets with:
 node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3 --json
 ```
 
-The prepare script creates or reuses `../Costume-Rent-workspaces/<plan-id>/<ticket-id>` worktrees, reserves slot 1-3 ports, starts `docker compose -p <ticket-project> -f docker-compose.dev.yml up -d backend frontend` unless `--no-start-runtime` is supplied, starts a default 60-minute ticket lease in `.opencode/state/ticket-leases.json`, and returns `dispatches[].task` objects. Override the lease with `--lease-minutes <n>` when needed. It selects only independent ready tickets: tickets with unmet `depends_on` prerequisites are skipped and reported until the prerequisite tickets are complete. It blocks on review tickets, malformed or cross-plan dependency declarations, dirty coordinator checkout, dirty reused worktrees, unsafe existing ticket leases, slot conflicts, or missing runtime setup.
+The prepare script creates or reuses `../Costume-Rent-workspaces/<plan-id>/<ticket-id>` worktrees, reserves slot 1-3 ports, starts `docker compose -p <ticket-project> -f docker-compose.dev.yml up -d backend frontend` unless `--no-start-runtime` is supplied, starts a default 60-minute ticket lease in `.opencode/state/ticket-leases.json`, writes durable handoff snapshots at `.opencode/state/ticket-handoffs/<ticket-id>.json`, and returns `dispatches[].task` objects. Override the lease with `--lease-minutes <n>` when needed. It selects only independent ready tickets: tickets with unmet `depends_on` prerequisites are skipped and reported until the prerequisite tickets are complete. It blocks on review tickets, malformed or cross-plan dependency declarations, dirty coordinator checkout, dirty reused worktrees, unsafe existing ticket leases, slot conflicts, or missing runtime setup.
 
 Existing leases with `running`, `deadline_expired`, or `interrupted` status exclude that ticket from the current batch so later ready tickets can refill available slots. Use `--replace-lease` only after manual interrupt/inspection proves the prior task will not write late into the checkout.
 
@@ -60,6 +60,8 @@ prompt: dispatch.task.prompt
 ```
 
 Do not rewrite the generated prompt. It is the handoff contract and includes `WORKTREE_ROOT`, `PLAN_ID`, `TICKET_ID`, runtime env keys, branch/base branch, lease deadline, and nested-worker root instructions.
+
+Worker task payloads for nested roles should be generated deterministically with `.opencode/scripts/build-worker-task.mjs` to guarantee required schema keys (`subagent_type`, `description`, `prompt`) and required prompt markers (`WORKTREE_ROOT`, `TICKET_ID`, `TEST_CASE_ID`).
 
 If a task appears stuck, do not wait indefinitely. Check leases with `node .opencode/scripts/ticket-lease.mjs status --json`; this is read-only and reports whether any persisted statuses would change. Persist expiry transitions only with `node .opencode/scripts/ticket-lease.mjs refresh --json`. A `deadline_expired` lease means manual interrupt may be needed for the active task wait. After interrupt, classify the checkout with `node .opencode/scripts/ticket-lease.mjs inspect --ticket <ticket-id> --json`; only reuse the worktree when inspection reports a clean retryable/adoptable state.
 

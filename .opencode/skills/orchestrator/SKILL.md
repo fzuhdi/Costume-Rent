@@ -229,6 +229,8 @@ In parallel when useful:
 - Invoke `sdet MODE: red` to write one primary acceptance test and run the targeted RED validation command.
 - Invoke `explore` with medium thoroughness for read-only implementation discovery.
 
+Nested worker dispatches must use deterministic task payload generation via `.opencode/scripts/build-worker-task.mjs --json`. Do not hand-write task payload JSON. Required payload keys are `subagent_type`, `description`, `command`, and `prompt`; required prompt markers are `WORKTREE_ROOT`, `TICKET_ID`, and `TEST_CASE_ID`.
+
 SDET must return `TEST_FILE`, `TEST_TITLE`, `RED_STATUS`, `RED_FAILURE_SUMMARY`, and `TEST_COMMAND`. Commit non-empty RED changes as `test(tdd): red <ticket-id>` when a failing expected RED is produced.
 
 Validate worker outputs deterministically before advancing state. Use `.opencode/scripts/workflow-runner.mjs --target <ticket-id> --validate-worker-output sdet-red --output-file <path> --json` when the worker response was captured to a file or needs contract checking outside the orchestrator prompt loop.
