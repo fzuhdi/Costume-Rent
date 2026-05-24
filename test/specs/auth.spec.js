@@ -116,4 +116,64 @@ test.describe('Authentication', () => {
     await loginPage.logout();
     await loginPage.assertNoTokenInLocalStorage();
   });
+
+  // AUTH-014: Login Uses Theme-Aware Mobile Layout
+  test('[AUTH-014] - Login uses theme-aware mobile layout', async ({ page }) => {
+    // Set mobile viewport (iPhone 6/7/8)
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+
+    // 1. VERIFY MOBILE USABILITY: form elements are visible at mobile viewport
+    await expect(loginPage.emailInput).toBeVisible();
+    await expect(loginPage.passwordInput).toBeVisible();
+    await expect(loginPage.submitButton).toBeVisible();
+
+    // 2. VERIFY THEME AWARENESS:
+    // Capture the computed background color in light mode
+    const lightBg = await page.evaluate(() => {
+      const container = document.querySelector('[aria-label="Login page"]');
+      return window.getComputedStyle(container).backgroundColor;
+    });
+
+    // Switch to dark mode via media query emulation
+    await page.emulateMedia({ colorScheme: 'dark' });
+
+    const darkBg = await page.evaluate(() => {
+      const container = document.querySelector('[aria-label="Login page"]');
+      return window.getComputedStyle(container).backgroundColor;
+    });
+
+    // Theme-aware: background color MUST change between light and dark mode
+    // bg-gray-50 = rgb(249, 250, 251) is a hardcoded light-only color
+    // If the page still uses bg-gray-50 in dark mode, this assertion will FAIL
+    expect(darkBg).not.toBe(lightBg);
+
+    // 3. VERIFY VALID CREDENTIALS at mobile viewport
+    await page.emulateMedia({ colorScheme: 'no-preference' });
+    await page.goto('/login');
+    await loginPage.expectOnLoginPage();
+    await page.fill('input[type="email"]', ADMIN_EMAIL);
+    await page.fill('input[type="password"]', ADMIN_PASSWORD);
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(/\/catalogue/);
+
+    // 4. VERIFY INVALID CREDENTIALS at mobile viewport
+    await page.goto('/login');
+    await loginPage.expectOnLoginPage();
+    await page.fill('input[type="email"]', 'wrong@test.com');
+    await page.fill('input[type="password"]', 'wrongpass');
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(/\/login/);
+    await expect(loginPage.errorAlert).toBeVisible({ timeout: 5000 });
+
+    // 5. VERIFY EMPTY FORM at mobile viewport
+    await page.goto('/login');
+    await loginPage.expectOnLoginPage();
+    await loginPage.submitButton.click();
+    await expect(page).toHaveURL(/\/login/);
+    const token = await page.evaluate(() => localStorage.getItem('token'));
+    expect(token).toBeNull();
+  });
 });
