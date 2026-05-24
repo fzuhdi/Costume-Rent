@@ -40,14 +40,16 @@ The coordinator owns routing, cleanliness checks, deterministic preparation, orc
    - Empty args: ask for a plan/ticket target or explicit status scan.
    - `PLAN-YYYYMMDD-*`: read only that plan plus tickets with matching `plan_id`.
    - `TICKET-YYYYMMDD-NNN`: read only that ticket and its manifest entry.
-4. For plan targets, run `node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3 --json` so up to three independent ready executable tickets get isolated worktrees, runtime slots, Compose stacks, bootstrapped state, and structured `dispatch.task` handoffs. The prepare script excludes `depends_on` tickets until their prerequisites are complete.
-5. Dispatch each returned `dispatch.task` with subagent type `orchestrator`. Do not edit the task prompt except to add user-approved context; it already contains `WORKTREE_ROOT`, target ids, branch data, runtime env keys, and nested-worker root instructions.
+4. For plan targets, run `node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3 --json` so up to three independent ready executable tickets get isolated worktrees, runtime slots, Compose stacks, bootstrapped state, ticket leases, and structured `dispatch.task` handoffs. The prepare script excludes `depends_on` tickets until their prerequisites are complete.
+5. Dispatch each returned `dispatch.task` with subagent type `orchestrator`. Do not edit the task prompt except to add user-approved context; it already contains `WORKTREE_ROOT`, target ids, branch data, runtime env keys, lease deadline, and nested-worker root instructions.
 6. For single-ticket targets, dispatch one `orchestrator` task in the active clean worktree using the prompt pattern in `REFERENCE.md`.
 7. Report target, slot/worktree/task details, and exact blocker or handoff result.
 
 ## Status Report
 
 Include branch/worktree state, active runtime plan/ticket, current or last orchestrator launch, blocked reasons, and next safest command. Status scans may read logs, plans, tickets, and runtime state as described in [REFERENCE.md](REFERENCE.md).
+
+For stuck tasks, check `.opencode/state/ticket-leases.json` via `node .opencode/scripts/ticket-lease.mjs status --json`. If a lease is `deadline_expired`, ask for/manual perform an interrupt of the blocked task wait, mark it `interrupted`, inspect the worktree, and continue scheduling other ready tickets instead of waiting indefinitely.
 
 ## Hard Rules
 
@@ -56,4 +58,5 @@ Include branch/worktree state, active runtime plan/ticket, current or last orche
 - Do not dispatch more than one orchestrator task against the same checkout concurrently; plan parallelism must use isolated worktrees/runtime slots.
 - Do not auto-stash, reset, checkout-discard, force push, or hide dirty work.
 - Do not manually execute the orchestrator FSM if task dispatch fails.
+- Do not assume an interrupted or deadline-expired subagent is dead; inspect the ticket lease and worktree before reusing that checkout.
 - Do not mark completion or create PRs unless lower-level completion and regression-gate rules are satisfied.

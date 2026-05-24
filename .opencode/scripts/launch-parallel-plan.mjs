@@ -15,9 +15,10 @@ const executableTypes = new Set(['feature', 'bug']);
 const ticketIdPattern = /^TICKET-\d{8}-\d{3}$/;
 const requiredRuntimeFiles = ['.env', 'frontend/package-lock.json', 'test/package-lock.json'];
 const optionalRuntimeFiles = ['backend/.env', 'frontend/.env'];
+const unsafeLeaseStatuses = new Set(['running', 'deadline_expired', 'interrupted']);
 
 function usage() {
-  return `Usage: node .opencode/scripts/launch-parallel-plan.mjs --target PLAN-* [--parallel 3] [--dry-run] [--json] [--workspace-root <path>] [--no-start-runtime] [--prepare-only]
+  return `Usage: node .opencode/scripts/launch-parallel-plan.mjs --target PLAN-* [--parallel 3] [--lease-minutes 60] [--dry-run] [--json] [--workspace-root <path>] [--no-start-runtime] [--prepare-only]
 
 Prepares up to three ready executable tickets for a plan in isolated git worktrees and runtime slots. Each ticket gets its own branch, .opencode/state, Compose project, host ports, Playwright base URL, and structured handoff for coordinator task dispatch.`;
 }
@@ -32,6 +33,9 @@ function parseArgs(argv) {
     startRuntime: true,
     prepareOnly: false,
     help: false,
+    leaseMinutes: 60,
+    replaceLease: false,
+    leaseRegistry: path.join(root, '.opencode', 'state', 'ticket-leases.json'),
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -59,6 +63,37 @@ function parseArgs(argv) {
 
     if (token === '--prepare-only') {
       values.prepareOnly = true;
+      continue;
+    }
+
+    if (token === '--replace-lease') {
+      values.replaceLease = true;
+      continue;
+    }
+
+    if (token === '--lease-registry') {
+      const next = argv[index + 1];
+      if (!next || next.startsWith('--')) throw new Error('Missing value for --lease-registry');
+      values.leaseRegistry = path.resolve(next);
+      index += 1;
+      continue;
+    }
+
+    if (token.startsWith('--lease-registry=')) {
+      values.leaseRegistry = path.resolve(token.slice('--lease-registry='.length));
+      continue;
+    }
+
+    if (token === '--lease-minutes') {
+      const next = argv[index + 1];
+      if (!next || next.startsWith('--')) throw new Error('Missing value for --lease-minutes');
+      values.leaseMinutes = Number(next);
+      index += 1;
+      continue;
+    }
+
+    if (token.startsWith('--lease-minutes=')) {
+      values.leaseMinutes = Number(token.slice('--lease-minutes='.length));
       continue;
     }
 
@@ -202,6 +237,47 @@ function parseFrontmatter(filePath) {
   }
 
   return data;
+}
+
+function readJsonIfExists(filePath, fallback) {
+  if (!fs.existsSync(filePath)) return fallback;
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function normalizeLease(lease) {
+  if (!lease || !lease.deadlineAt || !['running', 'deadline_expired'].includes(lease.status)) return lease;
+  if (Date.parse(lease.deadlineAt) <= Date.now()) return { ...lease, status: 'deadline_expired' };
+  return lease;
+}
+
+function loadTicketLeases(report, values) {
+  try {
+    const registry = readJsonIfExists(values.leaseRegistry, { schemaVersion: 1, leases: {} });
+    if (registry.schemaVersion !== 1 || typeof registry.leases !== 'object' || registry.leases === null) {
+      report.blockers.push(`Invalid ticket lease registry: ${rel(values.leaseRegistry)}`);
+      return new Map();
+    }
+    return new Map(Object.entries(registry.leases).map(([ticketId, lease]) => [ticketId, normalizeLease(lease)]));
+  } catch (error) {
+    report.blockers.push(`Could not read ticket lease registry: ${error.message}`);
+    return new Map();
+  }
+}
+
+function existingUnsafeLease(ticket, leasesByTicket, values, report) {
+  const lease = leasesByTicket.get(ticket.id);
+  if (!lease || !unsafeLeaseStatuses.has(lease.status)) return false;
+  if (values.replaceLease) {
+    report.warnings.push(`Replacing existing ${lease.status} lease for ${ticket.id}; coordinator is responsible for prior task interrupt/inspection.`);
+    return false;
+  }
+
+  return {
+    ticketId: ticket.id,
+    status: lease.status,
+    deadlineAt: lease.deadlineAt || null,
+    inspectCommand: `node .opencode/scripts/ticket-lease.mjs inspect --ticket ${ticket.id} --json`,
+  };
 }
 
 function dependencyIds(ticket) {
@@ -625,10 +701,14 @@ function buildOrchestratorPrompt(dispatch) {
     .map(key => `${key}=${dispatch.env[key]}`)
     .join('\n');
 
-  return `Load .opencode/skills/orchestrator/SKILL.md and run MODE: run-ticket for the assigned ticket.\n\nWORKTREE_ROOT: ${dispatch.worktree}\nPLAN_ID: ${dispatch.planId}\nTICKET_ID: ${dispatch.ticketId}\nTICKET_FILE: ${dispatch.ticketFile}\nTICKET_TYPE: ${dispatch.ticketType}\nTEST_CASE_ID: ${dispatch.testCaseId}\nBRANCH: ${dispatch.branch}\nBASE_BRANCH: ${dispatch.planBranch}\nRUNTIME_SLOT: ${dispatch.slot}\nCOMPOSE_PROJECT: ${dispatch.project}\nCOMPOSE_COMMAND: ${dispatch.composeCommand}\nRUNTIME_ENV_KEYS:\n${envLines}\n\nRun every file and shell operation under WORKTREE_ROOT. When dispatching nested worker subagents, include this same WORKTREE_ROOT and instruct them to run all file and shell operations there. Use only the runtime env keys and values above; do not inspect or include secret env file contents in prompts or summaries. If WORKTREE_ROOT is dirty before starting, block and report it. Return per .opencode/skills/shared/io-contract.md.`;
+  return `Load .opencode/skills/orchestrator/SKILL.md and run MODE: run-ticket for the assigned ticket.\n\nWORKTREE_ROOT: ${dispatch.worktree}\nPLAN_ID: ${dispatch.planId}\nTICKET_ID: ${dispatch.ticketId}\nTICKET_FILE: ${dispatch.ticketFile}\nTICKET_TYPE: ${dispatch.ticketType}\nTEST_CASE_ID: ${dispatch.testCaseId}\nBRANCH: ${dispatch.branch}\nBASE_BRANCH: ${dispatch.planBranch}\nRUNTIME_SLOT: ${dispatch.slot}\nCOMPOSE_PROJECT: ${dispatch.project}\nCOMPOSE_COMMAND: ${dispatch.composeCommand}\nLEASE_MINUTES: ${dispatch.leaseMinutes}\nLEASE_DEADLINE_AT: ${dispatch.leaseDeadlineAt}\nRUNTIME_ENV_KEYS:\n${envLines}\n\nRun every file and shell operation under WORKTREE_ROOT. When dispatching nested worker subagents, include this same WORKTREE_ROOT and instruct them to run all file and shell operations there. Use only the runtime env keys and values above; do not inspect or include secret env file contents in prompts or summaries. If WORKTREE_ROOT is dirty before starting, block and report it. If the lease deadline is exceeded, stop at the next safe boundary and return OUTCOME: blocked with the timeout reason. Return per .opencode/skills/shared/io-contract.md.`;
 }
 
 function attachTaskHandoff(dispatch) {
+  if (!dispatch.leaseMinutes || !dispatch.leaseDeadlineAt) {
+    throw new Error(`Cannot build orchestrator handoff without ticket lease fields for ${dispatch.ticketId}`);
+  }
+
   dispatch.status = 'prepared';
   dispatch.dispatchStatus = 'prepared';
   dispatch.task = {
@@ -656,7 +736,74 @@ function attachTaskHandoff(dispatch) {
   dispatch.task.orchestrator_prompt = dispatch.task.prompt;
 }
 
-function makeDispatch(planId, planBranch, ticket, index, workspaceRoot) {
+function applyLease(dispatch, lease) {
+  dispatch.lease = lease;
+  dispatch.leaseMinutes = lease.leaseMinutes;
+  dispatch.leaseDeadlineAt = lease.deadlineAt;
+}
+
+function buildLeaseRecord(dispatch, values, status = 'running') {
+  const now = new Date();
+  return {
+    ticketId: dispatch.ticketId,
+    planId: dispatch.planId,
+    testCaseId: dispatch.testCaseId,
+    worktree: dispatch.worktree,
+    slot: dispatch.slot,
+    project: dispatch.project,
+    status,
+    leaseMinutes: values.leaseMinutes,
+    startedAt: now.toISOString(),
+    deadlineAt: new Date(now.getTime() + values.leaseMinutes * 60 * 1000).toISOString(),
+  };
+}
+
+function startLease(dispatch, report, values) {
+  if (values.dryRun) {
+    applyLease(dispatch, buildLeaseRecord(dispatch, values, 'dry-run'));
+    report.checks.push({ name: 'ticket-lease', status: 'passed', detail: `${dispatch.ticketId}: dry-run deadline ${dispatch.leaseDeadlineAt}` });
+    return true;
+  }
+  const args = [
+    '.opencode/scripts/ticket-lease.mjs', 'start',
+    '--ticket', dispatch.ticketId,
+    '--plan', dispatch.planId,
+    '--test-case', dispatch.testCaseId,
+    '--worktree', dispatch.worktree,
+    '--slot', String(dispatch.slot),
+    '--project', dispatch.project,
+    '--lease-minutes', String(values.leaseMinutes),
+    '--lease-registry', values.leaseRegistry,
+    '--json',
+  ];
+  const result = runCapture(process.execPath, args);
+  if (!result.ok) {
+    report.blockers.push(`Failed to start ticket lease for ${dispatch.ticketId}: ${result.stderr || result.error || result.stdout}`);
+    dispatch.status = 'blocked';
+    report.checks.push({ name: 'ticket-lease', status: 'failed', detail: dispatch.ticketId });
+    return false;
+  }
+  applyLease(dispatch, JSON.parse(result.stdout).lease);
+  report.checks.push({ name: 'ticket-lease', status: 'passed', detail: `${dispatch.ticketId}: deadline ${dispatch.leaseDeadlineAt}` });
+  return true;
+}
+
+function transitionLease(dispatch, status, report, values, note) {
+  if (values.dryRun || !dispatch.lease) return;
+  const args = [
+    '.opencode/scripts/ticket-lease.mjs', status,
+    '--ticket', dispatch.ticketId,
+    '--lease-registry', values.leaseRegistry,
+    '--json',
+  ];
+  if (note) args.push('--note', note);
+  const result = runCapture(process.execPath, args);
+  if (!result.ok) {
+    report.warnings.push(`Failed to mark lease ${status} for ${dispatch.ticketId}: ${result.stderr || result.error || result.stdout}`);
+  }
+}
+
+function makeDispatch(planId, planBranch, ticket, index, workspaceRoot, leaseMinutes) {
   const slot = index + 1;
   const project = slug(ticket.id);
   const worktree = path.join(workspaceRoot, ticket.id);
@@ -674,6 +821,8 @@ function makeDispatch(planId, planBranch, ticket, index, workspaceRoot) {
     worktree,
     env,
     composeCommand: `docker compose -p ${project} -f docker-compose.dev.yml up -d backend frontend`,
+    leaseMinutes,
+    leaseDeadlineAt: null,
     status: 'planned',
   };
 }
@@ -694,6 +843,7 @@ function buildReport(values) {
     selectedTickets: [],
     skippedReadyTickets: [],
     dependencyBlockedTickets: [],
+    leaseBlockedTickets: [],
     dispatches: [],
     nextStep: null,
   };
@@ -708,6 +858,10 @@ function buildReport(values) {
     report.blockers.push(`--parallel must be an integer between 1 and ${maxParallel}.`);
   }
 
+  if (!Number.isFinite(values.leaseMinutes) || values.leaseMinutes < 1) {
+    report.blockers.push('--lease-minutes must be a positive number.');
+  }
+
   const clean = gitClean(root);
   if (!clean.ok) report.blockers.push(clean.error);
   else if (clean.dirty.length && !values.dryRun) report.blockers.push(`Coordinator checkout must be clean before parallel prepare/handoff: ${clean.dirty.join(', ')}`);
@@ -718,10 +872,12 @@ function buildReport(values) {
 
   const plan = readPlan(values.target);
   const tickets = readPlanTickets(values.target);
+  const leasesByTicket = loadTicketLeases(report, values);
   const ticketsById = new Map(tickets.map(ticket => [ticket.id, ticket]));
   const reviewTickets = tickets.filter(ticket => ticket.frontmatter.status === 'review');
   const readyTickets = tickets.filter(ticket => ticket.frontmatter.status === 'ready' && executableTypes.has(ticket.frontmatter.type));
   const dependencyBlockedTickets = [];
+  const leaseBlockedTickets = [];
   const independentReadyTickets = [];
 
   for (const ticket of readyTickets) {
@@ -747,6 +903,12 @@ function buildReport(values) {
       continue;
     }
 
+    const unsafeLease = existingUnsafeLease(ticket, leasesByTicket, values, report);
+    if (unsafeLease) {
+      leaseBlockedTickets.push(unsafeLease);
+      continue;
+    }
+
     independentReadyTickets.push(ticket);
   }
 
@@ -759,8 +921,10 @@ function buildReport(values) {
     readyExecutableTickets: readyTickets.map(ticket => ticket.id),
     independentReadyTickets: independentReadyTickets.map(ticket => ticket.id),
     dependencyBlockedTickets,
+    leaseBlockedTickets,
   };
   report.dependencyBlockedTickets = dependencyBlockedTickets;
+  report.leaseBlockedTickets = leaseBlockedTickets;
 
   if (reviewTickets.length) {
     report.blockers.push(`Plan has review tickets that must be audited before parallel executable prepare/handoff: ${reviewTickets.map(ticket => ticket.id).join(', ')}`);
@@ -768,13 +932,20 @@ function buildReport(values) {
 
   if (!readyTickets.length) {
     report.blockers.push(`Plan ${values.target} has no ready executable tickets to prepare.`);
-  } else if (!independentReadyTickets.length && dependencyBlockedTickets.length) {
-    const details = dependencyBlockedTickets
-      .map(item => `${item.ticketId} waits for ${item.unmet.join(', ')}`)
+  } else if (!independentReadyTickets.length && (dependencyBlockedTickets.length || leaseBlockedTickets.length)) {
+    const dependencyDetails = dependencyBlockedTickets
+      .map(item => `${item.ticketId} waits for ${item.unmet.join(', ')}`);
+    const leaseDetails = leaseBlockedTickets
+      .map(item => `${item.ticketId} has ${item.status} lease`);
+    const details = [...dependencyDetails, ...leaseDetails]
       .join('; ');
-    report.blockers.push(`Plan ${values.target} has no independent ready executable tickets. Dependency blockers: ${details}`);
+    report.blockers.push(`Plan ${values.target} has no independent ready executable tickets. Blockers: ${details}`);
   } else if (dependencyBlockedTickets.length) {
     report.warnings.push(`Excluded dependency-blocked ready ticket(s): ${dependencyBlockedTickets.map(item => `${item.ticketId} waits for ${item.unmet.join(', ')}`).join('; ')}`);
+  }
+
+  if (leaseBlockedTickets.length) {
+    report.warnings.push(`Skipped unsafe leased ticket(s): ${leaseBlockedTickets.map(item => `${item.ticketId} ${item.status}`).join('; ')}`);
   }
 
   const planBranch = `tdd/${values.target}`;
@@ -782,7 +953,7 @@ function buildReport(values) {
   report.workspaceRoot = workspaceRoot;
   report.selectedTickets = independentReadyTickets.slice(0, values.parallel).map(ticket => ticket.id);
   report.skippedReadyTickets = independentReadyTickets.slice(values.parallel).map(ticket => ticket.id);
-  report.dispatches = independentReadyTickets.slice(0, values.parallel).map((ticket, index) => makeDispatch(values.target, planBranch, ticket, index, workspaceRoot));
+  report.dispatches = independentReadyTickets.slice(0, values.parallel).map((ticket, index) => makeDispatch(values.target, planBranch, ticket, index, workspaceRoot, values.leaseMinutes));
 
   if (report.blockers.length) return finishReport(report);
 
@@ -793,9 +964,19 @@ function buildReport(values) {
     if (!copyRuntimeFiles(dispatch, report, values)) continue;
     if (!ensureTestDependencyLink(dispatch, report, values)) continue;
     if (!ensurePlaywrightBrowsers(dispatch, report, values)) continue;
-    if (!bootstrapState(dispatch, report, values)) continue;
-    if (!acquireSlot(dispatch, report, values)) continue;
-    if (!startRuntime(dispatch, report, values)) continue;
+    if (!startLease(dispatch, report, values)) continue;
+    if (!bootstrapState(dispatch, report, values)) {
+      transitionLease(dispatch, 'failed', report, values, 'state bootstrap failed');
+      continue;
+    }
+    if (!acquireSlot(dispatch, report, values)) {
+      transitionLease(dispatch, 'failed', report, values, 'runtime slot acquisition failed');
+      continue;
+    }
+    if (!startRuntime(dispatch, report, values)) {
+      transitionLease(dispatch, 'failed', report, values, 'runtime start failed');
+      continue;
+    }
     attachTaskHandoff(dispatch);
     if (values.dryRun) dispatch.status = 'ready-dry-run';
   }
@@ -835,6 +1016,9 @@ function printText(report) {
   if (report.plan) console.log(`INDEPENDENT_READY_TICKETS: ${report.plan.independentReadyTickets.join(', ') || 'none'}`);
   if (report.dependencyBlockedTickets.length) {
     console.log(`DEPENDENCY_BLOCKED_TICKETS: ${report.dependencyBlockedTickets.map(item => `${item.ticketId} waits for ${item.unmet.join(', ')}`).join('; ')}`);
+  }
+  if (report.leaseBlockedTickets.length) {
+    console.log(`LEASE_BLOCKED_TICKETS: ${report.leaseBlockedTickets.map(item => `${item.ticketId} ${item.status}`).join('; ')}`);
   }
   console.log('');
   console.log('DISPATCHES:');

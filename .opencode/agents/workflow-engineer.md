@@ -2,6 +2,7 @@
 description: Maintains OpenCode workflow configuration, agents, skills, commands, workflow docs, ADRs, quality gates, and workflow test helpers. Does not edit product application code.
 mode: subagent
 temperature: 0.15
+steps: 30
 permission:
   edit:
     "*": deny

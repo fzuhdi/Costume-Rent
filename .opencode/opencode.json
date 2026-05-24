@@ -34,6 +34,28 @@
       ".opencode/skills"
     ]
   },
+  "provider": {
+    "opencode": {
+      "options": {
+        "timeout": 300000,
+        "chunkTimeout": 60000
+      }
+    },
+    "openai": {
+      "options": {
+        "timeout": 300000,
+        "chunkTimeout": 60000
+      }
+    }
+  },
+  "agent": {
+    "explore": {
+      "steps": 15
+    },
+    "general": {
+      "steps": 20
+    }
+  },
   "command": {
     "plan-to-tickets": {
       "description": "Convert or repair a PRD, bug report, ask-me output, or plan into TDD-ready backlog tickets. Usage /plan-to-tickets [plan-file] [plan-id optional]",

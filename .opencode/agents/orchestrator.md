@@ -3,6 +3,7 @@ description: Runs the orchestrator TDD FSM for one ticket or one plan. Owns RED/
 mode: subagent
 model: opencode/big-pickle
 temperature: 0.2
+steps: 40
 permission:
   edit:
     "docs/tickets/**": allow

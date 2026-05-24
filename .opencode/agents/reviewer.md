@@ -3,6 +3,7 @@ description: Read-only reviewer that audits ticket readiness, RED disputes, alre
 mode: subagent
 model: opencode/big-pickle
 temperature: 0.1
+steps: 25
 permission:
   edit: deny
   bash:

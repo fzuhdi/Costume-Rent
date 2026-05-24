@@ -3,6 +3,7 @@ description: Senior fullstack developer that performs GREEN and optional bounded
 mode: subagent
 model: opencode/big-pickle
 temperature: 0.2
+steps: 40
 permission:
   edit:
     "backend/**": allow

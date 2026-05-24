@@ -3,6 +3,7 @@ description: SDET that owns ticket-level acceptance RED for exactly one TDD trac
 mode: subagent
 model: opencode/big-pickle
 temperature: 0.2
+steps: 25
 permission:
   edit:
     "**": deny
