@@ -28,8 +28,8 @@ const NotificationBell = ({ count }) => {
           )}
         </Badge.Anchor>
 
-        <Popover.Content className="p-0 border border-[var(--border)] shadow-xl overflow-hidden rounded-xl">
-          <div className="w-80 bg-[var(--surface)]">
+        <Popover.Content className="p-0 border border-[var(--border)] shadow-xl overflow-hidden rounded-xl max-sm:max-w-[calc(100vw-16px)]">
+          <div className="w-80 max-sm:w-[calc(100vw-32px)] bg-[var(--surface)]">
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--border)]/10">
               <h3 className="text-sm font-bold">Notifikasi</h3>
               <Button
@@ -38,8 +38,9 @@ const NotificationBell = ({ count }) => {
                 variant="light"
                 onPress={() => setIsOpen(false)}
                 aria-label="Tutup notifikasi"
+                data-slot="close-button"
               >
-                <X size={16} />
+                <X size={16} data-slot="close-icon" />
               </Button>
             </div>
 
