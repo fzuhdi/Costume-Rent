@@ -14,10 +14,6 @@
     ]
   },
   "permission": {
-    "skill": {
-      "orchestrator": "allow",
-      "*": "allow"
-    },
     "task": {
       "*": "deny",
       "explore": "allow",
@@ -34,55 +30,7 @@
       ".opencode/skills"
     ]
   },
-  "provider": {
-    "opencode": {
-      "options": {
-        "timeout": 300000,
-        "chunkTimeout": 60000
-      }
-    },
-    "openai": {
-      "options": {
-        "timeout": 300000,
-        "chunkTimeout": 60000
-      }
-    }
-  },
-  "agent": {
-    "explore": {
-      "steps": 15
-    },
-    "general": {
-      "steps": 20
-    }
-  },
-  "command": {
-    "plan-to-tickets": {
-      "description": "Convert or repair a PRD, bug report, ask-me output, or plan into TDD-ready backlog tickets. Usage /plan-to-tickets [plan-file] [plan-id optional]",
-      "template": "Load the plan-to-tickets skill (.opencode/skills/plan-to-tickets/SKILL.md).\n\nRaw arguments: **$ARGUMENTS**\n\nInterpret arguments as:\n- Plan file: $1\n- Optional plan id: $2\n\nRun the skill with:\n- PLAN_FILE: $1\n- PLAN_ID: $2\n- RAW_ARGUMENTS: $ARGUMENTS\n\nCreate or update only planning artifacts such as docs/plans/*.md and docs/tickets/*.md. Preserve in_progress and complete tickets. Repaired ambiguous tickets must be set to status: review. Do not invoke the orchestrator or any engineering subagent.",
-      "agent": "build"
-    },
-    "coordinator": {
-      "description": "Coordinate workflow runs safely. Usage /coordinator [plan-id|ticket-id]",
-      "template": "Load the coordinator skill (.opencode/skills/coordinator/SKILL.md).\n\nRaw arguments: **$ARGUMENTS**\n\nRoute arguments per the coordinator skill:\n- Empty args: ask for a target or explicit status scan before broad discovery.\n- PLAN-YYYYMMDD-*: use targeted mode, read only that plan and its tickets, require a clean coordinator checkout, then run `node .opencode/scripts/launch-parallel-plan.mjs --target $1 --parallel 3 --json` to deterministically prepare independent ready executable tracer-ticket worktrees/runtime slots; dispatch each returned `dispatch.task` via task with subagent type `orchestrator`. Tickets with unmet `depends_on` prerequisites wait for a later batch.\n- TICKET-YYYYMMDD-NNN: use targeted mode, read only directly related inputs, require a clean worktree, then dispatch one task with subagent type `orchestrator` using the prompt pattern in the coordinator reference.\n\nDo not call worker subagents directly, dispatch outside the coordinator root or prepared `WORKTREE_ROOT` handoffs, or manually execute the orchestrator FSM if task dispatch fails. Report the handoff or exact blocker.",
-      "agent": "build"
-    }
-  },
-  "compaction": {
-    "auto": true,
-    "prune": true,
-    "reserved": 10000
-  },
   "mcp": {
-    "heroui-react": {
-      "type": "local",
-      "command": [
-        "npx",
-        "-y",
-        "@heroui/react-mcp@latest"
-      ],
-      "enabled": true
-    },
     "playwright": {
       "type": "local",
       "command": [
