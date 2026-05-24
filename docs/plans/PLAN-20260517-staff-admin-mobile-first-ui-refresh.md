@@ -23,7 +23,7 @@ Refresh the existing authenticated staff/admin Costume Rental Management UI into
 - TICKET-20260517-004 - ready - feature - Costume detail and form are mobile usable
 - TICKET-20260517-005 - complete - feature - Rental history uses mobile cards
 - TICKET-20260517-006 - complete - feature - Rental detail and form are mobile usable
-- TICKET-20260517-007 - ready - feature - Client list uses mobile cards
+- TICKET-20260517-007 - complete - feature - Client list uses mobile cards
 - TICKET-20260517-008 - ready - feature - Client detail and form are mobile usable
 - TICKET-20260517-009 - ready - feature - Login uses theme-aware mobile layout
 - TICKET-20260517-010 - ready - feature - Settings branding page is mobile usable
@@ -32,10 +32,10 @@ Refresh the existing authenticated staff/admin Costume Rental Management UI into
 ## Status Summary
 - draft: 0
 - review: 0
-- ready: 6
+- ready: 5
 - in_progress: 0
 - blocked: 0
-- complete: 5
+- complete: 6
 
 ## Execution
 `/engineering/orchestrator PLAN-20260517-staff-admin-mobile-first-ui-refresh`
