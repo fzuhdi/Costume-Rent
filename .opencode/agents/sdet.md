@@ -1,7 +1,7 @@
 ---
 description: SDET that owns ticket-level acceptance RED for exactly one TDD tracer ticket. Cannot modify application code.
 mode: subagent
-model: opencode/big-pickle
+model: openai/gpt-5.3-codex
 temperature: 0.2
 steps: 25
 permission:

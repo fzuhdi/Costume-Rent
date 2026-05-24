@@ -1,7 +1,7 @@
 ---
 description: Read-only reviewer that audits ticket readiness, RED disputes, already-green coverage, final GREEN scope/test integrity, and workflow-maintenance changes.
 mode: subagent
-model: opencode/big-pickle
+model: openai/gpt-5.5
 temperature: 0.1
 steps: 25
 permission:

@@ -1,7 +1,7 @@
 ---
 description: Runs the orchestrator TDD FSM for one ticket or one plan. Owns RED/GREEN/REVIEW lifecycle and plan completion. Can push and create PRs only in plan-complete mode.
 mode: subagent
-model: opencode/big-pickle
+model: openai/gpt-5.5
 temperature: 0.2
 steps: 40
 permission:
