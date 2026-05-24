@@ -10,6 +10,7 @@ Add a model-selector skill and resolver script so the coordinator can detect una
 - `.opencode/model-capabilities.md` — human-editable model table with capability categories, role weights, and preference priority.
 - `.opencode/skills/model-selector/SKILL.md` — skill that ranks available models by role capability, presents options, asks user confirmation, and calls the resolver script.
 - `.opencode/scripts/resolve-agent-models.mjs` — deterministic script that scores available models per role by capability weight, reports in JSON/text, and updates agent frontmatter on `--write`.
+- `.opencode/scripts/test-resolve-agent-models.mjs` — targeted regression tests for explicit overrides and write-mode reporting.
 - Update `.opencode/skills/coordinator/SKILL.md` to reference model-availability checks before dispatch.
 - Update `.opencode/knowledge/runbook.md` for the new resolver script.
 - Update `.opencode/README.md` for the new skill and config.
@@ -22,6 +23,8 @@ Add a model-selector skill and resolver script so the coordinator can detect una
 
 ## Validation Plan
 - `node --check .opencode/scripts/resolve-agent-models.mjs`
+- `node --check .opencode/scripts/test-resolve-agent-models.mjs`
+- `node .opencode/scripts/test-resolve-agent-models.mjs` — verify explicit `--set role=model` overrides update available current models, dry-run does not write, and `--write` no-op reports are not labeled read-only.
 - `node .opencode/scripts/resolve-agent-models.mjs --dry-run --json` — verify it lists available models, scores per role, and recommends capability-appropriate models.
 - Parse `.opencode/model-capabilities.md` as reference documentation (visual review).
 
@@ -36,3 +39,5 @@ Yes. OpenCode must reload updated agent definitions after `resolve-agent-models.
 - `model-capabilities.md` is human-maintained and should be regenerated or reviewed when the available model set changes significantly.
 - Capability weights in the script mirror the table and can be tuned per role.
 - The coordinator should trigger `model-selector` before dispatch when `resolve-agent-models.mjs --dry-run --json` reports a role whose configured model is not available.
+- Explicit user selections should be passed to the resolver with repeatable `--set <role>=<model>` flags so available current models do not block intentional changes.
+- Full model reviews should collect all role choices in one batched prompt when possible, then run one resolver write command with all changed role overrides.

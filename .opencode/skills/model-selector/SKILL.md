@@ -36,21 +36,23 @@ Always checks all four roles: `sdet`, `developer`, `orchestrator`, `reviewer`.
    ```
 
 6. Ask the user one compound question:
-   - **Keep all current models and proceed** (proceed without changes)
-   - **Change a specific role's model** (opens per-role choices)
-   - **Full review** (walk through each role one by one)
+    - **Keep all current models and proceed** (proceed without changes)
+    - **Change a specific role's model** (opens per-role choices)
+    - **Full review** (collect per-role choices for all roles in one batched prompt when the question UI supports it; fall back to one role at a time only when custom input or tool limits require it)
 
 7. For any role the user wants to change:
-   a. Show the available options with their capability tags.
-   b. Let the user select from the ranked list or type a custom model.
-   c. Validate the chosen model exists in `opencode models`.
-   d. After each role, show the updated plan.
+    a. Show the available options with their capability tags.
+    b. Let the user select from the ranked list or type a custom model. In full-review mode, batch all four role choices into one question when possible to avoid serial prompts.
+    c. Validate the chosen model exists in `opencode models`.
+    d. After each role, show the updated plan.
 
 8. After all user choices are collected, if any model changed, run:
 
-   ```
-   node .opencode/scripts/resolve-agent-models.mjs --write --json
-   ```
+    ```
+    node .opencode/scripts/resolve-agent-models.mjs --write --json --set <role>=<model> [--set <role>=<model> ...]
+    ```
+
+   Use one repeatable `--set` argument per changed role so explicit user selections override available current models deterministically. If no role changed, do not run the writer.
 
 9. Report:
    - Models per role (kept or changed)

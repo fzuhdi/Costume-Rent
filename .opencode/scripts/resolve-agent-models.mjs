@@ -27,12 +27,27 @@ const CAPABILITY_WEIGHTS = {
 };
 
 function usage() {
-  return `Usage: node .opencode/scripts/resolve-agent-models.mjs [--dry-run] [--write] [--json] [--roles sdet,developer]
+  return `Usage: node .opencode/scripts/resolve-agent-models.mjs [--dry-run] [--write] [--json] [--roles sdet,developer] [--set role=model]
   Default: --dry-run --json
   --dry-run    Read-only report; no files modified (default)
   --write      Update agent frontmatter model lines
   --json       Machine-readable JSON output
-  --roles      Comma-separated subset of roles (default: all)`;
+  --roles      Comma-separated subset of roles (default: all)
+  --set        Repeatable explicit role assignment, e.g. --set developer=openai/gpt-5.3-codex`;
+}
+
+function parseRoleAssignment(raw) {
+  const separator = raw.indexOf('=');
+  if (separator === -1) throw new Error(`Expected role=model for --set, got: ${raw}`);
+  const role = raw.slice(0, separator).trim();
+  const model = raw.slice(separator + 1).trim();
+  if (!role || !model) throw new Error(`Expected role=model for --set, got: ${raw}`);
+  return { role, model };
+}
+
+function addOverride(values, raw) {
+  const { role, model } = parseRoleAssignment(raw);
+  values.overrides[role] = model;
 }
 
 function parseArgs(argv) {
@@ -41,6 +56,7 @@ function parseArgs(argv) {
     write: false,
     json: argv.includes('--json'),
     roles: null,
+    overrides: {},
     help: false,
   };
 
@@ -50,6 +66,17 @@ function parseArgs(argv) {
     if (token === '--dry-run') { values.dryRun = true; continue; }
     if (token === '--write') { values.dryRun = false; values.write = true; continue; }
     if (token === '--json') { values.json = true; continue; }
+    if (token === '--set') {
+      const next = argv[index + 1];
+      if (!next || next.startsWith('--')) throw new Error('Missing value for --set');
+      addOverride(values, next);
+      index += 1;
+      continue;
+    }
+    if (token.startsWith('--set=')) {
+      addOverride(values, token.slice('--set='.length));
+      continue;
+    }
     if (token === '--roles') {
       const next = argv[index + 1];
       if (!next || next.startsWith('--')) throw new Error('Missing value for --roles');
@@ -65,6 +92,24 @@ function parseArgs(argv) {
   }
 
   return values;
+}
+
+function validateRoles(values) {
+  for (const role of values.roles || []) {
+    if (!ROLE_AGENT_FILES[role]) throw new Error(`Unknown role in --roles: ${role}`);
+  }
+  const activeRoles = new Set(values.roles || ALL_ROLES);
+  for (const role of Object.keys(values.overrides)) {
+    if (!ROLE_AGENT_FILES[role]) throw new Error(`Unknown role in --set: ${role}`);
+    if (!activeRoles.has(role)) throw new Error(`Override role ${role} is not included in --roles`);
+  }
+}
+
+function validateOverrides(values, available) {
+  const availableSet = new Set(available.models);
+  for (const [role, model] of Object.entries(values.overrides)) {
+    if (!availableSet.has(model)) throw new Error(`Override model for ${role} is not available: ${model}`);
+  }
 }
 
 function runCapture(command, args, options = {}) {
@@ -86,6 +131,15 @@ function runCapture(command, args, options = {}) {
 }
 
 function getAvailableModels() {
+  if (process.env.RESOLVE_AGENT_MODELS_AVAILABLE) {
+    const models = process.env.RESOLVE_AGENT_MODELS_AVAILABLE
+      .split(/[\s,]+/)
+      .map(l => l.trim())
+      .filter(Boolean)
+      .sort();
+    return { ok: true, models, error: null };
+  }
+
   const result = runCapture('opencode', ['models']);
   if (!result.ok) {
     return { ok: false, models: [], error: result.stderr || result.error || 'opencode models failed' };
@@ -213,12 +267,18 @@ function buildReport(values, available, capabilities, workflowModels) {
     const preferredPath = rolePriorities[role] || [];
     const availablePreferred = preferredPath.find(m => available.models.includes(m));
     const topMatch = scored[0];
+    const currentAvailable = Boolean(currentModel && available.models.includes(currentModel));
+    const overrideModel = values.overrides[role] || null;
+    const targetModel = overrideModel || (currentAvailable ? currentModel : topMatch?.model || null);
 
     resolved[role] = {
       currentModel,
+      currentAvailable,
       preferredList: preferredPath,
       availablePreferred,
       recommended: topMatch?.model || null,
+      overrideModel,
+      targetModel,
       candidates: scored.slice(0, 5).map(s => ({
         model: s.model,
         score: Math.round(s.score * 10) / 10,
@@ -245,15 +305,23 @@ function writeAgentModels(resolved, availableModels) {
       continue;
     }
 
-    // If the current model is available, never change it
-    if (data.currentModel && availableSet.has(data.currentModel)) {
-      modified.push({ role, file: agentFile, status: 'unchanged', currentModel: data.currentModel, reason: 'already available' });
+    const newModel = data.targetModel;
+    if (!newModel) {
+      modified.push({ role, file: agentFile, status: 'skipped', reason: 'no target model' });
       continue;
     }
-
-    const newModel = data.recommended;
-    if (!newModel) {
-      modified.push({ role, file: agentFile, status: 'skipped', reason: 'no recommended model' });
+    if (!availableSet.has(newModel)) {
+      modified.push({ role, file: agentFile, status: 'skipped', reason: `target model unavailable: ${newModel}` });
+      continue;
+    }
+    if (data.currentModel === newModel) {
+      modified.push({
+        role,
+        file: agentFile,
+        status: 'unchanged',
+        currentModel: newModel,
+        reason: data.overrideModel ? 'override already set' : 'already available',
+      });
       continue;
     }
 
@@ -265,24 +333,36 @@ function writeAgentModels(resolved, availableModels) {
 
     const newContent = newFrontmatter + '\n' + parsed.body;
     fs.writeFileSync(agentPath, newContent, 'utf8');
-    modified.push({ role, file: agentFile, status: 'updated', oldModel: data.currentModel, newModel });
+    modified.push({
+      role,
+      file: agentFile,
+      status: 'updated',
+      oldModel: data.currentModel,
+      newModel,
+      reason: data.overrideModel ? 'explicit override' : 'recommended fallback',
+    });
   }
 
   return modified;
+}
+
+function buildNotes(values, modified) {
+  if (!modified) return ['Read-only report. Use --write to apply changes.'];
+  if (modified.some(m => m.status === 'updated')) return ['Agent frontmatter updated. OpenCode restart required.'];
+  if (modified.some(m => m.status === 'skipped')) return ['Write completed with skipped roles; inspect modified entries.'];
+  return ['Write completed. No agent frontmatter changes were needed.'];
 }
 
 function printReport(values, available, resolved, modified) {
   if (values.json) {
     console.log(JSON.stringify({
       outcome: 'resolved',
+      mode: values.dryRun ? 'dry-run' : 'write',
       availableModels: available.models,
+      overrides: values.overrides,
       resolved,
       modified: modified || [],
-      notes: [
-        modified?.some(m => m.status === 'updated')
-          ? 'Agent frontmatter updated. OpenCode restart required.'
-          : 'Read-only report. Use --write to apply changes.',
-      ],
+      notes: buildNotes(values, modified),
     }, null, 2));
     return;
   }
@@ -297,6 +377,8 @@ function printReport(values, available, resolved, modified) {
     console.log(`  Preferred:   ${data.preferredList.join(' → ') || '(none)'}`);
     console.log(`  Available:   ${data.availablePreferred || '(none from priority list)'}`);
     console.log(`  Recommended: ${data.recommended}`);
+    if (data.overrideModel) console.log(`  Override:    ${data.overrideModel}`);
+    console.log(`  Target:      ${data.targetModel || '(none)'}`);
     console.log(`  Top candidates:`);
     for (const c of data.candidates) {
       const marker = c.model === data.recommended ? ' ← recommended' : '';
@@ -319,6 +401,8 @@ function printReport(values, available, resolved, modified) {
     if (modified.some(m => m.status === 'updated')) {
       console.log('');
       console.log('RESTART REQUIRED: OpenCode must reload updated agent definitions.');
+    } else {
+      console.log('No agent frontmatter changes were needed.');
     }
   }
 }
@@ -331,11 +415,14 @@ function main() {
     process.exit(0);
   }
 
+  validateRoles(values);
+
   const available = getAvailableModels();
   if (!available.ok) {
     console.error(JSON.stringify({ outcome: 'error', error: available.error }));
     process.exit(1);
   }
+  validateOverrides(values, available);
 
   const workflowModels = readJson(workflowModelsPath);
   if (!workflowModels) {
@@ -351,9 +438,6 @@ function main() {
   } else {
     const modified = writeAgentModels(resolved, available.models);
     printReport(values, available, resolved, modified);
-    if (modified.some(m => m.status === 'updated')) {
-      process.exit(2);
-    }
   }
 }
 

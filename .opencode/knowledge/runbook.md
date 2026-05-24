@@ -135,6 +135,12 @@ Resolve for specific roles only:
 node .opencode/scripts/resolve-agent-models.mjs --write --roles sdet,developer
 ```
 
+Apply explicit user-selected models, even when the currently configured model is available:
+
+```bash
+node .opencode/scripts/resolve-agent-models.mjs --write --json --set sdet=openai/gpt-5.3-codex --set developer=openai/gpt-5.3-codex
+```
+
 Model capability categories are defined in `.opencode/model-capabilities.md`. Role preferences live in `.opencode/workflow-models.json`. After writing agent models, restart OpenCode.
 
 ## Workspaces
