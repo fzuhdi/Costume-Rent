@@ -126,4 +126,29 @@ test.describe('Settings', () => {
     await settingsPage.save();
     await settingsPage.assertSuccessMessage();
   });
+
+  // SETTINGS-014: Settings branding page is mobile usable
+  test('[SETTINGS-014] - Settings branding page is mobile usable', async ({ page }) => {
+    const settingsPage = new SettingsPage(page);
+    await page.setViewportSize({ width: 375, height: 667 });
+    await settingsPage.goto();
+
+    // Verify controls are visible at mobile viewport
+    await expect(settingsPage.appNameInput).toBeVisible();
+    await expect(settingsPage.taglineInput).toBeVisible();
+    await expect(settingsPage.logoUpload).toBeVisible();
+    await expect(settingsPage.saveButton).toBeVisible();
+
+    // Verify preview is visible
+    await expect(settingsPage.previewAppName).toBeVisible();
+
+    // Verify existing update behavior is preserved
+    await settingsPage.editAppName('Mobile Test ' + Date.now());
+    await settingsPage.save();
+    await settingsPage.assertSuccessMessage();
+
+    // Verify save and feedback remain visible at mobile viewport
+    await expect(settingsPage.successMessage).toBeVisible();
+    await expect(settingsPage.saveButton).toBeVisible();
+  });
 });
