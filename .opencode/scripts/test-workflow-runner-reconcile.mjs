@@ -115,10 +115,29 @@ try {
   run('git', ['init'], fixtureRoot);
   run('git', ['add', '.'], fixtureRoot);
   run('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'fixture'], fixtureRoot);
+  const defaultBranch = run('git', ['branch', '--show-current'], fixtureRoot).stdout.trim() || 'master';
+  run('git', ['branch', `tdd/${planId}`], fixtureRoot);
+  writeFile(path.join(fixtureRoot, 'README.md'), '# branch sync fixture\n');
+  run('git', ['add', 'README.md'], fixtureRoot);
+  run('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'advance base branch'], fixtureRoot);
+  const sourceHeadBeforeRun = run('git', ['rev-parse', 'HEAD'], fixtureRoot).stdout.trim();
 
   const { json: initReport } = runJson(process.execPath, ['.opencode/scripts/workflow-runner.mjs', '--target', ticketId, '--run-ticket', '--json'], fixtureRoot);
   if (initReport.outcome !== 'partial' || initReport.runtime?.status !== 'red-writing') {
     fail('Expected run-ticket initialization to enter red-writing.', JSON.stringify(initReport, null, 2));
+  }
+  if (!initReport.checks?.some(check => check.name === 'execution-branch-base' && check.detail?.includes(`tdd/${planId} fast-forwarded to ${defaultBranch}`))) {
+    fail('Expected run-ticket initialization to fast-forward the existing plan branch from its base branch.', JSON.stringify(initReport.checks, null, 2));
+  }
+
+  const activeBranch = run('git', ['branch', '--show-current'], fixtureRoot).stdout.trim();
+  if (activeBranch !== `tdd/${planId}`) {
+    fail('Expected run-ticket initialization to switch to the plan branch.', activeBranch);
+  }
+
+  const checkpointParent = run('git', ['rev-parse', 'HEAD^'], fixtureRoot).stdout.trim();
+  if (checkpointParent !== sourceHeadBeforeRun) {
+    fail('Expected the checkpoint commit to be based on the updated source branch head.', JSON.stringify({ checkpointParent, sourceHeadBeforeRun }, null, 2));
   }
 
   const checkpoints = JSON.parse(fs.readFileSync(path.join(fixtureRoot, '.opencode', 'state', 'checkpoints.json'), 'utf8'));
@@ -147,7 +166,7 @@ try {
     iteration: 0,
     maxIterations: 4,
     branch: `tdd/${planId}`,
-    baseBranch: 'master',
+    baseBranch: defaultBranch,
     lastCheckpointSha: runtime.red.preRedCheckpointSha,
     red: { status: null, testFile: null, testTitle: null, failureSummary: null, preRedCheckpointSha: null, afterRedCheckpointSha: null },
     green: { refactorNeeded: null, refactorUsed: false, greenCommitSha: null, refactorCommitSha: null },
@@ -163,7 +182,7 @@ try {
     currentTicketType: 'feature',
     status: 'idle',
     branch: `tdd/${planId}`,
-    baseBranch: 'master',
+    baseBranch: defaultBranch,
     pr: { state: 'not_applicable', url: null, blockedReason: null, rerunCommand: null },
     tickets: { [ticketId]: { status: 'complete' } },
   }, null, 2) + '\n');

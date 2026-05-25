@@ -1454,6 +1454,68 @@ function branchMergedInto(branch, baseBranch) {
   return null;
 }
 
+function branchDivergence(baseBranch, branch) {
+  if (!branchExists(branch) || !branchExists(baseBranch)) return null;
+  const result = runCapture('git', ['rev-list', '--left-right', '--count', `${baseBranch}...${branch}`]);
+  if (!result.ok) return null;
+  const match = result.stdout.trim().match(/^(\d+)\s+(\d+)$/);
+  if (!match) return null;
+  return {
+    baseAhead: Number(match[1]),
+    branchAhead: Number(match[2]),
+  };
+}
+
+function syncBranchWithBase(expectedBranch, baseBranch, currentBranch, values, report) {
+  if (!baseBranch || expectedBranch === baseBranch) return true;
+  if (!branchExists(baseBranch)) {
+    const detail = `Base branch ${baseBranch} does not exist; cannot verify ${expectedBranch}.`;
+    report.blockers.push(detail);
+    addCheck(report, 'execution-branch-base', 'failed', detail);
+    return false;
+  }
+  if (!branchExists(expectedBranch)) return true;
+
+  const divergence = branchDivergence(baseBranch, expectedBranch);
+  if (!divergence) {
+    const detail = `Could not compare ${expectedBranch} against base branch ${baseBranch}.`;
+    report.blockers.push(detail);
+    addCheck(report, 'execution-branch-base', 'failed', detail);
+    return false;
+  }
+
+  if (divergence.baseAhead === 0) {
+    addCheck(report, 'execution-branch-base', 'passed', `${expectedBranch} includes ${baseBranch}`);
+    return true;
+  }
+
+  if (divergence.branchAhead > 0) {
+    const detail = `Execution branch ${expectedBranch} has diverged from base branch ${baseBranch}; rebase or integrate it manually before continuing.`;
+    report.blockers.push(detail);
+    addCheck(report, 'execution-branch-base', 'failed', detail);
+    return false;
+  }
+
+  if (values.dryRun) {
+    addCheck(report, 'execution-branch-base', 'passed', `dry-run would fast-forward ${expectedBranch} to ${baseBranch}`);
+    return true;
+  }
+
+  const args = currentBranch === expectedBranch
+    ? ['merge', '--ff-only', baseBranch]
+    : ['branch', '-f', expectedBranch, baseBranch];
+  const result = runCapture('git', args);
+  if (!result.ok) {
+    const detail = (result.stderr || result.stdout).trim() || `failed to fast-forward ${expectedBranch} to ${baseBranch}`;
+    report.blockers.push(detail);
+    addCheck(report, 'execution-branch-base', 'failed', detail);
+    return false;
+  }
+
+  addCheck(report, 'execution-branch-base', 'passed', `${expectedBranch} fast-forwarded to ${baseBranch}`);
+  return true;
+}
+
 function appendCheckpoint(checkpointsState, sha) {
   if (!sha) return;
   if (!Array.isArray(checkpointsState.checkpoints)) checkpointsState.checkpoints = [];
@@ -1527,6 +1589,8 @@ function maybeCreateCommit(message, pathsToAdd, report, values, options = {}) {
 
 function ensureBranch(expectedBranch, baseBranch, values, report) {
   const current = currentBranchName(report);
+  if (!syncBranchWithBase(expectedBranch, baseBranch, current, values, report)) return false;
+
   if (current === expectedBranch) {
     addCheck(report, 'execution-branch', 'passed', expectedBranch);
     return true;
@@ -2133,7 +2197,16 @@ function runTicket(report, values, state, manifest, projectConfig) {
       return;
     }
     const branchName = `tdd/${summary.planId || summary.id}`;
-    const baseBranch = state.orchestrator.baseBranch || state.ticket.baseBranch || currentBranchName(report);
+    const currentBranch = currentBranchName(report);
+    const baseBranch = state.orchestrator.baseBranch || state.ticket.baseBranch || (currentBranch === branchName ? null : currentBranch);
+    if (!baseBranch && currentBranch === branchName && !values.dryRun) {
+      report.outcome = 'blocked';
+      report.exitCode = 1;
+      report.blockers.push(`Execution is already on ${branchName} with no recorded base branch.`);
+      report.nextStep = `Checkout the source branch for ${branchName} first, or restore runtime state with its baseBranch recorded, then retry.`;
+      addCheck(report, 'execution-branch-base', 'failed', `${branchName}: source branch unknown`);
+      return;
+    }
     ensureBranch(branchName, baseBranch, values, report);
     if (report.blockers.length) {
       report.outcome = 'blocked';

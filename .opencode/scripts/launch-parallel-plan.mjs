@@ -335,6 +335,69 @@ function branchExists(branch) {
   return runCapture('git', ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`]).ok;
 }
 
+function currentBranchName() {
+  const result = runCapture('git', ['branch', '--show-current']);
+  return result.ok ? result.stdout.trim() || null : null;
+}
+
+function branchDivergence(baseBranch, branch) {
+  if (!branchExists(baseBranch) || !branchExists(branch)) return null;
+  const result = runCapture('git', ['rev-list', '--left-right', '--count', `${baseBranch}...${branch}`]);
+  if (!result.ok) return null;
+  const match = result.stdout.trim().match(/^(\d+)\s+(\d+)$/);
+  if (!match) return null;
+  return {
+    baseAhead: Number(match[1]),
+    branchAhead: Number(match[2]),
+  };
+}
+
+function syncBranchWithBase(branch, baseBranch, currentBranch, report, values, checkName) {
+  if (!baseBranch || branch === baseBranch) return true;
+  if (!branchExists(baseBranch)) {
+    report.blockers.push(`Base branch ${baseBranch} does not exist; cannot verify ${branch}.`);
+    report.checks.push({ name: checkName, status: 'failed', detail: `${branch} missing base ${baseBranch}` });
+    return false;
+  }
+  if (!branchExists(branch)) return true;
+
+  const divergence = branchDivergence(baseBranch, branch);
+  if (!divergence) {
+    report.blockers.push(`Could not compare ${branch} against base branch ${baseBranch}.`);
+    report.checks.push({ name: checkName, status: 'failed', detail: `${branch} comparison failed` });
+    return false;
+  }
+
+  if (divergence.baseAhead === 0) {
+    report.checks.push({ name: checkName, status: 'passed', detail: `${branch} includes ${baseBranch}` });
+    return true;
+  }
+
+  if (divergence.branchAhead > 0) {
+    report.blockers.push(`Branch ${branch} has diverged from base branch ${baseBranch}; rebase or integrate it manually before continuing.`);
+    report.checks.push({ name: checkName, status: 'failed', detail: `${branch} diverged from ${baseBranch}` });
+    return false;
+  }
+
+  if (values.dryRun) {
+    report.checks.push({ name: checkName, status: 'passed', detail: `dry-run would fast-forward ${branch} to ${baseBranch}` });
+    return true;
+  }
+
+  const args = currentBranch === branch
+    ? ['merge', '--ff-only', baseBranch]
+    : ['branch', '-f', branch, baseBranch];
+  const result = runCapture('git', args);
+  if (!result.ok) {
+    report.blockers.push(`Failed to fast-forward ${branch} to ${baseBranch}: ${result.stderr || result.error}`);
+    report.checks.push({ name: checkName, status: 'failed', detail: `${branch} fast-forward failed` });
+    return false;
+  }
+
+  report.checks.push({ name: checkName, status: 'passed', detail: `${branch} fast-forwarded to ${baseBranch}` });
+  return true;
+}
+
 function worktreeExists(worktreePath) {
   return fs.existsSync(path.join(worktreePath, '.git')) || fs.existsSync(worktreePath);
 }
@@ -346,25 +409,39 @@ function ensureProjectRoot(report) {
   }
 }
 
-function ensurePlanBranch(planBranch, report, values) {
+function ensurePlanBranch(planBranch, baseBranch, report, values) {
+  const currentBranch = currentBranchName();
+
   if (branchExists(planBranch)) {
+    if (currentBranch === planBranch && !baseBranch && !values.dryRun) {
+      report.blockers.push(`Coordinator checkout is already on ${planBranch}; checkout the source branch first so the launcher can verify whether the plan branch is up to date.`);
+      report.checks.push({ name: 'plan-branch', status: 'failed', detail: `${planBranch}: source branch unknown` });
+      return false;
+    }
+    if (!syncBranchWithBase(planBranch, baseBranch, currentBranch, report, values, 'plan-branch-base')) return false;
     report.checks.push({ name: 'plan-branch', status: 'passed', detail: planBranch });
     return true;
   }
 
   if (values.dryRun) {
-    report.checks.push({ name: 'plan-branch', status: 'passed', detail: `dry-run would create ${planBranch} from current HEAD` });
+    report.checks.push({ name: 'plan-branch', status: 'passed', detail: `dry-run would create ${planBranch} from ${baseBranch || 'current HEAD'}` });
     return true;
   }
 
-  const result = runCapture('git', ['branch', planBranch]);
+  if (!baseBranch) {
+    report.blockers.push(`Cannot create ${planBranch} while already checked out there; checkout the source branch first.`);
+    report.checks.push({ name: 'plan-branch', status: 'failed', detail: `${planBranch}: source branch unknown` });
+    return false;
+  }
+
+  const result = runCapture('git', ['branch', planBranch, baseBranch]);
   if (!result.ok) {
     report.blockers.push(`Failed to create plan branch ${planBranch}: ${result.stderr || result.error}`);
     report.checks.push({ name: 'plan-branch', status: 'failed', detail: planBranch });
     return false;
   }
 
-  report.checks.push({ name: 'plan-branch', status: 'passed', detail: `created ${planBranch}` });
+  report.checks.push({ name: 'plan-branch', status: 'passed', detail: `created ${planBranch} from ${baseBranch}` });
   return true;
 }
 
@@ -1011,6 +1088,7 @@ function buildReport(values) {
   }
 
   const planBranch = `tdd/${values.target}`;
+  const baseBranch = currentBranchName() === planBranch ? null : currentBranchName();
   const workspaceRoot = path.resolve(values.workspaceRoot || path.join(root, '..', `${path.basename(root)}-workspaces`, values.target));
   report.workspaceRoot = workspaceRoot;
   report.selectedTickets = independentReadyTickets.slice(0, values.parallel).map(ticket => ticket.id);
@@ -1019,7 +1097,7 @@ function buildReport(values) {
 
   if (report.blockers.length) return finishReport(report);
 
-  if (!ensurePlanBranch(planBranch, report, values)) return finishReport(report);
+  if (!ensurePlanBranch(planBranch, baseBranch, report, values)) return finishReport(report);
 
   for (const dispatch of report.dispatches) {
     if (!ensureWorktree(dispatch, report, values)) continue;

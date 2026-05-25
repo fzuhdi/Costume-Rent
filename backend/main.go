@@ -16,7 +16,9 @@ import (
 func main() {
 	config.LoadEnv()
 	config.InitDB()
-	middleware.InitJWT()
+	if err := middleware.InitJWT(); err != nil {
+		log.Fatalf("Failed to initialize JWT: %v", err)
+	}
 
 	migrateDB()
 	seedData()
