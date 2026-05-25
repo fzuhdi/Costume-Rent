@@ -2,8 +2,8 @@
 FROM node:20-alpine AS builder
 
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json ./
+RUN npm install
 
 COPY . .
 RUN VITE_API_BASE_URL=/api VITE_UPLOADS_URL=/uploads npm run build
