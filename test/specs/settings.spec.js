@@ -133,22 +133,77 @@ test.describe('Settings', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await settingsPage.goto();
 
-    // Verify controls are visible at mobile viewport
+    const viewport = page.viewportSize();
+    expect(viewport).not.toBeNull();
+
+    // Verify controls are visible and not clipped at mobile viewport
     await expect(settingsPage.appNameInput).toBeVisible();
     await expect(settingsPage.taglineInput).toBeVisible();
     await expect(settingsPage.logoUpload).toBeVisible();
     await expect(settingsPage.saveButton).toBeVisible();
 
+    const assertElementInsideViewport = async (locator, label) => {
+      const box = await locator.boundingBox();
+      expect(box, `${label} should have a bounding box`).not.toBeNull();
+      expect(box.x, `${label} should not be clipped on the left`).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width, `${label} should not overflow viewport width`).toBeLessThanOrEqual(viewport.width + 1);
+    };
+
+    await assertElementInsideViewport(settingsPage.logoUpload, 'Logo upload control');
+    await assertElementInsideViewport(settingsPage.appNameInput, 'App name input');
+    await assertElementInsideViewport(settingsPage.taglineInput, 'Tagline input');
+    await assertElementInsideViewport(settingsPage.saveButton, 'Save button');
+
+    const pageWidth = await page.evaluate(() => {
+      const doc = document.documentElement;
+      return {
+        scrollWidth: doc.scrollWidth,
+        clientWidth: doc.clientWidth,
+      };
+    });
+    expect(pageWidth.scrollWidth, 'Page should not horizontally overflow on 375px').toBeLessThanOrEqual(pageWidth.clientWidth + 1);
+
     // Verify preview is visible
     await expect(settingsPage.previewAppName).toBeVisible();
+    const taglinePreview = page.locator('p.text-sm.text-\\[var\\(--muted\\)\\]');
+    await expect(taglinePreview).toBeVisible();
+
+    // Verify tagline preview updates live
+    const updatedTagline = `Mobile Preview ${Date.now()}`;
+    await settingsPage.editTagline(updatedTagline);
+    await expect(taglinePreview).toContainText(updatedTagline);
+
+    // Verify error feedback (save failure) is shown
+    await page.route('**/api/settings', async (route) => {
+      if (route.request().method() === 'PUT') {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'forced failure' }),
+        });
+        return;
+      }
+      await route.continue();
+    });
+    await settingsPage.save();
+    await expect(page.getByText('Gagal menyimpan pengaturan')).toBeVisible();
+    await page.unroute('**/api/settings');
 
     // Verify existing update behavior is preserved
-    await settingsPage.editAppName('Mobile Test ' + Date.now());
+    const updatedName = `Mobile Test ${Date.now()}`;
+    await settingsPage.editAppName(updatedName);
     await settingsPage.save();
     await settingsPage.assertSuccessMessage();
 
-    // Verify save and feedback remain visible at mobile viewport
+    // Verify success feedback and save action remain visible after save
     await expect(settingsPage.successMessage).toBeVisible();
     await expect(settingsPage.saveButton).toBeVisible();
+
+    // Verify persistence behavior remains intact
+    await page.reload();
+    await settingsPage.goto();
+    await expect(settingsPage.appNameInput).toHaveValue(updatedName);
+    await expect(settingsPage.taglineInput).toHaveValue(updatedTagline);
+    await expect(taglinePreview).toContainText(updatedTagline);
   });
 });

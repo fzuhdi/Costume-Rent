@@ -1,0 +1,182 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\fzuhd\\OneDrive\\Documents\\Project\\Costume-Rent-workspaces\\PLAN-20260517-staff-admin-mobile-first-ui-refresh\\TICKET-20260517-010\\test\\playwright.config.js",
+    "rootDir": "C:/Users/fzuhd/OneDrive/Documents/Project/Costume-Rent-workspaces/PLAN-20260517-staff-admin-mobile-first-ui-refresh/TICKET-20260517-010/test/specs",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/fzuhd/OneDrive/Documents/Project/Costume-Rent-workspaces/PLAN-20260517-staff-admin-mobile-first-ui-refresh/TICKET-20260517-010/test/test-results-ticket-20260517-010",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "C:/Users/fzuhd/OneDrive/Documents/Project/Costume-Rent-workspaces/PLAN-20260517-staff-admin-mobile-first-ui-refresh/TICKET-20260517-010/test/specs",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "html",
+        {
+          "open": "never",
+          "outputFolder": "playwright-report-ticket-20260517-010"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results-ticket-20260517-010/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.59.1",
+    "workers": 8,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "settings.spec.js",
+      "file": "settings.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Settings",
+          "file": "settings.spec.js",
+          "line": 8,
+          "column": 6,
+          "specs": [
+            {
+              "title": "[SETTINGS-014] - Settings branding page is mobile usable",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 12280,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveValue\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('input[placeholder=\"Inventory & Rental Management\"]')\nExpected: \u001b[32m\"Mobile Preview 1779755637346\"\u001b[39m\nReceived: \u001b[31m\"Inventory & Rental Management\"\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveValue\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('input[placeholder=\"Inventory & Rental Management\"]')\u001b[22m\n\u001b[2m    9 × locator resolved to <input title=\"\" data-rac=\"\" type=\"text\" tabindex=\"0\" data-slot=\"input\" class=\"input input--primary\" id=\"react-aria1807411845-_r_c_\" value=\"Inventory & Rental Management\" placeholder=\"Inventory & Rental Management\" aria-labelledby=\"react-aria1807411845-_r_d_\"/>\u001b[22m\n\u001b[2m      - unexpected value \"Inventory & Rental Management\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveValue\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('input[placeholder=\"Inventory & Rental Management\"]')\nExpected: \u001b[32m\"Mobile Preview 1779755637346\"\u001b[39m\nReceived: \u001b[31m\"Inventory & Rental Management\"\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveValue\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('input[placeholder=\"Inventory & Rental Management\"]')\u001b[22m\n\u001b[2m    9 × locator resolved to <input title=\"\" data-rac=\"\" type=\"text\" tabindex=\"0\" data-slot=\"input\" class=\"input input--primary\" id=\"react-aria1807411845-_r_c_\" value=\"Inventory & Rental Management\" placeholder=\"Inventory & Rental Management\" aria-labelledby=\"react-aria1807411845-_r_d_\"/>\u001b[22m\n\u001b[2m      - unexpected value \"Inventory & Rental Management\"\u001b[22m\n\n    at C:\\Users\\fzuhd\\OneDrive\\Documents\\Project\\Costume-Rent-workspaces\\PLAN-20260517-staff-admin-mobile-first-ui-refresh\\TICKET-20260517-010\\test\\specs\\settings.spec.js:206:45",
+                        "location": {
+                          "file": "C:\\Users\\fzuhd\\OneDrive\\Documents\\Project\\Costume-Rent-workspaces\\PLAN-20260517-staff-admin-mobile-first-ui-refresh\\TICKET-20260517-010\\test\\specs\\settings.spec.js",
+                          "column": 45,
+                          "line": 206
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 204 |\u001b[39m     \u001b[36mawait\u001b[39m settingsPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 205 |\u001b[39m     \u001b[36mawait\u001b[39m expect(settingsPage\u001b[33m.\u001b[39mappNameInput)\u001b[33m.\u001b[39mtoHaveValue(updatedName)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 206 |\u001b[39m     \u001b[36mawait\u001b[39m expect(settingsPage\u001b[33m.\u001b[39mtaglineInput)\u001b[33m.\u001b[39mtoHaveValue(updatedTagline)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 207 |\u001b[39m     \u001b[36mawait\u001b[39m expect(taglinePreview)\u001b[33m.\u001b[39mtoContainText(updatedTagline)\u001b[33m;\u001b[39m\n \u001b[90m 208 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 209 |\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\fzuhd\\OneDrive\\Documents\\Project\\Costume-Rent-workspaces\\PLAN-20260517-staff-admin-mobile-first-ui-refresh\\TICKET-20260517-010\\test\\specs\\settings.spec.js",
+                            "column": 45,
+                            "line": 206
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveValue\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('input[placeholder=\"Inventory & Rental Management\"]')\nExpected: \u001b[32m\"Mobile Preview 1779755637346\"\u001b[39m\nReceived: \u001b[31m\"Inventory & Rental Management\"\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveValue\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('input[placeholder=\"Inventory & Rental Management\"]')\u001b[22m\n\u001b[2m    9 × locator resolved to <input title=\"\" data-rac=\"\" type=\"text\" tabindex=\"0\" data-slot=\"input\" class=\"input input--primary\" id=\"react-aria1807411845-_r_c_\" value=\"Inventory & Rental Management\" placeholder=\"Inventory & Rental Management\" aria-labelledby=\"react-aria1807411845-_r_d_\"/>\u001b[22m\n\u001b[2m      - unexpected value \"Inventory & Rental Management\"\u001b[22m\n\n\n  204 |     await settingsPage.goto();\n  205 |     await expect(settingsPage.appNameInput).toHaveValue(updatedName);\n> 206 |     await expect(settingsPage.taglineInput).toHaveValue(updatedTagline);\n      |                                             ^\n  207 |     await expect(taglinePreview).toContainText(updatedTagline);\n  208 |   });\n  209 | });\n    at C:\\Users\\fzuhd\\OneDrive\\Documents\\Project\\Costume-Rent-workspaces\\PLAN-20260517-staff-admin-mobile-first-ui-refresh\\TICKET-20260517-010\\test\\specs\\settings.spec.js:206:45"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\Users\\fzuhd\\OneDrive\\Documents\\Project\\Costume-Rent-workspaces\\PLAN-20260517-staff-admin-mobile-first-ui-refresh\\TICKET-20260517-010\\test\\fixtures.js",
+                            "column": 13,
+                            "line": 52
+                          },
+                          "message": "Error: Console errors detected:\n\n[ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error)\n\n   at ..\\fixtures.js:52\n\n  50 |\n  51 |     if (issues.length > 0) {\n> 52 |       throw new Error(\n     |             ^\n  53 |         `Console errors detected:\\n\\n${\n  54 |           issues\n  55 |             .map(i => {\n    at Object.exports.test._test.test.extend.consoleGuard.auto (C:\\Users\\fzuhd\\OneDrive\\Documents\\Project\\Costume-Rent-workspaces\\PLAN-20260517-staff-admin-mobile-first-ui-refresh\\TICKET-20260517-010\\test\\fixtures.js:52:13)"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-26T00:33:53.022Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\fzuhd\\OneDrive\\Documents\\Project\\Costume-Rent-workspaces\\PLAN-20260517-staff-admin-mobile-first-ui-refresh\\TICKET-20260517-010\\test\\test-results-ticket-20260517-010\\settings-Settings-SETTINGS-ab205-nding-page-is-mobile-usable\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\fzuhd\\OneDrive\\Documents\\Project\\Costume-Rent-workspaces\\PLAN-20260517-staff-admin-mobile-first-ui-refresh\\TICKET-20260517-010\\test\\test-results-ticket-20260517-010\\settings-Settings-SETTINGS-ab205-nding-page-is-mobile-usable\\video-1.webm"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\fzuhd\\OneDrive\\Documents\\Project\\Costume-Rent-workspaces\\PLAN-20260517-staff-admin-mobile-first-ui-refresh\\TICKET-20260517-010\\test\\test-results-ticket-20260517-010\\settings-Settings-SETTINGS-ab205-nding-page-is-mobile-usable\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\fzuhd\\OneDrive\\Documents\\Project\\Costume-Rent-workspaces\\PLAN-20260517-staff-admin-mobile-first-ui-refresh\\TICKET-20260517-010\\test\\test-results-ticket-20260517-010\\settings-Settings-SETTINGS-ab205-nding-page-is-mobile-usable\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\fzuhd\\OneDrive\\Documents\\Project\\Costume-Rent-workspaces\\PLAN-20260517-staff-admin-mobile-first-ui-refresh\\TICKET-20260517-010\\test\\specs\\settings.spec.js",
+                        "column": 45,
+                        "line": 206
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-9c519436bf5ad248bdb1",
+              "file": "settings.spec.js",
+              "line": 131,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-05-26T00:33:52.064Z",
+    "duration": 13419.178,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}
