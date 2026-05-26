@@ -51,7 +51,8 @@ function runJson(command, args, cwd, options = {}) {
 const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'workflow-runner-reconcile-'));
 const planId = 'PLAN-20260524-runner-fixture';
 const ticketId = 'TICKET-20260524-001';
-const testCaseId = 'SETTINGS-014';
+const featureId = 'FEATURE';
+const testCaseId = 'FEATURE-001';
 
 try {
   copyScript(fixtureRoot, 'workflow-runner.mjs');
@@ -64,9 +65,9 @@ try {
     project: { name: 'Workflow Runner Fixture', adapter_path: '.opencode/project.json' },
     acceptance: { dir: 'docs/acceptance', id_pattern: '^[A-Z][A-Z0-9_]*-[0-9]{3}$', status: ['draft', 'ready', 'covered', 'retired'] },
     features: {
-      SETTINGS: { name: 'Settings', test_type: 'e2e', spec_files: ['test/specs/settings.spec.js'] },
+      [featureId]: { name: 'Feature Fixture', test_type: 'e2e', spec_files: ['test/specs/feature.spec.js'] },
     },
-    code_roots: ['backend', 'frontend'],
+    code_roots: ['src'],
     test_roots: ['test'],
     test_types: ['e2e'],
     commands: {
@@ -76,7 +77,7 @@ try {
     },
   }, null, 2) + '\n');
 
-  writeFile(path.join(fixtureRoot, 'docs', 'acceptance', 'SETTINGS.md'), `# Settings\n\n## ${testCaseId}: Fixture settings acceptance\nStatus: ready\nTest type: e2e\nCriterion: A fixture settings page works.\nExpected outcome: The fixture settings behavior is verifiable.\n`);
+  writeFile(path.join(fixtureRoot, 'docs', 'acceptance', `${featureId}.md`), `# Feature Fixture\n\n## ${testCaseId}: Fixture acceptance\nStatus: ready\nTest type: e2e\nCriterion: A fixture behavior works.\nExpected outcome: The fixture behavior is verifiable.\n`);
   writeFile(path.join(fixtureRoot, 'docs', 'plans', `${planId}.md`), `---\nid: ${planId}\nstatus: ready\n---\n\n# Runner Fixture Plan\n\n## Tickets\n- ${ticketId} - ready - feature - Fixture ticket\n\n## Status Summary\n- draft: 0\n- review: 0\n- ready: 1\n- in_progress: 0\n- blocked: 0\n- complete: 0\n`);
   writeFile(path.join(fixtureRoot, 'docs', 'tickets', `${ticketId}.md`), `---\nid: ${ticketId}\nplan_id: ${planId}\ntype: feature\nstatus: ready\ntest_case_id: ${testCaseId}\npriority: 1\nsource_plan: docs/plans/${planId}.md\nred_expectation: The new acceptance test fails for the fixture reason.\ngreen_expectation: The same acceptance test passes after the minimal fixture implementation.\n---\n\n# Fixture Ticket\n`);
   writeFile(path.join(fixtureRoot, '.opencode', 'state', 'orchestrator-progress.json'), JSON.stringify({
@@ -160,7 +161,7 @@ try {
     schemaVersion: 2,
     currentPlan: planId,
     currentTicket: ticketId,
-    currentFeature: 'SETTINGS',
+    currentFeature: featureId,
     currentTestCase: testCaseId,
     status: 'idle',
     iteration: 0,
@@ -177,7 +178,7 @@ try {
     schemaVersion: 2,
     currentPlan: planId,
     currentTicket: ticketId,
-    currentFeature: 'SETTINGS',
+    currentFeature: featureId,
     currentTestCase: testCaseId,
     currentTicketType: 'feature',
     status: 'idle',

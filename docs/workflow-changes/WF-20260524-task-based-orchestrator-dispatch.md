@@ -42,4 +42,4 @@ Revert this change record and listed files from version control. Restoring the d
 Yes. OpenCode must reload updated `.opencode/opencode.json`, commands, agents, and skills.
 
 ## Reviewer Notes
-Workflow-maintenance reviewer found one required fix: `.opencode/knowledge/runbook.md` showed the production prepare command without `--json`, which would prevent coordinator parsing of `dispatch.task`. Fixed by adding `--json` and adding a validation-plan check for the flag consistency. Reviewer re-check returned no findings; residual risk is low and limited to the intentionally superseded historical filename `WF-20260517-coordinator-launches-orchestrator-tui.md`.
+Workflow-maintenance reviewer found one required fix: `docs/runbooks/project-runbook.md` showed the production prepare command without `--json`, which would prevent coordinator parsing of `dispatch.task`. Fixed by adding `--json` and adding a validation-plan check for the flag consistency. Reviewer re-check returned no findings; residual risk is low and limited to the intentionally superseded historical filename `WF-20260517-coordinator-launches-orchestrator-tui.md`.

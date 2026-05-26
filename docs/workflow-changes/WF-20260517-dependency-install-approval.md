@@ -11,7 +11,7 @@ Prevent workflow agents from repairing setup by silently installing packages, up
 - `.opencode/skills/orchestrator/SKILL.md`
 - `.opencode/skills/coordinator/REFERENCE.md`
 - `.opencode/README.md`
-- `.opencode/knowledge/runbook.md`
+- `docs/runbooks/project-runbook.md`
 - `docs/adr/0003-ticket-and-workflow-workspaces.md`
 
 ## Source Of Truth

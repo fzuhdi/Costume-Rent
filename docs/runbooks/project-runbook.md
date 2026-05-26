@@ -72,7 +72,7 @@ const fetchNotifications = useCallback(async () => {
 ### 5. Docker not picking up changes
 **Fix:** `docker compose build --no-cache`
 
-> For a deeper catalogue of recurring bugs, see `.opencode/knowledge/common-bugs.md`.
+> For a deeper catalogue of recurring bugs, see `docs/engineering/common-bugs.md`.
 
 ---
 
@@ -236,7 +236,7 @@ Costume-Rent/
     ├── agents/              # Subagent definitions (developer, sdet, reviewer)
     ├── commands/            # Slash commands
     ├── skills/              # Orchestrator skill + shared docs
-    ├── knowledge/           # This runbook + common-bugs + project-notes
+    ├── skills/              # Reusable workflow skills
     ├── state/               # Runtime state (progress, bug reports, checkpoints)
     └── logs/                # Daily activity logs
 ```

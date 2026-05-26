@@ -20,7 +20,7 @@ Substantial workflow changes use isolated workspaces, the same way product ticke
 Recommended layout:
 
 ```text
-../Costume-Rent-workspaces/WF-YYYYMMDD-name
+../<project-name>-workspaces/WF-YYYYMMDD-name
 ```
 
 Recommended branch:
@@ -39,7 +39,7 @@ Use this mapping to avoid duplicate documents:
 - Operational procedure: relevant skill `REFERENCE.md`
 - User-facing index: `AGENTS.md`
 - Human overview: `.opencode/README.md`
-- Command snippets and recovery: `.opencode/knowledge/runbook.md`
+- Command snippets and recovery: `docs/runbooks/project-runbook.md`
 - Change-specific rationale: `docs/workflow-changes/*.md`
 
 When a policy already has a source of truth, update that file and add links or short pointers elsewhere.

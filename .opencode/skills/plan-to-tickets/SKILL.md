@@ -117,7 +117,7 @@ id: TICKET-YYYYMMDD-001
 plan_id: PLAN-YYYYMMDD-short-title
 type: feature
 status: ready
-test_case_id: CATALOGUE-004
+test_case_id: FEATURE-001
 priority: 1
 depends_on: []
 source_plan: docs/plans/example.md
@@ -138,7 +138,7 @@ Criterion, expected outcome, test type, and spec files resolve from `.opencode/s
 
 ## Smallest End-To-End Path
 1. {entry point}
-2. {minimal backend/frontend/data path}
+2. {minimal app/data path}
 3. {observable result}
 
 ## Definition Of Ready

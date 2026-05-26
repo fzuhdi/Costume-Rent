@@ -21,7 +21,7 @@ Reduce duplicated workflow instructions across OpenCode docs, commands, and agen
 - `.opencode/agents/*.md`
 - `.opencode/skills/coordinator/SKILL.md`
 - `.opencode/skills/coordinator/REFERENCE.md`
-- `.opencode/knowledge/runbook.md`
+- `docs/runbooks/project-runbook.md`
 - `.opencode/logs/2026-05-23.md`
 
 ## Source Of Truth

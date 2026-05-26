@@ -7,6 +7,9 @@ import os from 'node:os';
 import path from 'node:path';
 
 const cwd = process.cwd();
+const fixturePlanId = 'PLAN-20260524-worker-task-fixture';
+const fixtureTicketId = 'TICKET-20260524-001';
+const fixtureTestCaseId = 'FEATURE-001';
 
 function fail(message, details = '') {
   console.error(message);
@@ -37,10 +40,10 @@ function runRaw(args) {
 const task = run([
   '--role', 'sdet',
   '--mode', 'red',
-  '--ticket-id', 'TICKET-20260517-010',
-  '--test-case-id', 'SETTINGS-014',
+  '--ticket-id', fixtureTicketId,
+  '--test-case-id', fixtureTestCaseId,
   '--worktree-root', '.\\tmp-worktree',
-  '--plan-id', 'PLAN-20260517-staff-admin-mobile-first-ui-refresh',
+  '--plan-id', fixturePlanId,
   '--json',
 ]);
 
@@ -54,8 +57,8 @@ for (const marker of ['WORKTREE_ROOT', 'TICKET_ID', 'TEST_CASE_ID', 'MODE: red',
 const finalReviewTask = run([
   '--role', 'reviewer',
   '--mode', 'final-review',
-  '--ticket-id', 'TICKET-20260517-010',
-  '--test-case-id', 'SETTINGS-014',
+  '--ticket-id', fixtureTicketId,
+  '--test-case-id', fixtureTestCaseId,
   '--worktree-root', '.\\tmp-worktree',
   '--json',
 ]);
@@ -64,8 +67,8 @@ if (!finalReviewTask.prompt.includes('MODE: final-review')) fail('final-review m
 const exploreTask = run([
   '--role', 'explore',
   '--mode', 'explore',
-  '--ticket-id', 'TICKET-20260517-010',
-  '--test-case-id', 'SETTINGS-014',
+  '--ticket-id', fixtureTicketId,
+  '--test-case-id', fixtureTestCaseId,
   '--worktree-root', '.\\tmp-worktree',
   '--json',
 ]);
@@ -75,8 +78,8 @@ if (!exploreTask.prompt.includes('built-in explore subagent')) fail('explore pro
 const invalidMode = runRaw([
   '--role', 'reviewer',
   '--mode', 'green',
-  '--ticket-id', 'TICKET-20260517-010',
-  '--test-case-id', 'SETTINGS-014',
+  '--ticket-id', fixtureTicketId,
+  '--test-case-id', fixtureTestCaseId,
   '--worktree-root', '.\\tmp-worktree',
   '--json',
 ]);
@@ -85,8 +88,8 @@ if (invalidMode.status === 0) fail('invalid reviewer mode should fail');
 const unsupportedReviewerMode = runRaw([
   '--role', 'reviewer',
   '--mode', 'review',
-  '--ticket-id', 'TICKET-20260517-010',
-  '--test-case-id', 'SETTINGS-014',
+  '--ticket-id', fixtureTicketId,
+  '--test-case-id', fixtureTestCaseId,
   '--worktree-root', '.\\tmp-worktree',
   '--json',
 ]);
@@ -111,23 +114,31 @@ function runFixtureGit(fixtureRoot, args) {
 
 const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'worker-task-launch-fixture-'));
 try {
-  const planId = 'PLAN-20260524-worker-task-fixture';
   writeFile(path.join(fixtureRoot, '.opencode/scripts/launch-parallel-plan.mjs'), fs.readFileSync(path.join(cwd, '.opencode/scripts/launch-parallel-plan.mjs'), 'utf8'));
   writeFile(path.join(fixtureRoot, '.opencode/opencode.json'), '{}\n');
-  writeFile(path.join(fixtureRoot, '.opencode/project.json'), '{}\n');
-  writeFile(path.join(fixtureRoot, '.env'), 'FIXTURE=true\n');
-  writeFile(path.join(fixtureRoot, 'frontend/package-lock.json'), '{}\n');
+  writeFile(path.join(fixtureRoot, '.opencode/project.json'), JSON.stringify({
+    schema_version: 1,
+    project: { name: 'Worker Task Fixture', adapter_path: '.opencode/project.json' },
+    runtime: {
+      slot_step: 100,
+      base_ports: { frontend: 5173, backend: 8081, sqlite: 8080 },
+      compose: { file: 'compose.fixture.yml', services: ['app', 'web'] },
+      runtime_files: { required: ['app/package-lock.json', 'test/package-lock.json'], optional: [] },
+      generated_env_files: [],
+    },
+  }, null, 2) + '\n');
+  writeFile(path.join(fixtureRoot, 'app/package-lock.json'), '{}\n');
   writeFile(path.join(fixtureRoot, 'test/package-lock.json'), '{}\n');
   writeFile(path.join(fixtureRoot, 'test/node_modules/.bin', process.platform === 'win32' ? 'playwright.cmd' : 'playwright'), 'fixture\n');
-  writeFile(path.join(fixtureRoot, 'docs/plans', `${planId}.md`), '---\nstatus: ready\n---\n\n# Fixture Plan\n');
-  writeFile(path.join(fixtureRoot, 'docs/tickets/TICKET-20260524-001.md'), `---\nplan_id: ${planId}\nstatus: ready\ntype: feature\npriority: 1\ntest_case_id: SETTINGS-014\n---\n\n# Fixture Ticket\n`);
+  writeFile(path.join(fixtureRoot, 'docs/plans', `${fixturePlanId}.md`), '---\nstatus: ready\n---\n\n# Fixture Plan\n');
+  writeFile(path.join(fixtureRoot, 'docs/tickets', `${fixtureTicketId}.md`), `---\nplan_id: ${fixturePlanId}\nstatus: ready\ntype: feature\npriority: 1\ntest_case_id: ${fixtureTestCaseId}\n---\n\n# Fixture Ticket\n`);
   runFixtureGit(fixtureRoot, ['init']);
   runFixtureGit(fixtureRoot, ['add', '.']);
   runFixtureGit(fixtureRoot, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'fixture']);
 
   const launch = spawnSync(process.execPath, [
     '.opencode/scripts/launch-parallel-plan.mjs',
-    '--target', planId,
+    '--target', fixturePlanId,
     '--parallel', '1',
     '--dry-run',
     '--json',

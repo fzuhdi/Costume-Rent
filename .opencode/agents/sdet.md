@@ -8,6 +8,10 @@ permission:
   edit:
     "**": deny
     "test/**": allow
+    "tests/**": allow
+    "e2e/**": allow
+    "spec/**": allow
+    "specs/**": allow
   bash:
     "*": allow
     "git commit*": deny

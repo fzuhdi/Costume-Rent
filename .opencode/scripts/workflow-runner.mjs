@@ -291,11 +291,14 @@ function parseFrontmatter(filePath) {
 }
 
 function runCapture(command, args, options = {}) {
+  const useShell = options.shell ?? (process.platform === 'win32' && /\.cmd$/i.test(command));
   const result = spawnSync(command, args, {
     cwd: options.cwd || root,
+    env: options.env || process.env,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: false,
+    shell: useShell,
   });
 
   if (result.error) {
@@ -1855,12 +1858,7 @@ function runPlanRegression(report, values, planAnalysis, manifest, projectConfig
   persistRuntimeState(state, report, values);
   if (report.blockers.length) return;
 
-  const result = spawnSync(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['playwright', 'test', ...specArgs, '--reporter=json'], {
-    cwd,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    windowsHide: false,
-  });
+  const result = runCapture(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['playwright', 'test', ...specArgs, '--reporter=json'], { cwd });
   const jsonOutput = result.stdout || '';
   fs.writeFileSync(outputPath, jsonOutput, 'utf8');
   state.orchestrator.regression.lastResultsPath = rel(outputPath);

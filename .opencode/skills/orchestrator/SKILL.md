@@ -118,7 +118,7 @@ id: TICKET-YYYYMMDD-001
 plan_id: PLAN-YYYYMMDD-short-title
 type: feature
 status: ready
-test_case_id: CATALOGUE-004
+test_case_id: FEATURE-001
 priority: 1
 depends_on: []
 source_plan: docs/plans/example.md
@@ -348,9 +348,9 @@ Default coordinator plan launch prepares independent ready tracer tickets throug
 1. Ensure a current successful quality gate covers the plan diff before regression. Run the configured gate when coverage is missing or stale; block on failure.
 2. Build the impacted spec list from completed ticket `test_case_id` values plus manifest/reviewer shared-impact additions.
 3. Increment runtime `regression.cycle` and block/escalate if it exceeds runtime `regression.maxRegressionCycles` (default `3`).
-4. Run every impacted spec as a full spec and produce Playwright JSON results. Example from `test/`:
+4. Run every impacted spec as a full spec and produce JSON results using the project-configured test command. Example from an adapter-declared test root:
    ```bash
-   npx playwright test specs/catalogue.spec.js specs/rental.spec.js
+   npx playwright test <impacted-spec-files>
    ```
 5. If impacted specs pass, continue to `plan-complete`.
 6. If impacted specs fail and regression bug sync is not explicitly enabled, block with mapped/unmapped failure evidence and the exact rerun command.

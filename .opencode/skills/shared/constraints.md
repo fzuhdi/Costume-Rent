@@ -28,8 +28,8 @@ These constraints apply to ALL workflow agents (developer, sdet, reviewer).
 - Verify the test case immediately with the narrowest honest test before expanding scope.
 
 ## Role boundaries (system-enforced via permissions, but stated for clarity)
-- **developer** — owns `backend/`, `frontend/`. May NOT touch `test/`.
-- **sdet**      — owns `test/`. May NOT touch `backend/` or `frontend/`.
+- **developer** — owns adapter-declared `code_roots`. May NOT touch adapter-declared `test_roots` or the recorded SDET acceptance test.
+- **sdet**      — owns adapter-declared `test_roots`. May NOT touch adapter-declared `code_roots`.
 - **reviewer**  — read-only. May NOT edit anything.
 
 ## Source of truth
@@ -41,5 +41,5 @@ These constraints apply to ALL workflow agents (developer, sdet, reviewer).
 - Review checklist: `docs/engineering/REVIEW_CHECKLIST.md`
 - Quality gates: `docs/engineering/QUALITY_GATES.md`
 - Workflow I/O contract: `.opencode/skills/shared/io-contract.md`
-- Operational runbook: `.opencode/knowledge/runbook.md`
-- Known recurring bugs: `.opencode/knowledge/common-bugs.md`
+- Operational runbook: `docs/runbooks/project-runbook.md`
+- Known recurring bugs: `docs/engineering/common-bugs.md`
