@@ -46,3 +46,6 @@ temp/
 
 
 .playwright-mcp/
+
+# Scripts
+backend/scripts/
