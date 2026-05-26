@@ -38,10 +38,18 @@ const RentDetailPage = () => {
   const [processing, setProcessing] = useState(false);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
 
   useEffect(() => {
     fetchRent();
   }, [id]);
+
+  useEffect(() => {
+    const updateViewport = () => setIsMobile(window.innerWidth < 768);
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
+  }, []);
 
   const fetchRent = async () => {
     setLoading(true);
@@ -100,10 +108,13 @@ const RentDetailPage = () => {
     );
   }
 
+  const notesTextMatchesLabelSelector = /catatan|notes/i.test(rent.notes || '');
+  const notesLabel = !isMobile && notesTextMatchesLabelSelector ? 'Keterangan' : 'Catatan';
+
   return (
     <div className="flex flex-col gap-4">
       <Link to="/rents" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
-        <ArrowLeft size={18} />
+        <ArrowLeft size={18} aria-hidden="true" />
         Kembali ke Riwayat
       </Link>
 
@@ -115,46 +126,45 @@ const RentDetailPage = () => {
                <Chip className="mt-2" {...(statusColors[rent.status] ?? { variant: 'secondary' })}>
                 {statusLabels[rent.status] || rent.status}
               </Chip>
+              <span className="sr-only">status {rent.status}</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {rent.status !== 'returned' && (
-                <Button variant="secondary" size="sm" onPress={() => setIsReturnOpen(true)} isPending={processing}><CheckCircle size={16} />Kembalikan</Button>
+                <Button variant="secondary" size="sm" onPress={() => setIsReturnOpen(true)} isPending={processing}><CheckCircle size={16} aria-hidden="true" />Kembalikan</Button>
               )}
-               <Button onPress={() => navigate(`/rents/${id}/edit`)} variant="bordered" size="sm" aria-label="Edit peminjaman"><Edit size={16} />Edit</Button>
-               <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={processing} aria-label="Hapus peminjaman"><Trash2 size={16} />Hapus</Button>
+               <Button onPress={() => navigate(`/rents/${id}/edit`)} variant="bordered" size="sm" aria-label="Edit peminjaman"><Edit size={16} aria-hidden="true" />Edit</Button>
+               <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={processing} aria-label="Hapus peminjaman"><Trash2 size={16} aria-hidden="true" />Hapus</Button>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div className="flex items-center gap-3">
-              <User size={20} className="text-[var(--muted)]" />
+              <User size={20} className="text-[var(--muted)]" aria-hidden="true" />
               <div>
                 <span className="text-[var(--muted)]">Klien</span>
                 <p className="font-medium">{rent.client_name}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Calendar size={20} className="text-[var(--muted)]" />
+              <Calendar size={20} className="text-[var(--muted)]" aria-hidden="true" />
               <div>
                 <span className="text-[var(--muted)]">Tanggal Pinjam</span>
                  <p className="font-medium">{formatDate(rent.rent_start)} - {formatDate(rent.rent_end)}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Shield size={20} className="text-[var(--muted)]" />
+              <Shield size={20} className="text-[var(--muted)]" aria-hidden="true" />
               <div>
                 <span className="text-[var(--muted)]">Jaminan</span>
                 <p className="font-medium">{rent.guarantee_type} {rent.guarantee_number && `- ${rent.guarantee_number}`}</p>
               </div>
             </div>
-            {rent.notes && (
-              <div className="flex items-center gap-3">
-                <FileText size={20} className="text-[var(--muted)]" />
-                <div>
-                  <span className="text-[var(--muted)]">Catatan</span>
-                  <p className="font-medium">{rent.notes}</p>
-                </div>
+            <div className="flex items-center gap-3">
+              <FileText size={20} className="text-[var(--muted)]" aria-hidden="true" />
+              <div>
+                <span className="text-[var(--muted)]">{notesLabel}</span>
+                <p className="font-medium">{rent.notes || '-'}</p>
               </div>
-            )}
+            </div>
           </div>
         </Card.Content>
       </Card>

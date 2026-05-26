@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getCostumes, getRegions, getCategories } from '../api/costumeApi';
 import { Search, Grid, List, Filter, AlignLeft } from 'lucide-react';
@@ -84,7 +84,18 @@ const CataloguePage = () => {
         page,
         limit,
       });
-      const data = (response.data.data || []).map((c) => ({
+      const uniqueCostumes = [];
+      const seenNames = new Set();
+      for (const costume of response.data.data || []) {
+        const key = String(costume.name || '').trim().toLowerCase();
+        if (debouncedSearch.trim() && seenNames.has(key)) {
+          continue;
+        }
+        seenNames.add(key);
+        uniqueCostumes.push(costume);
+      }
+
+      const data = uniqueCostumes.map((c) => ({
         ...c,
         children: [{
           id: `detail-${c.id}`,
@@ -98,8 +109,8 @@ const CataloguePage = () => {
         }],
       }));
       setCostumes(data);
-      setTotalPages(response.data.total_pages || 1);
-      setTotal(response.data.total || 0);
+      setTotalPages(debouncedSearch.trim() ? 1 : response.data.total_pages || 1);
+      setTotal(debouncedSearch.trim() ? data.length : response.data.total || 0);
     } catch (error) {
       console.error('Failed to fetch costumes:', error);
     } finally {
@@ -111,7 +122,19 @@ const CataloguePage = () => {
     setExpandedKeys(keys);
   };
 
+  const visibleCostumes = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) {
+      return costumes;
+    }
+
+    return costumes.filter((costume) =>
+      String(costume.name || '').toLowerCase().includes(query)
+    );
+  }, [costumes, search]);
+
   const showFilterControls = !isMobile || isMobileFiltersOpen;
+  const displayTotal = search.trim() ? visibleCostumes.length : total;
 
   return (
     <Card>
@@ -253,7 +276,7 @@ const CataloguePage = () => {
           <div className="flex justify-center items-center h-48">
             <Spinner aria-label="Memuat data kostum" />
           </div>
-        ) : costumes.length === 0 ? (
+        ) : visibleCostumes.length === 0 ? (
           <div className="text-center py-12">
             <Filter size={64} className="mx-auto mb-4 opacity-50" />
             <h3 className="text-lg font-semibold">Tidak ada kostum</h3>
@@ -261,24 +284,24 @@ const CataloguePage = () => {
           </div>
         ) : view === 'list' ? (
           <CostumeListView
-            costumes={costumes}
+            costumes={visibleCostumes}
             expandedKeys={expandedKeys}
             onExpandedChange={handleExpandedChange}
           />
         ) : view === 'table' ? (
           <CostumeTableView
-            costumes={costumes}
+            costumes={visibleCostumes}
             expandedKeys={expandedKeys}
             onExpandedChange={handleExpandedChange}
           />
         ) : (
-          <CostumeCardView costumes={costumes} />
+          <CostumeCardView costumes={visibleCostumes} />
         )}
       </Card.Content>
 
       <Card.Footer>
         <CustomPagination
-          total={total}
+          total={displayTotal}
           page={page}
           limit={limit}
           onPageChange={setPage}

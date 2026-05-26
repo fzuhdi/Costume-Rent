@@ -685,7 +685,7 @@ function reconcileActiveRuntime(reconciliation, orchestrator, tickets) {
     addReconciliationItem(reconciliation, 'blocker', 'active-ticket-missing', `Runtime currentTicket ${orchestrator.currentTicket} has no docs/tickets file.`, [orchestrator.currentTicket, orchestrator.currentPlan]);
     return;
   }
-  const activeDone = ['ticket-complete', 'plan-complete', 'idle'].includes(orchestrator.status);
+  const activeDone = ['ticket-complete', 'regression-gating', 'plan-complete', 'idle'].includes(orchestrator.status);
   if (activeTicket.frontmatter.status === 'complete' && !activeDone) {
     addReconciliationItem(reconciliation, 'blocker', 'active-ticket-complete-drift', `Runtime is in ${orchestrator.status} for ${orchestrator.currentTicket}, but ${activeTicket.file} is already complete.`, [orchestrator.currentTicket, orchestrator.currentPlan]);
   }
@@ -1043,18 +1043,23 @@ function quoteForDisplay(value) {
   return `"${String(value).replace(/"/g, '\\"')}"`;
 }
 
+function escapeRegexLiteral(value) {
+  return String(value).replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+}
+
 function buildGreenRerunCommand(recorded) {
   const testCwd = path.join(root, ...recorded.testRoot.split('/'));
   const specArg = recorded.repoPath === recorded.testRoot
     ? '.'
     : recorded.repoPath.slice(recorded.testRoot.length + 1);
   const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  const grepPattern = escapeRegexLiteral(recorded.title);
 
   return {
     command: npxCommand,
-    args: ['playwright', 'test', specArg, '--grep', recorded.title],
+    args: ['playwright', 'test', specArg, '--grep', grepPattern],
     cwd: testCwd,
-    display: `cd ${recorded.testRoot} && npx playwright test ${quoteForDisplay(specArg)} --grep ${quoteForDisplay(recorded.title)}`,
+    display: `cd ${recorded.testRoot} && npx playwright test ${quoteForDisplay(specArg)} --grep ${quoteForDisplay(grepPattern)}`,
   };
 }
 
@@ -1845,7 +1850,9 @@ function runPlanRegression(report, values, planAnalysis, manifest, projectConfig
   const cwd = path.join(root, ...testRoot.split('/'));
   const specArgs = impactedSpecs.map(spec => spec.replace(/^test\//, ''));
   const outputPath = path.join(root, '.opencode', 'state', 'plan-regression-results.json');
-  const display = `cd ${testRoot} && npx playwright test ${specArgs.map(quoteForDisplay).join(' ')} --reporter=json > .opencode/state/plan-regression-results.json`;
+  const display = process.platform === 'win32'
+    ? `$env:CI='1'; cd ${testRoot} && npx playwright test ${specArgs.map(quoteForDisplay).join(' ')} --reporter=json > .opencode/state/plan-regression-results.json`
+    : `cd ${testRoot} && CI=1 npx playwright test ${specArgs.map(quoteForDisplay).join(' ')} --reporter=json > .opencode/state/plan-regression-results.json`;
 
   if (values.dryRun) {
     addCheck(report, 'plan-regression', 'passed', `dry-run only -> ${display}`);
@@ -1858,7 +1865,7 @@ function runPlanRegression(report, values, planAnalysis, manifest, projectConfig
   persistRuntimeState(state, report, values);
   if (report.blockers.length) return;
 
-  const result = runCapture(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['playwright', 'test', ...specArgs, '--reporter=json'], { cwd });
+  const result = runCapture(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['playwright', 'test', ...specArgs, '--reporter=json'], { cwd, env: { ...process.env, CI: '1' } });
   const jsonOutput = result.stdout || '';
   fs.writeFileSync(outputPath, jsonOutput, 'utf8');
   state.orchestrator.regression.lastResultsPath = rel(outputPath);
@@ -2812,6 +2819,9 @@ function validatePlan(planId, manifest, report) {
   const pendingIntegrationTickets = completedExecutableTickets
     .map(ticket => {
       const branch = `tdd/${ticket.id}`;
+      if (!branchExists(branch)) {
+        return { ticketId: ticket.id, branch, mergedIntoPlan: true };
+      }
       const merged = branchMergedInto(branch, planBranch);
       return { ticketId: ticket.id, branch, mergedIntoPlan: merged };
     })

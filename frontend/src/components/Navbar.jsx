@@ -7,6 +7,23 @@ import NotificationBell from './NotificationBell';
 import { LogOut, Sun, Moon, Menu, ChevronRight, User, Settings } from 'lucide-react';
 import { Avatar, useTheme } from '@heroui/react';
 
+const getCookie = (name) => {
+  const prefix = `${name}=`;
+  return document.cookie
+    .split(';')
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(prefix))
+    ?.slice(prefix.length) || '';
+};
+
+const persistTheme = (nextTheme) => {
+  localStorage.setItem('heroui-theme', nextTheme);
+  document.cookie = `heroui-theme=${encodeURIComponent(nextTheme)}; path=/; SameSite=Lax`;
+  document.documentElement.classList.toggle('dark', nextTheme === 'dark');
+  document.documentElement.classList.toggle('light', nextTheme !== 'dark');
+  document.documentElement.setAttribute('data-theme', nextTheme);
+};
+
 const NavbarComponent = () => {
   const { user, logout } = useAuth();
   const { isCollapsed, openMobile } = useSidebar();
@@ -28,17 +45,35 @@ const NavbarComponent = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('heroui-theme') || decodeURIComponent(getCookie('heroui-theme'));
+    if (savedTheme === 'dark' || savedTheme === 'light') {
+      persistTheme(savedTheme);
+      setTheme(savedTheme);
+    }
+  }, [setTheme]);
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const handleThemeToggle = () => {
+    const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : theme;
+    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    persistTheme(nextTheme);
+    setTheme(nextTheme);
   };
 
   const currentPath = location.pathname.split('/').filter(Boolean)[0] || 'Dashboard';
   const formattedPath = currentPath.charAt(0).toUpperCase() + currentPath.slice(1);
 
   return (
-    <nav className="fixed top-0 right-0 z-40 border-b border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md transition-all duration-300 w-full pl-0 md:pl-[var(--sidebar-width)]"
-      style={{ paddingLeft: isCollapsed ? 'var(--sidebar-width-collapsed)' : undefined }}>
+    <nav className="fixed top-0 right-0 z-40 overflow-visible border-b border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md transition-all duration-300 w-full pl-0 md:pl-[var(--sidebar-width)]"
+      style={{
+        overflow: 'visible',
+        paddingLeft: isCollapsed ? 'var(--sidebar-width-collapsed)' : undefined,
+      }}>
       
       <header className="flex h-[var(--navbar-height)] items-center justify-between px-4 sm:px-8 relative">
         
@@ -62,7 +97,7 @@ const NavbarComponent = () => {
         <div className="flex items-center gap-1 sm:gap-2 ml-auto">
           {/* THEME TOGGLE - Standardized to w-10 h-10 */}
           <button 
-            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+            onClick={handleThemeToggle}
             className="w-10 h-10 flex items-center justify-center text-[var(--muted)] hover:bg-[var(--border)]/50 rounded-full transition-all"
             aria-label={theme === 'light' ? 'Beralih ke mode gelap' : 'Beralih ke mode terang'}
           >
@@ -95,7 +130,7 @@ const NavbarComponent = () => {
 
             {/* DROPDOWN MENU ITEMS */}
             {isProfileOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-xl z-[100] py-2 animate-in fade-in zoom-in duration-150 origin-top-right overflow-hidden">
+              <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-xl z-[100] py-2 animate-in fade-in zoom-in duration-150 origin-top-right overflow-hidden">
                 {/* User Info Header */}
                 <div className="px-4 py-3 border-b border-[var(--border)] mb-1">
                   <p className="text-[10px] text-[var(--muted)] uppercase font-bold tracking-widest">Logged in as</p>

@@ -6,7 +6,7 @@ import { useSidebar } from '../context/SidebarContext';
 export const navItems = [
   { path: '/catalogue', icon: BookOpen, label: 'Katalog' },
   { path: '/rents', icon: ClipboardList, label: 'Peminjaman' },
-  { path: '/clients', icon: Users, label: 'Klien' },
+  { path: '/clients', icon: Users, label: 'Data Klien' },
 ];
 
 export const bottomItems = [

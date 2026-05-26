@@ -4,6 +4,85 @@ const { SettingsPage } = require('../pages/SettingsPage');
 
 const ADMIN_EMAIL = 'admin@busana.com';
 const ADMIN_PASSWORD = 'admin123';
+const MOBILE_VIEWPORT = { width: 390, height: 844 };
+const MOBILE_EDGE_TOLERANCE = 1;
+
+async function expectNoHorizontalOverflow(page, context) {
+  const layout = await page.evaluate((edgeTolerance) => {
+    const viewportWidth = window.innerWidth;
+    const documentWidth = Math.max(
+      document.documentElement.scrollWidth,
+      document.body.scrollWidth
+    );
+    const offenders = Array.from(document.body.querySelectorAll('*'))
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        const className = typeof element.className === 'string' ? element.className : '';
+        const label = element.getAttribute('aria-label') || element.textContent || '';
+
+        return {
+          tag: element.tagName.toLowerCase(),
+          className,
+          label: label.replace(/\s+/g, ' ').trim().slice(0, 80),
+          left: Math.floor(rect.left),
+          right: Math.ceil(rect.right),
+          width: Math.ceil(rect.width),
+        };
+      })
+      .filter((item) => item.width > 0 && (
+        item.left < -edgeTolerance ||
+        item.right > viewportWidth + edgeTolerance
+      ))
+      .slice(0, 5);
+
+    return { viewportWidth, documentWidth, offenders };
+  }, MOBILE_EDGE_TOLERANCE);
+
+  expect(
+    layout.documentWidth,
+    `${context} should not require horizontal scrolling; offenders: ${JSON.stringify(layout.offenders)}`
+  ).toBeLessThanOrEqual(layout.viewportWidth + MOBILE_EDGE_TOLERANCE);
+}
+
+async function expectMobileElementUsable(page, locator, label, { enabled = false } = {}) {
+  await locator.scrollIntoViewIfNeeded();
+  await expect(locator, `${label} should be visible on mobile`).toBeVisible();
+  await expect(locator, `${label} should be in the mobile viewport`).toBeInViewport({ ratio: 0.5 });
+
+  if (enabled) {
+    await expect(locator, `${label} should be usable on mobile`).toBeEnabled();
+  }
+
+  const box = await locator.boundingBox();
+  const viewport = page.viewportSize();
+
+  expect(box, `${label} should have a rendered mobile layout box`).not.toBeNull();
+  expect(box.x, `${label} should not be clipped by the left mobile edge`).toBeGreaterThanOrEqual(-MOBILE_EDGE_TOLERANCE);
+  expect(
+    box.x + box.width,
+    `${label} should not be clipped by the right mobile edge`
+  ).toBeLessThanOrEqual(viewport.width + MOBILE_EDGE_TOLERANCE);
+}
+
+async function failNextSettingsSave(page) {
+  let failed = false;
+  const handler = async (route) => {
+    if (!failed && route.request().method() === 'PUT') {
+      failed = true;
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'E2E forced settings save failure' }),
+      });
+      return;
+    }
+
+    await route.continue();
+  };
+
+  await page.route('**/api/settings', handler);
+  return handler;
+}
 
 test.describe('Settings', () => {
   test.beforeEach(async ({ page }) => {
@@ -125,5 +204,50 @@ test.describe('Settings', () => {
     await settingsPage.editAppName('Success Test ' + Date.now());
     await settingsPage.save();
     await settingsPage.assertSuccessMessage();
+  });
+
+  test('[SETTINGS-014] - Settings branding page is mobile usable', async ({ page }) => {
+    await page.setViewportSize(MOBILE_VIEWPORT);
+
+    const settingsPage = new SettingsPage(page);
+    const uniqueSuffix = Date.now();
+    const mobileAppName = `E2E_Settings_Mobile_${uniqueSuffix}`;
+    const mobileTagline = `E2E mobile branding ${uniqueSuffix}`;
+    const previewShell = page.locator('.h-12.bg-\\[var\\(--surface\\)\\]').first();
+    const previewAppName = page.locator('h3.font-bold').last();
+    const previewTagline = page.locator('p.text-sm.text-\\[var\\(--muted\\)\\]').first();
+
+    await settingsPage.goto();
+    await expectNoHorizontalOverflow(page, 'settings branding page');
+
+    await expectMobileElementUsable(page, settingsPage.logoUpload, 'logo upload control', { enabled: true });
+    await expectMobileElementUsable(page, settingsPage.appNameInput, 'app name control', { enabled: true });
+    await expectMobileElementUsable(page, settingsPage.taglineInput, 'tagline control', { enabled: true });
+    await expectMobileElementUsable(page, previewShell, 'branding preview');
+
+    await settingsPage.editAppName(mobileAppName);
+    await settingsPage.editTagline(mobileTagline);
+    await expect(previewAppName).toContainText(mobileAppName);
+    await expect(previewTagline).toContainText(mobileTagline);
+    await expectNoHorizontalOverflow(page, 'edited settings branding page');
+
+    await expectMobileElementUsable(page, settingsPage.saveButton, 'save action', { enabled: true });
+    await settingsPage.save();
+    await expectMobileElementUsable(page, settingsPage.successMessage, 'success feedback');
+    await expectNoHorizontalOverflow(page, 'saved settings feedback');
+
+    await page.reload();
+    await expect(settingsPage.appNameInput).toHaveValue(mobileAppName);
+    await expect(settingsPage.taglineInput).toHaveValue(mobileTagline);
+
+    const failedSaveRoute = await failNextSettingsSave(page);
+    const errorAppName = `E2E_Settings_Mobile_Error_${uniqueSuffix}`;
+    const errorMessage = page.locator('text=Gagal menyimpan pengaturan');
+
+    await settingsPage.editAppName(errorAppName);
+    await settingsPage.save();
+    await expectMobileElementUsable(page, errorMessage, 'error feedback');
+    await expectNoHorizontalOverflow(page, 'settings error feedback');
+    await page.unroute('**/api/settings', failedSaveRoute);
   });
 });

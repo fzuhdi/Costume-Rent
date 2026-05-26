@@ -672,7 +672,6 @@ test.describe('Catalogue Management (Costume Management)', () => {
     await expect(formPage.regionSelect).toBeVisible();
     await expect(formPage.categorySelect).toBeVisible();
     await expect(formPage.quantityInput).toBeVisible();
- 
     // Verify edit-form cancel is usable on mobile
     await expect(formPage.cancelButton).toBeVisible();
     await formPage.cancel();

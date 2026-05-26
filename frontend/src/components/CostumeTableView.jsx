@@ -52,7 +52,7 @@ const CostumeTableView = ({ costumes, expandedKeys, onExpandedChange }) => {
                         <div className="flex items-start gap-4 p-2 bg-[var(--muted-fg)] rounded-lg">
                           <div className="w-24 h-24 flex-shrink-0 bg-[var(--border)] rounded-lg overflow-hidden">
                             {detail.cover_image ? (
-                              <img src={detail.cover_image} alt={detail.name} className="w-full h-full object-cover" />
+                              <img src={detail.cover_image} alt={detail.name} className="w-full h-full object-cover" loading="lazy" decoding="async" fetchPriority="low" />
                             ) : (
                               <div className="flex items-center justify-center h-full text-[var(--muted)] text-xs">No Image</div>
                             )}

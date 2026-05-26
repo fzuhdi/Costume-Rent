@@ -39,7 +39,10 @@ const SettingsPage = () => {
     setSuccessMsg('');
     setErrorMsg('');
     try {
-      await updateSettings(formData);
+      await updateSettings({
+        app_name: formData.app_name,
+        app_tagline: formData.tagline,
+      });
       setSuccessMsg('Pengaturan berhasil disimpan');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (error) {
