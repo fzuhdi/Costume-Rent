@@ -1,6 +1,8 @@
 # Backend
 backend/server
 backend/*.db
+backend/*.db-shm
+backend/*.db-wal
 backend/uploads/*
 !backend/uploads/.gitkeep
 backend/.env
