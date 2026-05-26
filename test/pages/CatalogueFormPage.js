@@ -14,13 +14,14 @@ class CatalogueFormPage extends BasePage {
     this.descriptionInput = page.locator('textarea').first();
     // HeroUI v3 Select components - they render as buttons with placeholder text
     // Use the button that contains the placeholder text
-    this.regionSelect = page.getByRole('button', { name: /pilih wilayah/i });
-    this.categorySelect = page.getByRole('button', { name: /pilih kategori/i });
+    this.regionSelect = page.getByRole('button', { name: /wilayah/i }).first();
+    this.categorySelect = page.getByRole('button', { name: /kategori/i }).first();
     this.conditionSelect = page.locator('button').filter({ hasText: /excellent|good|fair/i }).first();
     // Price input
     this.priceInput = page.locator('label').filter({ hasText: /harga/i }).locator('..').locator('input[type="number"]');
     // Submit button - find by text content using JavaScript
     this.submitButton = page.getByRole('button', { name: /simpan|menyimpan/i }).first();
+    this.cancelButton = page.getByRole('button', { name: /^batal$/i }).first();
     // File input - might be hidden, use evaluate to set files
     this.fileInput = page.locator('input[type="file"]');
   }
@@ -53,16 +54,11 @@ class CatalogueFormPage extends BasePage {
   }
 
   async submit() {
-    // Use JavaScript to click the button directly to avoid visibility issues
-    await this.page.evaluate(() => {
-      const buttons = Array.from(document.querySelectorAll('button'));
-      const simpanBtn = buttons.find(btn => btn.textContent.toLowerCase().includes('simpan'));
-      if (simpanBtn) {
-        simpanBtn.click();
-        return true;
-      }
-      return false;
-    });
+    await this.submitButton.click();
+  }
+
+  async cancel() {
+    await this.cancelButton.click();
   }
 
   async uploadImages(files) {
