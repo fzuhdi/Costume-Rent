@@ -7,7 +7,7 @@ const SettingsPage = () => {
   const { settings, updateSettings, uploadLogo } = useSettings();
   const [formData, setFormData] = useState({
     app_name: settings.app_name || '',
-    tagline: settings.app_tagline || '',
+    app_tagline: settings.app_tagline || '',
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -88,7 +88,7 @@ const SettingsPage = () => {
             </TextField>
             <TextField>
               <Label>Tagline</Label>
-              <Input value={formData.tagline} onChange={(e) => setFormData((prev) => ({...prev, tagline: e.target.value}))} placeholder="Inventory & Rental Management" />
+              <Input value={formData.app_tagline} onChange={(e) => setFormData((prev) => ({...prev, app_tagline: e.target.value}))} placeholder="Inventory & Rental Management" />
             </TextField>
 
             {successMsg && <Chip variant="secondary">{successMsg}</Chip>}
@@ -121,7 +121,7 @@ const SettingsPage = () => {
 
           <div>
             <h3 className="font-bold">{formData.app_name || 'Costume Rental'}</h3>
-            <p className="text-sm text-[var(--muted)]">{formData.tagline || 'Inventory & Rental Management'}</p>
+            <p className="text-sm text-[var(--muted)]">{formData.app_tagline || 'Inventory & Rental Management'}</p>
           </div>
         </Card.Content>
       </Card>
