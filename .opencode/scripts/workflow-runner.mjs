@@ -1043,18 +1043,23 @@ function quoteForDisplay(value) {
   return `"${String(value).replace(/"/g, '\\"')}"`;
 }
 
+function escapeRegexLiteral(value) {
+  return String(value).replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+}
+
 function buildGreenRerunCommand(recorded) {
   const testCwd = path.join(root, ...recorded.testRoot.split('/'));
   const specArg = recorded.repoPath === recorded.testRoot
     ? '.'
     : recorded.repoPath.slice(recorded.testRoot.length + 1);
   const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  const grepPattern = escapeRegexLiteral(recorded.title);
 
   return {
     command: npxCommand,
-    args: ['playwright', 'test', specArg, '--grep', recorded.title],
+    args: ['playwright', 'test', specArg, '--grep', grepPattern],
     cwd: testCwd,
-    display: `cd ${recorded.testRoot} && npx playwright test ${quoteForDisplay(specArg)} --grep ${quoteForDisplay(recorded.title)}`,
+    display: `cd ${recorded.testRoot} && npx playwright test ${quoteForDisplay(specArg)} --grep ${quoteForDisplay(grepPattern)}`,
   };
 }
 
