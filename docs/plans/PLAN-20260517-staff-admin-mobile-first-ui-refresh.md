@@ -26,16 +26,16 @@ Refresh the existing authenticated staff/admin Costume Rental Management UI into
 - TICKET-20260517-007 - complete - feature - Client list uses mobile cards
 - TICKET-20260517-008 - complete - feature - Client detail and form are mobile usable
 - TICKET-20260517-009 - complete - feature - Login uses theme-aware mobile layout
-- TICKET-20260517-010 - ready - feature - Settings branding page is mobile usable
+- TICKET-20260517-010 - complete - feature - Settings branding page is mobile usable
 - TICKET-20260517-011 - complete - feature - Notification popover is usable on mobile
 
 ## Status Summary
 - draft: 0
 - review: 0
-- ready: 1
+- ready: 0
 - in_progress: 0
 - blocked: 0
-- complete: 10
+- complete: 11
 
 ## Execution
 `/engineering/orchestrator PLAN-20260517-staff-admin-mobile-first-ui-refresh`
