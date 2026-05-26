@@ -69,8 +69,11 @@ const NavbarComponent = () => {
   const formattedPath = currentPath.charAt(0).toUpperCase() + currentPath.slice(1);
 
   return (
-    <nav className="fixed top-0 right-0 z-40 border-b border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md transition-all duration-300 w-full pl-0 md:pl-[var(--sidebar-width)]"
-      style={{ paddingLeft: isCollapsed ? 'var(--sidebar-width-collapsed)' : undefined }}>
+    <nav className="fixed top-0 right-0 z-40 overflow-visible border-b border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur-md transition-all duration-300 w-full pl-0 md:pl-[var(--sidebar-width)]"
+      style={{
+        overflow: 'visible',
+        paddingLeft: isCollapsed ? 'var(--sidebar-width-collapsed)' : undefined,
+      }}>
       
       <header className="flex h-[var(--navbar-height)] items-center justify-between px-4 sm:px-8 relative">
         
@@ -127,7 +130,7 @@ const NavbarComponent = () => {
 
             {/* DROPDOWN MENU ITEMS */}
             {isProfileOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-xl z-[100] py-2 animate-in fade-in zoom-in duration-150 origin-top-right overflow-hidden">
+              <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-xl z-[100] py-2 animate-in fade-in zoom-in duration-150 origin-top-right overflow-hidden">
                 {/* User Info Header */}
                 <div className="px-4 py-3 border-b border-[var(--border)] mb-1">
                   <p className="text-[10px] text-[var(--muted)] uppercase font-bold tracking-widest">Logged in as</p>
