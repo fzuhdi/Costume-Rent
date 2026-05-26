@@ -1850,7 +1850,9 @@ function runPlanRegression(report, values, planAnalysis, manifest, projectConfig
   const cwd = path.join(root, ...testRoot.split('/'));
   const specArgs = impactedSpecs.map(spec => spec.replace(/^test\//, ''));
   const outputPath = path.join(root, '.opencode', 'state', 'plan-regression-results.json');
-  const display = `cd ${testRoot} && npx playwright test ${specArgs.map(quoteForDisplay).join(' ')} --reporter=json > .opencode/state/plan-regression-results.json`;
+  const display = process.platform === 'win32'
+    ? `$env:CI='1'; cd ${testRoot} && npx playwright test ${specArgs.map(quoteForDisplay).join(' ')} --reporter=json > .opencode/state/plan-regression-results.json`
+    : `cd ${testRoot} && CI=1 npx playwright test ${specArgs.map(quoteForDisplay).join(' ')} --reporter=json > .opencode/state/plan-regression-results.json`;
 
   if (values.dryRun) {
     addCheck(report, 'plan-regression', 'passed', `dry-run only -> ${display}`);
@@ -1863,7 +1865,7 @@ function runPlanRegression(report, values, planAnalysis, manifest, projectConfig
   persistRuntimeState(state, report, values);
   if (report.blockers.length) return;
 
-  const result = runCapture(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['playwright', 'test', ...specArgs, '--reporter=json'], { cwd });
+  const result = runCapture(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['playwright', 'test', ...specArgs, '--reporter=json'], { cwd, env: { ...process.env, CI: '1' } });
   const jsonOutput = result.stdout || '';
   fs.writeFileSync(outputPath, jsonOutput, 'utf8');
   state.orchestrator.regression.lastResultsPath = rel(outputPath);
