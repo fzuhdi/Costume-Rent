@@ -42,7 +42,7 @@ const CostumeListView = ({ costumes, expandedKeys, onExpandedChange }) => {
                 {/* Thumbnail */}
                 <div className="w-12 h-12 flex-shrink-0 bg-[var(--border)] rounded-lg overflow-hidden">
                   {costume.cover_image ? (
-                    <img src={costume.cover_image} alt={costume.name} className="w-full h-full object-cover" />
+                    <img src={costume.cover_image} alt={costume.name} className="w-full h-full object-cover" loading="lazy" decoding="async" fetchPriority="low" />
                   ) : (
                     <div className="flex items-center justify-center h-full text-[var(--muted)]">
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -110,7 +110,7 @@ const CostumeListView = ({ costumes, expandedKeys, onExpandedChange }) => {
                   {/* Detail image */}
                   <div className="w-20 h-20 flex-shrink-0 bg-[var(--border)] rounded-lg overflow-hidden">
                     {detail.cover_image ? (
-                      <img src={detail.cover_image} alt={detail.name} className="w-full h-full object-cover" />
+                      <img src={detail.cover_image} alt={detail.name} className="w-full h-full object-cover" loading="lazy" decoding="async" fetchPriority="low" />
                     ) : (
                       <div className="flex items-center justify-center h-full text-[var(--muted)] text-xs">No Image</div>
                     )}

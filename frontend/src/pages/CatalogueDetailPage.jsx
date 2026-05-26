@@ -80,7 +80,7 @@ const CatalogueDetailPage = () => {
           <Card.Content className="p-0">
             {costume.images?.length > 0 ? (
               <div className="grid grid-cols-2 gap-2 p-2">
-                <img src={costume.images[0].path} alt={costume.name} className="w-full aspect-square object-cover rounded-lg" />
+                <img src={costume.images[0].path} alt={costume.name} className="w-full aspect-square object-cover rounded-lg" loading="lazy" decoding="async" fetchPriority="low" />
                 {costume.images.slice(1).map((img, index) => (
                   <div
                     key={img.id}
@@ -92,7 +92,7 @@ const CatalogueDetailPage = () => {
                 ))}
               </div>
             ) : costume.cover_image ? (
-              <img src={costume.cover_image} alt={costume.name} className="w-full rounded-lg" />
+              <img src={costume.cover_image} alt={costume.name} className="w-full rounded-lg" loading="lazy" decoding="async" fetchPriority="low" />
             ) : (
               <div className="aspect-square flex items-center justify-center bg-[var(--border)] rounded-lg text-[var(--muted)]">
                 Tidak Ada Gambar

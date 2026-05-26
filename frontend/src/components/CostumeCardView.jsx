@@ -14,7 +14,7 @@ const CostumeCardView = ({ costumes }) => {
             <Card.Content className="p-0">
               <div className="aspect-square bg-[var(--border)] relative">
                 {costume.cover_image ? (
-                  <img src={costume.cover_image} alt={costume.name} className="w-full h-full object-cover" />
+                  <img src={costume.cover_image} alt={costume.name} className="w-full h-full object-cover" loading="lazy" decoding="async" fetchPriority="low" />
                 ) : (
                   <div className="flex items-center justify-center h-full text-[var(--muted)] text-xs">No Image</div>
                 )}

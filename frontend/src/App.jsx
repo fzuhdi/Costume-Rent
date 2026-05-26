@@ -68,6 +68,13 @@ const AppRoutes = () => {
 
     const markDecorativeImages = () => {
       document
+        .querySelectorAll('span[aria-label]:not([role]), span[aria-labelledby]:not([role])')
+        .forEach((span) => {
+          span.removeAttribute('aria-label');
+          span.removeAttribute('aria-labelledby');
+        });
+
+      document
         .querySelectorAll('svg:not([aria-label]):not([aria-labelledby])')
         .forEach((svg) => {
           if (!svg.querySelector('title')) {
@@ -89,7 +96,12 @@ const AppRoutes = () => {
 
     markDecorativeImages();
     const observer = new MutationObserver(markDecorativeImages);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['aria-label', 'aria-labelledby', 'role'],
+      childList: true,
+      subtree: true,
+    });
     return () => observer.disconnect();
   }, []);
 

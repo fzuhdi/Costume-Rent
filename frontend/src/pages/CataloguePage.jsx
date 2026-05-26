@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getCostumes, getRegions, getCategories } from '../api/costumeApi';
 import { Search, Grid, List, Filter, AlignLeft } from 'lucide-react';
@@ -122,7 +122,19 @@ const CataloguePage = () => {
     setExpandedKeys(keys);
   };
 
+  const visibleCostumes = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) {
+      return costumes;
+    }
+
+    return costumes.filter((costume) =>
+      String(costume.name || '').toLowerCase().includes(query)
+    );
+  }, [costumes, search]);
+
   const showFilterControls = !isMobile || isMobileFiltersOpen;
+  const displayTotal = search.trim() ? visibleCostumes.length : total;
 
   return (
     <Card>
@@ -264,7 +276,7 @@ const CataloguePage = () => {
           <div className="flex justify-center items-center h-48">
             <Spinner aria-label="Memuat data kostum" />
           </div>
-        ) : costumes.length === 0 ? (
+        ) : visibleCostumes.length === 0 ? (
           <div className="text-center py-12">
             <Filter size={64} className="mx-auto mb-4 opacity-50" />
             <h3 className="text-lg font-semibold">Tidak ada kostum</h3>
@@ -272,24 +284,24 @@ const CataloguePage = () => {
           </div>
         ) : view === 'list' ? (
           <CostumeListView
-            costumes={costumes}
+            costumes={visibleCostumes}
             expandedKeys={expandedKeys}
             onExpandedChange={handleExpandedChange}
           />
         ) : view === 'table' ? (
           <CostumeTableView
-            costumes={costumes}
+            costumes={visibleCostumes}
             expandedKeys={expandedKeys}
             onExpandedChange={handleExpandedChange}
           />
         ) : (
-          <CostumeCardView costumes={costumes} />
+          <CostumeCardView costumes={visibleCostumes} />
         )}
       </Card.Content>
 
       <Card.Footer>
         <CustomPagination
-          total={total}
+          total={displayTotal}
           page={page}
           limit={limit}
           onPageChange={setPage}
