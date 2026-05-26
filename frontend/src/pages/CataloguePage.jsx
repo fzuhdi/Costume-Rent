@@ -67,8 +67,8 @@ const CataloguePage = () => {
         getRegions(),
         getCategories(),
       ]);
-      setRegions(regionsRes.data);
-      setCategories(categoriesRes.data);
+      setRegions(regionsRes.data || []);
+      setCategories(categoriesRes.data || []);
     } catch (error) {
       console.error('Failed to fetch filters:', error);
     }

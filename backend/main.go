@@ -16,13 +16,20 @@ import (
 func main() {
 	config.LoadEnv()
 	config.InitDB()
+	migrateDB()
+
+	if len(os.Args) > 1 && os.Args[1] == "seed" {
+		runSeedCommand(os.Args[2:])
+		return
+	}
+
 	if err := middleware.InitJWT(); err != nil {
 		log.Fatalf("Failed to initialize JWT: %v", err)
 	}
 
-	migrateDB()
-	seedData()
-	seedRentals()
+	if os.Getenv("APP_ENV") == "development" {
+		runSeedCommand([]string{"demo"})
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -61,36 +68,21 @@ func migrateDB() {
 	log.Println("Database migrations completed successfully")
 }
 
-func seedData() {
-	if os.Getenv("APP_ENV") != "development" {
-		return
+func runSeedCommand(args []string) {
+	log.Println("Running seed command...")
+	seedReferenceData()
+	adminID := seedAdminUser()
+
+	if len(args) > 0 && args[0] == "demo" {
+		seedSampleCostumes()
+		seedSampleRentals(adminID)
 	}
 
+	log.Println("Seed command completed successfully")
+}
+
+func seedReferenceData() {
 	db := config.GetDB()
-
-	var userCount int64
-	db.Model(&models.User{}).Count(&userCount)
-	if userCount == 0 {
-		log.Println("Seeding default admin user...")
-
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
-		if err != nil {
-			log.Fatalf("Failed to hash password: %v", err)
-		}
-
-		admin := models.User{
-			Name:     "Admin Tari",
-			Email:    "admin@busana.com",
-			Password: string(hashedPassword),
-			Role:     "admin",
-		}
-
-		if err := db.Create(&admin).Error; err != nil {
-			log.Printf("Failed to create admin user: %v", err)
-		} else {
-			log.Println("Default admin user created: admin@busana.com / admin123")
-		}
-	}
 
 	var regionCount int64
 	db.Model(&models.Region{}).Count(&regionCount)
@@ -139,6 +131,43 @@ func seedData() {
 			db.Create(&s)
 		}
 	}
+
+	log.Println("Reference data seed check completed")
+}
+
+func seedAdminUser() uint {
+	db := config.GetDB()
+
+	var existingAdmin models.User
+	if err := db.Where("email = ?", "admin@busana.com").First(&existingAdmin).Error; err == nil {
+		log.Println("Default admin user already exists")
+		return existingAdmin.ID
+	}
+
+	log.Println("Seeding default admin user...")
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+	if err != nil {
+		log.Fatalf("Failed to hash password: %v", err)
+	}
+
+	admin := models.User{
+		Name:     "Admin Tari",
+		Email:    "admin@busana.com",
+		Password: string(hashedPassword),
+		Role:     "admin",
+	}
+
+	if err := db.Create(&admin).Error; err != nil {
+		log.Fatalf("Failed to create admin user: %v", err)
+	}
+
+	log.Println("Default admin user created: admin@busana.com / admin123")
+	return admin.ID
+}
+
+func seedSampleCostumes() {
+	db := config.GetDB()
 
 	var costumeCount int64
 	db.Model(&models.Costume{}).Count(&costumeCount)
@@ -232,10 +261,10 @@ func seedData() {
 		log.Println("Sample costumes created")
 	}
 
-	log.Println("Seed data check completed")
+	log.Println("Sample costume seed check completed")
 }
 
-func seedRentals() {
+func seedSampleRentals(adminID uint) {
 	db := config.GetDB()
 
 	var clientCount int64
@@ -271,7 +300,7 @@ func seedRentals() {
 		RentEnd:       rentEnd,
 		Status:        "active",
 		Notes:         "Penyewaan untuk acara adat",
-		CreatedBy:     1,
+		CreatedBy:     adminID,
 	}
 	if err := db.Create(&rent).Error; err != nil {
 		log.Printf("Failed to seed rental: %v", err)

@@ -27,7 +27,7 @@ func (s *NotificationService) GetNotifications() (*dto.NotificationResponse, err
 	today := time.Now().Format("2006-01-02")
 	futureDate := time.Now().AddDate(0, 0, dueDays).Format("2006-01-02")
 
-	var items []dto.NotificationItem
+	items := []dto.NotificationItem{}
 	var total int64
 
 	config.DB.Table("rent_orders").
