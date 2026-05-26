@@ -59,7 +59,7 @@ func (s *RentService) List(filter dto.RentOrderFilter) (*dto.PaginatedResponse, 
 		return nil, err
 	}
 
-	var response []dto.RentOrderResponse
+	response := []dto.RentOrderResponse{}
 	for _, o := range orders {
 		item := s.toRentOrderResponse(o)
 		response = append(response, item)

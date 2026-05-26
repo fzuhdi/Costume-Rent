@@ -37,7 +37,7 @@ func (s *ClientService) List(filter dto.ClientFilter) (*dto.PaginatedResponse, e
 		return nil, err
 	}
 
-	var response []dto.ClientResponse
+	response := []dto.ClientResponse{}
 	for _, c := range clients {
 		var totalRents, activeRents int64
 		config.DB.Model(&models.RentOrder{}).Where("client_id = ? AND deleted_at IS NULL", c.ID).Count(&totalRents)

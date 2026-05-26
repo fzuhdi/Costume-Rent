@@ -15,7 +15,7 @@ This `.opencode` setup runs strict TDD tracer-ticket execution for plans and tic
 | Model selection procedure | `.opencode/skills/model-selector/SKILL.md` |
 | Model resolver script | `.opencode/scripts/resolve-agent-models.mjs` |
 | Test integrity and quality gates | `docs/engineering/` |
-| Runtime recovery commands | `.opencode/knowledge/runbook.md` |
+| Runtime recovery commands | `docs/runbooks/project-runbook.md` |
 
 ## Model
 
@@ -56,7 +56,7 @@ Direct `developer`, `sdet`, and `reviewer` commands are debug-only for normal us
 
 - Default plan mode: up to 3 independent ready tracer tickets run in parallel as orchestrator tasks, each with an isolated worktree, branch, Compose project, host-port slot, Playwright base URL, and `.opencode/state/`. Tickets with unmet `depends_on` prerequisites wait for a later batch. Completed ticket branches require explicit serialized integration before plan regression; do not assume implicit auto-merge.
 - Default ticket mode: one orchestrator task, one checkout/worktree, one long-lived dev stack, one Playwright base URL.
-- Parallel isolation details are in `docs/adr/0003-ticket-and-workflow-workspaces.md` and `.opencode/knowledge/runbook.md`.
+- Parallel isolation details are in `docs/adr/0003-ticket-and-workflow-workspaces.md` and `docs/runbooks/project-runbook.md`.
 
 Dependency/install approval, runtime setup blocks, role boundaries, and test-state rules are defined in `.opencode/skills/shared/constraints.md`.
 

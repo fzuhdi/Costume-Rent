@@ -6,9 +6,20 @@ temperature: 0.2
 steps: 40
 permission:
   edit:
+    "**": deny
+    "src/**": allow
+    "app/**": allow
+    "lib/**": allow
+    "packages/**": allow
     "backend/**": allow
     "frontend/**": allow
+    ".opencode/**": deny
+    "docs/**": deny
     "test/**": deny
+    "tests/**": deny
+    "e2e/**": deny
+    "spec/**": deny
+    "specs/**": deny
     "docker-compose.yml": deny
     "**/Dockerfile": deny
     "**/nginx.conf": deny
@@ -31,7 +42,7 @@ Requires `MODE: green | refactor`, `TEST_CASE_ID`, ticket fields, manifest crite
 
 ## Pre-flight
 
-Read shared constraints, I/O contract, `TICKET_FILE`, `.opencode/state/test-case-manifest.json`, and relevant code roots. For material frontend layout, styling, responsive, or accessibility implementation, load `frontend-design`; do not load it for backend-only or non-visual changes.
+Read shared constraints, I/O contract, `TICKET_FILE`, `.opencode/state/test-case-manifest.json`, and relevant adapter-declared code roots. For material frontend layout, styling, responsive, or accessibility implementation, load `frontend-design`; do not load it for backend-only or non-visual changes.
 
 ## MODE: green
 
@@ -47,7 +58,7 @@ Use only after deterministic GREEN rerun verifies the recorded RED test and the 
 
 ## Hard Rules
 
-- Never edit `test/**` or the recorded SDET acceptance test.
+- Never edit adapter-declared test roots or the recorded SDET acceptance test.
 - Never weaken behavior, add a test framework, implement sibling scope, commit, push, stash, reset, or clean the worktree.
 - Never treat a test run as successful when the project-configured quality gate fails.
 

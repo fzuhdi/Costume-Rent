@@ -9,13 +9,98 @@ import { spawnSync } from 'node:child_process';
 const root = process.cwd();
 const defaultParallel = 3;
 const maxParallel = 3;
-const slotStep = 100;
-const basePorts = { frontend: 5173, backend: 8081, sqlite: 8080 };
+const projectConfig = loadProjectConfig();
+const runtimeConfig = requiredObject(projectConfig.runtime, 'runtime');
+const slotStep = requiredNumber(runtimeConfig.slot_step, 'runtime.slot_step');
+const basePorts = {
+  frontend: requiredNumber(runtimeConfig.base_ports?.frontend, 'runtime.base_ports.frontend'),
+  backend: requiredNumber(runtimeConfig.base_ports?.backend, 'runtime.base_ports.backend'),
+  sqlite: requiredNumber(runtimeConfig.base_ports?.sqlite, 'runtime.base_ports.sqlite'),
+};
+const composeConfig = requiredObject(runtimeConfig.compose, 'runtime.compose');
+const composeFile = requiredString(composeConfig.file, 'runtime.compose.file');
+const composeServices = requiredStringArray(composeConfig.services, 'runtime.compose.services');
+const composeServicesText = composeServices.join(' ');
+const runtimeFileConfig = requiredObject(runtimeConfig.runtime_files, 'runtime.runtime_files');
 const executableTypes = new Set(['feature', 'bug']);
 const ticketIdPattern = /^TICKET-\d{8}-\d{3}$/;
-const requiredRuntimeFiles = ['.env', 'frontend/package-lock.json', 'test/package-lock.json'];
-const optionalRuntimeFiles = ['backend/.env', 'frontend/.env'];
+const requiredRuntimeFiles = requiredStringArray(runtimeFileConfig.required, 'runtime.runtime_files.required');
+const optionalRuntimeFiles = runtimeFileConfig.optional || [];
+if (!Array.isArray(optionalRuntimeFiles) || optionalRuntimeFiles.some(item => typeof item !== 'string' || item.trim() === '')) {
+  throw new Error('Project adapter field runtime.runtime_files.optional must be an array of strings when present.');
+}
+for (const relativePath of [...requiredRuntimeFiles, ...optionalRuntimeFiles]) {
+  assertRuntimeFileIsSafeToCopy(relativePath);
+}
+const generatedEnvFiles = runtimeConfig.generated_env_files || [];
+if (!Array.isArray(generatedEnvFiles)) {
+  throw new Error('Project adapter field runtime.generated_env_files must be an array when present.');
+}
+for (const envFile of generatedEnvFiles) {
+  if (!envFile?.target || typeof envFile.target !== 'string' || typeof envFile.values !== 'object' || envFile.values === null || Array.isArray(envFile.values)) {
+    throw new Error('Project adapter field runtime.generated_env_files entries must include target and values object.');
+  }
+  assertRelativeProjectPath(envFile.target, 'runtime.generated_env_files.target');
+}
 const unsafeLeaseStatuses = new Set(['running', 'deadline_expired', 'interrupted']);
+
+function loadProjectConfig() {
+  const file = path.join(root, '.opencode', 'project.json');
+  if (!fs.existsSync(file)) return {};
+  return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+function requiredObject(value, key) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`Missing required .opencode/project.json ${key} object`);
+  }
+  return value;
+}
+
+function requiredString(value, key) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error(`Missing required .opencode/project.json ${key} string`);
+  }
+  return value;
+}
+
+function requiredNumber(value, key) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    throw new Error(`Missing required numeric .opencode/project.json ${key}`);
+  }
+  return number;
+}
+
+function requiredStringArray(value, key) {
+  if (!Array.isArray(value) || value.length === 0 || value.some(item => typeof item !== 'string' || item.trim() === '')) {
+    throw new Error(`Missing required non-empty .opencode/project.json ${key} array`);
+  }
+  return value;
+}
+
+function assertRelativeProjectPath(relativePath, key) {
+  if (path.isAbsolute(relativePath) || relativePath.split(/[\\/]+/).includes('..')) {
+    throw new Error(`Project adapter field ${key} must be a relative path inside the project: ${relativePath}`);
+  }
+}
+
+function assertRuntimeFileIsSafeToCopy(relativePath) {
+  assertRelativeProjectPath(relativePath, 'runtime.runtime_files');
+  const normalized = relativePath.replace(/\\/g, '/');
+  const basename = path.posix.basename(normalized).toLowerCase();
+  if (basename === '.env' || basename.startsWith('.env.')) {
+    throw new Error(`Project adapter runtime.runtime_files must not copy env file ${relativePath}; use runtime.generated_env_files for dev-only ticket env.`);
+  }
+}
+
+function runtimeEnvKey(name, fallback) {
+  return runtimeConfig.env_keys?.[name] || fallback;
+}
+
+function interpolateRuntimeValue(value, env) {
+  return String(value).replace(/\{([A-Z0-9_]+)\}/g, (_, key) => env[key] ?? '');
+}
 
 function usage() {
   return `Usage: node .opencode/scripts/launch-parallel-plan.mjs --target PLAN-* [--parallel 3] [--lease-minutes 60] [--dry-run] [--json] [--workspace-root <path>] [--no-start-runtime] [--prepare-only]
@@ -455,19 +540,25 @@ function portsForSlot(slot) {
 
 function envForSlot(slot, project) {
   const ports = portsForSlot(slot);
-  return {
-    BUSANA_CONTAINER_PREFIX: project,
-    FRONTEND_HOST_PORT: String(ports.frontend),
-    BACKEND_HOST_PORT: String(ports.backend),
-    SQLITE_WEB_HOST_PORT: String(ports.sqlite),
-    BUSANA_DB_VOLUME: `busana_db_${project}`,
-    BUSANA_FRONTEND_NODE_MODULES_VOLUME: `busana_frontend_node_modules_${project}`,
-    VITE_DEV_PORT: '5173',
-    PW_BASE_URL: `http://localhost:${ports.frontend}`,
-    PW_OUTPUT_DIR: `test-results-${project}`,
-    PW_JSON_OUTPUT: `test-results-${project}/results.json`,
-    PW_HTML_REPORT: `playwright-report-${project}`,
+  const env = {
+    [runtimeEnvKey('container_prefix', 'APP_CONTAINER_PREFIX')]: project,
+    [runtimeEnvKey('frontend_host_port', 'FRONTEND_HOST_PORT')]: String(ports.frontend),
+    [runtimeEnvKey('backend_host_port', 'BACKEND_HOST_PORT')]: String(ports.backend),
+    [runtimeEnvKey('sqlite_web_host_port', 'SQLITE_WEB_HOST_PORT')]: String(ports.sqlite),
+    [runtimeEnvKey('db_volume', 'APP_DB_VOLUME')]: `${runtimeConfig.volume_prefixes?.db || 'app_db'}_${project}`,
+    [runtimeEnvKey('frontend_node_modules_volume', 'APP_FRONTEND_NODE_MODULES_VOLUME')]: `${runtimeConfig.volume_prefixes?.frontend_node_modules || 'app_frontend_node_modules'}_${project}`,
+    [runtimeEnvKey('vite_dev_port', 'VITE_DEV_PORT')]: String(runtimeConfig.vite_dev_port || 5173),
+    [runtimeEnvKey('playwright_base_url', 'PW_BASE_URL')]: `http://localhost:${ports.frontend}`,
+    [runtimeEnvKey('playwright_output_dir', 'PW_OUTPUT_DIR')]: `test-results-${project}`,
+    [runtimeEnvKey('playwright_json_output', 'PW_JSON_OUTPUT')]: `test-results-${project}/results.json`,
+    [runtimeEnvKey('playwright_html_report', 'PW_HTML_REPORT')]: `playwright-report-${project}`,
   };
+
+  for (const [key, value] of Object.entries(runtimeConfig.env_values || {})) {
+    env[key] = interpolateRuntimeValue(value, env);
+  }
+
+  return env;
 }
 
 function slug(value) {
@@ -549,14 +640,16 @@ function copyRuntimeFiles(dispatch, report, values) {
     copied.push(relativePath);
   }
 
-  const composePath = path.join(dispatch.worktree, 'docker-compose.dev.yml');
-  if (fs.existsSync(composePath) && fs.readFileSync(composePath, 'utf8').includes('env_file: .env.production')) {
-    const source = path.join(root, '.env');
-    const target = path.join(dispatch.worktree, '.env.production');
-    if (fs.existsSync(source)) {
-      if (!values.dryRun) fs.copyFileSync(source, target);
-      copied.push('.env.production (compat alias from .env)');
+  for (const envFile of generatedEnvFiles) {
+    if (!envFile?.target || typeof envFile.values !== 'object' || envFile.values === null) continue;
+    const target = path.join(dispatch.worktree, envFile.target);
+    const lines = Object.entries(envFile.values)
+      .map(([key, value]) => `${key}=${interpolateRuntimeValue(value, dispatch.env)}`);
+    if (!values.dryRun) {
+      ensureDirFor(target);
+      fs.writeFileSync(target, `${lines.join('\n')}\n`, 'utf8');
     }
+    copied.push(`${envFile.target} (generated dev env)`);
   }
 
   dispatch.runtimeFiles = copied;
@@ -745,6 +838,44 @@ function acquireSlot(dispatch, report, values) {
   return true;
 }
 
+function cleanupCompletedSlotLeases(dispatch, leasesByTicket, report, values) {
+  const completedSameSlot = Array.from(leasesByTicket.values())
+    .filter(lease => lease?.status === 'complete')
+    .filter(lease => Number(lease.slot) === Number(dispatch.slot))
+    .filter(lease => lease.project && lease.project !== dispatch.project);
+
+  if (!completedSameSlot.length) return true;
+
+  if (values.dryRun) {
+    report.checks.push({
+      name: 'runtime-cleanup',
+      status: 'passed',
+      detail: `${dispatch.ticketId}: dry-run would stop completed slot ${dispatch.slot} stack(s): ${completedSameSlot.map(lease => lease.ticketId).join(', ')}`,
+    });
+    return true;
+  }
+
+  for (const lease of completedSameSlot) {
+    const composeCwd = lease.worktree && fs.existsSync(path.join(lease.worktree, composeFile))
+      ? lease.worktree
+      : root;
+    const result = runCapture('docker', ['compose', '-p', lease.project, '-f', composeFile, 'down'], { cwd: composeCwd });
+    if (!result.ok) {
+      report.blockers.push(`Failed to stop completed runtime ${lease.ticketId} (${lease.project}) before reusing slot ${dispatch.slot}: ${result.stderr || result.error || result.stdout}`);
+      report.checks.push({ name: 'runtime-cleanup', status: 'failed', detail: `${dispatch.ticketId}: ${lease.ticketId}` });
+      dispatch.status = 'blocked';
+      return false;
+    }
+  }
+
+  report.checks.push({
+    name: 'runtime-cleanup',
+    status: 'passed',
+    detail: `${dispatch.ticketId}: stopped completed slot ${dispatch.slot} stack(s): ${completedSameSlot.map(lease => lease.ticketId).join(', ')}`,
+  });
+  return true;
+}
+
 function startRuntime(dispatch, report, values) {
   if (!values.startRuntime) {
     dispatch.runtimeAction = 'skipped';
@@ -759,7 +890,7 @@ function startRuntime(dispatch, report, values) {
   }
 
   const env = { ...process.env, ...dispatch.env };
-  const ok = runInherit('docker', ['compose', '-p', dispatch.project, '-f', 'docker-compose.dev.yml', 'up', '-d', 'backend', 'frontend'], { cwd: dispatch.worktree, env });
+  const ok = runInherit('docker', ['compose', '-p', dispatch.project, '-f', composeFile, 'up', '-d', ...composeServices], { cwd: dispatch.worktree, env });
   if (!ok) {
     report.blockers.push(`Failed to start Compose runtime for ${dispatch.ticketId}.`);
     dispatch.status = 'blocked';
@@ -959,7 +1090,7 @@ function makeDispatch(planId, planBranch, ticket, index, workspaceRoot, leaseMin
     planBranch,
     worktree,
     env,
-    composeCommand: `docker compose -p ${project} -f docker-compose.dev.yml up -d backend frontend`,
+    composeCommand: `docker compose -p ${project} -f ${composeFile} up -d ${composeServicesText}`,
     leaseMinutes,
     leaseDeadlineAt: null,
     status: 'planned',
@@ -1104,6 +1235,7 @@ function buildReport(values) {
     if (!copyRuntimeFiles(dispatch, report, values)) continue;
     if (!ensureTestDependencyLink(dispatch, report, values)) continue;
     if (!ensurePlaywrightBrowsers(dispatch, report, values)) continue;
+    if (!cleanupCompletedSlotLeases(dispatch, leasesByTicket, report, values)) continue;
     if (!startLease(dispatch, report, values)) continue;
     if (!bootstrapState(dispatch, report, values)) {
       transitionLease(dispatch, 'failed', report, values, 'state bootstrap failed');
@@ -1164,7 +1296,7 @@ function printText(report) {
   console.log('');
   console.log('DISPATCHES:');
   for (const dispatch of report.dispatches) {
-    console.log(`- ${dispatch.ticketId}: slot=${dispatch.slot} branch=${dispatch.branch} url=${dispatch.env.PW_BASE_URL} status=${dispatch.status}`);
+    console.log(`- ${dispatch.ticketId}: slot=${dispatch.slot} branch=${dispatch.branch} url=${dispatch.env[runtimeEnvKey('playwright_base_url', 'PW_BASE_URL')]} status=${dispatch.status}`);
     console.log(`  worktree=${dispatch.worktree}`);
     console.log(`  compose=${dispatch.composeCommand}`);
     if (dispatch.task) console.log(`  task=${dispatch.task.subagentType}: ${dispatch.task.description}`);

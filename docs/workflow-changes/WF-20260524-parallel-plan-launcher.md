@@ -25,7 +25,7 @@ Restore the intended default plan flow: execute tracer-bullet tickets in paralle
 - `.opencode/skills/orchestrator/SKILL.md`
 - `.opencode/skills/plan-to-tickets/SKILL.md`
 - `.opencode/commands/engineering/orchestrator.md`
-- `.opencode/knowledge/runbook.md`
+- `docs/runbooks/project-runbook.md`
 - `AGENTS.md`
 - `docs/adr/0003-ticket-and-workflow-workspaces.md`
 - `docs/workflow-changes/WF-20260524-parallel-plan-launcher.md`

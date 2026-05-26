@@ -12,7 +12,7 @@ Add a model-selector skill and resolver script so the coordinator can detect una
 - `.opencode/scripts/resolve-agent-models.mjs` — deterministic script that scores available models per role by capability weight, reports in JSON/text, and updates agent frontmatter on `--write`.
 - `.opencode/scripts/test-resolve-agent-models.mjs` — targeted regression tests for explicit overrides and write-mode reporting.
 - Update `.opencode/skills/coordinator/SKILL.md` to reference model-availability checks before dispatch.
-- Update `.opencode/knowledge/runbook.md` for the new resolver script.
+- Update `docs/runbooks/project-runbook.md` for the new resolver script.
 - Update `.opencode/README.md` for the new skill and config.
 
 ## Source Of Truth

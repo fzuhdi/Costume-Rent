@@ -9,7 +9,7 @@ Define a reliable execution model for this repo across different model providers
 ## Scope
 - `docs/adr/0003-ticket-and-workflow-workspaces.md`
 - `.opencode/README.md`
-- `.opencode/knowledge/runbook.md`
+- `docs/runbooks/project-runbook.md`
 - `.opencode/scripts/runtime-slot.mjs`
 
 ## Previous Constraints
@@ -59,7 +59,7 @@ Process isolation contract:
 ## Source Of Truth
 - Workspace and execution policy: `docs/adr/0003-ticket-and-workflow-workspaces.md`
 - User-facing workflow summary: `.opencode/README.md`
-- Operational commands: `.opencode/knowledge/runbook.md`
+- Operational commands: `docs/runbooks/project-runbook.md`
 
 ## Validation Plan
 - Review workflow docs for a single runtime-isolation story.

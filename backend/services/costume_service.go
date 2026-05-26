@@ -52,7 +52,7 @@ func (s *CostumeService) List(filter dto.CostumeFilter) (*dto.PaginatedResponse,
 		return nil, err
 	}
 
-	var response []dto.CostumeListResponse
+	response := []dto.CostumeListResponse{}
 	for _, c := range costumes {
 		item := dto.CostumeListResponse{
 			ID:          c.ID,
@@ -313,7 +313,7 @@ func (s *CostumeService) Search(query string, limit int) ([]CostumeSearchRespons
 		return nil, err
 	}
 
-	var response []CostumeSearchResponse
+	response := []CostumeSearchResponse{}
 	for _, c := range costumes {
 		avail, _ := s.GetAvailableQuantity(c.ID)
 		response = append(response, CostumeSearchResponse{
@@ -334,7 +334,7 @@ func (s *CostumeService) GetRegions() ([]dto.RegionResponse, error) {
 		return nil, err
 	}
 
-	var response []dto.RegionResponse
+	response := []dto.RegionResponse{}
 	for _, r := range regions {
 		item := dto.RegionResponse{
 			ID:        r.ID,
@@ -374,7 +374,7 @@ func (s *CostumeService) GetCategories() ([]dto.CategoryResponse, error) {
 		return nil, err
 	}
 
-	var response []dto.CategoryResponse
+	response := []dto.CategoryResponse{}
 	for _, c := range categories {
 		item := dto.CategoryResponse{
 			ID:        c.ID,

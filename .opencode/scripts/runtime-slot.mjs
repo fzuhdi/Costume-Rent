@@ -8,12 +8,61 @@ import { execFileSync, spawnSync } from 'node:child_process';
 
 const root = process.cwd();
 const registryPath = path.join(root, '.opencode/state/runtime-slots.json');
-const slotStep = 100;
+const projectConfig = loadProjectConfig();
+const runtimeConfig = requiredObject(projectConfig.runtime, 'runtime');
+const slotStep = requiredNumber(runtimeConfig.slot_step, 'runtime.slot_step');
 const basePorts = {
-  frontend: 5173,
-  backend: 8081,
-  sqlite: 8080,
+  frontend: requiredNumber(runtimeConfig.base_ports?.frontend, 'runtime.base_ports.frontend'),
+  backend: requiredNumber(runtimeConfig.base_ports?.backend, 'runtime.base_ports.backend'),
+  sqlite: requiredNumber(runtimeConfig.base_ports?.sqlite, 'runtime.base_ports.sqlite'),
 };
+const composeConfig = requiredObject(runtimeConfig.compose, 'runtime.compose');
+const composeFile = requiredString(composeConfig.file, 'runtime.compose.file');
+const composeServices = requiredStringArray(composeConfig.services, 'runtime.compose.services');
+const composeServicesText = composeServices.join(' ');
+
+function loadProjectConfig() {
+  const file = path.join(root, '.opencode', 'project.json');
+  if (!fs.existsSync(file)) return {};
+  return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+function requiredObject(value, key) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`Missing required .opencode/project.json ${key} object`);
+  }
+  return value;
+}
+
+function requiredString(value, key) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error(`Missing required .opencode/project.json ${key} string`);
+  }
+  return value;
+}
+
+function requiredNumber(value, key) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    throw new Error(`Missing required numeric .opencode/project.json ${key}`);
+  }
+  return number;
+}
+
+function requiredStringArray(value, key) {
+  if (!Array.isArray(value) || value.length === 0 || value.some(item => typeof item !== 'string' || item.trim() === '')) {
+    throw new Error(`Missing required non-empty .opencode/project.json ${key} array`);
+  }
+  return value;
+}
+
+function runtimeEnvKey(name, fallback) {
+  return runtimeConfig.env_keys?.[name] || fallback;
+}
+
+function interpolateRuntimeValue(value, env) {
+  return String(value).replace(/\{([A-Z0-9_]+)\}/g, (_, key) => env[key] ?? '');
+}
 
 function fail(message, code = 1) {
   console.error(message);
@@ -104,20 +153,25 @@ function portsForSlot(slot) {
 function envForSlot(slot, project) {
   const ports = portsForSlot(slot);
   const suffix = slot === 0 ? project : `${project}`;
-
-  return {
-    BUSANA_CONTAINER_PREFIX: project,
-    FRONTEND_HOST_PORT: String(ports.frontend),
-    BACKEND_HOST_PORT: String(ports.backend),
-    SQLITE_WEB_HOST_PORT: String(ports.sqlite),
-    BUSANA_DB_VOLUME: `busana_db_${suffix}`,
-    BUSANA_FRONTEND_NODE_MODULES_VOLUME: `busana_frontend_node_modules_${suffix}`,
-    VITE_DEV_PORT: '5173',
-    PW_BASE_URL: `http://localhost:${ports.frontend}`,
-    PW_OUTPUT_DIR: slot === 0 ? 'test-results' : `test-results-${project}`,
-    PW_JSON_OUTPUT: slot === 0 ? 'test-results/results.json' : `test-results-${project}/results.json`,
-    PW_HTML_REPORT: slot === 0 ? 'playwright-report' : `playwright-report-${project}`,
+  const env = {
+    [runtimeEnvKey('container_prefix', 'APP_CONTAINER_PREFIX')]: project,
+    [runtimeEnvKey('frontend_host_port', 'FRONTEND_HOST_PORT')]: String(ports.frontend),
+    [runtimeEnvKey('backend_host_port', 'BACKEND_HOST_PORT')]: String(ports.backend),
+    [runtimeEnvKey('sqlite_web_host_port', 'SQLITE_WEB_HOST_PORT')]: String(ports.sqlite),
+    [runtimeEnvKey('db_volume', 'APP_DB_VOLUME')]: `${runtimeConfig.volume_prefixes?.db || 'app_db'}_${suffix}`,
+    [runtimeEnvKey('frontend_node_modules_volume', 'APP_FRONTEND_NODE_MODULES_VOLUME')]: `${runtimeConfig.volume_prefixes?.frontend_node_modules || 'app_frontend_node_modules'}_${suffix}`,
+    [runtimeEnvKey('vite_dev_port', 'VITE_DEV_PORT')]: String(runtimeConfig.vite_dev_port || 5173),
+    [runtimeEnvKey('playwright_base_url', 'PW_BASE_URL')]: `http://localhost:${ports.frontend}`,
+    [runtimeEnvKey('playwright_output_dir', 'PW_OUTPUT_DIR')]: slot === 0 ? 'test-results' : `test-results-${project}`,
+    [runtimeEnvKey('playwright_json_output', 'PW_JSON_OUTPUT')]: slot === 0 ? 'test-results/results.json' : `test-results-${project}/results.json`,
+    [runtimeEnvKey('playwright_html_report', 'PW_HTML_REPORT')]: slot === 0 ? 'playwright-report' : `playwright-report-${project}`,
   };
+
+  for (const [key, value] of Object.entries(runtimeConfig.env_values || {})) {
+    env[key] = interpolateRuntimeValue(value, env);
+  }
+
+  return env;
 }
 
 function isPortFree(port) {
@@ -185,7 +239,7 @@ function isFrontendHealthy(baseUrl) {
 }
 
 function composeDown(project) {
-  const result = spawnSync('docker', ['compose', '-p', project, '-f', 'docker-compose.dev.yml', 'down'], {
+  const result = spawnSync('docker', ['compose', '-p', project, '-f', composeFile, 'down'], {
     cwd: root,
     stdio: 'inherit',
   });
@@ -211,15 +265,19 @@ function validateSlots(slots) {
 }
 
 function printResult(result, values) {
+  const frontendUrlKey = runtimeEnvKey('playwright_base_url', 'PW_BASE_URL');
+  const backendPortKey = runtimeEnvKey('backend_host_port', 'BACKEND_HOST_PORT');
+  const sqlitePortKey = runtimeEnvKey('sqlite_web_host_port', 'SQLITE_WEB_HOST_PORT');
+
   if (values.json) {
     console.log(JSON.stringify(result, null, 2));
     return;
   }
 
   console.log(`Runtime slot ${result.slot} ${result.action} for ${result.project}`);
-  console.log(`Frontend: ${result.env.PW_BASE_URL}`);
-  console.log(`Backend host port: ${result.env.BACKEND_HOST_PORT}`);
-  console.log(`SQLite web host port: ${result.env.SQLITE_WEB_HOST_PORT}`);
+  console.log(`Frontend: ${result.env[frontendUrlKey]}`);
+  console.log(`Backend host port: ${result.env[backendPortKey]}`);
+  console.log(`SQLite web host port: ${result.env[sqlitePortKey]}`);
   console.log(`Compose command: ${result.composeCommand}`);
   console.log('PowerShell environment:');
 
@@ -245,7 +303,7 @@ function makeSlotRecord(slot, target, project, worktree, action) {
     ports,
     env,
     action,
-    composeCommand: `docker compose -p ${project} -f docker-compose.dev.yml up -d backend frontend`,
+    composeCommand: `docker compose -p ${project} -f ${composeFile} up -d ${composeServicesText}`,
   };
 }
 
@@ -280,7 +338,7 @@ async function acquire(values) {
     }
 
     if (existing?.project === project) {
-      const healthy = await isFrontendHealthy(record.env.PW_BASE_URL);
+      const healthy = await isFrontendHealthy(record.env[runtimeEnvKey('playwright_base_url', 'PW_BASE_URL')]);
 
       if (healthy) {
         if (!values.dryRun) {
@@ -367,7 +425,7 @@ function status(values) {
     const entries = Object.values(registry.slots);
     if (entries.length === 0) console.log('No registered runtime slots.');
     for (const entry of entries) {
-      console.log(`- slot ${entry.slot}: ${entry.project} ${entry.env?.PW_BASE_URL ?? ''} ${entry.status ?? ''}`);
+      console.log(`- slot ${entry.slot}: ${entry.project} ${entry.env?.[runtimeEnvKey('playwright_base_url', 'PW_BASE_URL')] ?? ''} ${entry.status ?? ''}`);
     }
   }
 }

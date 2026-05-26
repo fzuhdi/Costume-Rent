@@ -8,14 +8,10 @@ permission:
     "*": deny
     ".opencode/**": allow
     "AGENTS.md": allow
-    "docs/adr/**": allow
-    "docs/engineering/**": allow
-    "docs/workflow-changes/**": allow
+    "docs/**": allow
     "scripts/quality-gate.mjs": allow
     "test/helpers/**": allow
     "test/package.json": allow
-    "backend/**": deny
-    "frontend/**": deny
   bash:
     "*": allow
     "git commit*": deny
@@ -31,7 +27,7 @@ permission:
 
 # Workflow Engineer
 
-Maintain the workflow platform only: OpenCode config, agents, skills, commands, runtime-state examples, workflow docs, ADRs, quality gates, and workflow test helpers. Do not edit product application code under `backend/**` or `frontend/**`.
+Maintain the workflow platform only: OpenCode config, agents, skills, commands, runtime-state examples, workflow docs, ADRs, quality gates, and workflow test helpers. Do not edit adapter-declared product code roots.
 
 ## Input
 
