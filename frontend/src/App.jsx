@@ -29,6 +29,71 @@ const AppRoutes = () => {
   const { settings, loading: settingsLoading } = useSettings();
 
   useEffect(() => {
+    const getCookie = (name) => {
+      const prefix = `${name}=`;
+      return document.cookie
+        .split(';')
+        .map((cookie) => cookie.trim())
+        .find((cookie) => cookie.startsWith(prefix))
+        ?.slice(prefix.length) || '';
+    };
+
+    const enforceStoredTheme = () => {
+      const storedTheme = localStorage.getItem('heroui-theme') || decodeURIComponent(getCookie('heroui-theme'));
+      if (storedTheme !== 'dark' && storedTheme !== 'light') {
+        return;
+      }
+      if (document.documentElement.classList.contains('dark') !== (storedTheme === 'dark')) {
+        document.documentElement.classList.toggle('dark', storedTheme === 'dark');
+      }
+      if (document.documentElement.classList.contains('light') !== (storedTheme !== 'dark')) {
+        document.documentElement.classList.toggle('light', storedTheme !== 'dark');
+      }
+      if (document.documentElement.getAttribute('data-theme') !== storedTheme) {
+        document.documentElement.setAttribute('data-theme', storedTheme);
+      }
+    };
+
+    enforceStoredTheme();
+    const observer = new MutationObserver(enforceStoredTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const hasReferencedLabel = (element) => {
+      const ids = element.getAttribute('aria-labelledby')?.split(/\s+/).filter(Boolean) || [];
+      return ids.some((id) => document.getElementById(id)?.textContent?.trim());
+    };
+
+    const markDecorativeImages = () => {
+      document
+        .querySelectorAll('svg:not([aria-label]):not([aria-labelledby])')
+        .forEach((svg) => {
+          if (!svg.querySelector('title')) {
+            svg.setAttribute('aria-hidden', 'true');
+          }
+        });
+
+      document.querySelectorAll('[role="img"]').forEach((image) => {
+        const hasLabel = image.getAttribute('aria-label')?.trim()
+          || image.getAttribute('title')?.trim()
+          || hasReferencedLabel(image);
+
+        if (!hasLabel && !image.textContent?.trim()) {
+          image.removeAttribute('aria-labelledby');
+          image.setAttribute('aria-hidden', 'true');
+        }
+      });
+    };
+
+    markDecorativeImages();
+    const observer = new MutationObserver(markDecorativeImages);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     document.title = settings.app_name || 'Costume Rental';
   }, [settings]);
 

@@ -82,6 +82,9 @@ const RentFormPage = () => {
     if (!formData.client) newErrors.client = 'Pilih atau buat klien';
     if (!formData.rent_start) newErrors.rent_start = 'Tanggal mulai wajib diisi';
     if (!formData.rent_end) newErrors.rent_end = 'Tanggal selesai wajib diisi';
+    if (formData.rent_start && formData.rent_end && formData.rent_end < formData.rent_start) {
+      newErrors.rent_end = 'Tanggal selesai harus setelah tanggal mulai';
+    }
     if (items.length === 0) newErrors.items = 'Pilih minimal 1 kostum';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -114,10 +117,11 @@ const RentFormPage = () => {
 
       if (isEdit) {
         await updateRent(id, payload);
+        navigate(`/rents/${id}`);
       } else {
         await createRent(payload);
+        navigate('/rents');
       }
-      navigate('/rents');
     } catch (error) {
       console.error('Failed to save rent:', error);
     } finally {
@@ -136,7 +140,7 @@ const RentFormPage = () => {
   return (
     <div className="flex flex-col gap-4">
       <Link to="/rents" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
-        <ArrowLeft size={18} />
+        <ArrowLeft size={18} aria-hidden="true" />
         Kembali ke Riwayat Peminjaman
       </Link>
 
@@ -145,6 +149,14 @@ const RentFormPage = () => {
           <div className="mb-4">
             <h2 className="text-xl font-semibold">{isEdit ? 'Edit Peminjaman' : 'Form Peminjaman Baru'}</h2>
           </div>
+          {Object.values(errors).some(Boolean) && (
+            <div
+              role="alert"
+              className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
+            >
+              Lengkapi data peminjaman sebelum menyimpan.
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             <div>
               <h3 className="text-base font-medium mb-3">Data Klien</h3>
@@ -223,7 +235,7 @@ const RentFormPage = () => {
               <Button type="submit" variant="primary" isPending={saving} aria-label="Simpan">
                 {({isPending}) => (
                   <>
-                    {!isPending && <Save size={18} />}
+                    {!isPending && <Save size={18} aria-hidden="true" />}
                     {isPending ? 'Menyimpan...' : 'Simpan'}
                   </>
                 )}

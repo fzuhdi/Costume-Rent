@@ -55,7 +55,7 @@ func (s *RentService) List(filter dto.RentOrderFilter) (*dto.PaginatedResponse, 
 
 	var orders []models.RentOrder
 	offset := (filter.Page - 1) * filter.Limit
-	if err := query.Offset(offset).Limit(filter.Limit).Order("created_at DESC").Find(&orders).Error; err != nil {
+	if err := query.Offset(offset).Limit(filter.Limit).Order("rent_orders.created_at DESC").Find(&orders).Error; err != nil {
 		return nil, err
 	}
 

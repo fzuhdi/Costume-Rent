@@ -84,7 +84,18 @@ const CataloguePage = () => {
         page,
         limit,
       });
-      const data = (response.data.data || []).map((c) => ({
+      const uniqueCostumes = [];
+      const seenNames = new Set();
+      for (const costume of response.data.data || []) {
+        const key = String(costume.name || '').trim().toLowerCase();
+        if (debouncedSearch.trim() && seenNames.has(key)) {
+          continue;
+        }
+        seenNames.add(key);
+        uniqueCostumes.push(costume);
+      }
+
+      const data = uniqueCostumes.map((c) => ({
         ...c,
         children: [{
           id: `detail-${c.id}`,
@@ -98,8 +109,8 @@ const CataloguePage = () => {
         }],
       }));
       setCostumes(data);
-      setTotalPages(response.data.total_pages || 1);
-      setTotal(response.data.total || 0);
+      setTotalPages(debouncedSearch.trim() ? 1 : response.data.total_pages || 1);
+      setTotal(debouncedSearch.trim() ? data.length : response.data.total || 0);
     } catch (error) {
       console.error('Failed to fetch costumes:', error);
     } finally {

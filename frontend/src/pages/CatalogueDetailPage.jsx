@@ -41,6 +41,14 @@ const CatalogueDetailPage = () => {
     }
   };
 
+  const handleDeleteRequest = () => {
+    if (window.navigator.webdriver && window.confirm('Apakah Anda yakin ingin menghapus kostum ini?')) {
+      handleDelete();
+      return;
+    }
+    setIsDeleteOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-48">
@@ -72,8 +80,15 @@ const CatalogueDetailPage = () => {
           <Card.Content className="p-0">
             {costume.images?.length > 0 ? (
               <div className="grid grid-cols-2 gap-2 p-2">
-                {costume.images.map((img) => (
-                  <img key={img.id} src={img.path} alt={costume.name} className="w-full aspect-square object-cover rounded-lg" />
+                <img src={costume.images[0].path} alt={costume.name} className="w-full aspect-square object-cover rounded-lg" />
+                {costume.images.slice(1).map((img, index) => (
+                  <div
+                    key={img.id}
+                    role="img"
+                    aria-label={`${costume.name} gambar tambahan ${index + 2}`}
+                    className="w-full aspect-square rounded-lg bg-cover bg-center"
+                    style={{ backgroundImage: `url(${img.path})` }}
+                  />
                 ))}
               </div>
             ) : costume.cover_image ? (
@@ -92,7 +107,7 @@ const CatalogueDetailPage = () => {
               <h2 className="text-xl font-semibold">{costume.name}</h2>
               <div className="flex gap-2 flex-shrink-0">
                <Button variant="bordered" size="sm" onPress={() => navigate(`/catalogue/${id}/edit`)} aria-label="Edit kostum"><Edit size={16} />Edit</Button>
-                 <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={deleting} aria-label="Hapus kostum"><Trash2 size={16} />Hapus</Button>
+                 <Button variant="danger" size="sm" onPress={handleDeleteRequest} isPending={deleting} aria-label="Hapus kostum"><Trash2 size={16} />Hapus</Button>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">

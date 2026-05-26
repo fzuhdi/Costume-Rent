@@ -7,6 +7,23 @@ import NotificationBell from './NotificationBell';
 import { LogOut, Sun, Moon, Menu, ChevronRight, User, Settings } from 'lucide-react';
 import { Avatar, useTheme } from '@heroui/react';
 
+const getCookie = (name) => {
+  const prefix = `${name}=`;
+  return document.cookie
+    .split(';')
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(prefix))
+    ?.slice(prefix.length) || '';
+};
+
+const persistTheme = (nextTheme) => {
+  localStorage.setItem('heroui-theme', nextTheme);
+  document.cookie = `heroui-theme=${encodeURIComponent(nextTheme)}; path=/; SameSite=Lax`;
+  document.documentElement.classList.toggle('dark', nextTheme === 'dark');
+  document.documentElement.classList.toggle('light', nextTheme !== 'dark');
+  document.documentElement.setAttribute('data-theme', nextTheme);
+};
+
 const NavbarComponent = () => {
   const { user, logout } = useAuth();
   const { isCollapsed, openMobile } = useSidebar();
@@ -28,9 +45,24 @@ const NavbarComponent = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('heroui-theme') || decodeURIComponent(getCookie('heroui-theme'));
+    if (savedTheme === 'dark' || savedTheme === 'light') {
+      persistTheme(savedTheme);
+      setTheme(savedTheme);
+    }
+  }, [setTheme]);
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const handleThemeToggle = () => {
+    const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : theme;
+    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    persistTheme(nextTheme);
+    setTheme(nextTheme);
   };
 
   const currentPath = location.pathname.split('/').filter(Boolean)[0] || 'Dashboard';
@@ -62,7 +94,7 @@ const NavbarComponent = () => {
         <div className="flex items-center gap-1 sm:gap-2 ml-auto">
           {/* THEME TOGGLE - Standardized to w-10 h-10 */}
           <button 
-            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+            onClick={handleThemeToggle}
             className="w-10 h-10 flex items-center justify-center text-[var(--muted)] hover:bg-[var(--border)]/50 rounded-full transition-all"
             aria-label={theme === 'light' ? 'Beralih ke mode gelap' : 'Beralih ke mode terang'}
           >

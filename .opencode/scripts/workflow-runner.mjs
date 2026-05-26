@@ -685,7 +685,7 @@ function reconcileActiveRuntime(reconciliation, orchestrator, tickets) {
     addReconciliationItem(reconciliation, 'blocker', 'active-ticket-missing', `Runtime currentTicket ${orchestrator.currentTicket} has no docs/tickets file.`, [orchestrator.currentTicket, orchestrator.currentPlan]);
     return;
   }
-  const activeDone = ['ticket-complete', 'plan-complete', 'idle'].includes(orchestrator.status);
+  const activeDone = ['ticket-complete', 'regression-gating', 'plan-complete', 'idle'].includes(orchestrator.status);
   if (activeTicket.frontmatter.status === 'complete' && !activeDone) {
     addReconciliationItem(reconciliation, 'blocker', 'active-ticket-complete-drift', `Runtime is in ${orchestrator.status} for ${orchestrator.currentTicket}, but ${activeTicket.file} is already complete.`, [orchestrator.currentTicket, orchestrator.currentPlan]);
   }

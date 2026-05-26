@@ -4,7 +4,7 @@ import { BookOpen, ClipboardList, Users } from 'lucide-react';
 const tabs = [
   { path: '/catalogue', icon: BookOpen, label: 'Katalog' },
   { path: '/rents', icon: ClipboardList, label: 'Peminjaman' },
-  { path: '/clients', icon: Users, label: 'Klien' },
+  { path: '/clients', icon: Users, label: 'Data Klien' },
 ];
 
 const BottomTabs = () => {
