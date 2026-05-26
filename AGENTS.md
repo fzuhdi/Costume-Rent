@@ -2,16 +2,16 @@
 
 Tiny project memory. Skills/subagents/knowledge/commands load on demand.
 
-## Workflow adapter
-- Project Adapter: `.opencode/project.json` defines features, paths, protected files, test types, commands, quality gate, git defaults, and PR provider.
-- Acceptance source of truth: one file per feature in `docs/acceptance/`, using `FEATURE-001` test_case_id sections.
-- Generated Test Case Manifest: `.opencode/state/test-case-manifest.json`, built by `node .opencode/scripts/build-test-case-manifest.mjs`.
-- `/init-project <prd-or-plan>` is greenfield-only: use it only in empty/docs-only product repos. It must block existing product code, tests, dependency manifests, or CI configs instead of adopting them.
+## Source of truth
+- Project Adapter: `.opencode/project.json` defines features, paths, protected files, commands, quality gate, git defaults, and PR provider.
+- Acceptance: `docs/acceptance/`; generated manifest: `.opencode/state/test-case-manifest.json`.
+- FSM: `.opencode/skills/orchestrator/SKILL.md`; shared guardrails: `.opencode/skills/shared/constraints.md`; I/O: `.opencode/skills/shared/io-contract.md`.
+- Workflow model defaults: `.opencode/workflow-models.json`.
 
 ## Key commands
-- `/init-project` — initialize/repair Project Adapter, acceptance skeleton, manifests, rendered agents, and pointers after the Greenfield Gate passes.
 - `/plan-to-tickets` — create TDD tickets with `test_case_id`.
-- `/engineering/orchestrator` — execute one ready ticket through the TDD FSM.
+- `/coordinator` — ask for a target, prepare plan targets as max-3 isolated independent tracer-ticket worktrees/runtime slots, then dispatch orchestrator tasks; ticket targets dispatch one orchestrator task.
+- `/engineering/orchestrator` — show runnable plans with empty args, or execute one target ticket/plan through the TDD FSM.
 - `/productivity/start`, `/productivity/status` — resume and inspect workflow state.
 
 ## Guardrails

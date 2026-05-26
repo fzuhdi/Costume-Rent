@@ -6,12 +6,19 @@ const IGNORED_AXE_RULES = [
   'scrollable-region-focusable',
 ];
 
+function allowedConsoleErrorPatterns(testInfo) {
+  // Tests that intentionally mock browser errors must opt in with a regex annotation.
+  return testInfo.annotations
+    .filter(annotation => annotation.type === 'allow-console-error' && annotation.description)
+    .map(annotation => new RegExp(annotation.description, 'i'));
+}
+
 export const test = base.extend({
 
   // ── Console Guard ──────────────────────────────────────────────────────────
   // Captures ERRORS only (warnings are covered by axe a11yGuard below)
   // Deduplicates by type::text key, tracks occurrence count
-  consoleGuard: [async ({ page }, use) => {
+  consoleGuard: [async ({ page }, use, testInfo) => {
     const seen   = new Map();   // key: "type::text" → count
     const issues = [];          // { key, label } — unique entries only
 
@@ -21,11 +28,9 @@ export const test = base.extend({
       const text = msg.text();
       const key  = `error::${text}`;
 
-      if (text.includes('401') || text.includes('404')) return;
-
       if (!seen.has(key)) {
         seen.set(key, 1);
-        issues.push({ key, label: `[ERROR] ${text}` });
+        issues.push({ key, text, label: `[ERROR] ${text}` });
       } else {
         seen.set(key, seen.get(key) + 1);
       }
@@ -40,7 +45,7 @@ export const test = base.extend({
 
       if (!seen.has(key)) {
         seen.set(key, 1);
-        issues.push({ key, label: `[PAGEERROR] ${text}` });
+        issues.push({ key, text, label: `[PAGEERROR] ${text}` });
       } else {
         seen.set(key, seen.get(key) + 1);
       }
@@ -48,10 +53,13 @@ export const test = base.extend({
 
     await use();
 
-    if (issues.length > 0) {
+    const testAllowedPatterns = allowedConsoleErrorPatterns(testInfo);
+    const unallowedIssues = issues.filter(issue => !testAllowedPatterns.some(pattern => pattern.test(issue.text)));
+
+    if (unallowedIssues.length > 0) {
       throw new Error(
         `Console errors detected:\n\n${
-          issues
+          unallowedIssues
             .map(i => {
               const count = seen.get(i.key);
               return `${i.label}${count > 1 ? ` (×${count})` : ''}`;

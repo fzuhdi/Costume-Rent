@@ -3,8 +3,8 @@ description: Show TDD recovery status and recommend the safest next action
 agent: build
 ---
 
-Load the orchestrator skill (`.opencode/skills/orchestrator/SKILL.md`) and run its **Startup** procedure followed by its **Standard Report** section.
+Run `node .opencode/scripts/workflow-runner.mjs --json` and summarize its read-only status and reconciliation report.
 
-Recommend the safest TDD recovery action: resume RED validation, continue GREEN, rerun SDET, resolve dirty worktree, audit review tickets, run the next ready ticket, or rerun failed PR creation.
+Recommend the safest TDD recovery action from the runner's `nextStep`, prioritizing reconciliation blockers before deterministic GREEN rerun or worker dispatch.
 
 Do NOT invoke any subagents. This is a read-only status query.

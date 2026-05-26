@@ -4,13 +4,17 @@ These constraints apply to ALL workflow agents (developer, sdet, reviewer).
 
 ## Universal rules
 - Never modify `docker-compose.yml`, Dockerfiles, `nginx.conf` unless explicitly told.
-- Never introduce new dependencies without recording them in your return summary.
+- Never add, update, or remove dependencies without explicit user approval before the change.
+- Never run dependency or tool installers such as `npm install`, `npm ci`, `npx playwright install`, package-manager add/update commands, or browser/runtime installers without explicit user approval. Missing dependencies, missing browser caches, or lockfile drift are setup blocks until approved.
+- When asking for dependency/install approval, state the package or tool, requested version when known, reason, affected manifest/lockfile or cache, exact command, and fallback if denied.
+- In isolated worktrees, reuse an existing dependency directory only when it matches the relevant lockfile hash. If a dependency manifest or lockfile must change, serialize the work, ask approval, install once in a controlled workspace, and refresh the shared cache for that lockfile hash.
+- Record approved dependency changes and install commands in your return summary.
 - Never weaken assertions, skip tests, or use arbitrary `sleep` to "fix" timing — use proper waits.
 - A green suite is invalid if acceptance coverage was weakened. Product gaps must remain honest failures or become explicit product tickets.
 - Acceptance tests must be additive and self-scoped. Do not require global clean DB state, reset/truncate/drop data, or mutate records the test did not create.
 - Test-created records must use `E2E_...` for browser tests and `API_...` for API tests.
-- Run the project-configured quality gate after edits to adapter-declared test roots and before final review/commit when a gate is configured. If it fails, stop and report the findings.
-- A plan is not complete until full impacted specs pass. Mapped impacted-regression failures become same-plan `review` bug tickets; unmapped/setup failures block without product bug tickets.
+- Run the project-configured quality gate after edits to adapter-declared test roots and before final review/commit when no current successful gate covers the relevant diff. If it fails, stop and report the findings.
+- A plan is not complete until full impacted specs pass. Mapped impacted-regression failures block by default and become same-plan `review` bug tickets only when explicitly enabled; unmapped/setup failures block without product bug tickets.
 - Substantial workflow-maintenance changes use `workflow-engineer`, `docs/workflow-changes/*.md`, reviewer `MODE: workflow-maintenance`, and isolated workspaces per ADR 0003.
 - Use `write-a-skill` whenever creating or modifying skills.
 - Never push to `main`/`master`. Never use `--no-verify`. Never use `--force` on shared branches.
@@ -24,8 +28,8 @@ These constraints apply to ALL workflow agents (developer, sdet, reviewer).
 - Verify the test case immediately with the narrowest honest test before expanding scope.
 
 ## Role boundaries (system-enforced via permissions, but stated for clarity)
-- **developer** — owns `backend/`, `frontend/`. May NOT touch `test/`.
-- **sdet**      — owns `test/`. May NOT touch `backend/` or `frontend/`.
+- **developer** — owns adapter-declared `code_roots`. May NOT touch adapter-declared `test_roots` or the recorded SDET acceptance test.
+- **sdet**      — owns adapter-declared `test_roots`. May NOT touch adapter-declared `code_roots`.
 - **reviewer**  — read-only. May NOT edit anything.
 
 ## Source of truth
@@ -37,5 +41,5 @@ These constraints apply to ALL workflow agents (developer, sdet, reviewer).
 - Review checklist: `docs/engineering/REVIEW_CHECKLIST.md`
 - Quality gates: `docs/engineering/QUALITY_GATES.md`
 - Workflow I/O contract: `.opencode/skills/shared/io-contract.md`
-- Operational runbook: `.opencode/knowledge/runbook.md`
-- Known recurring bugs: `.opencode/knowledge/common-bugs.md`
+- Operational runbook: `docs/runbooks/project-runbook.md`
+- Known recurring bugs: `docs/engineering/common-bugs.md`

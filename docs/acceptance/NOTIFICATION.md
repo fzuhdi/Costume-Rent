@@ -71,3 +71,10 @@ Status: covered
 Test type: e2e
 Criterion: Overdue items are visually distinct from due_soon.
 Expected outcome: The system satisfies this behavior: Overdue items are visually distinct from due_soon.
+
+## NOTIFICATION-011: Notification Popover Is Usable On Mobile
+
+Status: ready
+Test type: e2e
+Criterion: The notification bell opens a mobile-usable popover with empty and populated states, a close control, and rent detail navigation.
+Expected outcome: Staff can review overdue and due-soon notifications from mobile without clipped content, inaccessible controls, or broken rent navigation.

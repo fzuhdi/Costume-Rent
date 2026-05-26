@@ -92,3 +92,17 @@ Status: covered
 Test type: e2e
 Criterion: Delete client.
 Expected outcome: The system satisfies this behavior: Delete client.
+
+## CLIENT-014: Client List Uses Mobile Cards
+
+Status: ready
+Test type: e2e
+Criterion: On a mobile viewport, the client list displays cards with name, phone, total rents, active or overdue state, detail action, and delete action.
+Expected outcome: Staff can search, review status, open, and delete clients from mobile without relying on horizontal table scanning.
+
+## CLIENT-015: Client Detail And Form Are Mobile Usable
+
+Status: ready
+Test type: e2e
+Criterion: Client detail and create/edit form pages show contact information, rental history, validation, edit/save actions, and destructive actions in scannable mobile sections without horizontal scrolling.
+Expected outcome: Staff can inspect and update client information from mobile while preserving existing client history and validation behavior.

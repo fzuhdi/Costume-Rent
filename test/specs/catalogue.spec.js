@@ -50,7 +50,10 @@ async function createE2ECostumeViaUi(page, purpose, images = []) {
   }
   await formPage.submit();
   await expect(page).toHaveURL(/\/catalogue\/\d+/, { timeout: 15000 });
-  return { name, detailUrl: page.url() };
+  const detailUrl = page.url();
+  const idMatch = detailUrl.match(/\/catalogue\/(\d+)/);
+  expect(idMatch).toBeTruthy();
+  return { id: Number(idMatch[1]), name, detailUrl };
 }
 
 test.describe('Catalogue Management (Costume Management)', () => {
@@ -534,5 +537,161 @@ test.describe('Catalogue Management (Costume Management)', () => {
       await page.waitForTimeout(500);
     }
     expect(true).toBe(true); // Test passes if no crash
+  });
+
+// CATALOGUE-035: Mobile catalogue uses collapsible filters and inventory cards
+  test('[CATALOGUE-035] - Mobile catalogue uses collapsible filters and inventory cards', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    const cataloguePage = new CataloguePage(page);
+    await cataloguePage.goto();
+    await cataloguePage.assertPageLoaded();
+
+    const filterToggle = page.getByRole('button', { name: /buka filter|tampilkan filter|filter katalog/i });
+    await expect(filterToggle).toBeVisible();
+
+    await expect(cataloguePage.searchInput).not.toBeVisible();
+
+    await filterToggle.click();
+
+    await expect(cataloguePage.searchInput).toBeVisible();
+    await expect(cataloguePage.regionFilter).toBeVisible();
+    await expect(cataloguePage.categoryFilter).toBeVisible();
+    await expect(cataloguePage.galleryViewButton).toBeVisible();
+
+    const firstCard = page.locator('a[href*="/catalogue/"]').first();
+    await expect(firstCard).toBeVisible();
+
+    const firstCardImage = firstCard.locator('img').first();
+    if (await firstCardImage.count()) {
+      await expect(firstCardImage).toBeVisible();
+    } else {
+      await expect(firstCard.getByText(/No Image/i)).toBeVisible();
+    }
+
+    await expect(firstCard).toContainText(/tersedia|unit/i);
+  });
+
+  // CATALOGUE-036: Mobile costume detail and form pages are usable without horizontal scrolling
+  test('[CATALOGUE-036] - Mobile costume detail and create/edit form pages are usable without horizontal scrolling', async ({ page }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    const costume = await createE2ECostumeViaUi(page, 'AC036_MOBILE', [fixtureImage1]);
+
+    // We land on the created costume detail page after save.
+    await expect(page).toHaveURL(/\/catalogue\/\d+$/);
+
+    // === TEST COSTUME DETAIL PAGE ===
+    // Verify no horizontal scroll on detail page
+    const detailBody = page.locator('body');
+    const detailScrollWidth = await detailBody.evaluate(el => el.scrollWidth);
+    const detailClientWidth = await detailBody.evaluate(el => el.clientWidth);
+    expect(detailScrollWidth).toBeLessThanOrEqual(detailClientWidth);
+
+    // Verify the created costume name appears on the detail page
+    await expect(page.getByText(costume.name)).toBeVisible();
+
+    // Verify the created costume image is visible within the main content area
+    const mainImages = page.locator('main img');
+    await expect(mainImages.first()).toBeVisible();
+    await expect(mainImages.first()).toHaveAttribute('alt', costume.name);
+
+    // Verify stock/quantity information is visible
+    const bodyText = await page.locator('body').textContent();
+    expect(bodyText).toMatch(/tersedia|quantity|jumlah|stock/i);
+
+    // Verify edit button is visible without scrolling
+    const editButton = page.getByRole('button', { name: /edit/i });
+    await expect(editButton).toBeVisible();
+
+    // Verify delete action is usable on mobile by opening and dismissing confirmation
+    const deleteButton = page.getByRole('button', { name: /hapus/i });
+    await expect(deleteButton).toBeVisible();
+    await deleteButton.click();
+    await expect(page.getByText(/apakah anda yakin ingin menghapus kostum ini\?/i)).toBeVisible();
+    await page.getByRole('button', { name: /^batal$/i }).click();
+    await expect(page.getByText(/apakah anda yakin ingin menghapus kostum ini\?/i)).not.toBeVisible();
+
+    // === TEST CREATE FORM PAGE ===
+    // Navigate to create new costume form
+    await page.goto('/catalogue/new');
+    const formPage = new CatalogueFormPage(page);
+    await formPage.assertFormLoaded();
+
+    // Verify no horizontal scroll on form page
+    const formBody = page.locator('body');
+    const formScrollWidth = await formBody.evaluate(el => el.scrollWidth);
+    const formClientWidth = await formBody.evaluate(el => el.clientWidth);
+    expect(formScrollWidth).toBeLessThanOrEqual(formClientWidth);
+
+    // Verify form fields are visible without scrolling
+    await expect(formPage.nameInput).toBeVisible();
+    await expect(formPage.regionSelect).toBeVisible();
+    await expect(formPage.categorySelect).toBeVisible();
+    await expect(formPage.quantityInput).toBeVisible();
+
+    // Verify validation works - try to submit empty form
+    await formPage.submit();
+    // Should stay on form page (not redirect) due to validation error
+    await expect(page).toHaveURL(/\/catalogue\/new/);
+    // Verify validation feedback appears — either inline HeroUI error or HTML5 native tooltip
+    const hasInlineError = await page.locator('[data-slot="error-message"], [role="alert"], .text-red, .error').first().isVisible().catch(() => false);
+    if (!hasInlineError) {
+      // HTML5 native validation: the first invalid input receives focus + has a validationMessage
+      const validationActive = await page.evaluate(() => {
+        const input = document.querySelector('input[data-slot="input"], input[required]');
+        return input && input === document.activeElement && input.validationMessage.length > 0;
+      });
+      expect(validationActive).toBe(true);
+    }
+
+    // Verify create-form cancel is usable on mobile
+    await expect(formPage.cancelButton).toBeVisible();
+    await formPage.cancel();
+    await expect(page).toHaveURL(/\/catalogue$/);
+
+    // Return to detail page before entering edit flow
+    await page.goto(`/catalogue/${costume.id}`);
+    await expect(page).toHaveURL(/\/catalogue\/\d+$/);
+
+    // === TEST EDIT FORM PAGE ===
+    // Go to edit page from detail
+    await page.getByRole('button', { name: /edit/i }).click();
+    await expect(page).toHaveURL(/\/catalogue\/\d+\/edit/);
+    await formPage.assertFormLoaded();
+
+    // Verify no horizontal scroll on edit form page
+    const editBody = page.locator('body');
+    const editScrollWidth = await editBody.evaluate(el => el.scrollWidth);
+    const editClientWidth = await editBody.evaluate(el => el.clientWidth);
+    expect(editScrollWidth).toBeLessThanOrEqual(editClientWidth);
+
+    // Verify form fields are visible without scrolling on edit page
+    await expect(formPage.nameInput).toBeVisible();
+    await expect(formPage.regionSelect).toBeVisible();
+    await expect(formPage.categorySelect).toBeVisible();
+    await expect(formPage.quantityInput).toBeVisible();
+ 
+    // Verify edit-form cancel is usable on mobile
+    await expect(formPage.cancelButton).toBeVisible();
+    await formPage.cancel();
+    await expect(page).toHaveURL(/\/catalogue$/);
+
+    // Re-enter edit form and verify save action is usable on mobile
+    await page.goto(`/catalogue/${costume.id}`);
+    await page.getByRole('button', { name: /edit/i }).click();
+    await expect(page).toHaveURL(/\/catalogue\/\d+\/edit/);
+    await formPage.assertFormLoaded();
+    await expect(formPage.submitButton).toBeVisible();
+    const editedName = `${costume.name}_EDITED`;
+    await formPage.nameInput.fill(editedName);
+    await formPage.submit();
+    await expect(page).toHaveURL(new RegExp(`/catalogue/${costume.id}$`));
+    await expect(page.getByText(editedName)).toBeVisible();
+
+    // End on a form page that has already been validated for mobile usability.
+    await page.goto('/catalogue/new');
+    await formPage.assertFormLoaded();
   });
 });

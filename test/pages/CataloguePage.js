@@ -47,8 +47,8 @@ class CataloguePage extends BasePage {
   }
 
   async clickFirstCostume() {
-    // Wait for content to load - works for both list and table view
-    await this.page.waitForSelector('div.rounded-lg.border, table tbody tr', { timeout: 10000 });
+    // Wait for content to load across desktop and mobile catalogue layouts
+    await this.page.waitForSelector('div.rounded-lg.border, table tbody tr, a[href*="/catalogue/"]', { timeout: 10000 });
 
     // In both views, click the link that goes to /catalogue/:id
     const detailLink = this.page.locator('a[href*="/catalogue/"]').filter({ hasNot: this.page.locator('text=/tambah|new/i') }).first();

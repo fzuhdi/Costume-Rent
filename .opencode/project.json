@@ -108,6 +108,64 @@
   "quality_gate": {
     "command": "node scripts/quality-gate.mjs"
   },
+  "runtime": {
+    "slot_step": 100,
+    "base_ports": {
+      "frontend": 5173,
+      "backend": 8081,
+      "sqlite": 8080
+    },
+    "compose": {
+      "file": "docker-compose.dev.yml",
+      "services": [
+        "backend",
+        "frontend"
+      ]
+    },
+    "runtime_files": {
+      "required": [
+        "frontend/package-lock.json",
+        "test/package-lock.json"
+      ],
+      "optional": []
+    },
+    "generated_env_files": [
+      {
+        "target": "backend/.env.ticket",
+        "values": {
+          "APP_ENV": "development",
+          "PORT": "8080",
+          "DB_PATH": "/app/data/busana_tari.db",
+          "JWT_SECRET": "dev-only-ticket-jwt-secret",
+          "JWT_EXPIRES_HOURS": "24",
+          "NOTIFICATION_DUE_DAYS": "3",
+          "UPLOAD_DIR": "/app/uploads",
+          "ALLOWED_ORIGINS": "http://localhost:{FRONTEND_HOST_PORT}"
+        }
+      }
+    ],
+    "env_keys": {
+      "container_prefix": "BUSANA_CONTAINER_PREFIX",
+      "frontend_host_port": "FRONTEND_HOST_PORT",
+      "backend_host_port": "BACKEND_HOST_PORT",
+      "sqlite_web_host_port": "SQLITE_WEB_HOST_PORT",
+      "db_volume": "BUSANA_DB_VOLUME",
+      "frontend_node_modules_volume": "BUSANA_FRONTEND_NODE_MODULES_VOLUME",
+      "vite_dev_port": "VITE_DEV_PORT",
+      "playwright_base_url": "PW_BASE_URL",
+      "playwright_output_dir": "PW_OUTPUT_DIR",
+      "playwright_json_output": "PW_JSON_OUTPUT",
+      "playwright_html_report": "PW_HTML_REPORT"
+    },
+    "env_values": {
+      "BUSANA_BACKEND_ENV_FILE": "backend/.env.ticket"
+    },
+    "volume_prefixes": {
+      "db": "busana_db",
+      "frontend_node_modules": "busana_frontend_node_modules"
+    },
+    "vite_dev_port": "5173"
+  },
   "git": {
     "branch_prefix": "tdd/",
     "commit_scope": "tdd",
@@ -115,6 +173,13 @@
   },
   "pr": {
     "provider": "github"
+  },
+  "portability_audit": {
+    "forbidden_reusable_patterns": [
+      "\\b(?:Costume Rental|Costume-Rent|catalogue|CATALOGUE|rental|RENT|busana|BUSANA|Baju Adat|admin@busana\\.com)\\b",
+      "(?:PLAN-20260517|TICKET-20260517|CATALOGUE-\\d{3}|RENT-\\d{3}|CLIENT-\\d{3}|AUTH-\\d{3}|SETTINGS-\\d{3}|NOTIFICATION-\\d{3}|NAVIGATION-\\d{3})",
+      "\\bBUSANA_[A-Z0-9_]+\\b|\\bbusana_[a-z0-9_]+\\b"
+    ]
   },
   "agent_permissions": {
     "developer": {
@@ -170,6 +235,31 @@
       "deny": [
         "backend/**",
         "frontend/**"
+      ]
+    },
+    "orchestrator": {
+      "read": [
+        "docs/tickets/**",
+        "docs/acceptance/**",
+        "docs/plans/**",
+        ".opencode/state/*.json",
+        ".opencode/state.example/*.json",
+        ".opencode/skills/**",
+        ".opencode/project.json",
+        "test/**",
+        "backend/**",
+        "frontend/**"
+      ],
+      "write": [
+        "docs/tickets/**",
+        "docs/plans/**",
+        ".opencode/state/*.json",
+        ".opencode/state/worker-outputs/**",
+        ".opencode/logs/workflow-runs/**",
+        ".opencode/state.example/*"
+      ],
+      "deny": [
+        ".opencode/opencode.json"
       ]
     }
   }

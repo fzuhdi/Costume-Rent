@@ -148,3 +148,17 @@ Status: covered
 Test type: e2e
 Criterion: Cancel delete does not remove rental.
 Expected outcome: The system satisfies this behavior: Cancel delete does not remove rental.
+
+## RENT-022: Rental History Uses Mobile Cards
+
+Status: ready
+Test type: e2e
+Criterion: On a mobile viewport, rental history displays rental cards with client, date range, costume count, status, detail action, and return action when applicable.
+Expected outcome: Staff can review and act on rentals from mobile without relying on horizontal table scanning.
+
+## RENT-023: Rental Detail And Form Are Mobile Usable
+
+Status: ready
+Test type: e2e
+Criterion: Rental detail and create/edit form pages show client, dates, guarantee, costumes, notes, validation, status, return/edit/save actions, and cancel actions in scannable mobile sections without horizontal scrolling.
+Expected outcome: Staff can inspect, create, edit, and return rentals from mobile while preserving existing rental validation and confirmation behavior.

@@ -57,7 +57,7 @@ Substantial workflow changes should document:
 
 ## Hard Rules
 
-- Do not edit `backend/**` or `frontend/**` as workflow maintenance.
+- Do not edit adapter-declared product code roots as workflow maintenance.
 - Do not use normal product tickets for workflow-platform changes.
 - Do not bypass reviewer for substantial workflow changes.
 - Do not duplicate policy across ADRs, skills, runbooks, and README files.

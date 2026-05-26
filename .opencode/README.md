@@ -1,8 +1,21 @@
 # OpenCode Workflow
 
-This `.opencode` setup uses an Agile backlog with strict TDD tracer-ticket execution. A plan acts like an epic. Ready `feature` and `bug` tickets are executable backlog items. Each executable ticket maps to exactly one generated Test Case Manifest entry, plus a RED expectation and a GREEN expectation.
+This `.opencode` setup runs strict TDD tracer-ticket execution for plans and tickets. Detailed behavior lives in source-of-truth files; this README is an index for users and agents.
 
-This Workflow Kit is intended for empty/greenfield product repositories where OpenCode establishes the project structure, acceptance IDs, test strategy, and workflow conventions from the start. It is not an adoption/migration workflow for existing applications, existing tests, existing CI, or existing dependency manifests.
+## Source Of Truth
+
+| Area | Source |
+|---|---|
+| Project adapter, writable roots, commands, quality gate | `.opencode/project.json` |
+| FSM and TDD lifecycle | `.opencode/skills/orchestrator/SKILL.md` |
+| Shared guardrails | `.opencode/skills/shared/constraints.md` |
+| Subagent return fields | `.opencode/skills/shared/io-contract.md` |
+| Model defaults | `.opencode/workflow-models.json` |
+| Model capability categories | `.opencode/model-capabilities.md` |
+| Model selection procedure | `.opencode/skills/model-selector/SKILL.md` |
+| Model resolver script | `.opencode/scripts/resolve-agent-models.mjs` |
+| Test integrity and quality gates | `docs/engineering/` |
+| Runtime recovery commands | `docs/runbooks/project-runbook.md` |
 
 ## Model
 
@@ -11,112 +24,63 @@ Plan / Epic
   -> Ticket / Backlog Item
       -> type: feature | bug | chore | spike
       -> exactly one executable acceptance criterion when ready
-      -> SDET RED -> developer GREEN -> SDET rerun -> reviewer final audit
+      -> runner reconciliation -> SDET RED -> developer GREEN -> deterministic GREEN rerun -> reviewer audit when risk rules require it
 ```
 
-Use one backlog for features, bugs, chores, and spikes. The orchestrator executes only ready `feature` and `bug` tickets mapped to one tracer test case. `chore` and `spike` tickets remain draft planning records until converted.
+Executable tickets are ready `feature` or `bug` items mapped to exactly one `test_case_id`. `chore` and `spike` records stay planning-only until converted.
 
 ## Commands
 
 | Command | Purpose |
 |---|---|
-| `/init-project <prd-or-plan>` | Initializes or repairs the Project Adapter only after the Greenfield Gate confirms an empty/docs-only product repo. |
-| `/plan-to-tickets [plan-file] [plan-id optional]` | Converts or repairs plans/bugs/ask-me output into TDD-ready plan and ticket files. |
-| `/engineering/orchestrator` | Shows TDD status, review/ready tickets, plans, checkpoints, and PR post-step state. |
-| `/engineering/orchestrator [ticket-id]` | Runs one ready feature/bug ticket through strict TDD. |
-| `/engineering/orchestrator [plan-id]` | Audits review tickets and runs all ready executable tickets for one plan sequentially. |
-| `/productivity/start` | Reads TDD progress/logs and recommends the safest recovery or next action. |
+| `/plan-to-tickets [plan-file] [plan-id optional]` | Converts or repairs plans, bugs, ask-me output, or PRDs into TDD-ready plan and ticket files. |
+| `/coordinator [plan-id|ticket-id]` | Preferred user-facing coordinator; plan targets prepare up to 3 independent ready tracer-ticket worktrees/runtime slots and dispatch orchestrator tasks, ticket targets dispatch one orchestrator task. |
+| `/engineering/orchestrator` | Shows TDD status, reconciliation drift, and runnable plans without invoking subagents. |
+| `/engineering/orchestrator [ticket-id]` | Runs one ticket through the runner-owned strict TDD workflow. |
+| `/engineering/orchestrator [plan-id]` | Runs one plan inside the current worktree; use `/coordinator <plan-id>` for default max-3 parallel tracer execution. |
+| `/productivity/start` | Reads progress and recommends the safest recovery or next action. |
 | `/productivity/status` | Reports current TDD workflow status without invoking subagents. |
+| `node .opencode/scripts/workflow-runner.mjs --target <plan-id|ticket-id> --dry-run` | Preview-only deterministic preflight; validates state and reports the next step without invoking subagents. |
+| `node .opencode/scripts/workflow-runner.mjs --reconcile --json` | Compares plan docs, ticket frontmatter, runtime state, checkpoints, and leases before execution. |
+| `node .opencode/scripts/workflow-runner.mjs --target <plan-id|ticket-id> --next-task --json` | Emits exactly one next worker task payload without invoking subagents. |
+| `node .opencode/scripts/workflow-runner.mjs --target <plan-id|ticket-id> --ingest-worker-output <path> --json` | Validates a captured worker final message and advances the selected ticket or plan phase when supported. |
+| `node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3 --dry-run --json` | Previews preparation for up to 3 independent ready executable tickets in isolated worktrees and Docker Compose runtime slots. Non-dry-run output includes orchestrator task handoffs. |
+| `node .opencode/scripts/workflow-runner.mjs --target <ticket-id> --run-ticket --json` | Deterministic happy-path ticket runner; owns branch/checkpoint commits, quality-gate checks, GREEN verification, optional reviewer skip, and runtime-state advancement while still consuming captured worker outputs. |
+| `node .opencode/scripts/workflow-runner.mjs --target <plan-id> --run-plan --json` | Deterministic plan runner; sequences review/ready tickets through the runner-owned ticket path and gates plan completion on impacted-spec regression. |
+| `node .opencode/scripts/workflow-runner.mjs --target <ticket-id> --run-green --json` | Deterministic official GREEN rerun for the recorded RED test; replaces `sdet MODE: run-green`. |
+| `node .opencode/scripts/workflow-runner.mjs --target <ticket-id> --validate-worker-output <sdet-red|developer-green|developer-refactor|reviewer> --output-file <path> --json` | Deterministic contract validator for one worker final message before the FSM advances. |
 
-The `coordinator` skill is the preferred user-facing entry point for multiple tickets/plans and workflow-maintenance sequencing. Direct `developer`, `sdet`, and `reviewer` commands are debug-only for normal users.
+Direct `developer`, `sdet`, and `reviewer` commands are debug-only for normal users.
 
-## TDD Flow
+## Runtime Modes
 
-```text
-selecting-ticket
--> red-writing          (SDET writes and validates acceptance RED)
--> red-validating       (only failing_expected starts GREEN)
--> green-building       (developer app-code only)
--> green-testing        (SDET reruns recorded RED test)
--> refactoring          (optional, bounded, app-code only)
--> final-review         (reviewer audits scope and test integrity)
--> ticket-complete
-```
+- Default plan mode: up to 3 independent ready tracer tickets run in parallel as orchestrator tasks, each with an isolated worktree, branch, Compose project, host-port slot, Playwright base URL, and `.opencode/state/`. Tickets with unmet `depends_on` prerequisites wait for a later batch. Completed ticket branches require explicit serialized integration before plan regression; do not assume implicit auto-merge.
+- Default ticket mode: one orchestrator task, one checkout/worktree, one long-lived dev stack, one Playwright base URL.
+- Parallel isolation details are in `docs/adr/0003-ticket-and-workflow-workspaces.md` and `docs/runbooks/project-runbook.md`.
 
-`explore` may run read-only discovery in parallel with SDET RED. Developer app-code work starts only after valid RED. Developer never edits the SDET acceptance test.
-
-## Ticket Files
-
-Tickets live in `docs/tickets/`.
-
-```yaml
----
-id: TICKET-20260516-001
-plan_id: PLAN-20260516-catalogue-search
-type: feature
-status: ready
-test_case_id: CATALOGUE-004
-priority: 1
-source_plan: docs/plans/catalogue-search.md
-red_expectation: The acceptance test fails because the behavior is missing.
-green_expectation: The same acceptance test passes after minimal implementation.
----
-```
-
-Ticket status enum: `draft | review | ready | in_progress | blocked | complete`.
-
-`status: review` means a repaired ambiguous ticket must pass reviewer `ticket-audit` before execution. `status: ready` means the ticket is independently executable and has all required TDD fields.
-
-## Plan Execution
-
-When invoked with a `PLAN_ID`, the orchestrator:
-
-1. Requires a clean worktree and creates/resumes `tdd/{plan-id}`.
-2. Audits `status: review` tickets first.
-3. Runs ready executable `feature`/`bug` tickets sequentially.
-4. Stops on dirty/disputed blocked work.
-5. Completes the plan only when all review/executable tickets pass and no executable/review ticket is blocked or escalated.
-6. Pushes the branch and creates a PR only after whole-plan success.
-
-Draft chore/spike backlog records do not block PR creation.
+Dependency/install approval, runtime setup blocks, role boundaries, and test-state rules are defined in `.opencode/skills/shared/constraints.md`.
 
 ## Branches And Commits
 
 - Plan branch: `tdd/{plan-id}`.
 - Ticket branch: `tdd/{ticket-id}`.
 - Branches are created only from a clean worktree.
-- No auto-stash, auto-reset, or dirty-work discard.
-- Coordinator-managed tickets and substantial workflow changes use isolated workspaces per `docs/adr/0003-ticket-and-workflow-workspaces.md`.
-
-Commit convention:
-
-- `checkpoint(tdd): pre-red <ticket-id>`
-- `test(tdd): red <ticket-id>`
-- `test(tdd): coverage <ticket-id>`
-- `feat(tdd): green <ticket-id>` or `fix(tdd): green <ticket-id>`
-- `refactor(tdd): <ticket-id>`
-- `docs(tdd): block <ticket-id|plan-id>`
-- `docs(tdd): complete <plan-id>`
+- No auto-stash, auto-reset, dirty-work discard, force push, or hidden recovery.
+- Commit message conventions are owned by `.opencode/skills/orchestrator/SKILL.md`.
 
 ## State Files
 
 | File | Purpose |
 |---|---|
-| `.opencode/state/orchestrator-progress.json` | Current TDD phase, ticket, branch, checkpoints, and RED evidence. |
-| `.opencode/state/ticket-progress.json` | Runtime ticket/plan execution and PR post-step state. |
-| `.opencode/state/checkpoints.json` | Recorded checkpoint SHAs. |
-| `.opencode/state.example/orchestrator-progress.json` | Tracked example orchestrator state shape. |
-| `.opencode/state.example/ticket-progress.json` | Tracked example ticket state shape. |
-| `.opencode/state.example/checkpoints.json` | Tracked example checkpoints shape. |
+| `.opencode/state/orchestrator-progress.json` | Authoritative active-run phase, ticket, branch, checkpoints, and RED evidence. |
+| `.opencode/state/ticket-progress.json` | Ticket/plan summary, audit evidence, and PR post-step state. |
+| `.opencode/state/checkpoints.json` | Checkpoint SHA ledger. |
 | `.opencode/state/test-case-manifest.json` | Generated feature-to-test case map. |
+| `.opencode/state/worker-outputs/` | Ignored captured worker final messages for runner ingestion. |
+| `.opencode/logs/workflow-runs/*.jsonl` | Ignored deterministic runner telemetry for mutating runner invocations. |
+| `.opencode/state.example/*.json` | Tracked example runtime state shapes. |
 
-Runtime state uses `schemaVersion: 2`. Unknown or old versions block with `invalid progress state`; old state is not auto-migrated.
-
-## ADRs
-
-- `docs/adr/0001-tdd-orchestrator-execution.md`
-- `docs/adr/0002-tdd-branching-commits-prs.md`
-- `docs/adr/0003-ticket-and-workflow-workspaces.md`
+Runtime state uses the schema version required by the orchestrator skill.
 
 ## Restart Note
 

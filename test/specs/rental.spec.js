@@ -341,4 +341,106 @@ test.describe('Rental Management', () => {
       }
     }
   });
+
+  test('[RENT-022] - Rental History Uses Mobile Cards', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const rentHistoryPage = new RentHistoryPage(page);
+    await rentHistoryPage.goto();
+    await expect(page).toHaveURL(/\/rents/);
+    await expect(page.getByRole('heading', { name: /Riwayat Peminjaman/i })).toBeVisible();
+
+    const cardCandidates = page
+      .locator([
+        '[data-testid*="rent-card"]',
+        '[data-testid*="rental-card"]',
+        '[class*="rent-card"]',
+        '[class*="rental-card"]',
+        'article:has(button:has-text("Detail"))',
+        'li:has(button:has-text("Detail"))'
+      ].join(', '));
+
+    const cardCount = await cardCandidates.count();
+    expect(cardCount).toBeGreaterThan(0);
+
+    const firstCard = cardCandidates.first();
+    await expect(firstCard).toContainText(/\d+\s*(kostum|costume)/i);
+    await expect(firstCard).toContainText(/\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/i);
+    await expect(firstCard).toContainText(/aktif|terlambat|dikembalikan|active|overdue|returned/i);
+
+    const detailAction = firstCard.getByRole('button', { name: /detail|lihat/i });
+    await expect(detailAction).toBeVisible();
+
+    const statusText = (await firstCard.textContent()) || '';
+    const isReturned = /dikembalikan|returned/i.test(statusText);
+    if (!isReturned) {
+      await expect(firstCard.getByRole('button', { name: /kembalikan|return/i })).toBeVisible();
+    }
+  });
+
+  test('[RENT-023] - Mobile rental detail and form remain scannable with usable actions', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    const rentHistoryPage = new RentHistoryPage(page);
+    await rentHistoryPage.goto();
+    await expect(page.locator('h1')).toContainText(/Riwayat Peminjaman/i);
+
+    const mobileCards = page
+      .locator([
+        '[data-testid*="rent-card"]',
+        '[data-testid*="rental-card"]',
+        '[class*="rent-card"]',
+        '[class*="rental-card"]',
+        'article:has(button:has-text("Detail"))',
+        'li:has(button:has-text("Detail"))'
+      ].join(', '));
+    await expect(mobileCards.first()).toBeVisible();
+    await mobileCards.first().getByRole('button', { name: /detail|lihat/i }).click();
+    await expect(page).toHaveURL(/\/rents\/\d+/);
+
+    await expect(page.getByText(/^Klien$/i)).toBeVisible();
+    await expect(page.getByText(/^Tanggal Pinjam$/i)).toBeVisible();
+    await expect(page.getByText(/^Jaminan$/i)).toBeVisible();
+    await expect(page.getByText(/^Catatan$/i)).toBeVisible();
+    await expect(page.locator('body')).toContainText(/status|aktif|dikembalikan|terlambat/i);
+    await expect(page.getByRole('button', { name: /Edit/i })).toBeVisible();
+    const detailText = (await page.locator('body').textContent()) || '';
+    if (!/dikembalikan|returned/i.test(detailText)) {
+      await expect(page.getByRole('button', { name: /Kembalikan/i })).toBeVisible();
+    }
+
+    const detailHasHorizontalOverflow = await page.evaluate(() => {
+      const doc = document.documentElement;
+      return doc.scrollWidth > doc.clientWidth;
+    });
+    expect(detailHasHorizontalOverflow).toBe(false);
+
+    await page.getByRole('button', { name: /Edit/i }).click();
+    await expect(page).toHaveURL(/\/rents\/\d+\/edit/);
+    const rentFormPage = new RentFormPage(page);
+    await expect(rentFormPage.clientSelect).toBeVisible();
+    await expect(rentFormPage.rentStartInput).toBeVisible();
+    await expect(rentFormPage.rentEndInput).toBeVisible();
+    await expect(rentFormPage.guaranteeTypeSelect).toBeVisible();
+    await expect(rentFormPage.notesInput).toBeVisible();
+    await expect(rentFormPage.cancelButton).toBeVisible();
+    await expect(rentFormPage.submitButton).toBeVisible();
+
+    const editHasHorizontalOverflow = await page.evaluate(() => {
+      const doc = document.documentElement;
+      return doc.scrollWidth > doc.clientWidth;
+    });
+    expect(editHasHorizontalOverflow).toBe(false);
+
+    await page.goto('/rents/new', { waitUntil: 'networkidle' });
+    await expect(page).toHaveURL(/\/rents\/new/);
+    await expect(rentFormPage.clientSelect).toBeVisible();
+    await rentFormPage.fillNotes(`E2E_RENT_023_${Date.now()}`);
+    await rentFormPage.submit();
+    await expect(page).toHaveURL(/\/rents\/new/);
+    await expect(page.locator('[role="alert"], [class*="alert"], [class*="error"], .text-red-500').first()).toBeVisible();
+
+    await rentFormPage.cancelButton.click();
+    await expect(page).toHaveURL(/\/rents$/);
+  });
 });

@@ -92,3 +92,10 @@ Status: covered
 Test type: e2e
 Criterion: Success message appears after save.
 Expected outcome: The system satisfies this behavior: Success message appears after save.
+
+## SETTINGS-014: Settings Branding Page Is Mobile Usable
+
+Status: ready
+Test type: e2e
+Criterion: The settings page shows logo, app name, tagline controls, preview, success/error feedback, and save action in a mobile-friendly layout while preserving existing update behavior.
+Expected outcome: Staff can update branding settings from mobile without losing existing logo, app name, tagline, preview, or persistence behavior.

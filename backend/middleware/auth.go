@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -11,12 +12,13 @@ import (
 
 var JWTSecret []byte
 
-func InitJWT() {
+func InitJWT() error {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		secret = "default_secret_key_change_me"
+		return fmt.Errorf("JWT_SECRET is required")
 	}
 	JWTSecret = []byte(secret)
+	return nil
 }
 
 func AuthMiddleware() gin.HandlerFunc {

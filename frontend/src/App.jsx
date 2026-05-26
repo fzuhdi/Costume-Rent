@@ -6,6 +6,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import { SettingsProvider } from './context/SettingsContext';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
+import BottomTabs from './components/BottomTabs';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import CataloguePage from './pages/CataloguePage';
@@ -78,6 +79,7 @@ const AuthenticatedLayout = () => {
           <Outlet />
         </main>
       </div>
+      <BottomTabs />
     </div>
   );
 };

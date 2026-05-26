@@ -1,100 +1,96 @@
 # Coordinator Reference
 
+## Source Of Truth
+
+- Workflow model defaults: `.opencode/workflow-models.json`
+- TDD lifecycle and plan completion: `.opencode/skills/orchestrator/SKILL.md`
+- Shared guardrails: `.opencode/skills/shared/constraints.md`
+- Workspace policy: `docs/adr/0003-ticket-and-workflow-workspaces.md`
+
 ## Execution Model
 
-Use the coordinator checkout for scheduling only. Executable tickets and substantial workflow-maintenance changes run in isolated workspaces per `docs/adr/0003-ticket-and-workflow-workspaces.md`.
+The coordinator checkout schedules only. By default, plan targets deterministically prepare up to three ready executable tracer tickets, each in its own git worktree and Docker Compose runtime slot, then dispatch one `orchestrator` task per prepared handoff. Ticket targets dispatch one `orchestrator` task in the active clean worktree. Each orchestrator task uses the deterministic runner for state files, checkpoint commits, worker subagent dispatches, ticket completion, and ticket branch output. Completed ticket branches still require explicit serialized integration before plan regression.
 
 ```text
-discover work
--> build queue
--> provision or reuse isolated workspace
--> run first item through existing workflow engine or workflow-engineer
--> wait for complete, blocked, or escalated state
--> continue only if coordinator checkout, item workspace, and runtime state are clean
--> summarize aggregate status
+route arguments
+-> targeted read
+-> for plans: prepare `node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3 --json`
+-> dispatch each returned `dispatch.task` via task(subagent_type="orchestrator")
+-> for tickets: dispatch one orchestrator task for the active clean worktree
+-> report handoff details
 ```
 
-Parallel execution is unsafe in one checkout because branches, runtime state, test output, and uncommitted files are shared. Parallel execution is allowed only when every active item has its own checkout, branch, state files, and test output path.
+## Argument Routing
 
-## Workspace Model
+1. Empty args: ask the user for a plan/ticket target or explicit status scan before broad discovery.
+2. `PLAN-YYYYMMDD-*`: read `docs/plans/{plan-id}.md` and tickets whose frontmatter `plan_id` equals the target.
+3. `TICKET-YYYYMMDD-NNN`: read `docs/tickets/{ticket-id}.md` and the matching manifest entry.
+4. Unknown or malformed args: ask one clarification question.
 
-Recommended root:
+Targeted mode may read runtime state files to detect active or blocked runs. Explicit status scans may read recent `.opencode/logs/*.md`, scan `docs/plans/*.md` and `docs/tickets/*.md`, group tickets by `plan_id` and status, and identify blocked/ready/in-progress work.
+
+## Launch Procedure
+
+Before launch:
+
+- Require a clean worktree.
+- Run `node .opencode/scripts/resolve-agent-models.mjs --dry-run --json` and continue without user interruption when configured role models are available. Load `.opencode/skills/model-selector/SKILL.md` only when a configured model is unavailable, a prior dispatch failed because of model availability, or the user asks to review models.
+- Confirm no runtime state indicates a different active run.
+- Confirm the target exists.
+- Confirm Docker and the relevant prepare script are available for plan targets.
+- Do not include secret env file contents in task prompts or summaries; pass only runtime env keys/values emitted by the prepare script.
+
+Prepare plan targets with:
 
 ```text
-../Costume-Rent-workspaces/
+node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3 --json
 ```
 
-Product ticket workspace:
+The prepare script creates or reuses `../<project-name>-workspaces/<plan-id>/<ticket-id>` worktrees by default, reserves runtime slots from `.opencode/project.json`, starts the adapter-declared Compose services unless `--no-start-runtime` is supplied, starts a default 60-minute ticket lease in `.opencode/state/ticket-leases.json`, writes durable handoff snapshots at `.opencode/state/ticket-handoffs/<ticket-id>.json`, and returns `dispatches[].task` objects. Override the lease with `--lease-minutes <n>` when needed. It selects only independent ready tickets: tickets with unmet `depends_on` prerequisites are skipped and reported until the prerequisite tickets are complete. It blocks on review tickets, malformed or cross-plan dependency declarations, dirty coordinator checkout, dirty reused worktrees, unsafe existing ticket leases, slot conflicts, or missing runtime setup.
+
+Existing leases with `running`, `deadline_expired`, or `interrupted` status exclude that ticket from the current batch so later ready tickets can refill available slots. Use `--replace-lease` only after manual interrupt/inspection proves the prior task will not write late into the checkout.
+
+For every successful non-dry-run dispatch, call the task tool with:
 
 ```text
-../Costume-Rent-workspaces/TICKET-YYYYMMDD-001
+subagent_type: orchestrator
+description: dispatch.task.description
+command: dispatch.task.command
+prompt: dispatch.task.prompt
 ```
 
-Workflow-change workspace:
+Do not rewrite the generated prompt. It is the handoff contract and includes `WORKTREE_ROOT`, `PLAN_ID`, `TICKET_ID`, runtime env keys, branch/base branch, lease deadline, and nested-worker root instructions.
+
+Worker task payloads for nested roles should be generated deterministically with `.opencode/scripts/build-worker-task.mjs` to guarantee required schema keys (`subagent_type`, `description`, `prompt`) and required prompt markers (`WORKTREE_ROOT`, `TICKET_ID`, `TEST_CASE_ID`).
+
+If a task appears stuck, do not wait indefinitely. Check leases with `node .opencode/scripts/ticket-lease.mjs status --json`; this is read-only and reports whether any persisted statuses would change. Persist expiry transitions only with `node .opencode/scripts/ticket-lease.mjs refresh --json`. A `deadline_expired` lease means manual interrupt may be needed for the active task wait. After interrupt, classify the checkout with `node .opencode/scripts/ticket-lease.mjs inspect --ticket <ticket-id> --json`; only reuse the worktree when inspection reports a clean retryable/adoptable state.
+
+Stuck ticket recovery commands:
 
 ```text
-../Costume-Rent-workspaces/WF-YYYYMMDD-short-name
+node .opencode/scripts/ticket-lease.mjs status --json
+node .opencode/scripts/ticket-lease.mjs refresh --json
+node .opencode/scripts/ticket-lease.mjs interrupted --ticket <ticket-id> --json
+node .opencode/scripts/ticket-lease.mjs inspect --ticket <ticket-id> --json
+node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3 --json
 ```
 
-Ticket branches start from the plan branch when `plan_id` exists. Workflow-change branches use `workflow/{change-id}` from the recorded base branch.
+Use `--replace-lease` on the final command only when inspection proves the same ticket checkout is safe to reuse. Without `--replace-lease`, unsafe leased tickets are skipped so other ready tickets can fill the batch.
 
-## Discovery Procedure
+For single-ticket targets, dispatch one `orchestrator` task from the active clean root with the same prompt shape: include `WORKTREE_ROOT`, `TICKET_ID`, optional `PLAN_ID`, branch/base branch when known, runtime env keys in scope, and the instruction to run all file/shell operations under `WORKTREE_ROOT` and pass it to nested worker prompts.
 
-1. Check `git status --short --branch`.
-2. If the worktree is dirty, stop before queueing executable work and report the dirty paths.
-3. Read recent `.opencode/logs/*.md` if present.
-4. Read `.opencode/state/orchestrator-progress.json`, `.opencode/state/ticket-progress.json`, and `.opencode/state/checkpoints.json` if present.
-5. Scan `docs/plans/*.md` and `docs/tickets/*.md`.
-6. Group tickets by `plan_id` and status.
-7. Identify review tickets, ready executable tickets, plans with queued work, workflow-change records, and plans stuck in regression gating or blocked PR state.
+Task failures or blocked/partial orchestrator returns are reported as workflow blockers; the coordinator does not simulate the FSM.
 
 ## Queue Rules
 
-Prefer plan-level runs when multiple tickets belong to the same plan, because plan mode preserves review ordering and plan-completion gates.
-
 Queue order:
 
-1. Resume an existing `in_progress` plan or ticket recorded in runtime state.
-2. Plans with `status: in_progress` and ready/review tickets.
-3. Plans with `status: ready` and ready/review tickets.
-4. Individual ready tickets only when they are not part of a better plan-level run.
-5. Workflow-maintenance changes requested by the user.
-6. Blocked or ambiguous items are report-only unless the user asks to repair planning artifacts.
-
-Within one plan, defer ordering to the existing workflow engine. Do not preemptively reorder tickets in plan mode.
-
-## Launch Rules
-
-Before launching any lower-level run:
-
-- Require a clean worktree.
-- Confirm no runtime state indicates a different active run.
-- Confirm the target plan or ticket still exists.
-- Confirm or create the target workspace before execution.
-- Prefer the existing command format already used by the repository.
+1. Existing `in_progress` plan or ticket recorded in runtime state.
+2. Plans with `status: ready` or `in_progress` and review/ready tickets.
+3. Individual ready tickets only when they are not part of a plan-level run.
+4. Workflow-maintenance changes requested by the user.
+5. Blocked or ambiguous items are report-only unless the user asks to repair planning artifacts.
 
 ## Stop Conditions
 
-Stop immediately and report if any of these occur:
-
-- Dirty worktree before or after a lower-level run.
-- Missing, reused-for-wrong-item, or dirty item workspace.
-- Branch mismatch or unexpected branch switch.
-- Runtime state points to a different active plan/ticket.
-- A lower-level run returns `blocked` or `escalated`.
-- Review rejects a generated regression bug as setup/test noise.
-- Impacted regression reports unmapped/setup failures.
-- The user asks to pause, inspect, commit, push, or change strategy.
-
-## Relationship To Other Workflow Rules
-
-The coordinator is above the existing workflow engine but below the user. It schedules work; it does not redefine the ticket lifecycle.
-
-Lower-level rules remain binding, including:
-
-- one executable acceptance test case per ticket
-- validation before implementation
-- developer does not edit SDET-owned acceptance tests
-- reviewer rejection is binding
-- acceptance integrity gate must pass
-- plan-completion impacted regression must pass before completion or PR
+Stop and report dirty worktrees, prepare/handoff failures, dirty work left by an orchestrator task, deadline-expired leases, or explicit user pause/inspection requests. Dependency and installer blocks follow `.opencode/skills/shared/constraints.md`.
