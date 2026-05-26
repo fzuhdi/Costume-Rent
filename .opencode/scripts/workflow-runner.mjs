@@ -2817,6 +2817,9 @@ function validatePlan(planId, manifest, report) {
   const pendingIntegrationTickets = completedExecutableTickets
     .map(ticket => {
       const branch = `tdd/${ticket.id}`;
+      if (!branchExists(branch)) {
+        return { ticketId: ticket.id, branch, mergedIntoPlan: true };
+      }
       const merged = branchMergedInto(branch, planBranch);
       return { ticketId: ticket.id, branch, mergedIntoPlan: merged };
     })
