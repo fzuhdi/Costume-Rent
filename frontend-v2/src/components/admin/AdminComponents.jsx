@@ -2,7 +2,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { Clock, FileCheck2, Upload } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Field, InfoBlock, StatusPill } from '../shared.jsx';
-import { activityText, formatDateRange, variantLabel } from '../../lib/rental-utils.js';
+import { activityText, formatDateRange, productAlt, productCoverImage, productName, variantLabel } from '../../lib/rental-utils.js';
 
 export function RecordPanel({ rental, products, t, locale, children }) {
   return (
@@ -211,9 +211,9 @@ export function RentalItems({ rental, products, t, compact = false }) {
         const product = products.find((entry) => entry.id === item.productId);
         return product ? (
           <div className="rental-item" key={`${rental.reference}-${item.productId}-${item.variantId}`}>
-            {!compact ? <img src={product.image} alt={t(product.altKey)} /> : null}
+            {!compact ? <img src={productCoverImage(product, t)} alt={productAlt(product, t)} /> : null}
             <div>
-              <strong>{t(product.nameKey)}</strong>
+              <strong>{productName(product, t)}</strong>
               <small>{variantLabel(t, item.variantId)} x {item.qty}</small>
             </div>
           </div>

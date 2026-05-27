@@ -28,7 +28,7 @@ export default function NotificationsAdmin({ t, notifications, setNotifications 
             {notification.resolved ? (
               <span className="status-badge success">
                 <Check aria-hidden="true" />
-                {t('admin.notifications.resolved')}
+                <span className="status-badge-label">{t('admin.notifications.resolved')}</span>
               </span>
             ) : (
               <button className="outline-button" type="button" onClick={() => setNotifications((current) => current.map((item) => (item.id === notification.id ? { ...item, resolved: true } : item)))}>

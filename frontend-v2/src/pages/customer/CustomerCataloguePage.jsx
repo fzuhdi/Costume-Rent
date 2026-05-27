@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ProductCard } from '../../components/customer/CustomerComponents.jsx';
 import { EmptyState } from '../../components/shared.jsx';
@@ -7,6 +7,8 @@ import { defaultDates } from '../../mockData.js';
 import {
   formatDateRange,
   getVariantAvailability,
+  productMeta,
+  productName,
   validateDates,
 } from '../../lib/rental-utils.js';
 import CustomerFrame from './CustomerFrame.jsx';
@@ -30,6 +32,7 @@ export default function CustomerCataloguePage({
   cart,
   setCart,
   onOpenCart,
+  dataAdapter,
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') ?? '';
@@ -39,25 +42,74 @@ export default function CustomerCataloguePage({
   const [draftDates, setDraftDates] = useState(appliedDates);
   const [dateError, setDateError] = useState('');
   const [showSyncPrompt, setShowSyncPrompt] = useState(false);
+  const [visibleProducts, setVisibleProducts] = useState([]);
+  const [availabilityByProduct, setAvailabilityByProduct] = useState({});
+  const [catalogueLoading, setCatalogueLoading] = useState(false);
+  const [catalogueError, setCatalogueError] = useState('');
 
   useEffect(() => {
     setDraftDates(appliedDates);
   }, [appliedDates.start, appliedDates.end]);
 
-  const visibleProducts = useMemo(() => {
-    if (!settings.publicCatalogue) return [];
-    const normalized = query.trim().toLowerCase();
-    return products.filter((product) => {
-      const name = t(product.nameKey).toLowerCase();
-      const meta = t(product.metaKey).toLowerCase();
-      const categoryMatches =
-        category === 'all' ||
-        product.region === category ||
-        product.category === category ||
-        (category === 'dance' && product.category === 'accessory');
-      return product.active && categoryMatches && (!normalized || name.includes(normalized) || meta.includes(normalized));
-    });
-  }, [category, products, query, settings.publicCatalogue, t]);
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setCatalogueLoading(true);
+      setCatalogueError('');
+      const listPromise = dataAdapter
+        ? dataAdapter.catalogue.list({
+            q: query,
+            category,
+            start: appliedDates.start,
+            end: appliedDates.end,
+            page: 1,
+            pageSize: 48,
+            signal: controller.signal,
+          })
+        : Promise.resolve({
+            items: filterCatalogueProducts({ products, settings, query, category, t }),
+          });
+
+      listPromise
+        .then((result) => setVisibleProducts(result.items))
+        .catch((error) => {
+          if (error.name === 'AbortError') return;
+          setCatalogueError(t('customer.catalogue.loadError'));
+          setVisibleProducts([]);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setCatalogueLoading(false);
+        });
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, category, appliedDates.start, appliedDates.end, products, settings.publicCatalogue, t]);
+
+  useEffect(() => {
+    const productIds = visibleProducts.map((product) => product.id);
+    if (!dataAdapter || productIds.length === 0) {
+      setAvailabilityByProduct({});
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    dataAdapter.availability
+      .batch({
+        productIds,
+        start: appliedDates.start,
+        end: appliedDates.end,
+        signal: controller.signal,
+      })
+      .then((rows) => setAvailabilityByProduct(buildAvailabilityMap(rows)))
+      .catch((error) => {
+        if (error.name !== 'AbortError') setAvailabilityByProduct({});
+      });
+
+    return () => controller.abort();
+  }, [visibleProducts, appliedDates.start, appliedDates.end, rentals]);
 
   const updateCatalogueParams = (updates, options = { replace: true }) => {
     const next = new URLSearchParams(searchParams);
@@ -151,6 +203,7 @@ export default function CustomerCataloguePage({
             </button>
           </div>
           {dateError ? <p className="validation-message">{dateError}</p> : null}
+          {catalogueError ? <p className="validation-message">{catalogueError}</p> : null}
           {showSyncPrompt ? (
             <div className="inline-alert warning">
               <div>
@@ -182,12 +235,22 @@ export default function CustomerCataloguePage({
             </div>
           </div>
 
-          {visibleProducts.length === 0 ? (
+          {catalogueLoading ? <p className="helper-text">{t('customer.catalogue.loading')}</p> : null}
+          {!catalogueLoading && visibleProducts.length === 0 ? (
             <EmptyState title={t('customer.catalogue.emptyTitle')} copy={t('customer.catalogue.emptyCopy')} icon={Search} />
           ) : (
             <div className="product-grid" aria-label={t('customer.grid.aria')}>
               {visibleProducts.map((product) => (
-                <ProductCard key={product.id} product={product} dates={appliedDates} locale={locale} t={t} detailTo={buildDetailTo(product.id)} rentals={rentals} />
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  dates={appliedDates}
+                  locale={locale}
+                  t={t}
+                  detailTo={buildDetailTo(product.id)}
+                  rentals={rentals}
+                  availabilityOverride={availabilityByProduct[product.id]}
+                />
               ))}
             </div>
           )}
@@ -195,4 +258,53 @@ export default function CustomerCataloguePage({
       </section>
     </CustomerFrame>
   );
+}
+
+function filterCatalogueProducts({ products, settings, query, category, t }) {
+  if (!settings.publicCatalogue) return [];
+  const normalized = query.trim().toLowerCase();
+  return products.filter((product) => {
+    const name = productName(product, t).toLowerCase();
+    const meta = productMeta(product, t).toLowerCase();
+    const categoryMatches =
+      category === 'all' ||
+      product.region === category ||
+      product.category === category ||
+      (category === 'dance' && product.category === 'accessory');
+    return product.active && categoryMatches && (!normalized || name.includes(normalized) || meta.includes(normalized));
+  });
+}
+
+function buildAvailabilityMap(rows) {
+  const byProductAndDate = rows.reduce((map, row) => {
+    const key = `${row.productId}:${row.date}`;
+    const dayRows = map.get(key) ?? [];
+    dayRows.push(row);
+    map.set(key, dayRows);
+    return map;
+  }, new Map());
+
+  return [...byProductAndDate.entries()].reduce((result, [key, dayRows]) => {
+    const productId = key.split(':')[0];
+    const available = dayRows.reduce((sum, row) => sum + row.available, 0);
+    const booked = dayRows.reduce((sum, row) => sum + row.booked, 0);
+    const dayState = dayRows.every((row) => row.state === 'unavailable')
+      ? 'unavailable'
+      : available <= 0
+        ? 'fully_booked'
+        : booked > 0
+          ? 'partially_booked'
+          : 'available';
+
+    if (!result[productId]) {
+      result[productId] = dayState;
+    } else if (dayState === 'unavailable') {
+      result[productId] = 'unavailable';
+    } else if (dayState === 'fully_booked' && result[productId] !== 'unavailable') {
+      result[productId] = 'fully_booked';
+    } else if (dayState === 'partially_booked' && result[productId] === 'available') {
+      result[productId] = 'partially_booked';
+    }
+    return result;
+  }, {});
 }

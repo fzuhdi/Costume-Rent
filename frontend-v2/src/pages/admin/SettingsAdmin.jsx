@@ -2,12 +2,16 @@ import * as Switch from '@radix-ui/react-switch';
 import { useState } from 'react';
 import { Field } from '../../components/shared.jsx';
 
-export default function SettingsAdmin({ t, settings, setSettings }) {
+export default function SettingsAdmin({ t, settings, setSettings, dataAdapter }) {
   const [saved, setSaved] = useState(false);
   const [draft, setDraft] = useState(settings);
 
-  const save = () => {
-    setSettings(draft);
+  const save = async () => {
+    if (dataAdapter) {
+      await dataAdapter.admin.settings.save(draft);
+    } else {
+      setSettings(draft);
+    }
     setSaved(true);
     window.setTimeout(() => setSaved(false), 2400);
   };

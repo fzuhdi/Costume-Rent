@@ -2,11 +2,13 @@ import { ArrowLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { ProductDetail } from '../../components/customer/CustomerComponents.jsx';
+import { usePersistentState } from '../../hooks/usePersistentState.js';
 import { defaultDates } from '../../mockData.js';
 import {
   firstAvailableVariant,
   formatDateRange,
   getVariantAvailability,
+  productName,
 } from '../../lib/rental-utils.js';
 import CustomerFrame from './CustomerFrame.jsx';
 
@@ -27,12 +29,14 @@ export default function ProductDetailPage({
   cart,
   addCartItem,
   onOpenCart,
+  dataAdapter,
 }) {
   const { productId } = useParams();
   const [searchParams] = useSearchParams();
   const product = products.find((entry) => entry.id === productId);
   const dates = readDates(searchParams);
   const [selectedVariantId, setSelectedVariantId] = useState('');
+  const [favorites, setFavorites] = usePersistentState('cr-v2-favorites', []);
   const catalogueSearch = searchParams.toString();
   const catalogueTo = { pathname: '/', search: catalogueSearch ? `?${catalogueSearch}` : '' };
 
@@ -52,10 +56,16 @@ export default function ProductDetailPage({
     addCartItem(product, selectedVariantId, dates, selectedAvailability);
     onOpenCart();
   };
+  const isFavorite = favorites.includes(product.id);
+  const toggleFavorite = () => {
+    setFavorites((current) =>
+      current.includes(product.id) ? current.filter((id) => id !== product.id) : [...current, product.id],
+    );
+  };
 
   return (
     <CustomerFrame
-      title={t('document.productTitle', { product: t(product.nameKey) })}
+      title={t('document.productTitle', { product: productName(product, t) })}
       skipTo="product-detail"
       settings={settings}
       locale={locale}
@@ -84,6 +94,9 @@ export default function ProductDetailPage({
         selectedAvailability={selectedAvailability}
         cart={cart}
         rentals={rentals}
+        dataAdapter={dataAdapter}
+        isFavorite={isFavorite}
+        onFavoriteToggle={toggleFavorite}
       />
     </CustomerFrame>
   );

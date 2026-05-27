@@ -29,6 +29,11 @@ import {
   formatDateRange,
   formatRupiah,
   findNextAvailableWindow,
+  productAlt,
+  productCoverImage,
+  productGallery,
+  productMeta,
+  productName,
   getProductAvailability,
   getProductDayAvailability,
   getVariantAvailability,
@@ -82,21 +87,21 @@ export function CustomerNav({ brandName, tagline, locale, setLocale, t, cartCoun
   );
 }
 
-export function ProductCard({ product, dates, detailTo, locale, t, rentals }) {
-  const availability = getProductAvailability(product, dates, rentals);
+export function ProductCard({ product, dates, detailTo, locale, t, rentals, availabilityOverride }) {
+  const availability = availabilityOverride ?? getProductAvailability(product, dates, rentals);
   const isBlocked = availability === 'fully_booked' || availability === 'unavailable';
   const nextWindow = isBlocked ? findNextAvailableWindow(product, null, dates, rentals) : null;
 
   return (
     <article className={`product-card ${isBlocked ? 'muted' : ''}`}>
       <Link className="product-media product-card-link" to={detailTo} aria-label={t(product.detailAriaKey)}>
-        <img src={product.image} alt={t(product.altKey)} loading="lazy" />
+        <img src={productCoverImage(product, t)} alt={productAlt(product, t)} loading="lazy" />
         <StatusPill type="availability" value={availability} t={t} />
       </Link>
       <div className="product-copy">
-        <span className="product-meta">{t(product.metaKey)}</span>
+        <span className="product-meta">{productMeta(product, t)}</span>
         <div className="product-title-line">
-          <h3>{t(product.nameKey)}</h3>
+          <h3>{productName(product, t)}</h3>
           <strong>
             {formatRupiah(product.price)}
             <small>{t(product.unitKey)}</small>
@@ -132,7 +137,7 @@ export function AvailabilityPanel({ products, dates, t, onOpenCart, rentals }) {
       <div className="availability-list">
         {totals.map(({ product, available }) => (
           <span key={product.id}>
-            {t(product.nameKey)}
+            {productName(product, t)}
             <b>{available}</b>
           </span>
         ))}
@@ -145,33 +150,63 @@ export function AvailabilityPanel({ products, dates, t, onOpenCart, rentals }) {
   );
 }
 
-export function ProductDetail({ product, selectedVariantId, setSelectedVariantId, dates, locale, t, onAdd, selectedAvailability, cart, rentals }) {
+export function ProductDetail({
+  product,
+  selectedVariantId,
+  setSelectedVariantId,
+  dates,
+  locale,
+  t,
+  onAdd,
+  selectedAvailability,
+  cart,
+  rentals,
+  dataAdapter,
+  isFavorite,
+  onFavoriteToggle,
+}) {
   const availability = getProductAvailability(product, dates, rentals);
   const isInCart = cart.some((item) => item.productId === product.id && item.variantId === selectedVariantId);
   const canAdd = selectedVariantId && selectedAvailability > 0;
   const nextWindow = selectedVariantId && selectedAvailability <= 0 ? findNextAvailableWindow(product, selectedVariantId, dates, rentals) : null;
+  const images = useMemo(() => productGallery(product, t), [product, t]);
+  const [selectedImageId, setSelectedImageId] = useState(images[0]?.id ?? '');
+  const selectedImage = images.find((image) => image.id === selectedImageId) ?? images[0];
+
+  useEffect(() => {
+    setSelectedImageId(images[0]?.id ?? '');
+  }, [product.id, images]);
 
   return (
     <section className="product-detail" id="product-detail">
       <div className="shell product-detail-layout">
-        <div className="detail-gallery" aria-label={t('customer.detail.galleryAria')}>
-          <div className="thumb-rail" aria-label={t('customer.detail.thumbsAria')}>
-            {[product].map((thumb) => (
-              <button className="thumb-button" type="button" key={thumb.id} aria-label={t(thumb.detailAriaKey)}>
-                <img src={thumb.image} alt={t(thumb.altKey)} />
-              </button>
-            ))}
-          </div>
+        <div className={`detail-gallery ${images.length > 1 ? '' : 'single-image'}`} aria-label={t('customer.detail.galleryAria')}>
+          {images.length > 1 ? (
+            <div className="thumb-rail" aria-label={t('customer.detail.thumbsAria')}>
+              {images.map((thumb) => (
+                <button
+                  className={`thumb-button ${selectedImage?.id === thumb.id ? 'selected' : ''}`}
+                  type="button"
+                  key={thumb.id}
+                  aria-label={t('customer.detail.thumbSelect', { item: thumb.label })}
+                  aria-pressed={selectedImage?.id === thumb.id}
+                  onClick={() => setSelectedImageId(thumb.id)}
+                >
+                  <img src={thumb.src} alt={thumb.alt} />
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div className="detail-photo">
-            <img src={product.image} alt={t(product.altKey)} />
+            <img src={selectedImage?.src ?? product.image} alt={selectedImage?.alt ?? productAlt(product, t)} />
           </div>
         </div>
 
         <aside className="detail-purchase" aria-label={t('customer.detail.panelAria')}>
           <div className="detail-heading">
             <StatusPill type="availability" value={availability} t={t} />
-            <p className="product-meta">{t(product.metaKey)}</p>
-            <h2>{t(product.nameKey)}</h2>
+            <p className="product-meta">{productMeta(product, t)}</p>
+            <h2>{productName(product, t)}</h2>
             <strong className="detail-price">
               {formatRupiah(product.price)}
               <span>{t(product.unitKey)}</span>
@@ -230,28 +265,47 @@ export function ProductDetail({ product, selectedVariantId, setSelectedVariantId
             locale={locale}
             t={t}
             rentals={rentals}
+            dataAdapter={dataAdapter}
           />
 
           <button className="secondary-button full" type="button" disabled={!canAdd} onClick={onAdd}>
             <ShoppingCart aria-hidden="true" />
             {isInCart ? t('customer.status.added') : t('customer.detail.add')}
           </button>
-          <button className="outline-button full" type="button">
-            <Heart aria-hidden="true" />
-            {t('customer.detail.favorite')}
+          <button className={`outline-button full favorite-button ${isFavorite ? 'selected' : ''}`} type="button" aria-pressed={isFavorite} onClick={onFavoriteToggle}>
+            <Heart aria-hidden="true" fill={isFavorite ? 'currentColor' : 'none'} />
+            {isFavorite ? t('customer.detail.favoriteSaved') : t('customer.detail.favorite')}
           </button>
+          {isFavorite ? <p className="success-message favorite-feedback">{t('customer.detail.favoriteUndo')}</p> : null}
         </aside>
       </div>
     </section>
   );
 }
 
-function ProductAvailabilityCalendar({ product, selectedVariantId, setSelectedVariantId, dates, locale, t, rentals }) {
+function ProductAvailabilityCalendar({ product, selectedVariantId, setSelectedVariantId, dates, locale, t, rentals, dataAdapter }) {
   const [monthCursor, setMonthCursor] = useState(monthKey(dates.start));
   const [inspectedDate, setInspectedDate] = useState(dates.start);
-  const inspected = getProductDayAvailability(product, inspectedDate, rentals);
+  const [availabilityRows, setAvailabilityRows] = useState([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState('');
   const selectedVariant = product.variants.find((variant) => variant.id === selectedVariantId) ?? product.variants[0];
   const monthDays = useMemo(() => buildMonthGrid(monthCursor), [monthCursor]);
+  const monthRange = useMemo(() => getMonthRange(monthCursor), [monthCursor]);
+  const rowsByDate = useMemo(() => {
+    const byDate = new Map();
+    availabilityRows.forEach((row) => {
+      const rows = byDate.get(row.date) ?? [];
+      rows.push(row);
+      byDate.set(row.date, rows);
+    });
+    return byDate;
+  }, [availabilityRows]);
+  const getDayAvailability = (day) => {
+    const rows = rowsByDate.get(day);
+    return rows?.length ? aggregateDayAvailability(product, day, rows) : getProductDayAvailability(product, day, rentals);
+  };
+  const inspected = getDayAvailability(inspectedDate);
   const weekdayLabels = useMemo(() => {
     const base = new Date('2026-06-07T00:00:00');
     return Array.from({ length: 7 }).map((_, index) => {
@@ -265,6 +319,29 @@ function ProductAvailabilityCalendar({ product, selectedVariantId, setSelectedVa
     setMonthCursor(monthKey(dates.start));
     setInspectedDate(dates.start);
   }, [dates.start]);
+
+  useEffect(() => {
+    if (!dataAdapter) return undefined;
+    const controller = new AbortController();
+    setAvailabilityLoading(true);
+    setAvailabilityError('');
+    dataAdapter.availability
+      .batch({
+        productIds: [product.id],
+        start: monthRange.start,
+        end: monthRange.end,
+        signal: controller.signal,
+      })
+      .then((rows) => setAvailabilityRows(rows))
+      .catch((error) => {
+        if (error.name === 'AbortError') return;
+        setAvailabilityError(t('customer.calendar.loadError'));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setAvailabilityLoading(false);
+      });
+    return () => controller.abort();
+  }, [product.id, monthRange.start, monthRange.end, rentals, t]);
 
   return (
     <section className="availability-calendar" aria-label={t('customer.calendar.aria')}>
@@ -293,7 +370,7 @@ function ProductAvailabilityCalendar({ product, selectedVariantId, setSelectedVa
         {monthDays.map((day, index) => {
           if (!day) return <span className="calendar-day empty" aria-hidden="true" key={`empty-${index}`} />;
 
-          const dayInfo = getProductDayAvailability(product, day, rentals);
+          const dayInfo = getDayAvailability(day);
           const inSelectedRange = day >= dates.start && day <= dates.end;
           return (
             <button
@@ -324,6 +401,8 @@ function ProductAvailabilityCalendar({ product, selectedVariantId, setSelectedVa
       </div>
 
       <p className="calendar-hint">{t('customer.calendar.clickHint')}</p>
+      {availabilityLoading ? <p className="calendar-hint">{t('customer.calendar.loading')}</p> : null}
+      {availabilityError ? <p className="validation-message">{availabilityError}</p> : null}
 
       <div className="calendar-inspector">
         <div>
@@ -374,6 +453,50 @@ function buildMonthGrid(date) {
   ];
 }
 
+function getMonthRange(date) {
+  const cursor = new Date(`${date}T00:00:00`);
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const start = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+  const endDate = new Date(year, month + 1, 0);
+  const end = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+  return { start, end };
+}
+
+function aggregateDayAvailability(product, date, rows) {
+  const variants = product.variants.map((variant) => {
+    const row = rows.find((entry) => entry.variantId === variant.id);
+    return row
+      ? {
+          variantId: variant.id,
+          label: variant.label,
+          total: row.total,
+          booked: row.booked,
+          available: row.available,
+          state: row.state,
+        }
+      : {
+          variantId: variant.id,
+          label: variant.label,
+          total: variant.total,
+          booked: variant.held,
+          available: Math.max(0, variant.total - variant.held),
+          state: variant.held > 0 ? 'partially_booked' : 'available',
+        };
+  });
+  const total = variants.reduce((sum, row) => sum + row.total, 0);
+  const booked = variants.reduce((sum, row) => sum + row.booked, 0);
+  const available = variants.reduce((sum, row) => sum + row.available, 0);
+  const state = variants.every((variant) => variant.state === 'unavailable')
+    ? 'unavailable'
+    : available <= 0
+      ? 'fully_booked'
+      : booked > 0
+        ? 'partially_booked'
+        : 'available';
+  return { date, productId: product.id, total, booked, available, state, variants };
+}
+
 export function CartSummary({ cartItems, cartTotal, t, locale, onQty, onRemove }) {
   return (
     <aside className="summary-card cart-card" aria-label={t('customer.summary.aria')}>
@@ -387,9 +510,9 @@ export function CartSummary({ cartItems, cartTotal, t, locale, onQty, onRemove }
       ) : (
         cartItems.map((item) => (
           <div className="summary-item editable" key={`${item.product.id}-${item.variantId}`}>
-            <img src={item.product.image} alt={t(item.product.altKey)} />
+            <img src={productCoverImage(item.product, t)} alt={productAlt(item.product, t)} />
             <div>
-              <strong>{t(item.product.nameKey)}</strong>
+              <strong>{productName(item.product, t)}</strong>
               <span>{t('customer.cart.itemDates', { start: formatDate(item.start, locale), end: formatDate(item.end, locale) })}</span>
               <span>{variantLabel(t, item.variantId)}</span>
             </div>
@@ -456,7 +579,7 @@ export function CheckoutForm({ t, cartCount, createBooking, submittedBooking }) 
       setSubmitError(t('customer.checkout.failureCopy'));
       return;
     }
-    const result = createBooking(values);
+    const result = await createBooking(values);
     if (result?.error) {
       setSubmitError(result.error);
       return;
@@ -543,7 +666,7 @@ export function CheckoutForm({ t, cartCount, createBooking, submittedBooking }) 
         <div className="confirmation-panel" id="confirmation">
           <span className="status-badge success">
             <BadgeCheck aria-hidden="true" />
-            {t('customer.checkout.successTitle')}
+            <span className="status-badge-label">{t('customer.checkout.successTitle')}</span>
           </span>
           <h3>{t('customer.confirmation.title')}: {submittedBooking.reference}</h3>
           <p>{t('customer.checkout.successCopy')}</p>
@@ -650,15 +773,18 @@ export function CheckoutModal({
   );
 }
 
-export function LookupSection({ t, locale, rentals, products, setNotifications }) {
+export function LookupSection({ t, locale, rentals, products, setNotifications, dataAdapter }) {
   const [result, setResult] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [changeSent, setChangeSent] = useState(false);
+  const [changeError, setChangeError] = useState('');
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [recoverySent, setRecoverySent] = useState(false);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryError, setRecoveryError] = useState('');
   const [recoveryDraft, setRecoveryDraft] = useState({ phone: '', name: '', hint: '' });
   const schema = useMemo(() => makeLookupSchema(t), [t]);
-  const { register, handleSubmit, control, formState: { errors } } = useForm({
+  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: { reference: 'CR-0142', phone: '+62 812 0000 0142', changeType: 'reschedule', changeNotes: '' },
   });
@@ -670,27 +796,72 @@ export function LookupSection({ t, locale, rentals, products, setNotifications }
     setChangeSent(false);
   };
 
-  const submitRecovery = (event) => {
+  const submitRecovery = async (event) => {
     event.preventDefault();
     const phone = recoveryDraft.phone.trim();
     if (!phone) return;
+    setRecoveryLoading(true);
+    setRecoveryError('');
     const name = recoveryDraft.name.trim() || t('customer.lookup.recoveryUnknownName');
     const hint = recoveryDraft.hint.trim();
-    setNotifications?.((current) => [
-      {
-        id: `lookup-recovery-${Date.now()}`,
-        tone: 'info',
-        titleId: 'Pelanggan lupa kode',
-        titleEn: 'Customer forgot reference',
-        copyId: `${name} meminta bantuan kode untuk ${phone}${hint ? ` (${hint})` : ''}.`,
-        copyEn: `${name} asked for reference help for ${phone}${hint ? ` (${hint})` : ''}.`,
-        targetRoute: `/admin/clients?phone=${encodeURIComponent(normalizePhone(phone))}`,
-      },
-      ...current,
-    ]);
-    setRecoverySent(true);
-    setRecoveryDraft({ phone: '', name: '', hint: '' });
+    try {
+      if (dataAdapter) {
+        await dataAdapter.lookup.recover({ phone, name, hint });
+      } else {
+        setNotifications?.((current) => [
+          {
+            id: `lookup-recovery-${Date.now()}`,
+            tone: 'info',
+            titleId: 'Pelanggan lupa kode',
+            titleEn: 'Customer forgot reference',
+            copyId: `${name} meminta bantuan kode untuk ${phone}${hint ? ` (${hint})` : ''}.`,
+            copyEn: `${name} asked for reference help for ${phone}${hint ? ` (${hint})` : ''}.`,
+            targetRoute: `/admin/clients?phone=${encodeURIComponent(normalizePhone(phone))}`,
+          },
+          ...current,
+        ]);
+      }
+      setRecoverySent(true);
+      setRecoveryDraft({ phone: '', name: '', hint: '' });
+    } catch {
+      setRecoveryError(t('customer.lookup.recoveryError'));
+    } finally {
+      setRecoveryLoading(false);
+    }
   };
+
+  const submitChange = handleSubmit(async (values) => {
+    if (!result) return;
+    setChangeError('');
+    setChangeSent(false);
+    try {
+      if (dataAdapter) {
+        await dataAdapter.requests.change({
+          reference: result.reference,
+          customerName: result.customerName,
+          phone: result.phone,
+          changeType: values.changeType,
+          changeNotes: values.changeNotes,
+        });
+      } else {
+        setNotifications?.((current) => [
+          {
+            id: `lookup-change-${Date.now()}`,
+            tone: values.changeType === 'cancel' ? 'warning' : 'info',
+            titleId: 'Pelanggan meminta perubahan',
+            titleEn: 'Customer requested a change',
+            copyId: `${result.reference} - ${result.customerName}: ${values.changeNotes || values.changeType}.`,
+            copyEn: `${result.reference} - ${result.customerName}: ${values.changeNotes || values.changeType}.`,
+            targetRoute: `/admin/requests?reference=${encodeURIComponent(result.reference)}`,
+          },
+          ...current,
+        ]);
+      }
+      setChangeSent(true);
+    } catch {
+      setChangeError(t('customer.lookup.changeError'));
+    }
+  });
 
   return (
     <section className="lookup-section" id="lookup-page">
@@ -740,12 +911,13 @@ export function LookupSection({ t, locale, rentals, products, setNotifications }
                     onChange={(event) => setRecoveryDraft((current) => ({ ...current, hint: event.target.value }))}
                   />
                 </Field>
-                <button className="outline-button" type="submit">
-                  {t('customer.lookup.recoverySubmit')}
+                <button className="outline-button" type="submit" disabled={recoveryLoading}>
+                  {recoveryLoading ? t('common.loading') : t('customer.lookup.recoverySubmit')}
                 </button>
               </form>
             ) : null}
             {recoverySent ? <p className="success-message">{t('customer.lookup.recoverySent')}</p> : null}
+            {recoveryError ? <p className="validation-message">{recoveryError}</p> : null}
           </div>
         </div>
 
@@ -771,9 +943,9 @@ export function LookupSection({ t, locale, rentals, products, setNotifications }
                 const product = products.find((entry) => entry.id === item.productId);
                 return product ? (
                   <div className="summary-item" key={`${item.productId}-${item.variantId}`}>
-                    <img src={product.image} alt={t(product.altKey)} />
+                    <img src={product.image} alt={productAlt(product, t)} />
                     <div>
-                      <strong>{t(product.nameKey)}</strong>
+                      <strong>{productName(product, t)}</strong>
                       <span>{variantLabel(t, item.variantId)} x {item.qty}</span>
                     </div>
                     <b>{formatRupiah(product.price * item.qty)}</b>
@@ -781,10 +953,7 @@ export function LookupSection({ t, locale, rentals, products, setNotifications }
                 ) : null;
               })}
             </div>
-            <form className="change-request-form" onSubmit={(event) => {
-              event.preventDefault();
-              setChangeSent(true);
-            }}>
+            <form className="change-request-form" onSubmit={submitChange}>
               <div>
                 <span className="section-kicker">{t('customer.lookup.changeTitle')}</span>
                 <p>{t('customer.lookup.changeCopy')}</p>
@@ -812,10 +981,11 @@ export function LookupSection({ t, locale, rentals, products, setNotifications }
               <Field label={t('common.notes')} error={errors.changeNotes?.message}>
                 <textarea {...register('changeNotes')} rows="3" />
               </Field>
-              <button className="outline-button" type="submit">
-                {t('customer.lookup.changeSubmit')}
+              <button className="outline-button" type="submit" disabled={isSubmitting}>
+                {isSubmitting ? t('common.loading') : t('customer.lookup.changeSubmit')}
               </button>
               {changeSent ? <p className="success-message">{t('customer.lookup.changeSent')}</p> : null}
+              {changeError ? <p className="validation-message">{changeError}</p> : null}
             </form>
           </div>
         ) : null}

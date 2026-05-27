@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { flexRender, getCoreRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table';
 import { CheckCircle, Languages, Search, Truck, WalletCards } from 'lucide-react';
 import { availabilityIcon, lifecycleIcon, lifecycleTone, paymentTone } from '../constants/ui.js';
@@ -77,17 +78,18 @@ export function StatusPill({ type, value, t, tone, icon: ExplicitIcon }) {
   return (
     <span className={`status-badge ${resolvedTone}`}>
       <Icon aria-hidden="true" />
-      {label}
+      <span className="status-badge-label">{label}</span>
     </span>
   );
 }
 
-export function Field({ label, error, children }) {
+export function Field({ label, error, hint, errorId, hintId, children }) {
   return (
     <label className="field-control">
       <span>{label}</span>
       {children}
-      {error ? <small className="validation-message">{error}</small> : null}
+      {error ? <small className="validation-message" id={errorId}>{error}</small> : null}
+      {!error && hint ? <small className="field-hint" id={hintId}>{hint}</small> : null}
     </label>
   );
 }
@@ -101,13 +103,13 @@ export function InfoBlock({ title, copy }) {
   );
 }
 
-export function Metric({ value, title, copy }) {
+export function Metric({ value, title, copy, to = '#admin-content' }) {
   return (
-    <a href="#admin-content">
+    <Link to={to}>
       <span>{title}</span>
       <strong>{value}</strong>
       <p>{copy}</p>
-    </a>
+    </Link>
   );
 }
 

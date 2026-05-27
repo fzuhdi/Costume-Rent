@@ -172,6 +172,55 @@ export function variantLabel(t, variant) {
   return variant === 'package' ? t('variant.package') : variant;
 }
 
+export function productName(product, t) {
+  return product.name ?? product.nameId ?? product.nameEn ?? t(product.nameKey ?? 'common.empty');
+}
+
+export function productMeta(product, t) {
+  return product.meta ?? product.metaId ?? product.metaEn ?? t(product.metaKey ?? 'common.empty');
+}
+
+export function productAlt(product, t) {
+  return product.alt ?? product.altId ?? product.altEn ?? productName(product, t);
+}
+
+export function productGallery(product, t) {
+  const fallbackSrc = product.image ?? '';
+  const fallbackAlt = productAlt(product, t);
+  const fallbackLabel = productName(product, t);
+  const rawImages = Array.isArray(product.images) ? product.images : [];
+  const normalized = rawImages
+    .map((image, index) => {
+      const src = typeof image === 'string' ? image : image?.src ?? image?.image ?? '';
+      if (!src) return null;
+      return {
+        id: typeof image === 'string' ? `${product.id}-image-${index}` : image.id ?? `${product.id}-image-${index}`,
+        src,
+        alt: typeof image === 'string' ? fallbackAlt : image.alt ?? fallbackAlt,
+        label: typeof image === 'string' ? fallbackLabel : image.label ?? fallbackLabel,
+        isCover: typeof image === 'string' ? false : Boolean(image.isCover),
+      };
+    })
+    .filter(Boolean);
+
+  if (normalized.length === 0) {
+    return fallbackSrc
+      ? [{ id: `${product.id}-legacy-cover`, src: fallbackSrc, alt: fallbackAlt, label: fallbackLabel, isCover: true }]
+      : [];
+  }
+
+  const markedCoverIndex = normalized.findIndex((image) => image.isCover);
+  const legacyCoverIndex = fallbackSrc ? normalized.findIndex((image) => image.src === fallbackSrc) : -1;
+  const coverIndex = markedCoverIndex >= 0 ? markedCoverIndex : legacyCoverIndex >= 0 ? legacyCoverIndex : 0;
+  const gallery = normalized.map((image, index) => ({ ...image, isCover: index === coverIndex }));
+  const cover = gallery[coverIndex];
+  return cover ? [cover, ...gallery.filter((_, index) => index !== coverIndex)] : gallery;
+}
+
+export function productCoverImage(product, t) {
+  return productGallery(product, t).find((image) => image.isCover)?.src ?? product.image ?? '';
+}
+
 export function formatRupiah(value) {
   return `Rp ${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(value)}`;
 }

@@ -10,6 +10,7 @@ export default function LookupPage({
   rentals,
   products,
   setNotifications,
+  dataAdapter,
   onOpenCart,
 }) {
   return (
@@ -23,7 +24,7 @@ export default function LookupPage({
       cartCount={cart.length}
       onOpenCart={onOpenCart}
     >
-      <LookupSection t={t} locale={locale} rentals={rentals} products={products} setNotifications={setNotifications} />
+      <LookupSection t={t} locale={locale} rentals={rentals} products={products} setNotifications={setNotifications} dataAdapter={dataAdapter} />
     </CustomerFrame>
   );
 }

@@ -17,11 +17,10 @@ import LookupPage from './pages/customer/LookupPage.jsx';
 import ProductDetailPage from './pages/customer/ProductDetailPage.jsx';
 import AdminShell from './pages/admin/AdminShell.jsx';
 import StaffLoginPage from './pages/admin/StaffLoginPage.jsx';
+import { createLocalDataAdapter } from './lib/data-adapter.js';
 import {
-  applyItemHoldDelta,
   getCartItems,
   getVariantAvailability,
-  upsertClient,
 } from './lib/rental-utils.js';
 
 function AppRoutes() {
@@ -50,6 +49,16 @@ function AppRoutes() {
   const [submittedBooking, setSubmittedBooking] = useState(null);
   const cartItems = getCartItems(cart, products);
   const cartTotal = cartItems.reduce((sum, item) => sum + item.product.price * item.qty, 0);
+  const dataAdapter = createLocalDataAdapter({
+    getState: () => ({ products, rentals, clients, notifications, settings }),
+    setProducts,
+    setRentals,
+    setClients,
+    setNotifications,
+    setSettings,
+    t: i18n.t,
+    locale: i18n.locale,
+  });
 
   const addCartItem = (product, variantId, dates, availability) => {
     setSubmittedBooking(null);
@@ -90,76 +99,13 @@ function AppRoutes() {
     setCart((current) => current.filter((item) => item.productId !== target.productId || item.variantId !== target.variantId));
   };
 
-  const createBooking = (values) => {
-    const blockedItem = cart.find((item) => {
-      const product = products.find((entry) => entry.id === item.productId);
-      if (!product) return true;
-      return getVariantAvailability(product, item.variantId, { start: item.start, end: item.end }, rentals) < item.qty;
-    });
-    if (blockedItem) {
-      const product = products.find((entry) => entry.id === blockedItem.productId);
-      return {
-        error: i18n.t('customer.checkout.stockChanged', {
-          item: product ? i18n.t(product.nameKey) : blockedItem.productId,
-        }),
-      };
+  const createBooking = async (values) => {
+    const result = await dataAdapter.requests.create({ values, cart });
+    if (result?.rental) {
+      setSubmittedBooking(result.rental);
+      setCart([]);
     }
-
-    const rentalItems = cart.map(({ productId, variantId, qty }) => ({ productId, variantId, qty }));
-    const reference = `CR-${String(146 + rentals.length).padStart(4, '0')}`;
-    const rental = {
-      reference,
-      customerName: values.name,
-      phone: values.phone,
-      email: values.email,
-      lifecycle: 'requested',
-      paymentStatus: 'missing',
-      paymentMethod: 'bank_transfer',
-      fulfillment: values.fulfillment,
-      start: cart[0]?.start ?? defaultDates.start,
-      end: cart[0]?.end ?? defaultDates.end,
-      pickupWindow: values.pickupWindow,
-      returnWindow: values.returnWindow,
-      deliveryWindow: values.deliveryWindow,
-      address: values.address,
-      notes: values.notes,
-      internalNotes: '',
-      staleHours: 0,
-      deliveryFee: 0,
-      deliveryNotes: '',
-      items: rentalItems,
-      checklist: [
-        { id: 'confirm-size', labelId: 'Konfirmasi ukuran', labelEn: 'Confirm size', done: false },
-        { id: 'hold-stock', labelId: 'Tahan stok', labelEn: 'Hold stock', done: true },
-      ],
-      activity: [
-        {
-          id: `a-${Date.now()}`,
-          time: '27 Mei 2026 14.30',
-          textId: 'Permintaan pelanggan dibuat dari frontend.',
-          textEn: 'Customer request created from frontend.',
-        },
-      ],
-    };
-
-    setProducts((current) => applyItemHoldDelta(current, rental.items, 1));
-    setRentals((current) => [rental, ...current]);
-    setClients((current) => upsertClient(current, rental));
-    setNotifications((current) => [
-      {
-        id: `n-${Date.now()}`,
-        tone: 'warning',
-        titleId: 'Permintaan baru masuk',
-        titleEn: 'New request submitted',
-        copyId: `${reference} menunggu tinjauan staf.`,
-        copyEn: `${reference} is waiting for staff review.`,
-        targetRoute: `/admin/requests?reference=${reference}`,
-      },
-      ...current,
-    ]);
-    setSubmittedBooking(rental);
-    setCart([]);
-    return { rental };
+    return result;
   };
 
   const appState = {
@@ -180,6 +126,7 @@ function AppRoutes() {
     setCart,
     addCartItem,
     onOpenCart: () => setRequestSheetOpen(true),
+    dataAdapter,
   };
 
   return (
@@ -188,7 +135,21 @@ function AppRoutes() {
         <Route path="/" element={<CustomerCataloguePage {...appState} />} />
         <Route path="/costumes/:productId" element={<ProductDetailPage {...appState} />} />
         <Route path="/lookup" element={<LookupPage {...appState} />} />
-        <Route path="/checkout" element={<CheckoutRoutePage {...appState} />} />
+        <Route
+          path="/checkout"
+          element={
+            <CheckoutRoutePage
+              {...appState}
+              cartItems={cartItems}
+              cartTotal={cartTotal}
+              cartCount={cart.length}
+              onQty={updateCartQty}
+              onRemove={removeCartItem}
+              createBooking={createBooking}
+              submittedBooking={submittedBooking}
+            />
+          }
+        />
         <Route path="/admin/login" element={<StaffLoginPage {...appState} />} />
         <Route path="/admin" element={<AdminIndex staffSession={safeStaffSession} />} />
         <Route
@@ -216,7 +177,7 @@ function AppRoutes() {
         onRemove={removeCartItem}
       />
 
-      {location.pathname === '/checkout' ? (
+      {location.pathname === '/checkout' && backgroundLocation ? (
         <CheckoutModal
           open
           onOpenChange={(open) => {

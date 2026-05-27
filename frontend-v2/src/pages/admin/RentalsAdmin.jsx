@@ -1,22 +1,44 @@
-import { Settings } from 'lucide-react';
+import { Plus, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ActivityLog, Checklist, OverrideDialog, PaymentPanel, RentalItems } from '../../components/admin/AdminComponents.jsx';
-import { InfoBlock, StatusPill } from '../../components/shared.jsx';
+import { Field, InfoBlock, StatusPill } from '../../components/shared.jsx';
 import {
   activityText,
   appendActivity,
   applyItemHoldDelta,
   formatDateRange,
   formatRupiah,
+  getVariantAvailability,
+  productName,
   shouldReleaseHold,
+  upsertClient,
 } from '../../lib/rental-utils.js';
 
-export default function RentalsAdmin({ t, locale, rentals, setRentals, products, setProducts, settings }) {
+export default function RentalsAdmin({ t, locale, rentals, setRentals, products, setProducts, setClients, settings }) {
   const [searchParams] = useSearchParams();
-  const activeRentals = rentals.filter((rental) => rental.lifecycle !== 'requested' && rental.lifecycle !== 'rejected');
+  const statusFilter = searchParams.get('status') ?? 'all';
+  const activeRentals = rentals
+    .filter((rental) => rental.lifecycle !== 'requested' && rental.lifecycle !== 'rejected')
+    .filter((rental) => {
+      if (statusFilter === 'ready') return ['preparing', 'ready_pickup'].includes(rental.lifecycle);
+      if (statusFilter === 'on_rent') return rental.lifecycle === 'on_rent' || rental.lifecycle === 'out_delivery';
+      return statusFilter === 'all' || rental.lifecycle === statusFilter;
+    });
   const [selectedRef, setSelectedRef] = useState(searchParams.get('reference') ?? activeRentals[0]?.reference ?? rentals[0]?.reference);
   const [overrideOpen, setOverrideOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addError, setAddError] = useState('');
+  const [newOrder, setNewOrder] = useState({
+    customerName: '',
+    phone: '',
+    start: '2026-06-12',
+    end: '2026-06-15',
+    fulfillment: 'pickup',
+    productId: products[0]?.id ?? '',
+    variantId: products[0]?.variants[0]?.id ?? '',
+    qty: 1,
+  });
   const selected = rentals.find((rental) => rental.reference === selectedRef) ?? activeRentals[0] ?? rentals[0];
   const isCompleted = selected?.lifecycle === 'completed';
 
@@ -42,20 +64,148 @@ export default function RentalsAdmin({ t, locale, rentals, setRentals, products,
   };
 
   const canComplete = selected?.paymentStatus === 'verified' || !settings.requireVerifiedProof;
+  const selectedProduct = products.find((product) => product.id === newOrder.productId) ?? products[0];
+  const selectedVariant = selectedProduct?.variants.find((variant) => variant.id === newOrder.variantId) ?? selectedProduct?.variants[0];
+
+  useEffect(() => {
+    if (!selectedProduct || selectedVariant) return;
+    setNewOrder((current) => ({ ...current, variantId: selectedProduct.variants[0]?.id ?? '' }));
+  }, [selectedProduct?.id, selectedVariant?.id]);
+
+  const createOrder = () => {
+    if (!selectedProduct || !selectedVariant) return;
+    if (!newOrder.customerName.trim() || !newOrder.phone.trim()) return;
+    if (!newOrder.start || !newOrder.end || newOrder.end < newOrder.start) return;
+    const qty = Math.max(1, Number(newOrder.qty) || 1);
+    const available = getVariantAvailability(selectedProduct, selectedVariant.id, { start: newOrder.start, end: newOrder.end }, rentals);
+    if (available < qty) {
+      setAddError(t('admin.rentals.stockLimited'));
+      return;
+    }
+
+    setAddError('');
+    const currentRefs = rentals
+      .map((rental) => Number(String(rental.reference).replace('CR-', '')))
+      .filter((value) => Number.isFinite(value));
+    const nextNumber = (currentRefs.length ? Math.max(...currentRefs) : 141) + 1;
+    const reference = `CR-${String(nextNumber).padStart(4, '0')}`;
+    const rental = {
+      reference,
+      customerName: newOrder.customerName.trim(),
+      phone: newOrder.phone.trim(),
+      email: '',
+      lifecycle: 'confirmed',
+      paymentStatus: 'missing',
+      paymentMethod: 'bank_transfer',
+      fulfillment: newOrder.fulfillment,
+      start: newOrder.start,
+      end: newOrder.end,
+      pickupWindow: '10.00-12.00',
+      returnWindow: '16.00-18.00',
+      deliveryWindow: newOrder.fulfillment === 'delivery' ? '09.00-11.00' : '',
+      address: '',
+      notes: '',
+      internalNotes: '',
+      staleHours: 0,
+      deliveryFee: 0,
+      deliveryNotes: '',
+      items: [{ productId: selectedProduct.id, variantId: selectedVariant.id, qty }],
+      checklist: [
+        { id: 'confirm-size', labelId: 'Konfirmasi ukuran', labelEn: 'Confirm size', done: false },
+        { id: 'hold-stock', labelId: 'Tahan stok', labelEn: 'Hold stock', done: true },
+      ],
+      activity: [
+        {
+          id: `a-${Date.now()}`,
+          time: '27 Mei 2026 15.05',
+          textId: 'Pesanan ditambahkan staf dari riwayat pesanan.',
+          textEn: 'Order added by staff from rentals history.',
+        },
+      ],
+    };
+
+    setProducts((current) => applyItemHoldDelta(current, rental.items, 1));
+    setRentals((current) => [rental, ...current]);
+    setClients((current) => upsertClient(current, rental));
+    setSelectedRef(reference);
+    setAddOpen(false);
+    setNewOrder((current) => ({ ...current, customerName: '', phone: '', qty: 1 }));
+  };
 
   return (
     <div className="admin-feature-grid">
-      <section className="management-list">
-        {activeRentals.map((rental) => (
-          <button className={`management-card ${selected?.reference === rental.reference ? 'selected' : ''}`} type="button" key={rental.reference} onClick={() => setSelectedRef(rental.reference)}>
-            <div>
-              <strong>{rental.reference}</strong>
-              <span>{rental.customerName}</span>
-            </div>
-            <StatusPill type="lifecycle" value={rental.lifecycle} t={t} />
-            <small>{formatDateRange(rental, locale)}</small>
+      <section className="base-window management-window">
+        <div className="view-bar">
+          <div className="view-title-stack">
+            <strong>{t('admin.rentals.title')}</strong>
+            {statusFilter !== 'all' ? <span>{t(`admin.rentals.filter.${statusFilter}`)}</span> : null}
+          </div>
+          <button className="primary-button" type="button" onClick={() => setAddOpen((open) => !open)}>
+            <Plus aria-hidden="true" />
+            {t('admin.rentals.add')}
           </button>
-        ))}
+        </div>
+        {addOpen ? (
+          <div className="content-panel compact-panel">
+            <div className="form-grid">
+              <Field label={t('common.name')}>
+                <input value={newOrder.customerName} onChange={(event) => setNewOrder((current) => ({ ...current, customerName: event.target.value }))} />
+              </Field>
+              <Field label={t('common.phone')}>
+                <input value={newOrder.phone} onChange={(event) => setNewOrder((current) => ({ ...current, phone: event.target.value }))} />
+              </Field>
+              <Field label={t('common.dateStart')}>
+                <input type="date" value={newOrder.start} onChange={(event) => setNewOrder((current) => ({ ...current, start: event.target.value }))} />
+              </Field>
+              <Field label={t('common.dateEnd')}>
+                <input type="date" value={newOrder.end} onChange={(event) => setNewOrder((current) => ({ ...current, end: event.target.value }))} />
+              </Field>
+              <Field label={t('admin.table.item')}>
+                <select value={newOrder.productId} onChange={(event) => {
+                  const productId = event.target.value;
+                  const product = products.find((entry) => entry.id === productId);
+                  setNewOrder((current) => ({ ...current, productId, variantId: product?.variants[0]?.id ?? '' }));
+                }}>
+                  {products.map((product) => (
+                    <option value={product.id} key={product.id}>{productName(product, t)}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label={t('admin.catalogue.variantLabel')}>
+                <select value={newOrder.variantId} onChange={(event) => setNewOrder((current) => ({ ...current, variantId: event.target.value }))}>
+                  {(selectedProduct?.variants ?? []).map((variant) => (
+                    <option value={variant.id} key={variant.id}>{variant.label}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label={t('common.qty')}>
+                <input type="number" min="1" value={newOrder.qty} onChange={(event) => setNewOrder((current) => ({ ...current, qty: event.target.value }))} />
+              </Field>
+              <Field label={t('admin.table.fulfillment')}>
+                <select value={newOrder.fulfillment} onChange={(event) => setNewOrder((current) => ({ ...current, fulfillment: event.target.value }))}>
+                  <option value="pickup">{t('enum.fulfillment.pickup')}</option>
+                  <option value="delivery">{t('enum.fulfillment.delivery')}</option>
+                </select>
+              </Field>
+            </div>
+            {addError ? <p className="validation-message">{addError}</p> : null}
+            <button className="secondary-button full" type="button" onClick={createOrder} disabled={!newOrder.customerName.trim() || !newOrder.phone.trim()}>
+              {t('common.save')}
+            </button>
+          </div>
+        ) : null}
+        <div className="management-list padded">
+          {activeRentals.map((rental) => (
+            <button className={`management-card ${selected?.reference === rental.reference ? 'selected' : ''}`} type="button" key={rental.reference} onClick={() => setSelectedRef(rental.reference)}>
+              <div>
+                <strong>{rental.reference}</strong>
+                <span>{rental.customerName}</span>
+              </div>
+              <StatusPill type="lifecycle" value={rental.lifecycle} t={t} />
+              <small>{formatDateRange(rental, locale)}</small>
+            </button>
+          ))}
+        </div>
       </section>
 
       {selected ? (

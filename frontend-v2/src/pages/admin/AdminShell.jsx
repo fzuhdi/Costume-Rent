@@ -131,10 +131,10 @@ export default function AdminShell(props) {
           </header>
 
           <section className="ops-metrics" aria-label={t('admin.metrics.aria')}>
-            <Metric value={metrics.requested} title={t('admin.metrics.new')} copy={t('admin.metrics.newCopy')} />
-            <Metric value={metrics.ready} title={t('admin.metrics.pickup')} copy={t('admin.metrics.pickupCopy')} />
-            <Metric value={metrics.returnedOpen} title={t('admin.metrics.returned')} copy={t('admin.metrics.returnedCopy')} />
-            <Metric value={metrics.overdue} title={t('admin.metrics.overdue')} copy={t('admin.metrics.overdueCopy')} />
+            <Metric value={metrics.requested} title={t('admin.metrics.new')} copy={t('admin.metrics.newCopy')} to="/admin/requests?tab=all&sort=stale" />
+            <Metric value={metrics.ready} title={t('admin.metrics.pickup')} copy={t('admin.metrics.pickupCopy')} to="/admin/rentals?status=ready" />
+            <Metric value={metrics.returnedOpen} title={t('admin.metrics.returned')} copy={t('admin.metrics.returnedCopy')} to="/admin/requests?tab=returned" />
+            <Metric value={metrics.overdue} title={t('admin.metrics.overdue')} copy={t('admin.metrics.overdueCopy')} to="/admin/rentals?status=on_rent" />
           </section>
 
           {section === 'requests' ? <RequestsAdmin {...props} /> : null}
