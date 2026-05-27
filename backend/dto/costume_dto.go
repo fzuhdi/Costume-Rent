@@ -87,3 +87,47 @@ type CategoryResponse struct {
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
 }
+
+type AvailabilityQuery struct {
+	ProductIDs string `form:"product_ids"`
+	CostumeIDs string `form:"costume_ids"`
+	Start      string `form:"start" binding:"required"`
+	End        string `form:"end" binding:"required"`
+	VariantIDs string `form:"variant_ids"`
+}
+
+type AvailabilityDayResponse struct {
+	Date      string `json:"date"`
+	ProductID uint   `json:"productId"`
+	CostumeID uint   `json:"costumeId"`
+	VariantID string `json:"variantId"`
+	Total     int    `json:"total"`
+	Booked    int    `json:"booked"`
+	Available int    `json:"available"`
+	State     string `json:"state"`
+}
+
+type AvailabilityResponse struct {
+	Start           string                    `json:"start"`
+	End             string                    `json:"end"`
+	CacheTTLSeconds int                       `json:"cacheTtlSeconds"`
+	Days            []AvailabilityDayResponse `json:"days"`
+}
+
+type NextAvailabilityQuery struct {
+	ProductID    string `form:"product_id"`
+	CostumeID    string `form:"costume_id"`
+	VariantID    string `form:"variant_id"`
+	Start        string `form:"start" binding:"required"`
+	DurationDays int    `form:"duration_days" binding:"required"`
+}
+
+type NextAvailabilityResponse struct {
+	ProductID uint   `json:"productId"`
+	CostumeID uint   `json:"costumeId"`
+	VariantID string `json:"variantId"`
+	Start     string `json:"start"`
+	End       string `json:"end"`
+	State     string `json:"state"`
+	Available int    `json:"available"`
+}

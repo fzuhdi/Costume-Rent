@@ -32,3 +32,13 @@ type CostumeImage struct {
 	CostumeID uint      `json:"costume_id" gorm:"not null;index"`
 	Path      string    `json:"path" gorm:"not null"`
 }
+
+type CostumeAvailabilityBlock struct {
+	BaseModel
+	CostumeID uint      `json:"costume_id" gorm:"not null;index"`
+	Costume   Costume   `json:"costume,omitempty" gorm:"foreignKey:CostumeID"`
+	VariantID string    `json:"variant_id" gorm:"default:'';index"`
+	StartDate time.Time `json:"start_date" gorm:"not null;index"`
+	EndDate   time.Time `json:"end_date" gorm:"not null;index"`
+	Reason    string    `json:"reason"`
+}

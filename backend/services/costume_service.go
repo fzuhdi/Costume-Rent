@@ -182,6 +182,7 @@ func (s *CostumeService) Create(req dto.CreateCostumeRequest) (*dto.CostumeDetai
 		return nil, err
 	}
 
+	ClearAvailabilityCache()
 	return s.GetByID(costume.ID)
 }
 
@@ -219,11 +220,16 @@ func (s *CostumeService) Update(id uint, req dto.UpdateCostumeRequest) (*dto.Cos
 		return nil, err
 	}
 
+	ClearAvailabilityCache()
 	return s.GetByID(costume.ID)
 }
 
 func (s *CostumeService) Delete(id uint) error {
-	return config.DB.Delete(&models.Costume{}, id).Error
+	if err := config.DB.Delete(&models.Costume{}, id).Error; err != nil {
+		return err
+	}
+	ClearAvailabilityCache()
+	return nil
 }
 
 func (s *CostumeService) AddImage(costumeID uint, path string) (*models.CostumeImage, error) {
@@ -289,6 +295,48 @@ func (s *CostumeService) GetAvailableQuantity(costumeID uint) (int, error) {
 		Scan(&rentedQty)
 
 	return costume.Quantity - int(rentedQty), nil
+}
+
+func (s *CostumeService) GetAvailableQuantityForRange(costumeID uint, start, end time.Time, excludedRentOrderID ...uint) (int, error) {
+	var costume models.Costume
+	if err := config.DB.First(&costume, costumeID).Error; err != nil {
+		return 0, err
+	}
+
+	query := config.DB.Model(&models.RentOrderItem{}).
+		Select("rent_order_items.costume_id, rent_order_items.quantity, rent_orders.rent_start, rent_orders.rent_end").
+		Joins("JOIN rent_orders ON rent_orders.id = rent_order_items.rent_order_id").
+		Where("rent_order_items.costume_id = ? AND rent_orders.status IN ? AND rent_orders.deleted_at IS NULL AND rent_orders.rent_start <= ? AND rent_orders.rent_end >= ?", costumeID, blockingAvailabilityStatuses, end, start)
+	if len(excludedRentOrderID) > 0 && excludedRentOrderID[0] > 0 {
+		query = query.Where("rent_orders.id <> ?", excludedRentOrderID[0])
+	}
+
+	var rentalRows []rentalAvailabilityRow
+	if err := query.Scan(&rentalRows).Error; err != nil {
+		return 0, err
+	}
+
+	var blocks []models.CostumeAvailabilityBlock
+	if err := config.DB.
+		Where("costume_id = ? AND start_date <= ? AND end_date >= ?", costumeID, end, start).
+		Find(&blocks).Error; err != nil {
+		return 0, err
+	}
+
+	minAvailable := costume.Quantity
+	for day := start; !day.After(end); day = day.AddDate(0, 0, 1) {
+		if isUnavailableForDay(blocks, costumeID, defaultVariantID, day) {
+			return 0, nil
+		}
+		available := costume.Quantity - bookedQuantityForDay(rentalRows, costumeID, day)
+		if available < minAvailable {
+			minAvailable = available
+		}
+	}
+	if minAvailable < 0 {
+		return 0, nil
+	}
+	return minAvailable, nil
 }
 
 type CostumeSearchResponse struct {

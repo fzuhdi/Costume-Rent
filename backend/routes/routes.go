@@ -50,6 +50,9 @@ func SetupRouter() *gin.Engine {
 		api.GET("/categories", costumeHandler.GetCategories)
 		api.POST("/categories", middleware.AuthMiddleware(), costumeHandler.CreateCategory)
 
+		api.GET("/availability", costumeHandler.GetAvailability)
+		api.GET("/availability/next", costumeHandler.GetNextAvailability)
+
 		api.GET("/costumes", costumeHandler.List)
 		api.GET("/costumes/search", costumeHandler.Search)
 		api.GET("/costumes/:id", costumeHandler.GetByID)

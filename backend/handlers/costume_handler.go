@@ -15,12 +15,14 @@ import (
 )
 
 type CostumeHandler struct {
-	costumeService *services.CostumeService
+	costumeService      *services.CostumeService
+	availabilityService *services.AvailabilityService
 }
 
 func NewCostumeHandler() *CostumeHandler {
 	return &CostumeHandler{
-		costumeService: services.NewCostumeService(),
+		costumeService:      services.NewCostumeService(),
+		availabilityService: services.NewAvailabilityService(),
 	}
 }
 
@@ -246,4 +248,37 @@ func (h *CostumeHandler) Search(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, costumes)
+}
+
+func (h *CostumeHandler) GetAvailability(c *gin.Context) {
+	var query dto.AvailabilityQuery
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	availability, err := h.availabilityService.GetAvailability(query)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Header("Cache-Control", "public, max-age=45")
+	c.JSON(http.StatusOK, availability)
+}
+
+func (h *CostumeHandler) GetNextAvailability(c *gin.Context) {
+	var query dto.NextAvailabilityQuery
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	window, err := h.availabilityService.FindNextAvailableWindow(query)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, window)
 }

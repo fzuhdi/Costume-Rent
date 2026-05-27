@@ -116,7 +116,7 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 	}
 
 	for _, item := range req.Items {
-		available, err := NewCostumeService().GetAvailableQuantity(item.CostumeID)
+		available, err := NewCostumeService().GetAvailableQuantityForRange(item.CostumeID, rentStart, rentEnd)
 		if err != nil {
 			return nil, errors.New("costume not found: " + strconv.Itoa(int(item.CostumeID)))
 		}
@@ -125,7 +125,7 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 		}
 	}
 
-  order := models.RentOrder{
+	order := models.RentOrder{
 		ClientID:      clientID,
 		GuaranteeType: req.GuaranteeType,
 		RentStart:     rentStart,
@@ -151,6 +151,7 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 		}
 	}
 
+	ClearAvailabilityCache()
 	return s.GetByID(order.ID)
 }
 
@@ -160,8 +161,8 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest) (*models.R
 		return nil, err
 	}
 
-  if req.GuaranteeType != "" {
-		order.GuaranteeType = req.GuaranteeType;
+	if req.GuaranteeType != "" {
+		order.GuaranteeType = req.GuaranteeType
 	}
 	if req.RentStart != "" {
 		if t, err := time.Parse("2006-01-02", req.RentStart); err == nil {
@@ -178,6 +179,32 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest) (*models.R
 	}
 	if req.Notes != "" {
 		order.Notes = req.Notes
+	}
+
+	shouldValidateAvailability := req.RentStart != "" || req.RentEnd != "" || len(req.Items) > 0 || (req.Status != "" && isAvailabilityBlockingStatus(req.Status))
+	if shouldValidateAvailability {
+		itemsToValidate := req.Items
+		if len(itemsToValidate) == 0 {
+			var existingItems []models.RentOrderItem
+			if err := config.DB.Where("rent_order_id = ?", id).Find(&existingItems).Error; err != nil {
+				return nil, err
+			}
+			for _, item := range existingItems {
+				itemsToValidate = append(itemsToValidate, dto.RentItemInput{
+					CostumeID: item.CostumeID,
+					Quantity:  item.Quantity,
+				})
+			}
+		}
+		for _, item := range itemsToValidate {
+			available, err := NewCostumeService().GetAvailableQuantityForRange(item.CostumeID, order.RentStart, order.RentEnd, id)
+			if err != nil {
+				return nil, errors.New("costume not found: " + strconv.Itoa(int(item.CostumeID)))
+			}
+			if item.Quantity > available {
+				return nil, errors.New("insufficient quantity for costume " + strconv.Itoa(int(item.CostumeID)) + ": requested " + strconv.Itoa(item.Quantity) + ", available " + strconv.Itoa(available))
+			}
+		}
 	}
 
 	if err := config.DB.Save(&order).Error; err != nil {
@@ -197,6 +224,7 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest) (*models.R
 		}
 	}
 
+	ClearAvailabilityCache()
 	return s.GetByID(order.ID)
 }
 
@@ -211,11 +239,25 @@ func (s *RentService) MarkReturned(id uint) (*models.RentOrder, error) {
 		return nil, err
 	}
 
+	ClearAvailabilityCache()
 	return s.GetByID(order.ID)
 }
 
 func (s *RentService) Delete(id uint) error {
-	return config.DB.Delete(&models.RentOrder{}, id).Error
+	if err := config.DB.Delete(&models.RentOrder{}, id).Error; err != nil {
+		return err
+	}
+	ClearAvailabilityCache()
+	return nil
+}
+
+func isAvailabilityBlockingStatus(status string) bool {
+	for _, blockingStatus := range blockingAvailabilityStatuses {
+		if status == blockingStatus {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderResponse {

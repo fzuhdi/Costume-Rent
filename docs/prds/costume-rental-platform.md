@@ -14,7 +14,7 @@ Legacy staff routes such as `/catalogue`, `/rents`, `/clients`, and `/settings` 
 ## Summary
 Costume Rental will become an offline-first boutique rental platform with public self-service discovery. Customers can browse costumes, choose rental dates and size variants, submit booking requests with name and phone, and reopen a booking by reference number plus phone. Staff still control confirmation, request edits, payment proof, preparation, boutique pickup, Gosend/manual delivery, returns, completion, and customer coordination through the staff app.
 
-The redesign must use a custom UI system. The active redesigned frontend must not rely on HeroUI components, HeroUI styling, HeroUI component APIs, or HeroUI theme assumptions.
+The redesign should be implemented as a greenfield `frontend-v2/` app using shadcn/ui as the base UI system. shadcn/ui components should be installed into the repository and wrapped with project-owned customer/admin components so the product keeps a consistent boutique booking and staff operations experience.
 
 ## Problem
 The current product is optimized for authenticated staff operations. Most customers still transact offline: many visit the boutique to inspect costumes, and some coordinate through WhatsApp or phone before staff send items through Gosend or another manual delivery method. The product needs a public catalogue and booking-request flow that reduces staff effort without forcing non-technical customers into ecommerce-style accounts or online payment.
@@ -23,9 +23,11 @@ The staff product also needs a redesigned operational workflow that preserves ca
 
 ## Product Decisions
 - Route strategy: `/` is the customer storefront; `/admin/*` is the staff management app.
+- Public route split: `/` is catalogue-only, `/costumes/:productId` is the public product detail route, `/lookup` is the standalone lookup/change-request route, and `/checkout` is a route-backed modal or sheet over the customer flow.
 - Order intake: Customer checkout creates a staff-visible booking request, not a confirmed reservation.
 - Customer identity: MVP is client-first and guest-friendly. Customers submit name and phone; email is optional.
 - Customer lookup: Customers reopen or check a submitted booking with booking reference plus phone.
+- Forgot reference recovery: Customers who forget the booking reference can submit phone plus identifying hints for staff follow-up. This recovery flow must not reveal whether a booking exists, show matching references, or expose booking details publicly.
 - Customer accounts: Full account login, social login, magic links, and full self-service order history are future enhancements, not MVP requirements.
 - Role separation: Anonymous visitors, customer lookup users, staff users, and admin users have distinct permissions.
 - Inventory hold: Pending booking requests hold inventory until staff accepts, rejects, cancels, or edits the request.
@@ -36,12 +38,17 @@ The staff product also needs a redesigned operational workflow that preserves ca
 - Completion gate: A rent can become `completed` only after payment proof is attached and verified.
 - Return semantics: `returned` means the costume is physically back and inventory is released, but the transaction is not financially closed.
 - Alerts: Returned-but-not-completed rents continue to alert staff until payment proof is verified and the rent is completed.
+- Staff notifications: MVP notifications are a header bell popover with links into the relevant staff context, not a standalone notification-management page or manually resolved inbox.
+- Pricing model: Costume price is per selected costume set/package for the rental transaction, not per day. Rental dates affect availability, due dates, and overdue behavior, but do not multiply the base costume price by day count.
 - Delivery: Delivery is staff-arranged. Customers provide address and preferred window; staff confirm fee, schedule, and Gosend/manual delivery details.
 - Time windows: Pickup, return, and delivery use preferred windows in MVP, not hard-reserved exact slots.
 - Guarantee handling: Staff record guarantee type only.
-- Language: Indonesian is the primary UI language. Copy should be structured so future English/i18n support is possible.
-- UI system: Build custom primitives with semantic HTML, Tailwind/CSS tokens, React state, and lucide-react icons.
-- HeroUI policy: HeroUI migration docs are historical references only and must not be treated as implementation guidance for this redesign.
+- Language: Indonesian is the primary UI language. Database/API flags remain stable English enum values, but visible wording must resolve through shared Indonesian and English label maps.
+- UI system: Use shadcn/ui as the base component system, with semantic HTML, Tailwind/CSS tokens, React state, and lucide-react icons where appropriate.
+- Component library policy: Planned libraries and project wrappers must be used before manual UI. shadcn/ui primitives must be centralized through shared project components and documented patterns so customer and staff flows remain visually consistent, accessible, and maintainable.
+- Availability presentation: Product detail uses a month calendar timeline with variant selection, legend, and tap/click date inspection. Catalogue cards use compact selected-range summaries, not full per-card calendars.
+- Availability states: Public and staff-facing availability must resolve to `available`, `partially_booked`, `fully_booked`, or `unavailable`/maintenance.
+- Availability cost control: Public availability must use one batched visible-range query per surface. Product detail fetches one product, selected variants, and one visible month plus a small buffer. Catalogue fetches only visible product IDs for the selected date range.
 
 ## Users And Roles
 - Anonymous visitor: Can browse public catalogue, product detail, availability prompts, and brand information without staff login.
@@ -58,7 +65,7 @@ Customer lookup access must not authorize admin routes or admin APIs. Staff/admi
 - Make pending customer requests discoverable, editable, and auditable for staff.
 - Keep offline operations first: boutique visits, WhatsApp/phone coordination, staff-recorded payment proof, and staff-arranged Gosend delivery.
 - Enforce a clear lifecycle where returned stock can be rented again, but financial closure requires verified proof.
-- Remove active reliance on HeroUI and establish a custom UI system for customer and staff workflows.
+- Establish a consistent reusable shadcn/ui-based system for customer and staff workflows.
 - Add acceptance coverage before implementation tickets are executed.
 
 ## Non-Goals
@@ -70,13 +77,17 @@ Customer lookup access must not authorize admin routes or admin APIs. Staff/admi
 - Adding QR pickup scanning, AR try-on, push notifications, full offline app behavior, or PWA install behavior in this redesign unless separately ticketed.
 
 ## Current Stack And Deprecations
-Current frontend stack for this redesign:
+Recommended `frontend-v2/` stack for this redesign:
 
 - React
 - Vite
 - React Router
 - Axios
 - Tailwind v4
+- shadcn/ui
+- Radix UI primitives where used by shadcn/ui
+- TanStack Table for staff/admin queues and data tables
+- React Hook Form and Zod for complex forms and validation where useful
 - lucide-react
 - Context API
 
@@ -90,15 +101,17 @@ Current backend stack:
 - Local uploads
 - Docker development runtime
 
-Deprecated in this refactor:
+UI implementation direction:
 
-- `@heroui/react`
-- `@heroui/styles`
-- HeroUI component APIs
-- HeroUI theme assumptions
-- HeroUI-specific migration guidance as active implementation direction
-
-The redesigned UI must not rely on HeroUI components or HeroUI styling. Old HeroUI docs may remain only when clearly marked as legacy or historical notes.
+- Build the redesign in `frontend-v2/` instead of incrementally reshaping the existing frontend.
+- Use shadcn/ui as the base component source for reusable controls and layouts.
+- Use lucide-react icons for visual UI actions and status indicators. Do not hand-draw icons with CSS pseudo-elements or ad hoc SVG when a lucide icon exists.
+- Use TanStack Table for staff/admin queue and rental/client/catalogue tables that require sorting, filtering, pagination, row actions, or selection.
+- Use React Hook Form and Zod for complex request, admin edit, payment proof, and settings forms when local component state becomes error-prone.
+- Project-specific styling tokens, variants, and layout conventions should be centralized instead of duplicated per feature.
+- Use `docs/frontend/design-system.md` as the `frontend-v2/` design-system source of truth.
+- Avoid importing generated shadcn/ui primitives directly across feature pages when a project-level component is needed. Prefer wrappers such as `Button`, `Field`, `StatusBadge`, `BookingStatePill`, `PageHeader`, `DataTable`, `DateRangeField`, and `MoneyText`.
+- Do not render backend flags such as `requested`, `missing`, or `attached` directly in the UI. Map enum values through shared label dictionaries with Indonesian default labels and English fallback labels.
 
 ## Product Surfaces
 
@@ -138,6 +151,7 @@ The staff app preserves and redesigns:
 - Fitting/measurement notes
 - Accessory and bundle notes
 - Staff preparation checklist
+- Header notification popover for operational alerts that opens the related queue, rental, catalogue, or client context
 - Activity log on rent detail
 - Admin override for completed rents
 
@@ -146,12 +160,14 @@ The staff app preserves and redesigns:
 ### Routing And Access
 - REQ-001: The customer storefront must be available at `/` without staff authentication.
 - REQ-002: Customer product, request submission, confirmation, lookup, and change-request routes must be public-app routes and must not live under `/admin/*`.
+- REQ-002A: `/` must remain a catalogue-only route; product detail must use `/costumes/:productId`; customer lookup and change-request entry must use `/lookup`; checkout must be addressable at `/checkout` as a modal or sheet route.
 - REQ-003: The staff management app must place redesigned admin pages under `/admin/*`.
 - REQ-004: Customer lookup access must not authorize `/admin/*` route access.
 - REQ-005: Customer lookup access must not authorize admin APIs for catalogue mutation, rental administration, client management, settings, notifications, payment proof verification, or inventory blocks.
 - REQ-006: Staff/admin APIs must remain protected by staff/admin authorization.
 - REQ-007: Public customer APIs must expose only browse, availability, booking request, and booking lookup data needed by the public app.
 - REQ-008: Booking lookup APIs must require booking reference plus phone and must not expose unrelated clients or orders.
+- REQ-008A: Forgot-reference recovery must use a non-enumerating staff-follow-up request. Public responses must be generic and must not reveal whether a phone/name/date hint matched a booking.
 
 ### Customer Catalogue And Request Flow
 - REQ-009: Anonymous visitors must be able to browse the public catalogue without staff login.
@@ -163,9 +179,14 @@ The staff app preserves and redesigns:
 - REQ-015: Past customer booking dates must be blocked unless staff-only backdating is explicitly supported.
 - REQ-016: Products must remain browseable when no date range is selected, but request submission must require valid dates.
 - REQ-017: Applied date ranges must update availability using overlapping rents, requested bookings, confirmed bookings, maintenance blocks, unavailable inventory blocks, size/variant quantities, and requested quantities.
+- REQ-017A: Catalogue product cards must show compact selected-range availability only: available, limited/partially booked, unavailable/fully booked, and next available date/range only when blocked.
+- REQ-017B: Product detail must show a month calendar availability timeline with previous/next month controls, selected variant label, legend, and click/tap date inspection of per-variant stock.
+- REQ-017C: Product detail calendar cells must not trigger individual backend requests. The backend must return a compact day map for the visible range.
+- REQ-017D: Availability states must be `available`, `partially_booked`, `fully_booked`, and `unavailable`; maintenance/unavailable inventory blocks must render as unavailable.
 - REQ-018: Product detail must show images, name, description, category/region, availability, price when configured, size/variant options, fitting/measurement guidance when configured, accessory/bundle notes when configured, and active rental dates.
 - REQ-019: Product detail must require valid date selection and variant selection when variants exist before enabling add-to-request.
 - REQ-020: Customer product images must lazy-load and provide accessible alt text.
+- REQ-020A: Customer-facing price labels must make clear that costume price is per set/package, not per day.
 - REQ-021: Customers must be able to build a request before providing contact details.
 - REQ-022: The request summary must persist locally across refresh and temporary connection loss.
 - REQ-023: Each request item must include costume identity, variant identity/label when applicable, image when available, quantity, rental date range, price/rental cost when configured, and availability state.
@@ -186,10 +207,14 @@ The staff app preserves and redesigns:
 - REQ-036: Booking request submission must not collect guarantee document details online.
 - REQ-037: Before request submission, the backend must revalidate all items against current date-range and variant availability.
 - REQ-038: If an item becomes unavailable before request submission, the system must block submission and identify the affected item.
+- REQ-038A: Availability queries must be batched by product IDs and date range. Blocking lifecycle states are `requested`, `confirmed`, `preparing`, `ready_pickup`, `out_delivery`, and `on_rent`; returned, completed, rejected, and cancelled records must not block stock.
+- REQ-038B: Detail calendar availability windows must be capped at 62 days per request. Next-available searches must be capped at 90 days. Public availability responses may be cached for 30-60 seconds and must be cleared, bypassed, or revalidated after request submission and staff inventory edits.
+- REQ-038C: Public availability responses must expose aggregated stock only: date, product ID, variant ID, total, booked, available, and state. They must not expose rental customer data.
 - REQ-039: Successful submission must create a staff-visible `requested` booking linked to a new or matched client by customer name and phone.
 - REQ-040: Successful submission must show confirmation with booking reference, rental dates, selected items and variants, fulfillment choice, pending/requested status, and next steps for staff follow-up.
 - REQ-041: Duplicate request submission must be prevented with submit locking and idempotent backend handling where feasible.
 - REQ-042: Customers must be able to look up a booking using booking reference plus phone.
+- REQ-042A: Customers who forgot the booking reference must be able to submit phone plus identifying hints for staff follow-up without receiving public booking details or a list of matching references.
 - REQ-043: Booking lookup must show customer-friendly status, rental dates, fulfillment method, product count, selected items/variants, and staff-visible next steps when available.
 - REQ-044: Customers must be able to request cancellation for eligible bookings through booking lookup.
 - REQ-045: Customers must be able to request reschedule for eligible bookings through booking lookup.
@@ -220,13 +245,14 @@ The staff app preserves and redesigns:
 - REQ-068: Staff must be able to mark payment proof as `attached`, `verified`, or `rejected`.
 - REQ-069: The system must block `completed` unless payment proof is attached and verified.
 - REQ-070: Returned-but-not-completed rents must remain visible in staff alerts, especially after rent due date.
+- REQ-070A: Staff pricing displays must calculate base costume charges as selected set/package price times quantity, with delivery fee, late fee, damage fee, discount, or staff adjustment shown as separate line items when used.
 - REQ-071: Completed rents must be locked from normal staff edits.
 - REQ-072: Admin users must be able to override completed rents only with a required reason.
 - REQ-073: Every meaningful staff edit, lifecycle transition, payment proof change, customer request, and admin override must create an activity log entry visible on staff rent detail.
 - REQ-074: Staff must be able to schedule and update delivery details, fee notes, and Gosend/manual delivery notes for delivery bookings.
 - REQ-075: Existing staff client behavior must continue to show contact information and rental history.
 - REQ-076: Existing notifications must continue to show overdue and due-soon rental alerts.
-- REQ-077: Notifications or queue indicators must make new pending requests, stale requests, returned-but-not-completed rents, and rejected payment proofs discoverable.
+- REQ-077: Header notification popover alerts or queue indicators must make new pending requests, stale requests, returned-but-not-completed rents, rejected payment proofs, and forgot-reference recovery requests discoverable. Popover items must open related staff context and must not require manual resolve actions in MVP.
 - REQ-078: Settings for app name, tagline, logo, and branding must apply to customer and staff surfaces where appropriate.
 
 ### Status Model
@@ -239,20 +265,22 @@ The staff app preserves and redesigns:
 - REQ-085: Reschedule requests must keep the original inventory hold until staff approves new dates or rejects the request.
 
 ### UI System, Mobile, And Accessibility
-- REQ-086: The redesigned UI must use custom primitives built from semantic HTML, Tailwind/CSS tokens, React state, and lucide-react icons.
-- REQ-087: No active redesigned frontend code may import from `@heroui/react`.
-- REQ-088: No active global CSS may import `@heroui/styles`.
+- REQ-086: The redesigned UI must use a shadcn/ui-based shared component system backed by semantic HTML, Tailwind/CSS tokens, React state, and lucide-react icons where appropriate.
+- REQ-087: shadcn/ui primitive usage must be centralized through project-level wrappers or documented patterns instead of ad hoc per-page implementations.
+- REQ-088: Global CSS must centralize base styles, design tokens, and required shadcn/ui integration without route-specific duplication.
 - REQ-089: Customer and staff UIs must be usable at 320px through desktop widths with no horizontal body overflow.
 - REQ-090: Customer and staff interactive controls must provide reliable touch targets.
 - REQ-091: Forms must use mobile-appropriate input types for phone numbers, dates, addresses, payment proof fields, and search.
 - REQ-092: Customer and staff flows must expose visible loading, empty, disabled, error, retry, and success states.
 - REQ-093: Customer and staff core flows must pass accessibility checks for keyboard access, focus visibility, labels, roles, color contrast, and meaningful status announcements.
-- REQ-094: The custom UI system must avoid HeroUI component APIs, HeroUI class assumptions, and HeroUI theme tokens.
+- REQ-094: The UI system must document shadcn/ui component usage, theming/tokens, variants, responsive behavior, and accessibility expectations.
 - REQ-095: Customer and staff product copy must be Indonesian-first.
+- REQ-096: Customer and staff UI must not render English backend enum flags directly. Lifecycle, payment proof, availability, fulfillment, validation, and action labels must be mapped through shared Indonesian and English label dictionaries.
+- REQ-097: Planned libraries must be preferred over manual implementations. Use lucide-react for icons, shadcn/ui or project wrappers for standard controls, TanStack Table for staff grids, and React Hook Form plus Zod for complex validated forms unless a documented exception exists.
 
 ### Acceptance Coverage
-- REQ-096: New customer, admin queue, payment proof, variant availability, and design-system behavior must be represented in `docs/acceptance/` before implementation tickets are executed.
-- REQ-097: Regression coverage must preserve existing `AUTH`, `CATALOGUE`, `RENT`, `CLIENT`, `NOTIFICATION`, `SETTINGS`, `NAVIGATION`, and `API` acceptance behavior unless a later ticket explicitly migrates route paths while preserving workflow intent.
+- REQ-098: New customer, admin queue, payment proof, variant availability, and design-system behavior must be represented in `docs/acceptance/` before implementation tickets are executed.
+- REQ-099: Regression coverage must preserve existing `AUTH`, `CATALOGUE`, `RENT`, `CLIENT`, `NOTIFICATION`, `SETTINGS`, `NAVIGATION`, and `API` acceptance behavior unless a later ticket explicitly migrates route paths while preserving workflow intent.
 
 ## User Flows
 - Public browse: Visitor opens `/`, browses catalogue, searches or filters products, views product detail, sees size/variant options, and sees date prompts without staff login.
@@ -261,6 +289,7 @@ The staff app preserves and redesigns:
 - Boutique pickup request: Customer selects pickup, enters preferred pickup and return windows, and staff confirms exact coordination offline.
 - Booking confirmation: Customer sees booking reference, requested status, selected items/variants, dates, fulfillment method, and instructions for staff follow-up.
 - Booking lookup: Customer enters booking reference plus phone to see current status, selected items, dates, fulfillment details, and available request actions.
+- Forgot booking reference: Customer enters phone plus name/date/item hints, receives a generic follow-up confirmation, and staff receives a header alert to recover the reference through staff tools.
 - Customer change request: Customer requests cancellation, reschedule, or detail changes; staff reviews and applies or rejects the change.
 - Staff pending queue: Staff opens `/admin/*`, sees requested bookings, stale warnings, requested variants, date ranges, customer contact, and fulfillment preferences.
 - Staff edit and confirm: Staff edits dates/items/variants/quantities if needed, logs changes automatically, confirms or rejects the request, and coordinates with the customer.
@@ -281,6 +310,7 @@ The staff app preserves and redesigns:
 - Request submission network failure: Preserve request summary and allow retry without duplicate request creation.
 - Duplicate submit: Lock submit and rely on idempotent backend behavior where feasible.
 - Invalid booking lookup: Show a safe not-found state without revealing whether the reference or phone was wrong.
+- Forgot booking reference recovery: Always show a generic submitted state and never reveal whether the phone or hints matched a booking.
 - Customer lookup attempts admin route/API: Deny and redirect to customer flow.
 - Staff token attempts customer-only lookup action: Enforce route/API policy according to role rules.
 - Corrupted local request data: Clear invalid local data and inform the customer.
@@ -313,12 +343,14 @@ Regression coverage must preserve:
 
 Acceptance must verify:
 
-- No HeroUI imports remain in redesigned frontend code.
-- No `@heroui/styles` import remains in active global CSS.
+- shadcn/ui is used as the base UI system for redesigned customer and staff flows.
+- Project-owned wrappers are used consistently for repeated product concepts instead of scattering raw primitive usage across pages.
+- Global styles include the required base styles, tokens, and shadcn/ui integration without duplicating route-specific styling.
 - Public customer pages work without staff login.
 - Admin pages are under `/admin/*`.
 - Customer booking requests can be submitted without account login.
 - Booking lookup works by reference plus phone and does not expose unrelated data.
+- Forgot-reference recovery creates staff follow-up context without public booking enumeration.
 - Pending requests hold variant inventory until staff resolves them.
 - Stale pending requests surface in the staff queue.
 - Staff edits before completion are revalidated and logged.
@@ -357,19 +389,20 @@ Acceptance must verify:
 - Variant complexity: Keep variants simple with label, quantity, and optional notes before adding individual-unit tracking.
 - Payment proof ambiguity: Separate lifecycle status from payment proof state and block completion until verified.
 - Role confusion between customer lookup and staff access: Use explicit route guards, API guards, and scoped lookup behavior.
-- HeroUI assumptions leaking into redesign: Treat HeroUI docs as historical only and scan source for active imports.
+- UI inconsistency from mixed component approaches: Use shadcn/ui as the base, lucide-react for icons, TanStack Table for staff grids, React Hook Form/Zod for complex forms, then centralize project-specific wrappers and shared conventions before broad implementation.
+- Language inconsistency from raw flags: Keep English enum flags in the data layer, but render localized labels through shared dictionaries for Indonesian-first UI and future English/i18n support.
 - Staff workflow regression: Preserve existing acceptance and add admin queue/payment/variant coverage before implementation.
 - Mobile layout regression: Test 320px and common mobile widths for no horizontal overflow.
 
 ## Open Questions And Handoff Notes
 - Confirm stale pending request warning age, for example 1 business day.
-- Confirm customer-facing Indonesian labels for lifecycle and payment proof states.
+- Confirm Indonesian and English label maps for lifecycle, payment proof, availability, fulfillment, validation, and request actions.
 - Confirm exact required terms, cancellation, and reschedule policy text.
 - Confirm whether delivery fee is required before confirmation or can remain as staff notes in MVP.
 - Confirm accepted payment proof file types and size limits.
 - Confirm whether payment proof verification requires staff role only or admin role.
 - Confirm whether variant labels should use fixed values, free-form labels, or both.
 - Product handoff: Approve status labels, stale warning age, terms, cancellation policy, reschedule policy, and payment proof rules.
-- Design handoff: Build Indonesian-first customer and staff flows with custom UI primitives and no HeroUI dependency.
+- Design handoff: Build Indonesian-first customer and staff flows with shadcn/ui, lucide-react, TanStack Table, React Hook Form/Zod, and project-owned wrappers for product-specific patterns.
 - Engineering handoff: Treat payment gateway, Gosend API, customer accounts, social login, and magic links as future enhancements.
 - QA handoff: Create or update Playwright/API tests from acceptance docs, with each test title containing exactly one bracketed test case ID.

@@ -55,6 +55,7 @@ func migrateDB() {
 		&models.Category{},
 		&models.Costume{},
 		&models.CostumeImage{},
+		&models.CostumeAvailabilityBlock{},
 		&models.Client{},
 		&models.RentOrder{},
 		&models.RentOrderItem{},
