@@ -31,6 +31,8 @@ Use page files for route-specific rules. Use this file for global direction, tok
 
 ### Token Quick Reference
 
+Canonical CSS tokens live in `frontend-v2/styles.css` under `:root`.
+
 | Token | Exact value |
 |-------|-------------|
 | Background | `#F8FAFC` |
@@ -49,16 +51,26 @@ Use page files for route-specific rules. Use this file for global direction, tok
 | Card/panel/sheet radius | `8px max` |
 | Touch target | `44px minimum for buttons, icon buttons, table header sort controls, and calendar controls` |
 
+### Token Enforcement
+
+- Run `npm run check:tokens` from `frontend-v2` after CSS changes.
+- Raw color literals are allowed only inside the `:root` token block in `frontend-v2/styles.css`.
+- New CSS must use semantic tokens first, such as `--background`, `--surface`, `--text`, `--muted`, `--border`, `--primary`, `--accent`, `--success`, `--info`, and `--danger`.
+- Exact-value `--color-*` tokens exist only to preserve legacy visual output while centralizing one-off colors. Do not add new `--color-*` tokens unless a value cannot be expressed through the semantic palette without changing visual behavior.
+- Font, radius, shadow, and touch-target values must come from tokens or the documented constants above. Do not add ad hoc `13px`, `17px`, arbitrary radius, or raw font stacks.
+
 ### Frontend Architecture Principles
 
 Feature folders are the component source of truth for future `frontend-v2` work:
 
 - Admin components live under `components/admin/common`, `catalogue`, `clients`, `requests`, `rentals`, and `settings`.
 - Customer components live under `components/customer/common`, `catalogue`, `checkout`, `home`, `lookup`, and `product`.
-- `components/admin/AdminComponents.jsx` and `components/customer/CustomerComponents.jsx` are compatibility barrels only. New internal imports must target the concrete feature module.
-- Pages orchestrate route state, query params, persistence, adapter calls, and cross-feature composition. Components render focused UI units. Feature-specific helpers live beside the feature as `*Utils.js`.
+- `components/admin/AdminComponents.tsx` and `components/customer/CustomerComponents.tsx` are compatibility barrels only. New internal imports must target the concrete feature module.
+- Pages compose route surfaces. Business logic, query-param synchronization, adapter calls, mutation rules, and feature state machines live in typed feature hooks such as `useCatalogueAdminController.ts`, `useRequestsAdminController.ts`, and `useRentalsAdminController.ts`.
+- Components render focused UI units. Feature-specific helpers live beside the feature as `*Utils.ts`; feature-specific type aliases live beside the feature when they are not shared domain contracts.
+- Shared public domain contracts live in `src/types/domain.ts`; app/page state contracts live in `src/types/app.ts`. New data shapes must be represented there before they cross page or adapter boundaries.
 - Do not recreate mini-monoliths. Split mixed-responsibility modules into shells, panels/tabs, dialogs/sheets, action bars, cards, calendars, and utilities once responsibilities diverge.
-- Cross-domain primitives stay in `components/shared.jsx`; feature modules may import shared primitives, but shared primitives must not import feature modules.
+- Cross-domain primitives stay in `components/shared.tsx`; feature modules may import shared primitives, but shared primitives must not import feature modules.
 - CSS remains the styling source of truth. Preserve existing tokens, class hooks, route copy, translation keys, data shapes, and storage keys during structural cleanup.
 
 ### Component Library Principles
@@ -76,8 +88,11 @@ Feature folders are the component source of truth for future `frontend-v2` work:
 - Update this design-system whenever a change alters component ownership, route responsibility, interaction patterns, accessibility behavior, responsive behavior, data mutation rules, or library policy.
 - Update the relevant `pages/*.md` file when a route gets a new surface, sheet, modal, tab, calendar, save flow, destructive action, or availability/checkout/lookup behavior.
 - Keep design-system rules implementation-specific enough to guide future agents: name the folder, wrapper, token, class hook, library, and route when the rule depends on them.
+- Keep TypeScript contracts current with UI changes. When props, adapter payloads, request drafts, payment proof metadata, availability rows, or localized content shapes change, update `src/types/domain.ts`, `src/types/app.ts`, and feature-local `*Types.ts` files in the same change.
+- Keep feature controllers as the business-logic boundary. New route-level mutation or query-param behavior belongs in a typed `use*Controller.ts` hook or feature service, not directly inside JSX-heavy page components.
+- Keep token governance current. Any new palette, elevation, radius, or font decision must update `:root`, this file, and `npm run check:tokens` expectations when needed.
 - Structural refactors must preserve public routes, URL params, copy keys, locale behavior, storage keys, adapter contracts, and business rules unless the plan explicitly approves a behavior change.
-- Verification for UI structural changes must include a production build, an import scan for compatibility barrel usage, and mobile overflow checks for any touched customer catalogue or admin workspace route.
+- Verification for UI structural changes must include `npm run typecheck`, `npm run check:tokens`, a production build, an import scan for compatibility barrel usage, and mobile overflow checks for any touched customer catalogue or admin workspace route.
 
 ### Breakpoints And Responsive Order
 
@@ -575,7 +590,9 @@ Before opening a pull request, verify:
 
 - [ ] `design-system/MASTER.md` and the relevant `design-system/pages/*.md` file were checked.
 - [ ] Design-system docs were updated if the work changed architecture, component ownership, interaction patterns, library policy, responsive rules, accessibility rules, or route behavior.
-- [ ] New internal imports target feature modules directly, not `AdminComponents.jsx` or `CustomerComponents.jsx`.
+- [ ] `npm run typecheck` passes from `frontend-v2`.
+- [ ] `npm run check:tokens` passes from `frontend-v2`.
+- [ ] New internal imports target feature modules directly, not `AdminComponents.tsx` or `CustomerComponents.tsx`.
 - [ ] The UI uses the exact tokens above for colors, font, radius, and touch target minimums.
 - [ ] CSS is base-first for `320-375px` and uses only `min-width` media queries.
 - [ ] The page works at `320`, `375`, `768`, `1024`, and `1440` widths with no horizontal body overflow.
