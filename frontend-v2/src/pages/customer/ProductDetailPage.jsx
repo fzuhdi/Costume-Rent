@@ -38,7 +38,7 @@ export default function ProductDetailPage({
   const [selectedVariantId, setSelectedVariantId] = useState('');
   const [favorites, setFavorites] = usePersistentState('cr-v2-favorites', []);
   const catalogueSearch = searchParams.toString();
-  const catalogueTo = { pathname: '/', search: catalogueSearch ? `?${catalogueSearch}` : '' };
+  const catalogueTo = { pathname: '/catalogue', search: catalogueSearch ? `?${catalogueSearch}` : '' };
 
   useEffect(() => {
     if (!product) return;

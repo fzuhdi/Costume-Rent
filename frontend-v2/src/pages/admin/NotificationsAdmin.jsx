@@ -1,4 +1,5 @@
-import { AlertTriangle, Bell, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { NotificationRow, StatusPill } from '../../components/shared.jsx';
 import { localizedData } from '../../lib/rental-utils.js';
 
 export default function NotificationsAdmin({ t, notifications, setNotifications }) {
@@ -16,26 +17,23 @@ export default function NotificationsAdmin({ t, notifications, setNotifications 
       </div>
       <div className="notification-list">
         {notifications.map((notification) => (
-          <article className={`notification-item ${notification.resolved ? 'resolved' : ''}`} key={notification.id}>
-            <span className={`notification-severity ${notification.tone}`}>
-              {notification.tone === 'danger' ? <AlertTriangle aria-hidden="true" /> : <Bell aria-hidden="true" />}
-              {t(`admin.notifications.tone.${notification.tone}`)}
-            </span>
-            <div>
-              <strong>{localizedData(notification, 'title', t)}</strong>
-              <p>{localizedData(notification, 'copy', t)}</p>
-            </div>
+          <NotificationRow
+            className="notification-item"
+            key={notification.id}
+            tone={notification.tone}
+            resolved={notification.resolved}
+            severityLabel={t(`admin.notifications.tone.${notification.tone}`)}
+            title={localizedData(notification, 'title', t)}
+            copy={localizedData(notification, 'copy', t)}
+          >
             {notification.resolved ? (
-              <span className="status-badge success">
-                <Check aria-hidden="true" />
-                <span className="status-badge-label">{t('admin.notifications.resolved')}</span>
-              </span>
+              <StatusPill type="custom" value={t('admin.notifications.resolved')} tone="success" icon={Check} />
             ) : (
               <button className="outline-button" type="button" onClick={() => setNotifications((current) => current.map((item) => (item.id === notification.id ? { ...item, resolved: true } : item)))}>
                 {t('admin.notifications.resolve')}
               </button>
             )}
-          </article>
+          </NotificationRow>
         ))}
       </div>
     </section>

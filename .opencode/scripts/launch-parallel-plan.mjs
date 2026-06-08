@@ -5,24 +5,26 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import process from 'node:process';
 import { spawnSync } from 'node:child_process';
+import { loadProjectConfig as loadAdapterConfig, workflowModeEnabled } from './lib/config.mjs';
+import { portsForSlot as configuredPortsForSlot, runtimeEnvForSlot } from './lib/runtime-slots.mjs';
+import { normalizeLease as normalizeTicketLease } from './lib/leases.mjs';
 
 const root = process.cwd();
 const defaultParallel = 3;
-const maxParallel = 3;
-const projectConfig = loadProjectConfig();
+const projectConfig = loadAdapterConfig(root).config;
+const maxParallel = projectConfig.workflow.max_parallel || 3;
 const runtimeConfig = requiredObject(projectConfig.runtime, 'runtime');
-const slotStep = requiredNumber(runtimeConfig.slot_step, 'runtime.slot_step');
-const basePorts = {
-  frontend: requiredNumber(runtimeConfig.base_ports?.frontend, 'runtime.base_ports.frontend'),
-  backend: requiredNumber(runtimeConfig.base_ports?.backend, 'runtime.base_ports.backend'),
-  sqlite: requiredNumber(runtimeConfig.base_ports?.sqlite, 'runtime.base_ports.sqlite'),
-};
+requiredNumber(runtimeConfig.slot_step, 'runtime.slot_step');
+requiredNumber(runtimeConfig.base_ports?.frontend, 'runtime.base_ports.frontend');
+requiredNumber(runtimeConfig.base_ports?.backend, 'runtime.base_ports.backend');
+requiredNumber(runtimeConfig.base_ports?.sqlite, 'runtime.base_ports.sqlite');
 const composeConfig = requiredObject(runtimeConfig.compose, 'runtime.compose');
 const composeFile = requiredString(composeConfig.file, 'runtime.compose.file');
 const composeServices = requiredStringArray(composeConfig.services, 'runtime.compose.services');
 const composeServicesText = composeServices.join(' ');
 const runtimeFileConfig = requiredObject(runtimeConfig.runtime_files, 'runtime.runtime_files');
 const executableTypes = new Set(['feature', 'bug']);
+const strictTddPolicy = 'strict-tdd';
 const ticketIdPattern = /^TICKET-\d{8}-\d{3}$/;
 const requiredRuntimeFiles = requiredStringArray(runtimeFileConfig.required, 'runtime.runtime_files.required');
 const optionalRuntimeFiles = runtimeFileConfig.optional || [];
@@ -44,10 +46,17 @@ for (const envFile of generatedEnvFiles) {
 }
 const unsafeLeaseStatuses = new Set(['running', 'deadline_expired', 'interrupted']);
 
-function loadProjectConfig() {
-  const file = path.join(root, '.opencode', 'project.json');
-  if (!fs.existsSync(file)) return {};
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
+function ticketQualityPolicy(frontmatter) {
+  if (frontmatter.quality_policy) return frontmatter.quality_policy;
+  if (frontmatter.workflow_mode && projectConfig.workflow.legacy_mode_map?.[frontmatter.workflow_mode]) {
+    return projectConfig.workflow.legacy_mode_map[frontmatter.workflow_mode].quality_policy;
+  }
+  if (frontmatter.test_case_id || frontmatter.red_expectation || frontmatter.green_expectation) return strictTddPolicy;
+  return projectConfig.workflow.default_quality_policy;
+}
+
+function isParallelExecutableTicket(ticket) {
+  return executableTypes.has(ticket.frontmatter.type) && ticketQualityPolicy(ticket.frontmatter) === strictTddPolicy;
 }
 
 function requiredObject(value, key) {
@@ -330,9 +339,7 @@ function readJsonIfExists(filePath, fallback) {
 }
 
 function normalizeLease(lease) {
-  if (!lease || !lease.deadlineAt || !['running', 'deadline_expired'].includes(lease.status)) return lease;
-  if (Date.parse(lease.deadlineAt) <= Date.now()) return { ...lease, status: 'deadline_expired' };
-  return lease;
+  return normalizeTicketLease(lease);
 }
 
 function loadTicketLeases(report, values) {
@@ -531,34 +538,11 @@ function ensurePlanBranch(planBranch, baseBranch, report, values) {
 }
 
 function portsForSlot(slot) {
-  return {
-    frontend: basePorts.frontend + slotStep * slot,
-    backend: basePorts.backend + slotStep * slot,
-    sqlite: basePorts.sqlite + slotStep * slot,
-  };
+  return configuredPortsForSlot(runtimeConfig, slot);
 }
 
 function envForSlot(slot, project) {
-  const ports = portsForSlot(slot);
-  const env = {
-    [runtimeEnvKey('container_prefix', 'APP_CONTAINER_PREFIX')]: project,
-    [runtimeEnvKey('frontend_host_port', 'FRONTEND_HOST_PORT')]: String(ports.frontend),
-    [runtimeEnvKey('backend_host_port', 'BACKEND_HOST_PORT')]: String(ports.backend),
-    [runtimeEnvKey('sqlite_web_host_port', 'SQLITE_WEB_HOST_PORT')]: String(ports.sqlite),
-    [runtimeEnvKey('db_volume', 'APP_DB_VOLUME')]: `${runtimeConfig.volume_prefixes?.db || 'app_db'}_${project}`,
-    [runtimeEnvKey('frontend_node_modules_volume', 'APP_FRONTEND_NODE_MODULES_VOLUME')]: `${runtimeConfig.volume_prefixes?.frontend_node_modules || 'app_frontend_node_modules'}_${project}`,
-    [runtimeEnvKey('vite_dev_port', 'VITE_DEV_PORT')]: String(runtimeConfig.vite_dev_port || 5173),
-    [runtimeEnvKey('playwright_base_url', 'PW_BASE_URL')]: `http://localhost:${ports.frontend}`,
-    [runtimeEnvKey('playwright_output_dir', 'PW_OUTPUT_DIR')]: `test-results-${project}`,
-    [runtimeEnvKey('playwright_json_output', 'PW_JSON_OUTPUT')]: `test-results-${project}/results.json`,
-    [runtimeEnvKey('playwright_html_report', 'PW_HTML_REPORT')]: `playwright-report-${project}`,
-  };
-
-  for (const [key, value] of Object.entries(runtimeConfig.env_values || {})) {
-    env[key] = interpolateRuntimeValue(value, env);
-  }
-
-  return env;
+  return runtimeEnvForSlot(projectConfig, root, slot, project);
 }
 
 function slug(value) {
@@ -1119,6 +1103,16 @@ function buildReport(values) {
   };
 
   ensureProjectRoot(report);
+  report.workflow = {
+    defaultMode: projectConfig.workflow.default_mode,
+    enabledModes: projectConfig.workflow.enabled_modes,
+  };
+  if (!workflowModeEnabled(projectConfig, 'parallel-runtime')) {
+    report.blockers.push('Parallel plan preparation requires workflow.enabled_modes to include "parallel-runtime" in .opencode/project.json.');
+  }
+  if (!workflowModeEnabled(projectConfig, 'strict-tdd')) {
+    report.blockers.push('Parallel plan preparation dispatches strict TDD tickets; workflow.enabled_modes must include "strict-tdd".');
+  }
 
   if (!values.target || !/^PLAN-\d{8}-[A-Za-z0-9-]+$/.test(values.target)) {
     report.blockers.push('Parallel prepare/handoff requires --target PLAN-YYYYMMDD-name.');
@@ -1145,7 +1139,7 @@ function buildReport(values) {
   const leasesByTicket = loadTicketLeases(report, values);
   const ticketsById = new Map(tickets.map(ticket => [ticket.id, ticket]));
   const reviewTickets = tickets.filter(ticket => ticket.frontmatter.status === 'review');
-  const readyTickets = tickets.filter(ticket => ticket.frontmatter.status === 'ready' && executableTypes.has(ticket.frontmatter.type));
+  const readyTickets = tickets.filter(ticket => ticket.frontmatter.status === 'ready' && isParallelExecutableTicket(ticket));
   const dependencyBlockedTickets = [];
   const leaseBlockedTickets = [];
   const independentReadyTickets = [];

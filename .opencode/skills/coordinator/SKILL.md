@@ -9,7 +9,7 @@ description: Coordinates existing workflow runs without replacing the lower-leve
 
 Use this skill to route targets, prepare isolated worktrees/runtime slots, dispatch orchestrator tasks, and report handoff/status. The coordinator does not implement product code, write acceptance tests, audit tickets, or execute the orchestrator FSM inline.
 
-Default execution is argument-first. Plan targets use deterministic max-3 isolated tracer-ticket preparation followed by orchestrator task fan-out; ticket targets dispatch one orchestrator task:
+Default execution is argument-first. Plan targets use deterministic max-3 isolated tracer-ticket preparation followed by orchestrator task fan-out only when `strict-tdd` and `parallel-runtime` are enabled; ticket targets dispatch one orchestrator task when `strict-tdd` is enabled:
 
 ```text
 target argument -> targeted read -> deterministic preparation -> orchestrator task dispatch -> handoff summary
@@ -40,7 +40,7 @@ The coordinator owns routing, cleanliness checks, deterministic preparation, orc
    - Empty args: ask for a plan/ticket target or explicit status scan.
    - `PLAN-YYYYMMDD-*`: read only that plan plus tickets with matching `plan_id`.
    - `TICKET-YYYYMMDD-NNN`: read only that ticket and its manifest entry.
-4. For plan targets, run `node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3 --json` so up to three independent ready executable tickets get isolated worktrees, runtime slots, Compose stacks, bootstrapped state, ticket leases, and structured `dispatch.task` handoffs. The prepare script excludes `depends_on` tickets until their prerequisites are complete.
+4. For plan targets, run `node .opencode/scripts/launch-parallel-plan.mjs --target <plan-id> --parallel 3 --json` so up to three independent ready executable tickets get isolated worktrees, runtime slots, Compose stacks, bootstrapped state, ticket leases, and structured `dispatch.task` handoffs. The prepare script validates workflow modes and excludes `depends_on` tickets until their prerequisites are complete.
 5. Dispatch each returned `dispatch.task` with subagent type `orchestrator`. Do not edit the task prompt except to add user-approved context; it already contains `WORKTREE_ROOT`, target ids, branch data, runtime env keys, lease deadline, and nested-worker root instructions.
 6. For single-ticket targets, dispatch one `orchestrator` task in the active clean worktree using the prompt pattern in `REFERENCE.md`.
 7. Report target, slot/worktree/task details, and exact blocker or handoff result.

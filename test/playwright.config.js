@@ -1,41 +1,64 @@
+const path = require('node:path');
 const { defineConfig } = require('@playwright/test');
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL || process.env.PW_BASE_URL || 'http://localhost:5173';
-const outputDir = process.env.PLAYWRIGHT_OUTPUT_DIR || process.env.PW_OUTPUT_DIR || 'test-results';
-const jsonOutputFile = process.env.PLAYWRIGHT_JSON_OUTPUT || process.env.PW_JSON_OUTPUT || `${outputDir}/results.json`;
-const htmlReportDir = process.env.PLAYWRIGHT_HTML_REPORT || process.env.PW_HTML_REPORT;
+const repoRoot = path.resolve(__dirname, '..');
+const artifactRoot = path.resolve(repoRoot, '.artifacts');
+const playwrightRoot = path.join(artifactRoot, 'playwright');
 
-const htmlReportOptions = { open: 'never' };
-
-if (htmlReportDir) {
-  htmlReportOptions.outputFolder = htmlReportDir;
+function artifactPath(...parts) {
+  return path.join(playwrightRoot, ...parts);
 }
 
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || process.env.PW_BASE_URL || 'http://localhost:5173';
+const outputDir = path.resolve(process.env.PLAYWRIGHT_OUTPUT_DIR || process.env.PW_OUTPUT_DIR || artifactPath('test-results'));
+const jsonOutputFile = path.resolve(process.env.PLAYWRIGHT_JSON_OUTPUT || process.env.PW_JSON_OUTPUT || path.join(outputDir, 'results.json'));
+const htmlReportDir = path.resolve(process.env.PLAYWRIGHT_HTML_REPORT || process.env.PW_HTML_REPORT || artifactPath('html-report'));
+const screenshotDir = path.resolve(process.env.PW_SCREENSHOT_DIR || artifactPath('screenshots'));
+
 module.exports = defineConfig({
-  testDir: './specs',
+  testDir: path.join(__dirname, 'specs'),
   outputDir,
+  snapshotPathTemplate: path.join(screenshotDir, '{testFilePath}', '{arg}{ext}'),
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: 0,  // Set to 0 for exactly 1 screenshot per test
+  retries: 0,
   workers: process.env.CI ? 1 : undefined,
-  
-  // Reporters for good reporting
   reporter: [
-    ['list'],                           // Console output
-    ['html', htmlReportOptions],      // HTML report with screenshots
-    ['json', { outputFile: jsonOutputFile }]  // JSON for CI
+    ['list'],
+    ['html', { open: 'never', outputFolder: htmlReportDir }],
+    ['json', { outputFile: jsonOutputFile }],
   ],
-  
+  projects: [
+    {
+      name: 'ui:smoke',
+      testIgnore: /api\.spec\.js/,
+      grepInvert: /@visual|@ui-review/,
+    },
+    {
+      name: 'ui:review',
+      testIgnore: /api\.spec\.js/,
+      grep: /@ui-review/,
+    },
+    {
+      name: 'e2e:tdd',
+      testIgnore: /api\.spec\.js/,
+      grepInvert: /@visual|@ui-review/,
+    },
+    {
+      name: 'api',
+      testMatch: /api\.spec\.js/,
+    },
+    {
+      name: 'visual',
+      grep: /@visual/,
+    },
+  ],
   timeout: 30000,
   use: {
     baseURL,
-    trace: 'on-first-retry',
-    video: 'on',
-    
-    // Screenshot: Captures EXACTLY 1 screenshot when test ends
-    // Stored in: test-results/<test-name>/screenshot.png
-    screenshot: 'on',
-    
+    trace: 'retain-on-failure',
+    video: 'off',
+    screenshot: 'only-on-failure',
     actionTimeout: 5000,
   },
 });

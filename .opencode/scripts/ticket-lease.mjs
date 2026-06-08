@@ -4,9 +4,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { spawnSync } from 'node:child_process';
+import {
+  loadLeaseRegistry as loadLeaseRegistryFromLib,
+  normalizeLease as normalizeTicketLease,
+  registryPathFor as registryPathForLib,
+  saveLeaseRegistry as saveLeaseRegistryFromLib,
+} from './lib/leases.mjs';
 
 const root = process.cwd();
-const defaultRegistryPath = path.join(root, '.opencode', 'state', 'ticket-leases.json');
 const defaultLeaseMinutes = 60;
 const ticketPattern = /^TICKET-\d{8}-\d{3}$/;
 
@@ -43,34 +48,20 @@ function parseArgs(argv) {
   return args;
 }
 
-function readJson(filePath, fallback) {
-  if (!fs.existsSync(filePath)) return fallback;
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-}
-
 function registryPathFor(values) {
-  const configured = values.leaseRegistry || values.registry || defaultRegistryPath;
-  return path.resolve(configured);
-}
-
-function writeJson(filePath, value) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
+  return registryPathForLib(root, values);
 }
 
 function loadRegistry(values) {
-  const registryPath = registryPathFor(values);
-  const registry = readJson(registryPath, { schemaVersion: 1, leases: {} });
-  if (registry.schemaVersion !== 1 || typeof registry.leases !== 'object' || registry.leases === null) {
-    fail(`Invalid ticket lease registry: ${path.relative(root, registryPath)}`);
+  try {
+    return loadLeaseRegistryFromLib(root, values).registry;
+  } catch (error) {
+    fail(error.message);
   }
-  return registry;
 }
 
 function saveRegistry(registry, values) {
-  const registryPath = registryPathFor(values);
-  registry.updatedAt = new Date().toISOString();
-  if (!values.dryRun) writeJson(registryPath, registry);
+  saveLeaseRegistryFromLib(root, registry, values);
 }
 
 function requiredTicket(values) {
@@ -96,9 +87,7 @@ function gitDirty(worktree) {
 }
 
 function normalizeLease(lease) {
-  if (!lease || !lease.deadlineAt || !['running', 'deadline_expired'].includes(lease.status)) return lease;
-  if (Date.parse(lease.deadlineAt) <= Date.now()) return { ...lease, status: 'deadline_expired' };
-  return lease;
+  return normalizeTicketLease(lease);
 }
 
 function start(values) {

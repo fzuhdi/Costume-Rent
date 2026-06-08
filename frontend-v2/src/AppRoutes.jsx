@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { CheckoutModal, RequestSummarySheet } from './components/customer/CustomerComponents.jsx';
 import { useI18n } from './hooks/useI18n.js';
@@ -10,8 +10,10 @@ import {
   initialProducts,
   initialRentals,
   initialSettings,
+  normalizeHomeContent,
 } from './mockData.js';
 import CustomerCataloguePage from './pages/customer/CustomerCataloguePage.jsx';
+import CustomerHomePage from './pages/customer/CustomerHomePage.jsx';
 import CheckoutRoutePage from './pages/customer/CheckoutRoutePage.jsx';
 import LookupPage from './pages/customer/LookupPage.jsx';
 import ProductDetailPage from './pages/customer/ProductDetailPage.jsx';
@@ -19,8 +21,10 @@ import AdminShell from './pages/admin/AdminShell.jsx';
 import StaffLoginPage from './pages/admin/StaffLoginPage.jsx';
 import { createLocalDataAdapter } from './lib/data-adapter.js';
 import {
+  contentSource,
   getCartItems,
   getVariantAvailability,
+  toSourceContent,
 } from './lib/rental-utils.js';
 
 function AppRoutes() {
@@ -45,6 +49,30 @@ function AppRoutes() {
     { productId: 'batik', variantId: 'M', qty: 1, start: defaultDates.start, end: defaultDates.end },
     { productId: 'melayu', variantId: 'L', qty: 1, start: defaultDates.start, end: defaultDates.end },
   ]);
+
+  useEffect(() => {
+    setProducts((current) => {
+      const byId = new Map(current.map((product) => [product.id, product]));
+      let changed = false;
+      const normalized = current.map((product) => {
+        const initialProduct = initialProducts.find((entry) => entry.id === product.id);
+        const nextProduct = normalizeProductContent(product, initialProduct);
+        if (stableJson(nextProduct) !== stableJson(product)) changed = true;
+        return nextProduct;
+      });
+      const missing = initialProducts.filter((product) => !byId.has(product.id)).map((product) => normalizeProductContent(product, product));
+      if (missing.length > 0) changed = true;
+      return changed ? [...normalized, ...missing] : current;
+    });
+  }, [setProducts]);
+
+  useEffect(() => {
+    setSettings((current) => {
+      const normalizedHomeContent = normalizeHomeContent(current.homeContent);
+      if (stableJson(current.homeContent) === stableJson(normalizedHomeContent)) return current;
+      return { ...current, homeContent: normalizedHomeContent };
+    });
+  }, [setSettings]);
   const [requestSheetOpen, setRequestSheetOpen] = useState(false);
   const [submittedBooking, setSubmittedBooking] = useState(null);
   const cartItems = getCartItems(cart, products);
@@ -102,7 +130,11 @@ function AppRoutes() {
   const createBooking = async (values) => {
     const result = await dataAdapter.requests.create({ values, cart });
     if (result?.rental) {
-      setSubmittedBooking(result.rental);
+      setSubmittedBooking(
+        result.rentals?.length > 1
+          ? { ...result.rental, groupedReferences: result.rentals.map((rental) => rental.reference) }
+          : result.rental,
+      );
       setCart([]);
     }
     return result;
@@ -132,7 +164,8 @@ function AppRoutes() {
   return (
     <>
       <Routes location={backgroundLocation || location}>
-        <Route path="/" element={<CustomerCataloguePage {...appState} />} />
+        <Route path="/" element={<CustomerHomePage {...appState} />} />
+        <Route path="/catalogue" element={<CustomerCataloguePage {...appState} />} />
         <Route path="/costumes/:productId" element={<ProductDetailPage {...appState} />} />
         <Route path="/lookup" element={<LookupPage {...appState} />} />
         <Route
@@ -175,6 +208,8 @@ function AppRoutes() {
         cartCount={cart.length}
         onQty={updateCartQty}
         onRemove={removeCartItem}
+        createBooking={createBooking}
+        submittedBooking={submittedBooking}
       />
 
       {location.pathname === '/checkout' && backgroundLocation ? (
@@ -185,7 +220,7 @@ function AppRoutes() {
             if (backgroundLocation) {
               navigate(-1);
             } else {
-              navigate({ pathname: '/', search: location.search });
+              navigate({ pathname: '/catalogue', search: location.search });
             }
           }}
           t={i18n.t}
@@ -213,6 +248,111 @@ function AdminIndex({ staffSession }) {
 function AdminLoginRedirect() {
   const location = useLocation();
   return <Navigate to={`/admin/login${location.search}`} replace />;
+}
+
+function normalizeProductContent(product, initialProduct = {}) {
+  const {
+    descriptionId,
+    descriptionEn,
+    bundleId,
+    bundleEn,
+    measurementId,
+    measurementEn,
+    variantNotesId,
+    variantNotesEn,
+    nameId,
+    nameEn,
+    nameKey,
+    metaId,
+    metaEn,
+    metaKey,
+    altId,
+    altEn,
+    altKey,
+    copyKey,
+    detailAriaKey,
+    priceKey,
+    unitKey,
+    ...rest
+  } = product;
+  const name = firstContentText(product.name, nameId, nameEn, initialProduct.name, literalFallback(nameKey));
+  const meta = firstContentText(product.meta, metaId, metaEn, initialProduct.meta, literalFallback(metaKey));
+  const alt = firstContentText(product.alt, altId, altEn, initialProduct.alt, literalFallback(altKey), name);
+  const descriptionFallback = firstContentText(
+    descriptionId,
+    descriptionEn,
+    bundleId,
+    bundleEn,
+    contentSource(initialProduct.description),
+    initialProduct.descriptionId,
+    initialProduct.descriptionEn,
+    initialProduct.bundleId,
+    initialProduct.bundleEn,
+    literalFallback(copyKey),
+  );
+  const variants = Array.isArray(product.variants) && product.variants.length > 0 ? product.variants : initialProduct.variants ?? [];
+  const maintenanceBlocks = Array.isArray(product.maintenanceBlocks) ? product.maintenanceBlocks : initialProduct.maintenanceBlocks ?? [];
+
+  return {
+    ...rest,
+    name,
+    meta,
+    alt,
+    unitKey: normalizeUnitKey(unitKey ?? initialProduct.unitKey),
+    gender: product.gender ?? initialProduct.gender ?? 'unisex',
+    description: toSourceContent(product.description, descriptionFallback),
+    variants: variants.map((variant) => normalizeVariantContent(variant, {
+      measurementId,
+      measurementEn,
+      variantNotesId,
+      variantNotesEn,
+      initialProduct,
+    })),
+    maintenanceBlocks,
+  };
+}
+
+function normalizeVariantContent(variant, productContext) {
+  const { notesId, notesEn, ...rest } = variant;
+  const initialVariant = productContext.initialProduct?.variants?.find((entry) => entry.id === variant.id);
+  const notesFallback = firstContentText(
+    notesId,
+    notesEn,
+    productContext.variantNotesId,
+    productContext.variantNotesEn,
+    productContext.measurementId,
+    productContext.measurementEn,
+    contentSource(initialVariant?.notes),
+    initialVariant?.notesId,
+    initialVariant?.notesEn,
+    productContext.initialProduct?.measurementId,
+    productContext.initialProduct?.measurementEn,
+  );
+
+  return {
+    ...rest,
+    notes: toSourceContent(variant.notes, notesFallback),
+  };
+}
+
+function firstContentText(...values) {
+  const value = values.map((entry) => contentSource(entry)).find((entry) => String(entry ?? '').trim());
+  return String(value ?? '').trim();
+}
+
+function literalFallback(value) {
+  if (!value || /^[a-z0-9]+(\.[a-z0-9_-]+)+$/i.test(value)) return '';
+  return value;
+}
+
+function normalizeUnitKey(unitKey) {
+  if (unitKey === 'customer.product.batik.unitSet') return 'customer.product.unitSet';
+  if (unitKey === 'customer.product.songket.unitPack') return 'customer.product.unitPack';
+  return unitKey ?? 'customer.product.unitSet';
+}
+
+function stableJson(value) {
+  return JSON.stringify(value);
 }
 
 export default AppRoutes;

@@ -1,4 +1,4 @@
-import { Check, ShoppingBag } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import { CartSummary, CheckoutForm } from '../../components/customer/CustomerComponents.jsx';
 import CustomerFrame from './CustomerFrame.jsx';
 
@@ -36,17 +36,9 @@ export default function CheckoutRoutePage({
             <h1>{t('customer.checkout.routeTitle')}</h1>
             <p>{t('customer.checkout.routeCopy')}</p>
           </div>
-          <div className="checkout-steps" aria-label={t('customer.checkout.stepsAria')}>
-            <span className="step-chip done">
-              <Check aria-hidden="true" />
-              {t('customer.checkout.stepReview')}
-            </span>
-            <span className="step-chip current">{t('customer.checkout.stepContact')}</span>
-            <span className="step-chip">{t('customer.checkout.stepFulfillment')}</span>
-          </div>
           <div className="checkout-modal-layout route-checkout-layout">
-            <CartSummary cartItems={cartItems} cartTotal={cartTotal} t={t} locale={locale} onQty={onQty} onRemove={onRemove} />
             <CheckoutForm t={t} cartCount={cartCount} createBooking={createBooking} submittedBooking={submittedBooking} />
+            <CartSummary cartItems={cartItems} cartTotal={cartTotal} t={t} locale={locale} onQty={onQty} onRemove={onRemove} />
           </div>
         </div>
       </section>

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Admin Dashboard UI UX Audit"
+  short_description: "Audit mobile admin dashboard screenshots"
+  default_prompt: "Use $admin-dashboard-ui-ux-audit to audit the screenshots in <screenshots-directory>."

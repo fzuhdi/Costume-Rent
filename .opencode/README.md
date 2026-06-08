@@ -1,13 +1,15 @@
 # OpenCode Workflow
 
-This `.opencode` setup runs strict TDD tracer-ticket execution for plans and tickets. Detailed behavior lives in source-of-truth files; this README is an index for users and agents.
+This `.opencode` setup is a reusable workflow template with project-local adapter config, role boundaries, deterministic runner checks, artifact policy, and optional isolated runtime support. Strict TDD is an opt-in module, not the universal default.
 
 ## Source Of Truth
 
 | Area | Source |
 |---|---|
-| Project adapter, writable roots, commands, quality gate | `.opencode/project.json` |
-| FSM and TDD lifecycle | `.opencode/skills/orchestrator/SKILL.md` |
+| Project adapter, writable roots, workflow stages/policies, commands, quality gate | `.opencode/project.json` |
+| Copyable adapter starter | `.opencode/project.example.json` |
+| Active orchestrator procedure | `.opencode/skills/orchestrator/SKILL.md` |
+| Strict TDD reference detail | `.opencode/skills/orchestrator/REFERENCE.md` |
 | Shared guardrails | `.opencode/skills/shared/constraints.md` |
 | Subagent return fields | `.opencode/skills/shared/io-contract.md` |
 | Model defaults | `.opencode/workflow-models.json` |
@@ -17,23 +19,35 @@ This `.opencode` setup runs strict TDD tracer-ticket execution for plans and tic
 | Test integrity and quality gates | `docs/engineering/` |
 | Runtime recovery commands | `docs/runbooks/project-runbook.md` |
 
-## Model
+## Docs Placement
 
-```text
-Plan / Epic
-  -> Ticket / Backlog Item
-      -> type: feature | bug | chore | spike
-      -> exactly one executable acceptance criterion when ready
-      -> runner reconciliation -> SDET RED -> developer GREEN -> deterministic GREEN rerun -> reviewer audit when risk rules require it
-```
+Durable project documents live at the repository root under `docs/`:
 
-Executable tickets are ready `feature` or `bug` items mapped to exactly one `test_case_id`. `chore` and `spike` records stay planning-only until converted.
+- `docs/acceptance/`
+- `docs/plans/`
+- `docs/tickets/`
+- `docs/workflow-changes/`
+- `docs/runbooks/`
+
+Do not create `.opencode/generated` or `.codex/generated` for project docs. `.opencode/` is workflow engine/template state, `.codex/` is the Codex adapter, and generated runtime output belongs in ignored `.artifacts/`, `.opencode/state/`, or `.opencode/logs/` paths.
+
+## Workflow Stages And Policies
+
+Product workflow stages are configured by `workflow.product_stages`:
+
+- `design-ui`
+- `integrate-backend`
+- `deployment`
+
+Internal workflow maintenance uses `workflow-maintenance` for `.opencode`, `.codex`, workflow docs, scripts, skills, runner changes, and workflow test helpers. Strict TDD is configured by `quality_policy: strict-tdd`; non-strict work uses `exploratory` or `light-checks`.
+
+Legacy `workflow.enabled_modes` remains for compatibility and maps to stages/policies through `workflow.legacy_mode_map`. New projects should keep product docs focused on `Design UI -> Integrate Backend -> Deployment` and enable strict-TDD tickets only when acceptance criteria are worth enforcing through RED/GREEN.
 
 ## Commands
 
 | Command | Purpose |
 |---|---|
-| `/plan-to-tickets [plan-file] [plan-id optional]` | Converts or repairs plans, bugs, ask-me output, or PRDs into TDD-ready plan and ticket files. |
+| `/create-tickets [source-file] [plan-id optional]` | Converts or repairs plans, bugs, ask-me output, or PRDs into staged plan and ticket files. |
 | `/coordinator [plan-id|ticket-id]` | Preferred user-facing coordinator; plan targets prepare up to 3 independent ready tracer-ticket worktrees/runtime slots and dispatch orchestrator tasks, ticket targets dispatch one orchestrator task. |
 | `/engineering/orchestrator` | Shows TDD status, reconciliation drift, and runnable plans without invoking subagents. |
 | `/engineering/orchestrator [ticket-id]` | Runs one ticket through the runner-owned strict TDD workflow. |
@@ -48,9 +62,23 @@ Executable tickets are ready `feature` or `bug` items mapped to exactly one `tes
 | `node .opencode/scripts/workflow-runner.mjs --target <ticket-id> --run-ticket --json` | Deterministic happy-path ticket runner; owns branch/checkpoint commits, quality-gate checks, GREEN verification, optional reviewer skip, and runtime-state advancement while still consuming captured worker outputs. |
 | `node .opencode/scripts/workflow-runner.mjs --target <plan-id> --run-plan --json` | Deterministic plan runner; sequences review/ready tickets through the runner-owned ticket path and gates plan completion on impacted-spec regression. |
 | `node .opencode/scripts/workflow-runner.mjs --target <ticket-id> --run-green --json` | Deterministic official GREEN rerun for the recorded RED test; replaces `sdet MODE: run-green`. |
-| `node .opencode/scripts/workflow-runner.mjs --target <ticket-id> --validate-worker-output <sdet-red|developer-green|developer-refactor|reviewer> --output-file <path> --json` | Deterministic contract validator for one worker final message before the FSM advances. |
+| `node .opencode/scripts/workflow-runner.mjs --target <ticket-id> --validate-worker-output <sdet-red|developer-green|developer-refactor|reviewer|workflow-maintenance> --output-file <path> --json` | Deterministic contract validator for one worker final message before the FSM advances. |
+| `node .opencode/scripts/doctor.mjs --json` | Validates template installation, adapter normalization, ignored artifacts, workflow stages/policies, and portability. |
+| `node .opencode/scripts/cleanup-generated.mjs --dry-run --json` | Reports generated artifacts that can be cleaned safely; `--apply` deletes only untracked generated files. |
 
 Direct `developer`, `sdet`, and `reviewer` commands are debug-only for normal users.
+
+## Artifact Policy
+
+Generated artifacts belong under ignored roots:
+
+- `.artifacts/playwright/test-results/`
+- `.artifacts/playwright/html-report/`
+- `.artifacts/playwright/screenshots/`
+- `.artifacts/playwright-mcp/`
+- `.artifacts/opencode/`
+
+Legacy root/test Playwright output directories are ignored and reported by `cleanup-generated.mjs`. Tracked historical files are skipped rather than deleted.
 
 ## Runtime Modes
 

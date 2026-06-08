@@ -2,8 +2,10 @@ import * as Dialog from '@radix-ui/react-dialog';
 import * as Switch from '@radix-ui/react-switch';
 import * as Tabs from '@radix-ui/react-tabs';
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  ChevronRight,
   CheckCircle2,
   ImagePlus,
   Link2,
@@ -16,24 +18,37 @@ import {
   Trash2,
   Upload,
   Wrench,
+  X,
   XCircle,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { EmptyState, Field, StatusPill } from '../../components/shared.jsx';
+import { EmptyState, Field, SearchInput, SelectField } from '../../components/shared.jsx';
 import { defaultDates } from '../../mockData.js';
 import {
+  contentSource,
   formatDateRange,
   formatRupiah,
-  getProductAvailability,
+  getVariantAvailability,
   productAlt,
   productCoverImage,
+  productDescription,
   productMeta,
   productName,
+  toSourceContent,
 } from '../../lib/rental-utils.js';
+import { resetMobileDetailScroll } from '../../lib/mobile-detail.js';
 
 const MAX_IMAGE_COUNT = 6;
 const MAX_IMAGE_SIZE = 1024 * 1024;
-const editorTabs = ['details', 'media', 'variants', 'maintenance'];
+const categoryOptions = (locale) => [
+  { value: 'formal', label: locale === 'id' ? 'Formal' : 'Formal' },
+  { value: 'accessory', label: locale === 'id' ? 'Aksesori' : 'Accessory' },
+];
+const genderOptions = (t) => ['women', 'men', 'unisex', 'kids'].map((value) => ({
+  value,
+  label: t(`enum.gender.${value}`),
+}));
+const editorTabs = ['details', 'variants', 'media', 'maintenance'];
 
 function cloneProduct(product) {
   if (!product) return null;
@@ -48,11 +63,12 @@ function cloneProduct(product) {
 export default function CatalogueAdmin({ t, locale, products, setProducts, dataAdapter }) {
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState(products[0]?.id);
+  const [editorOpen, setEditorOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [createDraft, setCreateDraft] = useState({ name: '', meta: '', category: 'formal', price: 0, variantLabel: 'M', total: 1 });
+  const [createDraft, setCreateDraft] = useState({ name: '', meta: '', category: 'formal', gender: 'unisex', price: '', variantLabel: 'M', total: 1 });
   const [productDraft, setProductDraft] = useState(cloneProduct(products[0]));
   const [activeTab, setActiveTab] = useState('details');
-  const [newVariant, setNewVariant] = useState({ label: '', total: 1 });
+  const [newVariant, setNewVariant] = useState({ label: '', total: 1, notes: '' });
   const [newVariantErrors, setNewVariantErrors] = useState({});
   const [maintenanceOpen, setMaintenanceOpen] = useState(false);
   const [maintenanceDraft, setMaintenanceDraft] = useState({ start: '', end: '', reason: '' });
@@ -76,13 +92,17 @@ export default function CatalogueAdmin({ t, locale, products, setProducts, dataA
 
   useEffect(() => {
     setProductDraft(cloneProduct(selected));
-    setNewVariant({ label: '', total: 1 });
+    setNewVariant({ label: '', total: 1, notes: '' });
     setNewVariantErrors({});
     setMaintenanceOpen(false);
     setMaintenanceDraft({ start: '', end: '', reason: '' });
     setActiveTab('details');
     setSaveState({ status: 'idle', message: '' });
   }, [selected?.id]);
+
+  useEffect(() => {
+    if (editorOpen) resetMobileDetailScroll();
+  }, [editorOpen, selected?.id]);
 
   const updateDraft = (changes) => {
     setSaveState((current) => (current.status === 'saved' || current.status === 'error' ? { status: 'idle', message: '' } : current));
@@ -135,7 +155,10 @@ export default function CatalogueAdmin({ t, locale, products, setProducts, dataA
     const stock = Number(newVariant.total);
     const errors = validateNewVariant({ label, stock, variants: productDraft?.variants ?? [], t });
     setNewVariantErrors(errors);
-    if (hasErrors(errors) || !productDraft) return;
+    if (hasErrors(errors) || !productDraft) {
+      if (errors.label) window.requestAnimationFrame(() => variantLabelRef.current?.focus());
+      return;
+    }
 
     const id = makeVariantId(label, productDraft.variants);
     setProductDraft((current) => {
@@ -149,11 +172,12 @@ export default function CatalogueAdmin({ t, locale, products, setProducts, dataA
             label,
             total: stock,
             held: 0,
+            notes: toSourceContent(newVariant.notes.trim()),
           },
         ],
       };
     });
-    setNewVariant({ label: '', total: 1 });
+    setNewVariant({ label: '', total: 1, notes: '' });
     setNewVariantErrors({});
     window.requestAnimationFrame(() => variantLabelRef.current?.focus());
   };
@@ -165,9 +189,7 @@ export default function CatalogueAdmin({ t, locale, products, setProducts, dataA
     if (!name || !variantLabel) return;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `catalogue-${Date.now()}`;
     const uniqueId = products.some((product) => product.id === slug) ? `${slug}-${products.length + 1}` : slug;
-    const fallbackMeta = createDraft.category === 'accessory'
-      ? (locale === 'id' ? 'Aksesori' : 'Accessory')
-      : (locale === 'id' ? 'Adat formal' : 'Formal attire');
+    const fallbackMeta = createDraft.category === 'accessory' ? 'Aksesori' : 'Adat formal';
     const coverSrc = productCoverImage(selected ?? products[0] ?? {}, t);
     const nextProduct = {
       id: uniqueId,
@@ -175,33 +197,33 @@ export default function CatalogueAdmin({ t, locale, products, setProducts, dataA
       images: coverSrc ? [{ id: `${uniqueId}-cover`, src: coverSrc, alt: name, label: name, isCover: true }] : [],
       category: createDraft.category,
       region: createDraft.category === 'accessory' ? 'dance' : 'bali',
+      gender: createDraft.gender,
       active: false,
-      nameKey: name,
-      metaKey: meta || fallbackMeta,
-      priceKey: 'customer.product.batik.price',
-      unitKey: 'customer.product.batik.unitSet',
-      copyKey: locale === 'id' ? 'Katalog baru, lengkapi detail produk.' : 'New catalogue item. Complete product details.',
-      detailAriaKey: name,
-      altKey: name,
+      unitKey: createDraft.category === 'accessory' ? 'customer.product.unitPack' : 'customer.product.unitSet',
       name,
       meta: meta || fallbackMeta,
       alt: name,
-      price: Math.max(0, Number(createDraft.price) || 0),
+      price: toNonNegativeNumber(createDraft.price),
       availability: 'available',
-      measurementId: locale === 'id' ? 'Tambahkan ukuran produk' : 'Add product measurements',
-      measurementEn: 'Add product measurements',
-      bundleId: locale === 'id' ? 'Tambahkan isi paket' : 'Add package contents',
-      bundleEn: 'Add package contents',
-      variants: [{ id: variantLabel.toUpperCase(), label: variantLabel.toUpperCase(), total: Math.max(1, Number(createDraft.total) || 1), held: 0 }],
+      description: toSourceContent('Tambahkan deskripsi produk'),
+      variants: [{
+        id: variantLabel.toUpperCase(),
+        label: variantLabel.toUpperCase(),
+        total: Math.max(1, Number(createDraft.total) || 1),
+        held: 0,
+        notes: toSourceContent('Tambahkan catatan varian'),
+      }],
       maintenanceBlocks: [],
     };
     setProducts((current) => [nextProduct, ...current]);
     setSelectedId(nextProduct.id);
+    setEditorOpen(true);
     setCreateOpen(false);
-    setCreateDraft({ name: '', meta: '', category: 'formal', price: 0, variantLabel: 'M', total: 1 });
+    setCreateDraft({ name: '', meta: '', category: 'formal', gender: 'unisex', price: '', variantLabel: 'M', total: 1 });
   };
 
   const removeVariant = (variantId) => {
+    if (!window.confirm(t('common.remove'))) return;
     setProductDraft((current) => {
       if (!current) return current;
       if (current.variants.length <= 1) {
@@ -242,7 +264,7 @@ export default function CatalogueAdmin({ t, locale, products, setProducts, dataA
 
   const resetProduct = () => {
     setProductDraft(cloneProduct(selected));
-    setNewVariant({ label: '', total: 1 });
+    setNewVariant({ label: '', total: 1, notes: '' });
     setNewVariantErrors({});
     setMaintenanceOpen(false);
     setMaintenanceDraft({ start: '', end: '', reason: '' });
@@ -250,23 +272,29 @@ export default function CatalogueAdmin({ t, locale, products, setProducts, dataA
   };
 
   const requestProductSwitch = (productId) => {
-    if (productId === selected?.id) return;
+    if (productId === selected?.id) {
+      setEditorOpen(true);
+      return;
+    }
     if (isDirty) {
       setSwitchTargetId(productId);
       return;
     }
     setSelectedId(productId);
+    setEditorOpen(true);
   };
 
   const saveAndSwitch = async () => {
     const saved = await saveProduct();
     if (!saved) return;
     setSelectedId(switchTargetId);
+    setEditorOpen(true);
     setSwitchTargetId('');
   };
 
   const discardAndSwitch = () => {
     setSelectedId(switchTargetId);
+    setEditorOpen(true);
     setSwitchTargetId('');
   };
 
@@ -289,6 +317,7 @@ export default function CatalogueAdmin({ t, locale, products, setProducts, dataA
   };
 
   const removeMaintenanceBlock = (blockIndex) => {
+    if (!window.confirm(t('common.remove'))) return;
     setProductDraft((current) => (current ? {
       ...current,
       maintenanceBlocks: current.maintenanceBlocks.filter((_, index) => index !== blockIndex),
@@ -296,20 +325,30 @@ export default function CatalogueAdmin({ t, locale, products, setProducts, dataA
   };
 
   return (
-    <div className="admin-feature-grid catalogue-admin-grid">
+    <div className={`admin-feature-grid catalogue-admin-grid ${editorOpen ? 'detail-open' : ''}`}>
       <section className="base-window management-window">
         <div className="view-bar">
-          <label className="search-inline">
-            <Search aria-hidden="true" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('common.search')} />
-          </label>
-          <button className="primary-button" type="button" onClick={() => setCreateOpen((open) => !open)}>
+          <SearchInput value={query} onChange={setQuery} placeholder={t('common.search')} clearLabel={t('common.clear')} />
+          <button className="primary-button desktop-create-action" type="button" aria-expanded={createOpen} aria-controls="catalogue-create-panel" onClick={() => setCreateOpen((open) => !open)}>
             <Plus aria-hidden="true" />
             {t('admin.catalogue.add')}
           </button>
         </div>
+        <button className="primary-button mobile-fab" type="button" aria-expanded={createOpen} aria-controls="catalogue-create-panel" aria-label={t('admin.catalogue.add')} onClick={() => setCreateOpen((open) => !open)}>
+          <Plus aria-hidden="true" />
+          <span className="visually-hidden">{t('admin.catalogue.add')}</span>
+        </button>
         {createOpen ? (
-          <div className="content-panel compact-panel">
+          <div className="content-panel compact-panel" id="catalogue-create-panel">
+            <div className="panel-form-head">
+              <div>
+                <span className="section-kicker">{t('admin.catalogue.add')}</span>
+                <h3>{t('admin.catalogue.addHelp')}</h3>
+              </div>
+              <button className="icon-button" type="button" aria-label={t('common.close')} onClick={() => setCreateOpen(false)}>
+                <X aria-hidden="true" />
+              </button>
+            </div>
             <div className="form-grid">
               <Field label={t('common.name')}>
                 <input value={createDraft.name} onChange={(event) => setCreateDraft((current) => ({ ...current, name: event.target.value }))} />
@@ -317,14 +356,20 @@ export default function CatalogueAdmin({ t, locale, products, setProducts, dataA
               <Field label={t('admin.catalogue.meta')}>
                 <input value={createDraft.meta} onChange={(event) => setCreateDraft((current) => ({ ...current, meta: event.target.value }))} />
               </Field>
-              <Field label={t('admin.catalogue.category')}>
-                <select value={createDraft.category} onChange={(event) => setCreateDraft((current) => ({ ...current, category: event.target.value }))}>
-                  <option value="formal">{locale === 'id' ? 'Formal' : 'Formal'}</option>
-                  <option value="accessory">{locale === 'id' ? 'Aksesori' : 'Accessory'}</option>
-                </select>
-              </Field>
+              <SelectField
+                label={t('admin.catalogue.category')}
+                value={createDraft.category}
+                onValueChange={(category) => setCreateDraft((current) => ({ ...current, category }))}
+                options={categoryOptions(locale)}
+              />
+              <SelectField
+                label={t('admin.catalogue.gender')}
+                value={createDraft.gender}
+                onValueChange={(gender) => setCreateDraft((current) => ({ ...current, gender }))}
+                options={genderOptions(t)}
+              />
               <Field label={t('admin.catalogue.price')}>
-                <input type="number" min="0" value={createDraft.price} onChange={(event) => setCreateDraft((current) => ({ ...current, price: event.target.value }))} />
+                <input type="number" min="0" value={createDraft.price} onChange={(event) => setCreateDraft((current) => ({ ...current, price: toNonNegativeDraftNumber(event.target.value) }))} />
               </Field>
               <Field label={t('admin.catalogue.newVariant')}>
                 <input value={createDraft.variantLabel} onChange={(event) => setCreateDraft((current) => ({ ...current, variantLabel: event.target.value }))} />
@@ -355,17 +400,21 @@ export default function CatalogueAdmin({ t, locale, products, setProducts, dataA
                   <span>{productMeta(product, t)}</span>
                   {isDirty && selected?.id === product.id ? <em className="dirty-badge">{t('admin.catalogue.unsavedBadge')}</em> : null}
                 </div>
-                <StatusPill type="availability" value={getProductAvailability(product, defaultDates)} t={t} />
+                <CatalogueStockFraction product={product} t={t} />
+                <ChevronRight className="catalogue-card-chevron" aria-hidden="true" />
               </button>
             ))
           )}
         </div>
       </section>
 
-      {selected && productDraft ? (
+      {selected && productDraft && editorOpen ? (
         <section className="record-panel feature-panel catalogue-editor-panel" aria-label={t('admin.catalogue.editorAria')}>
           <div className="catalogue-editor-head">
-            <img className="catalogue-preview-thumb" src={coverImage?.src ?? productDraft.image} alt={coverImage?.alt ?? productAlt(productDraft, t)} />
+            <div className="catalogue-preview-thumb">
+              <img src={coverImage?.src ?? productDraft.image} alt={coverImage?.alt ?? productAlt(productDraft, t)} />
+              <span>{t('admin.catalogue.imageCount', { count: mediaItems.length, total: MAX_IMAGE_COUNT })}</span>
+            </div>
             <div className="catalogue-editor-title">
               <span className="eyebrow">{t('admin.common.selected')}</span>
               <strong>{productName(productDraft, t)}</strong>
@@ -376,6 +425,9 @@ export default function CatalogueAdmin({ t, locale, products, setProducts, dataA
                 <span className={`save-state ${saveState.status}`}>{saveState.message || (isDirty ? t('admin.catalogue.unsaved') : t('admin.catalogue.noChanges'))}</span>
               </div>
             </div>
+            <button className="icon-button catalogue-editor-close" type="button" aria-label={t('common.close')} onClick={() => setEditorOpen(false)}>
+              <X aria-hidden="true" />
+            </button>
           </div>
 
           <Tabs.Root value={activeTab} onValueChange={setActiveTab} className="catalogue-tabs">
@@ -414,6 +466,7 @@ export default function CatalogueAdmin({ t, locale, products, setProducts, dataA
                 newVariant={newVariant}
                 newVariantErrors={newVariantErrors}
                 setNewVariant={setNewVariant}
+                setNewVariantErrors={setNewVariantErrors}
                 updateVariant={updateVariant}
                 adjustVariantTotal={adjustVariantTotal}
                 removeVariant={removeVariant}
@@ -460,6 +513,24 @@ export default function CatalogueAdmin({ t, locale, products, setProducts, dataA
   );
 }
 
+function CatalogueStockFraction({ product, t }) {
+  const total = product.variants.reduce((sum, variant) => sum + (Number(variant.total) || 0), 0);
+  const available = product.active
+    ? product.variants.reduce((sum, variant) => sum + getVariantAvailability(product, variant.id, defaultDates), 0)
+    : 0;
+  if (total > 0 && available / total > 0.3) return null;
+
+  const tone = available <= 0 ? 'danger' : 'warning';
+  const Icon = available <= 0 ? XCircle : AlertTriangle;
+
+  return (
+    <span className={`status-badge ${tone} catalogue-stock-fraction`}>
+      <Icon aria-hidden="true" />
+      <span className="status-badge-label">{t('admin.catalogue.stockFraction', { available, total })}</span>
+    </span>
+  );
+}
+
 function DetailsTab({ t, locale, productDraft, detailErrors, updateDraft }) {
   return (
     <div className="editor-section">
@@ -470,7 +541,7 @@ function DetailsTab({ t, locale, productDraft, detailErrors, updateDraft }) {
         </div>
         <div className="info-block compact-info">
           <span>{t('admin.catalogue.publicPrice')}</span>
-          <strong>{formatRupiah(productDraft.price)}</strong>
+          <strong>{formatRupiah(toNonNegativeNumber(productDraft.price))}</strong>
         </div>
       </div>
       <div className="catalogue-edit-grid">
@@ -480,28 +551,39 @@ function DetailsTab({ t, locale, productDraft, detailErrors, updateDraft }) {
             aria-invalid={Boolean(detailErrors.name)}
             aria-describedby={detailErrors.name ? 'catalogue-name-error' : undefined}
             onChange={(event) => updateDraft({
-              nameKey: event.target.value,
               name: event.target.value,
-              altKey: event.target.value,
               alt: event.target.value,
             })}
           />
         </Field>
         <Field label={t('admin.catalogue.meta')}>
-          <input value={productMeta(productDraft, t)} onChange={(event) => updateDraft({ metaKey: event.target.value, meta: event.target.value })} />
+          <input value={productMeta(productDraft, t)} onChange={(event) => updateDraft({ meta: event.target.value })} />
         </Field>
-        <Field label={t('admin.catalogue.category')}>
-          <select value={productDraft.category} onChange={(event) => updateDraft({ category: event.target.value })}>
-            <option value="formal">{locale === 'id' ? 'Formal' : 'Formal'}</option>
-            <option value="accessory">{locale === 'id' ? 'Aksesori' : 'Accessory'}</option>
-          </select>
-        </Field>
+        <SelectField
+          label={t('admin.catalogue.category')}
+          value={productDraft.category}
+          onValueChange={(category) => updateDraft({ category })}
+          options={categoryOptions(locale)}
+        />
+        <SelectField
+          label={t('admin.catalogue.gender')}
+          value={productDraft.gender ?? 'unisex'}
+          onValueChange={(gender) => updateDraft({ gender })}
+          options={genderOptions(t)}
+        />
         <Field label={t('admin.catalogue.price')}>
           <input
             type="number"
             min="0"
             value={productDraft.price}
-            onChange={(event) => updateDraft({ price: Math.max(0, Number(event.target.value) || 0) })}
+            onChange={(event) => updateDraft({ price: toNonNegativeDraftNumber(event.target.value) })}
+          />
+        </Field>
+        <Field label={t('admin.catalogue.description')}>
+          <textarea
+            rows="3"
+            value={contentSource(productDraft.description, productDescription(productDraft, locale, t))}
+            onChange={(event) => updateDraft({ description: updateSource(productDraft.description, event.target.value) })}
           />
         </Field>
       </div>
@@ -526,29 +608,46 @@ function DetailsTab({ t, locale, productDraft, detailErrors, updateDraft }) {
 function MediaTab({ t, productDraft, mediaItems, updateMediaItems }) {
   const [urlDraft, setUrlDraft] = useState('');
   const [mediaError, setMediaError] = useState('');
+  const [selectedMediaId, setSelectedMediaId] = useState(mediaItems[0]?.id ?? '');
   const fileInputRef = useRef(null);
+  const urlInputRef = useRef(null);
+  const selectedImage = mediaItems.find((image) => image.id === selectedMediaId) ?? mediaItems[0] ?? null;
+  const selectedIndex = selectedImage ? mediaItems.findIndex((image) => image.id === selectedImage.id) : -1;
+
+  useEffect(() => {
+    if (mediaItems.length === 0) {
+      if (selectedMediaId) setSelectedMediaId('');
+      return;
+    }
+    if (!mediaItems.some((image) => image.id === selectedMediaId)) {
+      setSelectedMediaId(mediaItems[0].id);
+    }
+  }, [mediaItems, selectedMediaId]);
 
   const addUrlImage = () => {
     const src = urlDraft.trim();
     if (!src) {
       setMediaError(t('admin.catalogue.errorImageUrl'));
+      window.requestAnimationFrame(() => urlInputRef.current?.focus());
       return;
     }
     if (mediaItems.length >= MAX_IMAGE_COUNT) {
       setMediaError(t('admin.catalogue.errorImageCount', { count: MAX_IMAGE_COUNT }));
       return;
     }
+    const id = makeMediaId();
     setMediaError('');
     updateMediaItems((current) => [
       ...current,
       {
-        id: makeMediaId(),
+        id,
         src,
         alt: productAlt(productDraft, t),
         label: `${productName(productDraft, t)} ${current.length + 1}`,
         isCover: current.length === 0,
       },
     ]);
+    setSelectedMediaId(id);
     setUrlDraft('');
   };
 
@@ -578,16 +677,35 @@ function MediaTab({ t, productDraft, mediaItems, updateMediaItems }) {
     if (accepted.length === 0) return;
 
     const dataUrls = await Promise.all(accepted.map(readFileAsDataUrl));
+    const nextItems = dataUrls.map((src, index) => ({
+      id: makeMediaId(),
+      src,
+      alt: productAlt(productDraft, t),
+      label: accepted[index].name || `${productName(productDraft, t)} ${mediaItems.length + index + 1}`,
+      isCover: mediaItems.length === 0 && index === 0,
+    }));
     updateMediaItems((current) => [
       ...current,
-      ...dataUrls.map((src, index) => ({
-        id: makeMediaId(),
-        src,
-        alt: productAlt(productDraft, t),
+      ...nextItems.map((item, index) => ({
+        ...item,
         label: accepted[index].name || `${productName(productDraft, t)} ${current.length + index + 1}`,
         isCover: current.length === 0 && index === 0,
       })),
     ]);
+    setSelectedMediaId(nextItems[0]?.id ?? selectedMediaId);
+  };
+
+  const selectAdjacentImage = (delta) => {
+    if (selectedIndex < 0) return;
+    const nextImage = mediaItems[selectedIndex + delta];
+    if (nextImage) setSelectedMediaId(nextImage.id);
+  };
+
+  const removeSelectedImage = () => {
+    if (!selectedImage || !window.confirm(t('common.remove'))) return;
+    const fallback = mediaItems[selectedIndex + 1] ?? mediaItems[selectedIndex - 1] ?? null;
+    updateMediaItems((current) => current.filter((item) => item.id !== selectedImage.id));
+    setSelectedMediaId(fallback?.id ?? '');
   };
 
   return (
@@ -602,18 +720,28 @@ function MediaTab({ t, productDraft, mediaItems, updateMediaItems }) {
 
       <div className="media-toolbar">
         <input ref={fileInputRef} className="visually-hidden" type="file" accept="image/*" multiple onChange={handleFiles} />
-        <button className="outline-button" type="button" onClick={() => fileInputRef.current?.click()}>
-          <Upload aria-hidden="true" />
-          {t('admin.catalogue.imageUpload')}
-        </button>
+        <div className="media-upload-control">
+          <button className="outline-button" type="button" aria-describedby="catalogue-media-upload-help" onClick={() => fileInputRef.current?.click()}>
+            <Upload aria-hidden="true" />
+            {t('admin.catalogue.imageUpload')}
+          </button>
+          <small id="catalogue-media-upload-help">{t('admin.catalogue.imageUploadHelp')}</small>
+        </div>
         <div className="field-control">
           <span>{t('admin.catalogue.imageUrl')}</span>
           <div className="url-add-row">
             <input
+              ref={urlInputRef}
               value={urlDraft}
               aria-invalid={Boolean(mediaError)}
               aria-describedby={mediaError ? 'catalogue-media-error' : undefined}
-              onChange={(event) => setUrlDraft(event.target.value)}
+              onPointerDown={() => {
+                if (mediaError) setMediaError('');
+              }}
+              onChange={(event) => {
+                setUrlDraft(event.target.value);
+                if (mediaError) setMediaError('');
+              }}
               placeholder="https://example.com/costume.jpg"
             />
             <button className="secondary-button" type="button" onClick={addUrlImage}>
@@ -632,33 +760,48 @@ function MediaTab({ t, productDraft, mediaItems, updateMediaItems }) {
           <p>{t('admin.catalogue.noMediaCopy')}</p>
         </div>
       ) : (
-        <div className="media-grid" aria-label={t('admin.catalogue.mediaGridAria')}>
-          {mediaItems.map((image, index) => (
-            <article className={`media-tile ${image.isCover ? 'cover' : ''}`} key={image.id}>
-              <div className="media-thumb">
-                <img src={image.src} alt={image.alt} />
-                {image.isCover ? <span>{t('admin.catalogue.cover')}</span> : null}
-              </div>
-              <Field label={t('admin.catalogue.altText')}>
-                <input value={image.alt} onChange={(event) => updateMediaItems((current) => current.map((item) => (item.id === image.id ? { ...item, alt: event.target.value } : item)))} />
-              </Field>
+        <div className="media-carousel-card" aria-label={t('admin.catalogue.mediaGridAria')}>
+          <div className="media-carousel-stage">
+            <div className="media-carousel-image">
+              <img src={selectedImage?.src} alt={productAlt(productDraft, t)} />
+              {selectedImage?.isCover ? <span>{t('admin.catalogue.cover')}</span> : null}
+              <button className="media-carousel-arrow previous" type="button" onClick={() => selectAdjacentImage(-1)} disabled={selectedIndex <= 0} aria-label={t('admin.catalogue.previousImage')}>
+                <ArrowLeft aria-hidden="true" />
+              </button>
+              <button className="media-carousel-arrow next" type="button" onClick={() => selectAdjacentImage(1)} disabled={selectedIndex >= mediaItems.length - 1} aria-label={t('admin.catalogue.nextImage')}>
+                <ArrowRight aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+
+          {selectedImage ? (
+            <div className="media-carousel-meta">
               <div className="media-actions">
-                <button className="outline-button" type="button" onClick={() => updateMediaItems((current) => current.map((item) => ({ ...item, isCover: item.id === image.id })))} disabled={image.isCover}>
+                <button className="outline-button" type="button" onClick={() => updateMediaItems((current) => current.map((item) => ({ ...item, isCover: item.id === selectedImage.id })))} disabled={selectedImage.isCover}>
                   <CheckCircle2 aria-hidden="true" />
                   {t('admin.catalogue.setCover')}
                 </button>
-                <button className="icon-button" type="button" onClick={() => updateMediaItems((current) => moveItem(current, index, -1))} disabled={index === 0} aria-label={t('admin.catalogue.moveImageLeft')}>
-                  <ArrowLeft aria-hidden="true" />
-                </button>
-                <button className="icon-button" type="button" onClick={() => updateMediaItems((current) => moveItem(current, index, 1))} disabled={index === mediaItems.length - 1} aria-label={t('admin.catalogue.moveImageRight')}>
-                  <ArrowRight aria-hidden="true" />
-                </button>
-                <button className="icon-button danger" type="button" onClick={() => updateMediaItems((current) => current.filter((item) => item.id !== image.id))} aria-label={t('admin.catalogue.removeImage')}>
+                <button className="icon-button danger" type="button" onClick={removeSelectedImage} aria-label={t('admin.catalogue.removeImage')}>
                   <Trash2 aria-hidden="true" />
                 </button>
               </div>
-            </article>
-          ))}
+            </div>
+          ) : null}
+
+          <div className="media-thumb-strip">
+            {mediaItems.map((image, index) => (
+              <button
+                className={`media-thumb-button ${selectedImage?.id === image.id ? 'selected' : ''}`}
+                type="button"
+                key={image.id}
+                aria-label={t('admin.catalogue.selectedImage', { index: index + 1, total: mediaItems.length })}
+                aria-pressed={selectedImage?.id === image.id}
+                onClick={() => setSelectedMediaId(image.id)}
+              >
+                <img src={image.src} alt={productAlt(productDraft, t)} />
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -672,6 +815,7 @@ function VariantsTab({
   newVariant,
   newVariantErrors,
   setNewVariant,
+  setNewVariantErrors,
   updateVariant,
   adjustVariantTotal,
   removeVariant,
@@ -692,6 +836,7 @@ function VariantsTab({
           const errors = variantErrors[variant.id] ?? {};
           const held = Number(variant.held) || 0;
           const total = Number(variant.total) || 0;
+          const available = Math.max(0, total - held);
           return (
             <div className="variant-row variant-admin-row" key={variant.id}>
               <Field label={t('admin.catalogue.variantLabel')} error={errors.label} errorId={`variant-${variant.id}-label-error`}>
@@ -712,9 +857,16 @@ function VariantsTab({
                   onChange={(event) => updateVariant(variant.id, { total: event.target.value })}
                 />
               </Field>
+              <Field label={t('admin.catalogue.variantNotes')}>
+                <textarea
+                  rows="2"
+                  value={contentSource(variant.notes, variant.notesId ?? variant.notesEn ?? '')}
+                  onChange={(event) => updateVariant(variant.id, { notes: updateSource(variant.notes, event.target.value) })}
+                />
+              </Field>
               <div className="variant-availability-readout">
                 <span>{t('admin.catalogue.availableQty')}</span>
-                <strong>{Math.max(0, total - held)}</strong>
+                <strong>{t('admin.catalogue.stockFraction', { available, total })}</strong>
                 <small>{t('admin.catalogue.heldQty', { count: held })}</small>
               </div>
               <div className="quantity-control">
@@ -741,7 +893,11 @@ function VariantsTab({
               value={newVariant.label}
               aria-invalid={Boolean(newVariantErrors.label)}
               aria-describedby={newVariantErrors.label ? 'new-variant-label-error' : undefined}
-              onChange={(event) => setNewVariant((current) => ({ ...current, label: event.target.value }))}
+              onPointerDown={() => setNewVariantErrors((current) => ({ ...current, label: '' }))}
+              onChange={(event) => {
+                setNewVariant((current) => ({ ...current, label: event.target.value }));
+                if (newVariantErrors.label) setNewVariantErrors((current) => ({ ...current, label: '' }));
+              }}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   event.preventDefault();
@@ -758,13 +914,24 @@ function VariantsTab({
               value={newVariant.total}
               aria-invalid={Boolean(newVariantErrors.total)}
               aria-describedby={newVariantErrors.total ? 'new-variant-total-error' : undefined}
-              onChange={(event) => setNewVariant((current) => ({ ...current, total: event.target.value }))}
+              onPointerDown={() => setNewVariantErrors((current) => ({ ...current, total: '' }))}
+              onChange={(event) => {
+                setNewVariant((current) => ({ ...current, total: event.target.value }));
+                if (newVariantErrors.total) setNewVariantErrors((current) => ({ ...current, total: '' }));
+              }}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   event.preventDefault();
                   addVariant();
                 }
               }}
+            />
+          </Field>
+          <Field label={t('admin.catalogue.variantNotes')}>
+            <textarea
+              rows="2"
+              value={newVariant.notes}
+              onChange={(event) => setNewVariant((current) => ({ ...current, notes: event.target.value }))}
             />
           </Field>
           <button className="outline-button add-variant-button" type="button" onClick={addVariant}>
@@ -874,16 +1041,19 @@ function SwitchProductDialog({ t, open, onStay, onDiscard, onSave, saving }) {
     }}>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content className="dialog-content">
+        <Dialog.Content className="dialog-content destructive-dialog">
+          <div className="dialog-icon danger">
+            <AlertTriangle aria-hidden="true" />
+          </div>
           <Dialog.Title>{t('admin.catalogue.switchTitle')}</Dialog.Title>
-          <Dialog.Description>{t('admin.catalogue.switchCopy')}</Dialog.Description>
-          <div className="dialog-actions">
-            <button className="outline-button" type="button" onClick={onStay}>{t('admin.catalogue.stay')}</button>
-            <button className="ghost-button" type="button" onClick={onDiscard}>{t('admin.catalogue.discardSwitch')}</button>
+          <Dialog.Description className="dialog-description">{t('admin.catalogue.switchCopy')}</Dialog.Description>
+          <div className="dialog-actions switch-product-actions">
             <button className="primary-button" type="button" onClick={onSave} disabled={saving}>
               {saving ? <Loader2 aria-hidden="true" className="spin-icon" /> : <Save aria-hidden="true" />}
               {t('admin.catalogue.saveAndSwitch')}
             </button>
+            <button className="outline-button" type="button" onClick={onStay}>{t('admin.catalogue.stay')}</button>
+            <button className="danger-button" type="button" onClick={onDiscard}>{t('admin.catalogue.discardSwitch')}</button>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
@@ -924,20 +1094,74 @@ function getDraftImages(product, t) {
 }
 
 function normalizeProductForSave(product, t) {
-  const images = ensureSingleCover(getDraftImages(product, t)).map(toStoredImage);
+  const {
+    descriptionId,
+    descriptionEn,
+    bundleId,
+    bundleEn,
+    measurementId,
+    measurementEn,
+    variantNotesId,
+    variantNotesEn,
+    nameId,
+    nameEn,
+    metaId,
+    metaEn,
+    altId,
+    altEn,
+    nameKey,
+    metaKey,
+    altKey,
+    copyKey,
+    detailAriaKey,
+    priceKey,
+    unitKey,
+    ...rest
+  } = product;
+  const derivedAlt = productAlt(product, t);
+  const images = ensureSingleCover(getDraftImages(product, t)).map((image, index) => toStoredImage({ ...image, alt: derivedAlt }, index));
   const cover = images.find((image) => image.isCover) ?? images[0];
   return {
-    ...product,
+    ...rest,
+    gender: product.gender ?? 'unisex',
+    unitKey: normalizeUnitKey(unitKey ?? product.unitKey),
+    description: toSourceContent(product.description, firstContentText(descriptionId, descriptionEn, bundleId, bundleEn, literalFallback(copyKey))),
+    price: toNonNegativeNumber(product.price),
     image: cover?.src ?? product.image ?? '',
     images,
-    variants: product.variants.map((variant) => ({
-      ...variant,
-      label: String(variant.label).trim(),
-      total: Math.max(Number(variant.held) || 0, Math.max(1, Number(variant.total) || 1)),
-      held: Number(variant.held) || 0,
+    variants: product.variants.map((variant) => normalizeVariantForSave(variant, {
+      measurementId,
+      measurementEn,
+      variantNotesId,
+      variantNotesEn,
     })),
     maintenanceBlocks: product.maintenanceBlocks.map((block) => ({ ...block })),
   };
+}
+
+function normalizeVariantForSave(variant, productContext) {
+  const { notesId, notesEn, ...rest } = variant;
+  return {
+    ...rest,
+    label: String(variant.label).trim(),
+    total: Math.max(Number(variant.held) || 0, Math.max(1, Number(variant.total) || 1)),
+    held: Number(variant.held) || 0,
+    notes: toSourceContent(
+      variant.notes,
+      firstContentText(notesId, notesEn, productContext.variantNotesId, productContext.variantNotesEn, productContext.measurementId, productContext.measurementEn),
+    ),
+  };
+}
+
+function toNonNegativeDraftNumber(value) {
+  if (value === '') return '';
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+}
+
+function toNonNegativeNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
 }
 
 function ensureSingleCover(images) {
@@ -1003,6 +1227,29 @@ function hasErrors(errorMap) {
   return Object.values(errorMap).some(Boolean);
 }
 
+function updateSource(content, source) {
+  return {
+    ...toSourceContent(content),
+    source,
+  };
+}
+
+function firstContentText(...values) {
+  const value = values.map((entry) => contentSource(entry)).find((entry) => String(entry ?? '').trim());
+  return String(value ?? '').trim();
+}
+
+function literalFallback(value) {
+  if (!value || /^[a-z0-9]+(\.[a-z0-9_-]+)+$/i.test(value)) return '';
+  return value;
+}
+
+function normalizeUnitKey(unitKey) {
+  if (unitKey === 'customer.product.batik.unitSet') return 'customer.product.unitSet';
+  if (unitKey === 'customer.product.songket.unitPack') return 'customer.product.unitPack';
+  return unitKey ?? 'customer.product.unitSet';
+}
+
 function stableProductJson(product) {
   if (!product) return '';
   return JSON.stringify({
@@ -1021,15 +1268,6 @@ function makeVariantId(label, variants) {
 
 function makeMediaId() {
   return `media-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-}
-
-function moveItem(items, index, delta) {
-  const next = [...items];
-  const targetIndex = index + delta;
-  if (targetIndex < 0 || targetIndex >= next.length) return next;
-  const [item] = next.splice(index, 1);
-  next.splice(targetIndex, 0, item);
-  return next;
 }
 
 function readFileAsDataUrl(file) {

@@ -10,14 +10,22 @@ backend/.env
 
 # Test
 test/test-results/
+test/test-results-*/
 test/node_modules/
 test/*.log
 test/package-lock.json
 test/playwright-report/
+test/playwright-report-*/
+test/screenshots/
 
 # Root
 .env
 .env.production
+test-results/
+test-results-*/
+playwright-report/
+playwright-report-*/
+.artifacts/
 
 # Frontend
 frontend/node_modules/

@@ -87,7 +87,7 @@ Before presenting the PRD, verify:
 - Requirements are testable and avoid implementation detail unless it is a real constraint.
 - Non-goals prevent likely scope creep.
 - Open questions are explicit and not hidden in prose.
-- The PRD can be converted into tickets with `/plan-to-tickets` after product approval.
+- The PRD can be converted into tickets with `/create-tickets` after product approval.
 
 ## Review With User
 

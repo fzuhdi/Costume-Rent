@@ -23,6 +23,18 @@ function writeFile(filePath, text) {
   fs.writeFileSync(filePath, text);
 }
 
+function copyScriptLib(fixtureRoot) {
+  const libRoot = path.join(root, '.opencode', 'scripts', 'lib');
+  for (const entry of fs.readdirSync(libRoot, { withFileTypes: true })) {
+    if (entry.isFile()) {
+      writeFile(
+        path.join(fixtureRoot, '.opencode', 'scripts', 'lib', entry.name),
+        fs.readFileSync(path.join(libRoot, entry.name), 'utf8'),
+      );
+    }
+  }
+}
+
 function runGit(fixtureRoot, args) {
   const result = spawnSync('git', args, {
     cwd: fixtureRoot,
@@ -100,12 +112,24 @@ function writeExpiredRunningRegistry(filePath) {
 }
 
 function prepareFixture(fixtureRoot) {
+  copyScriptLib(fixtureRoot);
   writeFile(path.join(fixtureRoot, '.opencode/scripts/launch-parallel-plan.mjs'), fs.readFileSync(path.join(root, '.opencode/scripts/launch-parallel-plan.mjs'), 'utf8'));
   writeFile(path.join(fixtureRoot, '.opencode/scripts/ticket-lease.mjs'), fs.readFileSync(path.join(root, '.opencode/scripts/ticket-lease.mjs'), 'utf8'));
   writeFile(path.join(fixtureRoot, '.opencode/opencode.json'), '{}\n');
   writeFile(path.join(fixtureRoot, '.opencode/project.json'), JSON.stringify({
     schema_version: 1,
     project: { name: 'Lease Fixture', adapter_path: '.opencode/project.json' },
+    workflow: { enabled_modes: ['ui-tracer', 'light-implementation', 'strict-tdd', 'parallel-runtime'], default_mode: 'ui-tracer', max_parallel: 3 },
+    artifacts: {
+      root: '.artifacts',
+      playwright: {
+        output_dir: '.artifacts/playwright/test-results',
+        html_report: '.artifacts/playwright/html-report',
+        screenshots: '.artifacts/playwright/screenshots',
+      },
+      playwright_mcp: '.artifacts/playwright-mcp',
+      opencode: '.artifacts/opencode',
+    },
     runtime: {
       slot_step: 100,
       base_ports: { frontend: 5173, backend: 8081, sqlite: 8080 },

@@ -1,0 +1,212 @@
+{
+  "schema_version": 2,
+  "project": {
+    "name": "{{PROJECT_NAME}}",
+    "adapter_path": ".opencode/project.json"
+  },
+  "acceptance": {
+    "dir": "docs/acceptance",
+    "id_pattern": "^[A-Z][A-Z0-9_]*-[0-9]{3}$",
+    "status": [
+      "draft",
+      "ready",
+      "covered",
+      "retired"
+    ]
+  },
+  "features": {
+    "{{FEATURE_ID}}": {
+      "name": "{{FEATURE_NAME}}",
+      "test_type": "e2e",
+      "spec_files": [
+        "test/specs/{{feature_file}}.spec.js"
+      ]
+    }
+  },
+  "code_roots": [
+    "src"
+  ],
+  "test_roots": [
+    "test"
+  ],
+  "docs": {
+    "root": "docs",
+    "acceptance": "docs/acceptance",
+    "plans": "docs/plans",
+    "tickets": "docs/tickets",
+    "workflow_changes": "docs/workflow-changes",
+    "runbooks": "docs/runbooks"
+  },
+  "test_types": [
+    "e2e",
+    "api"
+  ],
+  "workflow": {
+    "product_stages": [
+      "design-ui",
+      "integrate-backend",
+      "deployment"
+    ],
+    "internal_stages": [
+      "workflow-maintenance"
+    ],
+    "quality_policies": [
+      "exploratory",
+      "light-checks",
+      "strict-tdd"
+    ],
+    "default_stage": "design-ui",
+    "default_quality_policy": "exploratory",
+    "legacy_mode_map": {
+      "ui-tracer": {
+        "workflow_stage": "design-ui",
+        "quality_policy": "exploratory"
+      },
+      "light-implementation": {
+        "workflow_stage": "integrate-backend",
+        "quality_policy": "light-checks"
+      },
+      "strict-tdd": {
+        "workflow_stage": "integrate-backend",
+        "quality_policy": "strict-tdd"
+      }
+    },
+    "enabled_modes": [
+      "ui-tracer",
+      "light-implementation"
+    ],
+    "default_mode": "ui-tracer",
+    "max_parallel": 1
+  },
+  "artifacts": {
+    "root": ".artifacts",
+    "playwright": {
+      "output_dir": ".artifacts/playwright/test-results",
+      "html_report": ".artifacts/playwright/html-report",
+      "screenshots": ".artifacts/playwright/screenshots"
+    },
+    "playwright_mcp": ".artifacts/playwright-mcp",
+    "opencode": ".artifacts/opencode"
+  },
+  "commands": {
+    "ui_smoke": "cd test && npx playwright test --project=ui:smoke",
+    "ui_review": "cd test && npx playwright test --project=ui:review",
+    "e2e_tdd": "cd test && npx playwright test {test_runner_spec_files} --grep \"{test_case_id}\"",
+    "api": "cd test && npx playwright test --project=api",
+    "visual": "cd test && npx playwright test --project=visual",
+    "test_case": "cd test && npx playwright test {test_runner_spec_files} --grep \"{test_case_id}\"",
+    "feature": "cd test && npx playwright test {test_runner_spec_files}",
+    "manifest": "node .opencode/scripts/build-test-case-manifest.mjs",
+    "manifest_check": "node .opencode/scripts/build-test-case-manifest.mjs --check"
+  },
+  "quality_gate": {
+    "command": "{{QUALITY_GATE_COMMAND}}"
+  },
+  "runtime": {
+    "slot_step": 100,
+    "base_ports": {
+      "frontend": 5173,
+      "backend": 8081,
+      "sqlite": 8080
+    },
+    "compose": {
+      "file": "{{COMPOSE_FILE}}",
+      "services": [
+        "{{SERVICE_NAME}}"
+      ]
+    },
+    "runtime_files": {
+      "required": [],
+      "optional": []
+    },
+    "generated_env_files": [],
+    "env_keys": {
+      "container_prefix": "APP_CONTAINER_PREFIX",
+      "frontend_host_port": "FRONTEND_HOST_PORT",
+      "backend_host_port": "BACKEND_HOST_PORT",
+      "sqlite_web_host_port": "SQLITE_WEB_HOST_PORT",
+      "playwright_base_url": "PW_BASE_URL",
+      "playwright_output_dir": "PW_OUTPUT_DIR",
+      "playwright_json_output": "PW_JSON_OUTPUT",
+      "playwright_html_report": "PW_HTML_REPORT",
+      "playwright_screenshots": "PW_SCREENSHOT_DIR"
+    }
+  },
+  "agent_permissions": {
+    "developer": {
+      "read": [
+        "{{CODE_ROOT}}/**",
+        "docs/tickets/**",
+        "docs/acceptance/**",
+        ".opencode/state/test-case-manifest.json"
+      ],
+      "write": [
+        "{{CODE_ROOT}}/**"
+      ],
+      "deny": [
+        "{{TEST_ROOT}}/**"
+      ]
+    },
+    "sdet": {
+      "read": [
+        "{{TEST_ROOT}}/**",
+        "docs/acceptance/**",
+        ".opencode/project.json"
+      ],
+      "write": [
+        "{{TEST_ROOT}}/**",
+        ".opencode/state/test-case-manifest.json"
+      ],
+      "deny": [
+        "{{CODE_ROOT}}/**"
+      ]
+    },
+    "reviewer": {
+      "read": [
+        "**/*"
+      ],
+      "write": []
+    },
+    "workflow-engineer": {
+      "read": [
+        ".opencode/**",
+        "docs/**",
+        "{{TEST_ROOT}}/**",
+        "AGENTS.md"
+      ],
+      "write": [
+        ".opencode/**",
+        "docs/**",
+        "{{TEST_ROOT}}/**",
+        "AGENTS.md"
+      ],
+      "deny": [
+        "{{CODE_ROOT}}/**"
+      ]
+    },
+    "orchestrator": {
+      "read": [
+        "docs/tickets/**",
+        "docs/acceptance/**",
+        "docs/plans/**",
+        ".opencode/state/*.json",
+        ".opencode/state.example/*.json",
+        ".opencode/skills/**",
+        ".opencode/project.json",
+        "{{TEST_ROOT}}/**",
+        "{{CODE_ROOT}}/**"
+      ],
+      "write": [
+        "docs/tickets/**",
+        "docs/plans/**",
+        ".opencode/state/*.json",
+        ".opencode/state/worker-outputs/**",
+        ".opencode/logs/workflow-runs/**",
+        ".opencode/state.example/*"
+      ],
+      "deny": [
+        ".opencode/opencode.json"
+      ]
+    }
+  }
+}

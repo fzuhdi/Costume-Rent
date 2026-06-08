@@ -2,6 +2,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { loadProjectConfig } from './lib/config.mjs';
 
 const root = process.cwd();
 const projectPath = path.join(root, '.opencode/project.json');
@@ -15,7 +16,6 @@ function fail(messages) {
   for (const message of messages) console.error(message);
   process.exit(1);
 }
-function readJson(file) { return JSON.parse(fs.readFileSync(file, 'utf8')); }
 function rel(file) { return path.relative(root, file).split(path.sep).join('/'); }
 function isPortableRelative(file) { return file && !path.isAbsolute(file) && !/^[A-Za-z]:\//.test(file); }
 function walk(dir) {
@@ -75,7 +75,7 @@ function renderCommand(template, values) {
 }
 
 if (!fs.existsSync(projectPath)) fail([`Missing ${rel(projectPath)}`]);
-const project = readJson(projectPath);
+const project = loadProjectConfig(root).config;
 const errors = [];
 for (const id of Object.keys(project.features ?? {})) {
   if (!/^[A-Z][A-Z0-9_]*$/.test(id)) errors.push(`Invalid feature id: ${id}`);

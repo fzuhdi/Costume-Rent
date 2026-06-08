@@ -83,6 +83,15 @@ export function getProductAvailability(product, dates, rentals) {
   return 'available';
 }
 
+export function getMaintenanceBlock(product, dates) {
+  const blocks = Array.isArray(product?.maintenanceBlocks) ? product.maintenanceBlocks : [];
+  return blocks.find((block) => overlaps(dates, block)) ?? null;
+}
+
+export function getMaintenanceReason(product, dates) {
+  return String(getMaintenanceBlock(product, dates)?.reason ?? '').trim();
+}
+
 export function getVariantAvailability(product, variantId, dates, rentals) {
   if (product.maintenanceBlocks.some((block) => overlaps(dates, block))) return 0;
   const variant = product.variants.find((entry) => entry.id === variantId);
@@ -109,7 +118,7 @@ export function availabilityTone(value) {
 
 export function variantSummary(product, dates, locale, t, rentals) {
   const available = product.variants.filter((variant) => getVariantAvailability(product, variant.id, dates, rentals) > 0);
-  if (available.length === 0) return t('customer.product.topeng.action');
+  if (available.length === 0) return t('customer.product.unavailableAction');
   if (available.length === 1) return `${variantLabel(t, available[0].label)} ${locale === 'id' ? 'tersedia' : 'available'}`;
   return `${available.map((variant) => variantLabel(t, variant.label)).join(', ')}`;
 }
@@ -172,16 +181,88 @@ export function variantLabel(t, variant) {
   return variant === 'package' ? t('variant.package') : variant;
 }
 
+function firstText(...values) {
+  const value = values.find((entry) => String(entry ?? '').trim());
+  return String(value ?? '').trim();
+}
+
+function translatedOrFallback(t, key, fallback = '') {
+  if (!key) return fallback;
+  const translated = t(key);
+  return translated === key ? fallback : translated;
+}
+
 export function productName(product, t) {
-  return product.name ?? product.nameId ?? product.nameEn ?? t(product.nameKey ?? 'common.empty');
+  return localizeContent(product.name, 'id', product.nameId ?? product.nameEn ?? translatedOrFallback(t, product.nameKey, t('common.empty')));
 }
 
 export function productMeta(product, t) {
-  return product.meta ?? product.metaId ?? product.metaEn ?? t(product.metaKey ?? 'common.empty');
+  return localizeContent(product.meta, 'id', product.metaId ?? product.metaEn ?? translatedOrFallback(t, product.metaKey, t('common.empty')));
 }
 
 export function productAlt(product, t) {
-  return product.alt ?? product.altId ?? product.altEn ?? productName(product, t);
+  return localizeContent(product.alt, 'id', product.altId ?? product.altEn ?? productName(product, t));
+}
+
+export function localizeContent(value, locale = 'id', fallback = '') {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const translations = value.translations && typeof value.translations === 'object' ? value.translations : {};
+    const translated = translations[locale];
+    return String(translated || value.source || fallback || '').trim();
+  }
+  return String(value ?? fallback ?? '').trim();
+}
+
+export function toSourceContent(value, fallback = '') {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const translations = value.translations && typeof value.translations === 'object' ? value.translations : {};
+    return {
+      sourceLocale: value.sourceLocale || 'id',
+      source: firstText(value.source, fallback),
+      translations: { ...translations },
+    };
+  }
+  return {
+    sourceLocale: 'id',
+    source: String(value ?? fallback ?? '').trim(),
+    translations: {},
+  };
+}
+
+export function contentSource(value, fallback = '') {
+  return toSourceContent(value, fallback).source;
+}
+
+export function productDescription(product, locale, t) {
+  return localizeContent(
+    product.description,
+    locale,
+    firstText(
+      product.descriptionId,
+      product.descriptionEn,
+      product.bundleId,
+      product.bundleEn,
+      translatedOrFallback(t, product.copyKey, t('common.empty')),
+    ),
+  );
+}
+
+export function selectedVariantNotes(product, variantId, locale, t) {
+  const variants = Array.isArray(product?.variants) ? product.variants : [];
+  const variant = variants.find((entry) => entry.id === variantId) ?? variants[0] ?? {};
+  return localizeContent(
+    variant.notes,
+    locale,
+    firstText(
+      variant.notesId,
+      variant.notesEn,
+      product.variantNotesId,
+      product.variantNotesEn,
+      product.measurementId,
+      product.measurementEn,
+      t('common.empty'),
+    ),
+  );
 }
 
 export function productGallery(product, t) {
@@ -271,16 +352,36 @@ export function upsertClient(clients, rental) {
   ];
 }
 
+export function hasRentalChanged(previous, next) {
+  return JSON.stringify(previous) !== JSON.stringify(next);
+}
+
 export function appendActivity(rental, activity) {
+  const activityItems = Array.isArray(rental.activity) ? rental.activity : [];
+  const latest = activityItems[0];
+
+  if (latest?.textId === activity.textId && latest?.textEn === activity.textEn) {
+    return { ...rental, activity: activityItems };
+  }
+
+  const timestamp = new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date()).replace(',', '');
+
   return {
     ...rental,
     activity: [
       {
-        id: `a-${Date.now()}`,
-        time: '27 Mei 2026 14.45',
+        id: `a-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        time: timestamp,
         ...activity,
       },
-      ...rental.activity,
+      ...activityItems,
     ],
   };
 }
@@ -327,9 +428,13 @@ export function localizedData(item, field, t) {
 export function getAdminMetrics(rentals) {
   return {
     requested: rentals.filter((rental) => rental.lifecycle === 'requested').length,
+    staleRequests: rentals.filter((rental) => rental.lifecycle === 'requested' && rental.staleHours >= 24).length,
+    deliveryRequests: rentals.filter((rental) => rental.lifecycle === 'requested' && rental.fulfillment === 'delivery').length,
     ready: rentals.filter((rental) => ['preparing', 'ready_pickup'].includes(rental.lifecycle)).length,
+    outWithCustomer: rentals.filter((rental) => ['out_delivery', 'on_rent'].includes(rental.lifecycle)).length,
     returnedOpen: rentals.filter((rental) => rental.lifecycle === 'returned' && rental.paymentStatus !== 'verified').length,
-    overdue: rentals.filter((rental) => rental.lifecycle === 'on_rent').length || 1,
+    overdue: rentals.filter((rental) => rental.lifecycle === 'on_rent').length,
+    completed: rentals.filter((rental) => rental.lifecycle === 'completed').length,
   };
 }
 

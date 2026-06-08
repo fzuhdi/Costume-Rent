@@ -2,11 +2,119 @@ import melayuImage from '../assets/baju_melayu.jpg';
 import batikImage from '../assets/kebaya_bali.jpg';
 import songketImage from '../assets/selendang_songket.jpg';
 import topengImage from '../assets/topeng_bali.jpg';
+import { contentSource, toSourceContent } from './lib/rental-utils.js';
 
 export const defaultDates = {
   start: '2026-06-12',
   end: '2026-06-15',
 };
+
+const sourceContent = (source, translations = {}) => ({
+  sourceLocale: 'id',
+  source,
+  translations,
+});
+
+export const defaultHomeContent = {
+  heroImageUrl: '',
+  heroImageAlt: sourceContent(''),
+  heroKicker: sourceContent('Sewa kostum butik'),
+  heroTitle: sourceContent('Costume Rental'),
+  heroCopy: sourceContent('Katalog kostum adat, tari, dan aksesori dengan tanggal sewa yang jelas sebelum pelanggan membuat pesanan.'),
+  catalogueKicker: sourceContent('Mulai dari tanggal'),
+  catalogueTitle: sourceContent('Cek stok berdasarkan periode sewa.'),
+  catalogueCopy: sourceContent('Pilih tanggal mulai dan tanggal kembali agar hasil katalog, detail produk, keranjang, dan checkout memakai periode sewa yang sama.'),
+  articlesKicker: sourceContent('Panduan sewa'),
+  articlesTitle: sourceContent('Catatan singkat sebelum memilih kostum'),
+  testimonialsKicker: sourceContent('Pengalaman pelanggan'),
+  testimonialsTitle: sourceContent('Pesanan tetap ditinjau staf sebelum sewa final'),
+  articles: [
+    {
+      label: sourceContent('Ukuran'),
+      title: sourceContent('Pilih ukuran dari varian yang benar-benar tersedia.'),
+      copy: sourceContent('Staf tetap mengecek ukuran, tapi memilih varian sejak awal membantu stok tidak tertahan di item yang salah.'),
+    },
+    {
+      label: sourceContent('Acara'),
+      title: sourceContent('Sesuaikan paket dengan acara dan durasi.'),
+      copy: sourceContent('Kostum formal, tari, dan aksesori punya isi paket berbeda. Gunakan catatan checkout untuk detail acara.'),
+    },
+    {
+      label: sourceContent('Kondisi'),
+      title: sourceContent('Blok perawatan terlihat sebelum pesanan dikirim.'),
+      copy: sourceContent('Katalog menyaring item yang sedang dibersihkan atau diperbaiki pada tanggal pilihan.'),
+    },
+  ],
+  testimonials: [
+    {
+      quote: sourceContent('Tanggal dan ukuran terlihat jelas, lalu staf cepat mengonfirmasi sebelum acara sekolah.'),
+      name: sourceContent('Maya, acara sekolah'),
+    },
+    {
+      quote: sourceContent('Saya bisa pilih pengantaran dan menulis catatan lokasi aula tanpa membuat akun.'),
+      name: sourceContent('Dimas, pentas budaya'),
+    },
+    {
+      quote: sourceContent('Aksesori tari mudah disaring, dan stok penuh tidak masuk ke pesanan saya.'),
+      name: sourceContent('Rina, sanggar tari'),
+    },
+  ],
+};
+
+const homeFields = [
+  'heroKicker',
+  'heroTitle',
+  'heroCopy',
+  'catalogueKicker',
+  'catalogueTitle',
+  'catalogueCopy',
+  'articlesKicker',
+  'articlesTitle',
+  'testimonialsKicker',
+  'testimonialsTitle',
+];
+
+const articleFields = ['label', 'title', 'copy'];
+const testimonialFields = ['quote', 'name'];
+
+export function normalizeHomeContent(content = {}) {
+  const current = content && typeof content === 'object' ? content : {};
+  return {
+    heroImageUrl: typeof current.heroImageUrl === 'string' ? current.heroImageUrl : defaultHomeContent.heroImageUrl,
+    heroImageAlt: normalizeContentField(current, defaultHomeContent, 'heroImageAlt'),
+    ...homeFields.reduce((result, field) => ({
+      ...result,
+      [field]: normalizeContentField(current, defaultHomeContent, field),
+    }), {}),
+    articles: normalizeContentList(current.articles, defaultHomeContent.articles, articleFields),
+    testimonials: normalizeContentList(current.testimonials, defaultHomeContent.testimonials, testimonialFields),
+  };
+}
+
+function normalizeContentList(listValue, fallbackList, fields) {
+  const list = Array.isArray(listValue) ? listValue : [];
+  const count = Math.max(fallbackList.length, list.length);
+  return Array.from({ length: count }).map((_, index) => {
+    const current = list[index] ?? {};
+    const fallback = fallbackList[index] ?? {};
+    return fields.reduce((result, field) => ({
+      ...result,
+      [field]: normalizeContentField(current, fallback, field),
+    }), {});
+  });
+}
+
+function normalizeContentField(current, fallback, field) {
+  return toSourceContent(
+    current?.[field],
+    firstHomeText(current?.[`${field}Id`], current?.[`${field}En`], contentSource(fallback?.[field])),
+  );
+}
+
+function firstHomeText(...values) {
+  const value = values.find((entry) => String(entry ?? '').trim());
+  return String(value ?? '').trim();
+}
 
 export const initialSettings = {
   brandName: 'Costume Rental',
@@ -19,6 +127,7 @@ export const initialSettings = {
   policy: '',
   publicCatalogue: true,
   requireVerifiedProof: true,
+  homeContent: defaultHomeContent,
 };
 
 export const initialProducts = [
@@ -27,25 +136,20 @@ export const initialProducts = [
     image: batikImage,
     category: 'formal',
     region: 'bali',
+    gender: 'men',
     active: true,
-    nameKey: 'customer.product.batik.name',
-    metaKey: 'customer.product.batik.meta',
-    priceKey: 'customer.product.batik.price',
-    unitKey: 'customer.product.batik.unitSet',
-    copyKey: 'customer.product.batik.copy',
-    detailAriaKey: 'customer.product.batik.detailAria',
-    altKey: 'customer.product.batik.alt',
+    name: 'Batik Pria Premium',
+    meta: 'Adat formal - Pria',
+    unitKey: 'customer.product.unitSet',
+    alt: 'Batik pria motif cokelat untuk sewa',
     price: 220000,
     availability: 'available',
-    measurementId: 'M/L: dada 96-104 cm, panjang 72 cm',
-    measurementEn: 'M/L: chest 96-104 cm, length 72 cm',
-    bundleId: 'Atasan batik, celana gelap opsional, hanger pelindung.',
-    bundleEn: 'Batik top, optional dark trousers, protective hanger.',
+    description: sourceContent('Atasan batik, celana gelap opsional, hanger pelindung.'),
     variants: [
-      { id: 'S', label: 'S', total: 1, held: 1 },
-      { id: 'M', label: 'M', total: 4, held: 1 },
-      { id: 'L', label: 'L', total: 3, held: 0 },
-      { id: 'XL', label: 'XL', total: 1, held: 1 },
+      { id: 'S', label: 'S', total: 1, held: 1, notes: sourceContent('S: dada 90-94 cm, panjang 70 cm.') },
+      { id: 'M', label: 'M', total: 4, held: 1, notes: sourceContent('M: dada 96-100 cm, panjang 72 cm.') },
+      { id: 'L', label: 'L', total: 3, held: 0, notes: sourceContent('L: dada 102-106 cm, panjang 74 cm.') },
+      { id: 'XL', label: 'XL', total: 1, held: 1, notes: sourceContent('XL: dada 108-112 cm, panjang 76 cm.') },
     ],
     maintenanceBlocks: [],
   },
@@ -54,24 +158,19 @@ export const initialProducts = [
     image: melayuImage,
     category: 'formal',
     region: 'melayu',
+    gender: 'men',
     active: true,
-    nameKey: 'customer.product.melayu.name',
-    metaKey: 'customer.product.melayu.meta',
-    priceKey: 'customer.product.melayu.price',
-    unitKey: 'customer.product.batik.unitSet',
-    copyKey: 'customer.product.melayu.copy',
-    detailAriaKey: 'customer.product.melayu.detailAria',
-    altKey: 'customer.product.melayu.alt',
+    name: 'Baju Melayu Pria',
+    meta: 'Melayu - Pria',
+    unitKey: 'customer.product.unitSet',
+    alt: 'Baju Melayu pria lengkap dengan kain',
     price: 150000,
     availability: 'limited',
-    measurementId: 'M/L: lingkar dada 98-106 cm, kain pinggang adjustable.',
-    measurementEn: 'M/L: chest 98-106 cm, adjustable waist cloth.',
-    bundleId: 'Baju, celana, kain, dan kopiah sesuai stok.',
-    bundleEn: 'Top, trousers, waist cloth, and cap based on stock.',
+    description: sourceContent('Baju, celana, kain, dan kopiah sesuai stok.'),
     variants: [
-      { id: 'M', label: 'M', total: 2, held: 1 },
-      { id: 'L', label: 'L', total: 3, held: 2 },
-      { id: 'XL', label: 'XL', total: 1, held: 1 },
+      { id: 'M', label: 'M', total: 2, held: 1, notes: sourceContent('M: lingkar dada 98-102 cm, kain pinggang adjustable.') },
+      { id: 'L', label: 'L', total: 3, held: 2, notes: sourceContent('L: lingkar dada 104-108 cm, kain pinggang adjustable.') },
+      { id: 'XL', label: 'XL', total: 1, held: 1, notes: sourceContent('XL: lingkar dada 110-114 cm, stok terbatas.') },
     ],
     maintenanceBlocks: [],
   },
@@ -80,21 +179,16 @@ export const initialProducts = [
     image: songketImage,
     category: 'accessory',
     region: 'songket',
+    gender: 'unisex',
     active: true,
-    nameKey: 'customer.product.songket.name',
-    metaKey: 'customer.product.songket.meta',
-    priceKey: 'customer.product.songket.price',
-    unitKey: 'customer.product.songket.unitPack',
-    copyKey: 'customer.product.songket.copy',
-    detailAriaKey: 'customer.product.songket.detailAria',
-    altKey: 'customer.product.songket.alt',
+    name: 'Selendang Songket',
+    meta: 'Aksesori - Songket',
+    unitKey: 'customer.product.unitPack',
+    alt: 'Selendang songket biru dengan motif emas',
     price: 55000,
     availability: 'available',
-    measurementId: 'Paket aksesori standar untuk dewasa dan remaja.',
-    measurementEn: 'Standard accessory package for adults and teens.',
-    bundleId: 'Selendang songket dan pin cadangan.',
-    bundleEn: 'Songket shawl and spare pin.',
-    variants: [{ id: 'package', label: 'package', total: 8, held: 1 }],
+    description: sourceContent('Selendang songket dan pin cadangan.'),
+    variants: [{ id: 'package', label: 'package', total: 8, held: 1, notes: sourceContent('Paket aksesori standar untuk dewasa dan remaja.') }],
     maintenanceBlocks: [],
   },
   {
@@ -102,22 +196,95 @@ export const initialProducts = [
     image: topengImage,
     category: 'accessory',
     region: 'bali',
+    gender: 'unisex',
     active: true,
-    nameKey: 'customer.product.topeng.name',
-    metaKey: 'customer.product.topeng.meta',
-    priceKey: 'customer.product.topeng.price',
-    unitKey: 'customer.product.songket.unitPack',
-    copyKey: 'customer.product.topeng.copy',
-    detailAriaKey: 'customer.product.topeng.detailAria',
-    altKey: 'customer.product.topeng.alt',
+    name: 'Topeng Bali',
+    meta: 'Bali - Aksesori',
+    unitKey: 'customer.product.unitPack',
+    alt: 'Koleksi topeng Bali untuk aksesori panggung',
     price: 80000,
     availability: 'full',
-    measurementId: 'Paket topeng panggung, ukuran campuran.',
-    measurementEn: 'Stage mask package, mixed sizes.',
-    bundleId: 'Topeng, sarung kain, dan kotak pelindung.',
-    bundleEn: 'Mask, cloth pouch, and protective box.',
-    variants: [{ id: 'package', label: 'package', total: 2, held: 2 }],
+    description: sourceContent('Topeng, sarung kain, dan kotak pelindung.'),
+    variants: [{ id: 'package', label: 'package', total: 2, held: 2, notes: sourceContent('Paket topeng panggung ukuran campuran; staf mengecek kondisi cat sebelum ambil.') }],
     maintenanceBlocks: [{ start: '2026-06-12', end: '2026-06-16', reason: 'Perawatan cat' }],
+  },
+  {
+    id: 'kebaya',
+    image: batikImage,
+    category: 'formal',
+    region: 'bali',
+    gender: 'women',
+    active: true,
+    name: 'Kebaya Bali',
+    meta: 'Bali - Wanita',
+    unitKey: 'customer.product.unitSet',
+    alt: 'Kebaya Bali warna hangat untuk sewa',
+    price: 260000,
+    availability: 'available',
+    description: sourceContent('Kebaya, kamen, selendang, dan bros sesuai stok.'),
+    variants: [
+      { id: 'S', label: 'S', total: 2, held: 0, notes: sourceContent('S: kebaya ramping, kamen pinggang adjustable.') },
+      { id: 'M', label: 'M', total: 3, held: 1, notes: sourceContent('M: kebaya reguler, bros mengikuti stok.') },
+      { id: 'L', label: 'L', total: 2, held: 0, notes: sourceContent('L: kebaya longgar, selendang bisa diganti warna.') },
+    ],
+    maintenanceBlocks: [],
+  },
+  {
+    id: 'tari-bali',
+    image: topengImage,
+    category: 'formal',
+    region: 'bali',
+    gender: 'kids',
+    active: true,
+    name: 'Kostum Tari Bali Anak',
+    meta: 'Bali - Anak',
+    unitKey: 'customer.product.unitSet',
+    alt: 'Kostum tari Bali anak dengan aksesori panggung',
+    price: 180000,
+    availability: 'available',
+    description: sourceContent('Atasan tari, rok, sabuk, dan aksesori kepala.'),
+    variants: [
+      { id: '6-8', label: '6-8', total: 2, held: 0, notes: sourceContent('Untuk anak 6-8 tahun; sabuk dan rok adjustable.') },
+      { id: '9-10', label: '9-10', total: 2, held: 1, notes: sourceContent('Untuk anak 9-10 tahun; aksesori kepala perlu dicek saat ambil.') },
+    ],
+    maintenanceBlocks: [],
+  },
+  {
+    id: 'beskap',
+    image: melayuImage,
+    category: 'formal',
+    region: 'jawa',
+    gender: 'men',
+    active: true,
+    name: 'Beskap Jawa',
+    meta: 'Jawa - Pria',
+    unitKey: 'customer.product.unitSet',
+    alt: 'Beskap Jawa pria untuk acara formal',
+    price: 240000,
+    availability: 'available',
+    description: sourceContent('Beskap, jarik, blangkon, dan hanger pelindung.'),
+    variants: [
+      { id: 'M', label: 'M', total: 2, held: 0, notes: sourceContent('M: dada 98-102 cm, jarik adjustable.') },
+      { id: 'L', label: 'L', total: 2, held: 0, notes: sourceContent('L: dada 104-108 cm, blangkon mengikuti stok.') },
+    ],
+    maintenanceBlocks: [],
+  },
+  {
+    id: 'aksesoris-tari',
+    image: songketImage,
+    category: 'accessory',
+    region: 'dance',
+    gender: 'unisex',
+    active: true,
+    name: 'Paket Aksesori Tari',
+    meta: 'Tari - Aksesori',
+    unitKey: 'customer.product.unitPack',
+    alt: 'Paket aksesori tari dengan selendang dan gelang',
+    price: 95000,
+    availability: 'available',
+    description: sourceContent('Mahkota kecil, gelang, dan selendang cadangan.'),
+    variants: [{ id: 'package', label: 'package', total: 5, held: 0, notes: sourceContent('Paket aksesori panggung dewasa/remaja; warna cadangan mengikuti stok.') }],
+    maintenanceBlocks: [],
   },
 ];
 
@@ -152,7 +319,7 @@ export const initialRentals = [
       { id: 'photo', labelId: 'Foto kondisi awal', labelEn: 'Initial condition photo', done: false },
     ],
     activity: [
-      { id: 'a1', time: '27 Mei 2026 09.20', textId: 'Permintaan masuk dari katalog publik.', textEn: 'Request created from public catalogue.' },
+      { id: 'a1', time: '27 Mei 2026 09.20', textId: 'Pesanan masuk dari katalog publik.', textEn: 'Order created from public catalogue.' },
       { id: 'a2', time: '27 Mei 2026 10.05', textId: 'Stok varian M ditahan sementara.', textEn: 'Size M inventory held temporarily.' },
     ],
   },
@@ -287,10 +454,10 @@ export const initialNotifications = [
   {
     id: 'n2',
     tone: 'warning',
-    titleId: '2 permintaan tertahan',
-    titleEn: '2 stale requests',
-    copyId: 'Permintaan lebih dari 1 hari masih menahan stok.',
-    copyEn: 'Requests older than 1 day still hold stock.',
+    titleId: '2 pesanan tertahan',
+    titleEn: '2 stale orders',
+    copyId: 'Pesanan lebih dari 1 hari masih menahan stok.',
+    copyEn: 'Orders older than 1 day still hold stock.',
     targetRoute: '/admin/requests?tab=stale',
   },
   {

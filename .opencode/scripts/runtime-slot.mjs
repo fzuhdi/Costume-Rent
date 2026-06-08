@@ -5,27 +5,21 @@ import http from 'node:http';
 import net from 'node:net';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
+import { loadProjectConfig as loadAdapterConfig } from './lib/config.mjs';
+import { portsForSlot as configuredPortsForSlot, runtimeEnvForSlot } from './lib/runtime-slots.mjs';
 
 const root = process.cwd();
 const registryPath = path.join(root, '.opencode/state/runtime-slots.json');
-const projectConfig = loadProjectConfig();
+const projectConfig = loadAdapterConfig(root).config;
 const runtimeConfig = requiredObject(projectConfig.runtime, 'runtime');
-const slotStep = requiredNumber(runtimeConfig.slot_step, 'runtime.slot_step');
-const basePorts = {
-  frontend: requiredNumber(runtimeConfig.base_ports?.frontend, 'runtime.base_ports.frontend'),
-  backend: requiredNumber(runtimeConfig.base_ports?.backend, 'runtime.base_ports.backend'),
-  sqlite: requiredNumber(runtimeConfig.base_ports?.sqlite, 'runtime.base_ports.sqlite'),
-};
+requiredNumber(runtimeConfig.slot_step, 'runtime.slot_step');
+requiredNumber(runtimeConfig.base_ports?.frontend, 'runtime.base_ports.frontend');
+requiredNumber(runtimeConfig.base_ports?.backend, 'runtime.base_ports.backend');
+requiredNumber(runtimeConfig.base_ports?.sqlite, 'runtime.base_ports.sqlite');
 const composeConfig = requiredObject(runtimeConfig.compose, 'runtime.compose');
 const composeFile = requiredString(composeConfig.file, 'runtime.compose.file');
 const composeServices = requiredStringArray(composeConfig.services, 'runtime.compose.services');
 const composeServicesText = composeServices.join(' ');
-
-function loadProjectConfig() {
-  const file = path.join(root, '.opencode', 'project.json');
-  if (!fs.existsSync(file)) return {};
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
-}
 
 function requiredObject(value, key) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -58,10 +52,6 @@ function requiredStringArray(value, key) {
 
 function runtimeEnvKey(name, fallback) {
   return runtimeConfig.env_keys?.[name] || fallback;
-}
-
-function interpolateRuntimeValue(value, env) {
-  return String(value).replace(/\{([A-Z0-9_]+)\}/g, (_, key) => env[key] ?? '');
 }
 
 function fail(message, code = 1) {
@@ -143,35 +133,11 @@ function saveRegistry(registry) {
 }
 
 function portsForSlot(slot) {
-  return {
-    frontend: basePorts.frontend + slotStep * slot,
-    backend: basePorts.backend + slotStep * slot,
-    sqlite: basePorts.sqlite + slotStep * slot,
-  };
+  return configuredPortsForSlot(runtimeConfig, slot);
 }
 
 function envForSlot(slot, project) {
-  const ports = portsForSlot(slot);
-  const suffix = slot === 0 ? project : `${project}`;
-  const env = {
-    [runtimeEnvKey('container_prefix', 'APP_CONTAINER_PREFIX')]: project,
-    [runtimeEnvKey('frontend_host_port', 'FRONTEND_HOST_PORT')]: String(ports.frontend),
-    [runtimeEnvKey('backend_host_port', 'BACKEND_HOST_PORT')]: String(ports.backend),
-    [runtimeEnvKey('sqlite_web_host_port', 'SQLITE_WEB_HOST_PORT')]: String(ports.sqlite),
-    [runtimeEnvKey('db_volume', 'APP_DB_VOLUME')]: `${runtimeConfig.volume_prefixes?.db || 'app_db'}_${suffix}`,
-    [runtimeEnvKey('frontend_node_modules_volume', 'APP_FRONTEND_NODE_MODULES_VOLUME')]: `${runtimeConfig.volume_prefixes?.frontend_node_modules || 'app_frontend_node_modules'}_${suffix}`,
-    [runtimeEnvKey('vite_dev_port', 'VITE_DEV_PORT')]: String(runtimeConfig.vite_dev_port || 5173),
-    [runtimeEnvKey('playwright_base_url', 'PW_BASE_URL')]: `http://localhost:${ports.frontend}`,
-    [runtimeEnvKey('playwright_output_dir', 'PW_OUTPUT_DIR')]: slot === 0 ? 'test-results' : `test-results-${project}`,
-    [runtimeEnvKey('playwright_json_output', 'PW_JSON_OUTPUT')]: slot === 0 ? 'test-results/results.json' : `test-results-${project}/results.json`,
-    [runtimeEnvKey('playwright_html_report', 'PW_HTML_REPORT')]: slot === 0 ? 'playwright-report' : `playwright-report-${project}`,
-  };
-
-  for (const [key, value] of Object.entries(runtimeConfig.env_values || {})) {
-    env[key] = interpolateRuntimeValue(value, env);
-  }
-
-  return env;
+  return runtimeEnvForSlot(projectConfig, root, slot, project);
 }
 
 function isPortFree(port) {

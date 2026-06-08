@@ -18,5 +18,19 @@ export function usePersistentState(key, fallback) {
     }
   }, [key, state]);
 
+  useEffect(() => {
+    const handleStorage = (event) => {
+      if (event.key !== key) return;
+      try {
+        setState(event.newValue ? JSON.parse(event.newValue) : fallback);
+      } catch {
+        setState(fallback);
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [fallback, key]);
+
   return [state, setState];
 }

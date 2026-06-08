@@ -4,6 +4,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { spawnSync } from 'node:child_process';
+import {
+  LEGACY_WORKFLOW_MODE_MAP,
+  loadProjectConfig as loadAdapterConfig,
+  workflowModeEnabled,
+} from './lib/config.mjs';
+import { parseStructuredOutput as parseWorkerFields } from './lib/worker-output.mjs';
 
 const root = process.cwd();
 
@@ -19,6 +25,7 @@ const STATE_VALUES = new Set([
   'green-testing',
   'refactoring',
   'final-review',
+  'workflow-maintenance',
   'ticket-complete',
   'regression-gating',
   'plan-complete',
@@ -29,6 +36,9 @@ const STATE_VALUES = new Set([
 const TICKET_STATUSES = new Set(['draft', 'review', 'ready', 'in_progress', 'blocked', 'complete']);
 const PLAN_STATUSES = new Set(['draft', 'ready', 'in_progress', 'blocked', 'complete']);
 const EXECUTABLE_TYPES = new Set(['feature', 'bug']);
+const STRICT_TDD_POLICY = 'strict-tdd';
+const NON_STRICT_POLICIES = new Set(['exploratory', 'light-checks']);
+const WORKFLOW_MAINTENANCE_STAGE = 'workflow-maintenance';
 const SETUP_FAILURE_PATTERNS = [
   /no tests found/i,
   /cannot find module/i,
@@ -44,7 +54,7 @@ function usage() {
        node .opencode/scripts/workflow-runner.mjs --target TICKET-* --run-ticket [--dry-run] [--json] [--output-file <path>] [--after-red-checkpoint-sha <sha>]
        node .opencode/scripts/workflow-runner.mjs --target PLAN-* --run-plan [--dry-run] [--json] [--output-file <path>]
        node .opencode/scripts/workflow-runner.mjs --target TICKET-* --run-green [--dry-run] [--json] [--recorded-test-file <path>] [--recorded-test-title <title>]
-       node .opencode/scripts/workflow-runner.mjs --target TICKET-* --validate-worker-output <sdet-red|developer-green|developer-refactor|reviewer> --output-file <path> [--json]
+       node .opencode/scripts/workflow-runner.mjs --target TICKET-* --validate-worker-output <sdet-red|developer-green|developer-refactor|reviewer|workflow-maintenance> --output-file <path> [--json]
        node .opencode/scripts/workflow-runner.mjs --reconcile [--target PLAN-*|TICKET-*] [--json]
        node .opencode/scripts/workflow-runner.mjs --target PLAN-*|TICKET-* --next-task [--json]
        node .opencode/scripts/workflow-runner.mjs --target PLAN-*|TICKET-* --ingest-worker-output <path> [--json]
@@ -253,13 +263,24 @@ function writeJson(filePath, value) {
 }
 
 function parseScalar(value) {
-  const trimmed = value.trim();
+  const trimmed = String(value || '').trim();
+  const quoted = trimmed.match(/^(['"])([\s\S]*)\1$/);
+  if (quoted) return quoted[2];
+
+  const inlineArray = trimmed.match(/^\[(.*)\]$/);
+  if (inlineArray) {
+    const body = inlineArray[1].trim();
+    if (!body) return [];
+    return body.split(',')
+      .map(item => parseScalar(item))
+      .filter(item => item !== '');
+  }
+
   if (trimmed === 'null') return null;
   if (trimmed === 'true') return true;
   if (trimmed === 'false') return false;
   if (/^-?\d+$/.test(trimmed)) return Number(trimmed);
-  const quoted = trimmed.match(/^(['"])([\s\S]*)\1$/);
-  return quoted ? quoted[2] : trimmed;
+  return trimmed;
 }
 
 function parseFrontmatter(filePath) {
@@ -272,18 +293,40 @@ function parseFrontmatter(filePath) {
   const data = {};
   const errors = [];
   const lines = match[1].split(/\r?\n/);
+  let currentListKey = null;
 
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
 
-    const item = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$/);
-    if (!item) {
-      errors.push(`Unsupported frontmatter line in ${rel(filePath)}: ${trimmed}`);
+    const listItem = line.match(/^\s+-\s*(.*)$/);
+    if (listItem) {
+      if (!currentListKey) {
+        errors.push(`Unsupported frontmatter list item in ${rel(filePath)}: ${trimmed}`);
+        continue;
+      }
+      if (!Array.isArray(data[currentListKey])) data[currentListKey] = data[currentListKey] ? [data[currentListKey]] : [];
+      data[currentListKey].push(parseScalar(listItem[1]));
       continue;
     }
 
-    data[item[1]] = parseScalar(item[2]);
+    const item = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$/);
+    if (!item) {
+      errors.push(`Unsupported frontmatter line in ${rel(filePath)}: ${trimmed}`);
+      currentListKey = null;
+      continue;
+    }
+
+    const key = item[1];
+    const value = item[2].trim();
+    if (value === '') {
+      data[key] = [];
+      currentListKey = key;
+      continue;
+    }
+
+    data[key] = parseScalar(value);
+    currentListKey = null;
   }
 
   if (errors.length) return { ok: false, data, error: errors.join('; ') };
@@ -379,7 +422,13 @@ function checkProjectRoot(report) {
 
 function checkProjectConfig(report) {
   const projectPath = path.join(root, '.opencode', 'project.json');
-  const parsed = readJson(projectPath);
+  let parsed;
+
+  try {
+    parsed = { ok: true, value: loadAdapterConfig(root).config, error: null };
+  } catch (error) {
+    parsed = { ok: false, value: null, error: `${rel(projectPath)} is invalid or missing required template fields: ${error.message}` };
+  }
 
   if (!parsed.ok) {
     report.blockers.push(parsed.error);
@@ -394,8 +443,15 @@ function checkProjectConfig(report) {
     return parsed.value;
   }
 
-  addCheck(report, 'project-config', 'passed', `${testRoots.length} test root(s)`);
+  const workflowModes = parsed.value.workflow?.enabled_modes || [];
+  addCheck(report, 'project-config', 'passed', `${testRoots.length} test root(s); modes=${workflowModes.join(',') || 'none'}`);
   return parsed.value;
+}
+
+function checkWorkflowMode(report, projectConfig, values) {
+  if (!projectConfig) return;
+
+  addCheck(report, 'workflow-modes', 'passed', `${projectConfig.workflow.default_mode}; enabled=${projectConfig.workflow.enabled_modes.join(',')}; stages=${[...projectConfig.workflow.product_stages, ...projectConfig.workflow.internal_stages].join(',')}; policies=${projectConfig.workflow.quality_policies.join(',')}`);
 }
 
 function checkWorktree(report, targetProvided, allowDirtyForGreenRerun, allowDirtyForDeferredTarget) {
@@ -795,6 +851,77 @@ function compareTickets(left, right) {
   return left.id.localeCompare(right.id);
 }
 
+function configuredStages(projectConfig) {
+  return new Set([
+    ...(projectConfig?.workflow?.product_stages || []),
+    ...(projectConfig?.workflow?.internal_stages || []),
+  ]);
+}
+
+function configuredQualityPolicies(projectConfig) {
+  return new Set(projectConfig?.workflow?.quality_policies || []);
+}
+
+function legacyWorkflowMapping(mode, projectConfig) {
+  if (!mode) return null;
+  return projectConfig?.workflow?.legacy_mode_map?.[mode] || LEGACY_WORKFLOW_MODE_MAP[mode] || null;
+}
+
+function hasStrictTddFields(fm) {
+  return Boolean(fm.test_case_id || fm.red_expectation || fm.green_expectation);
+}
+
+function normalizeTicketWorkflow(fm, projectConfig) {
+  const legacy = legacyWorkflowMapping(fm.workflow_mode, projectConfig);
+  const inferredStrict = !fm.workflow_stage && !fm.quality_policy && !legacy && hasStrictTddFields(fm);
+  const workflowStage = fm.workflow_stage
+    || legacy?.workflow_stage
+    || (inferredStrict ? 'integrate-backend' : projectConfig?.workflow?.default_stage)
+    || 'design-ui';
+  const qualityPolicy = fm.quality_policy
+    || legacy?.quality_policy
+    || (inferredStrict ? STRICT_TDD_POLICY : projectConfig?.workflow?.default_quality_policy)
+    || 'exploratory';
+  return {
+    workflowStage,
+    qualityPolicy,
+    legacyMode: fm.workflow_mode || null,
+    executionKind: qualityPolicy === STRICT_TDD_POLICY
+      ? STRICT_TDD_POLICY
+      : workflowStage === WORKFLOW_MAINTENANCE_STAGE && NON_STRICT_POLICIES.has(qualityPolicy)
+        ? WORKFLOW_MAINTENANCE_STAGE
+        : 'non-strict',
+  };
+}
+
+function isStrictTicketWorkflow(workflow) {
+  return workflow.qualityPolicy === STRICT_TDD_POLICY;
+}
+
+function hasDeterministicExecutor(workflow) {
+  return workflow.executionKind === STRICT_TDD_POLICY || workflow.executionKind === WORKFLOW_MAINTENANCE_STAGE;
+}
+
+function dependencyIds(ticket) {
+  const value = ticket.frontmatter.depends_on;
+  if (value === undefined || value === null || value === '' || value === '[]') return [];
+  const values = Array.isArray(value) ? value : String(value).split(',');
+  return values
+    .map(item => String(item).trim())
+    .filter(Boolean);
+}
+
+function analyzeDependencies(ticket, ticketsById) {
+  const dependsOn = dependencyIds(ticket);
+  const invalid = dependsOn.filter(id => !/^TICKET-\d{8}-\d{3}$/.test(id));
+  const missing = dependsOn.filter(id => /^TICKET-\d{8}-\d{3}$/.test(id) && !ticketsById.has(id));
+  const unmet = dependsOn.filter((id) => {
+    const dependency = ticketsById.get(id);
+    return dependency && dependency.frontmatter.status !== 'complete';
+  });
+  return { dependsOn, invalid, missing, unmet };
+}
+
 function loadTicket(ticketId, report) {
   const filePath = ticketPath(ticketId);
   const parsed = parseFrontmatter(filePath);
@@ -810,19 +937,31 @@ function loadTicket(ticketId, report) {
   return ticket;
 }
 
-function validateTicket(ticket, manifest, report) {
+function validateTicket(ticket, manifest, report, projectConfig) {
   const fm = ticket.frontmatter;
+  const workflow = normalizeTicketWorkflow(fm, projectConfig);
+  const knownStages = configuredStages(projectConfig);
+  const knownPolicies = configuredQualityPolicies(projectConfig);
 
   if (fm.id !== ticket.id) report.blockers.push(`Ticket frontmatter id ${fm.id ?? 'missing'} does not match ${ticket.id}`);
   if (!fm.plan_id) report.blockers.push(`Ticket ${ticket.id} is missing plan_id`);
-  if (!EXECUTABLE_TYPES.has(fm.type)) report.blockers.push(`Ticket ${ticket.id} type ${fm.type ?? 'missing'} is not executable; only feature or bug tickets run.`);
   if (!TICKET_STATUSES.has(fm.status)) report.blockers.push(`Ticket ${ticket.id} has invalid status ${fm.status ?? 'missing'}`);
-  if (!fm.test_case_id) report.blockers.push(`Ticket ${ticket.id} is missing test_case_id`);
-  if (!fm.red_expectation) report.blockers.push(`Ticket ${ticket.id} is missing red_expectation`);
-  if (!fm.green_expectation) report.blockers.push(`Ticket ${ticket.id} is missing green_expectation`);
+  if (!knownStages.has(workflow.workflowStage)) report.blockers.push(`Ticket ${ticket.id} has unknown workflow_stage ${workflow.workflowStage}`);
+  if (!knownPolicies.has(workflow.qualityPolicy)) report.blockers.push(`Ticket ${ticket.id} has unknown quality_policy ${workflow.qualityPolicy}`);
 
-  const manifestEntry = fm.test_case_id ? manifest?.test_cases?.[fm.test_case_id] : null;
-  if (fm.test_case_id && !manifestEntry) report.blockers.push(`Ticket ${ticket.id} test_case_id ${fm.test_case_id} is not in the test-case manifest`);
+  const strictTicket = isStrictTicketWorkflow(workflow);
+  if (strictTicket && !workflowModeEnabled(projectConfig, 'strict-tdd')) {
+    report.blockers.push(`Ticket ${ticket.id} uses quality_policy strict-tdd, but workflow.enabled_modes does not include "strict-tdd".`);
+  }
+  if (strictTicket && !EXECUTABLE_TYPES.has(fm.type)) {
+    report.blockers.push(`Ticket ${ticket.id} type ${fm.type ?? 'missing'} is not valid for strict-tdd; only feature or bug tickets run through the strict FSM.`);
+  }
+  if (strictTicket && !fm.test_case_id) report.blockers.push(`Ticket ${ticket.id} is missing test_case_id`);
+  if (strictTicket && !fm.red_expectation) report.blockers.push(`Ticket ${ticket.id} is missing red_expectation`);
+  if (strictTicket && !fm.green_expectation) report.blockers.push(`Ticket ${ticket.id} is missing green_expectation`);
+
+  const manifestEntry = strictTicket && fm.test_case_id ? manifest?.test_cases?.[fm.test_case_id] : null;
+  if (strictTicket && fm.test_case_id && !manifestEntry) report.blockers.push(`Ticket ${ticket.id} test_case_id ${fm.test_case_id} is not in the test-case manifest`);
 
   if (manifestEntry && manifestEntry.feature_id !== String(fm.test_case_id).split('-')[0]) {
     report.blockers.push(`Manifest feature ${manifestEntry.feature_id} does not match ${fm.test_case_id}`);
@@ -835,6 +974,11 @@ function validateTicket(ticket, manifest, report) {
     planId: fm.plan_id ?? null,
     ticketType: fm.type ?? null,
     status: fm.status ?? null,
+    workflowStage: workflow.workflowStage,
+    qualityPolicy: workflow.qualityPolicy,
+    executionKind: workflow.executionKind,
+    deterministicExecutor: hasDeterministicExecutor(workflow),
+    legacyWorkflowMode: workflow.legacyMode,
     testCaseId: fm.test_case_id ?? null,
     feature: manifestEntry?.feature_id ?? null,
     testType: manifestEntry?.test_type ?? null,
@@ -919,6 +1063,21 @@ function requireDirtyPathsWithin(report, roots, phase) {
   }
 
   addCheck(report, 'execution-worktree', 'passed', dirty.length ? `${phase}: dirty paths limited to ${allowedRoots.join(', ')}` : `${phase}: clean`);
+  return true;
+}
+
+function requireNoDirtyProductRoots(report, projectConfig, phase) {
+  const dirty = dirtyRepoPaths(report);
+  const productRoots = normalizedRoots(projectConfig?.code_roots || []);
+  const productChanges = dirty.filter(repoPath => productRoots.some(rootPath => pathIsUnder(repoPath, rootPath)));
+
+  if (productChanges.length) {
+    report.blockers.push(`Workflow-maintenance execution cannot modify product roots: ${productChanges.join(', ')}`);
+    addCheck(report, 'workflow-maintenance-product-roots', 'blocked', productChanges.join(', '));
+    return false;
+  }
+
+  addCheck(report, 'workflow-maintenance-product-roots', 'passed', productRoots.join(', ') || 'no product roots configured');
   return true;
 }
 
@@ -1098,14 +1257,7 @@ function summarizeFailure(output, status) {
 }
 
 function parseStructuredOutput(text) {
-  const fields = {};
-  const lines = String(text || '').split(/\r?\n/);
-  for (const line of lines) {
-    const match = line.match(/^([A-Z][A-Z0-9_]*):\s*(.*)$/);
-    if (!match) continue;
-    fields[match[1]] = match[2].trim();
-  }
-  return fields;
+  return parseWorkerFields(text);
 }
 
 function readWorkerOutputFile(outputFile) {
@@ -1118,7 +1270,7 @@ function readWorkerOutputFile(outputFile) {
 }
 
 function validateWorkerOutputFile(report, kind, outputFile, summary) {
-  const allowedKinds = new Set(['sdet-red', 'developer-green', 'developer-refactor', 'reviewer']);
+  const allowedKinds = new Set(['sdet-red', 'developer-green', 'developer-refactor', 'reviewer', 'workflow-maintenance']);
   if (!allowedKinds.has(kind)) {
     report.blockers.push(`Unknown worker output validator ${kind}; expected ${[...allowedKinds].join(', ')}.`);
     return null;
@@ -1138,6 +1290,13 @@ function validateWorkerOutputFile(report, kind, outputFile, summary) {
     file: file.value.repoPath,
     parsedFields: Object.keys(fields).sort(),
   };
+
+  if (kind === 'workflow-maintenance') {
+    validateWorkflowMaintenanceFields(fields, summary, report, kind);
+    if (report.blockers.length) return null;
+    addCheck(report, 'worker-output-validation', 'passed', kind);
+    return fields;
+  }
 
   validateBaseWorkerFields(fields, summary, report, kind);
 
@@ -1168,6 +1327,24 @@ function validateWorkerOutputFile(report, kind, outputFile, summary) {
   if (report.blockers.length) return null;
   addCheck(report, 'worker-output-validation', 'passed', kind);
   return fields;
+}
+
+function validateWorkflowMaintenanceFields(fields, summary, report, context) {
+  expectEnum(fields, 'OUTCOME', new Set(['success', 'partial', 'blocked']), report, context);
+  const ticketId = expectField(fields, 'TICKET_ID', report, context);
+  expectField(fields, 'CHANGE_ID', report, context);
+  expectField(fields, 'SUMMARY', report, context);
+  expectField(fields, 'VALIDATION', report, context);
+  expectField(fields, 'FILES_MODIFIED', report, context);
+  expectEnum(fields, 'RESTART_REQUIRED', new Set(['yes', 'no']), report, context);
+  expectField(fields, 'NOTES', report, context);
+
+  if (summary?.id && ticketId && ticketId !== summary.id) {
+    report.blockers.push(`${context} TICKET_ID ${ticketId} does not match target ticket ${summary.id}.`);
+    addCheck(report, `${context}-ticket-match`, 'failed', `${ticketId} != ${summary.id}`);
+  } else if (summary?.id && ticketId) {
+    addCheck(report, `${context}-ticket-match`, 'passed', ticketId);
+  }
 }
 
 function expectField(fields, name, report, context) {
@@ -1272,6 +1449,7 @@ const WORKER_PHASES = {
   'green-building': { role: 'developer', mode: 'green' },
   refactoring: { role: 'developer', mode: 'refactor' },
   'final-review': { role: 'reviewer', mode: 'final-review' },
+  'workflow-maintenance': { role: 'workflow-engineer', mode: 'workflow-maintenance' },
 };
 
 function buildWorkerTaskPayload(report, summary, role, mode, state) {
@@ -1280,14 +1458,16 @@ function buildWorkerTaskPayload(report, summary, role, mode, state) {
     '--role', role,
     '--mode', mode,
     '--ticket-id', summary.id,
-    '--test-case-id', summary.testCaseId,
     '--worktree-root', root,
     '--ticket-file', summary.file,
     '--json',
   ];
 
+  if (summary.testCaseId) args.push('--test-case-id', summary.testCaseId);
   if (summary.planId) args.push('--plan-id', summary.planId);
   if (summary.ticketType) args.push('--ticket-type', summary.ticketType);
+  if (summary.workflowStage) args.push('--workflow-stage', summary.workflowStage);
+  if (summary.qualityPolicy) args.push('--quality-policy', summary.qualityPolicy);
   if (state?.orchestrator?.branch) args.push('--branch', state.orchestrator.branch);
   if (state?.orchestrator?.baseBranch) args.push('--base-branch', state.orchestrator.baseBranch);
   if (summary.testType) args.push('--test-interface', summary.testType);
@@ -1366,7 +1546,7 @@ function emitTicketNextTask(report, summary, state) {
   addCheck(report, 'next-task', 'passed', `${phase} -> ${worker.role}:${worker.mode}`);
 }
 
-function emitNextTask(report, values, state, manifest, planAnalysis) {
+function emitNextTask(report, values, state, manifest, planAnalysis, projectConfig) {
   if (report.blockers.length) {
     report.outcome = 'blocked';
     report.exitCode = 1;
@@ -1389,13 +1569,13 @@ function emitNextTask(report, values, state, manifest, planAnalysis) {
       report.nextStep = `Active plan ticket ${runtime.currentTicket} could not be loaded.`;
       return;
     }
-    validateTicket(activeTicket, manifest, report);
+    validateTicket(activeTicket, manifest, report, projectConfig);
     emitTicketNextTask(report, report.targetSummary, state);
     return;
   }
 
   if (planAnalysis?.reviewTicket) {
-    const summary = selectPlanTicketSummary(planAnalysis.reviewTicket);
+    const summary = selectPlanTicketSummary(planAnalysis.reviewTicket, projectConfig);
     const task = buildWorkerTaskPayload(report, summary, 'reviewer', 'ticket-audit', state);
     if (!task) {
       report.outcome = 'blocked';
@@ -1781,7 +1961,8 @@ function recordPlanRuntime(state, planId, status) {
   state.ticket.status = status;
 }
 
-function selectPlanTicketSummary(ticket) {
+function selectPlanTicketSummary(ticket, projectConfig = null) {
+  const workflow = normalizeTicketWorkflow(ticket.frontmatter, projectConfig);
   return {
     type: 'ticket',
     id: ticket.id,
@@ -1789,6 +1970,11 @@ function selectPlanTicketSummary(ticket) {
     planId: ticket.frontmatter.plan_id ?? null,
     ticketType: ticket.frontmatter.type ?? null,
     status: ticket.frontmatter.status ?? null,
+    workflowStage: workflow.workflowStage,
+    qualityPolicy: workflow.qualityPolicy,
+    executionKind: workflow.executionKind,
+    deterministicExecutor: hasDeterministicExecutor(workflow),
+    legacyWorkflowMode: workflow.legacyMode,
     testCaseId: ticket.frontmatter.test_case_id ?? null,
     feature: String(ticket.frontmatter.test_case_id || '').split('-')[0] || null,
     testType: null,
@@ -1816,7 +2002,10 @@ function withTicketSummary(report, summary, values, fn) {
 }
 
 function runPlanRegression(report, values, planAnalysis, manifest, projectConfig, state) {
-  const completeTickets = planAnalysis.tickets.filter(ticket => ticket.frontmatter.status === 'complete' && EXECUTABLE_TYPES.has(ticket.frontmatter.type));
+  const completeTickets = planAnalysis.tickets.filter((ticket) => {
+    const workflow = normalizeTicketWorkflow(ticket.frontmatter, projectConfig);
+    return ticket.frontmatter.status === 'complete' && workflow.qualityPolicy === STRICT_TDD_POLICY;
+  });
   const impactedSpecs = [...new Set(completeTickets
     .map(ticket => manifest?.test_cases?.[ticket.frontmatter.test_case_id]?.tests || [])
     .flat()
@@ -1824,8 +2013,7 @@ function runPlanRegression(report, values, planAnalysis, manifest, projectConfig
     .filter(Boolean))];
 
   if (!impactedSpecs.length) {
-    report.blockers.push(`Plan ${planAnalysis.frontmatter.id} has no impacted spec files for regression-gating.`);
-    addCheck(report, 'plan-regression', 'failed', 'no impacted specs');
+    addCheck(report, 'plan-regression', 'passed', 'no strict-tdd tickets require impacted-spec regression');
     return;
   }
 
@@ -1941,7 +2129,7 @@ function runPlan(report, values, state, manifest, projectConfig, planAnalysis) {
       return;
     }
     const planSummary = report.targetSummary;
-    validateTicket(activeTicket, manifest, report);
+    validateTicket(activeTicket, manifest, report, projectConfig);
     const ticketSummary = report.targetSummary;
     report.targetSummary = planSummary;
     withTicketSummary(report, ticketSummary, values, () => runTicket(report, values, state, manifest, projectConfig));
@@ -1960,7 +2148,7 @@ function runPlan(report, values, state, manifest, projectConfig, planAnalysis) {
       blockOnExecutionWorktree(report, 'Clean the worktree before applying review-ticket status updates.');
       return;
     }
-    const reviewSummary = selectPlanTicketSummary(reviewTicket);
+    const reviewSummary = selectPlanTicketSummary(reviewTicket, projectConfig);
     const fields = validateWorkerOutputFile(report, 'reviewer', values.outputFile, reviewSummary);
     if (!fields) {
       report.outcome = 'blocked';
@@ -1995,18 +2183,21 @@ function runPlan(report, values, state, manifest, projectConfig, planAnalysis) {
       return;
     }
     const planSummary = report.targetSummary;
-    validateTicket(nextTicket, manifest, report);
+    validateTicket(nextTicket, manifest, report, projectConfig);
     const ticketSummary = report.targetSummary;
     report.targetSummary = planSummary;
     withTicketSummary(report, ticketSummary, values, () => runTicket(report, values, state, manifest, projectConfig));
     if (report.blockers.length) return;
     refreshPlanDocument(values.target, values, report, 'in_progress');
-    report.nextStep = `Plan ${values.target} selected ${ticketSummary.id}. Capture the SDET RED final message and continue with --run-plan --output-file <path>.`;
+    report.nextStep = ticketSummary.executionKind === WORKFLOW_MAINTENANCE_STAGE
+      ? `Plan ${values.target} selected ${ticketSummary.id}. Dispatch workflow-engineer via --next-task, capture its final message, and continue with --run-plan --output-file <path>.`
+      : `Plan ${values.target} selected ${ticketSummary.id}. Capture the SDET RED final message and continue with --run-plan --output-file <path>.`;
     addCheck(report, 'plan-select-ticket', 'passed', ticketSummary.id);
     return;
   }
 
-  if (planAnalysis.tickets.length > 0 && planAnalysis.tickets.every(ticket => !EXECUTABLE_TYPES.has(ticket.frontmatter.type) || ticket.frontmatter.status === 'complete')) {
+  const deterministicTickets = planAnalysis.tickets.filter(ticket => hasDeterministicExecutor(normalizeTicketWorkflow(ticket.frontmatter, projectConfig)));
+  if (deterministicTickets.length > 0 && deterministicTickets.every(ticket => ticket.frontmatter.status === 'complete')) {
     const pendingIntegration = report.targetSummary?.pendingIntegrationTickets || [];
     if (pendingIntegration.length) {
       const details = pendingIntegration
@@ -2136,6 +2327,122 @@ function initTicketRunState(state, report, summary, values) {
   report.nextStep = `Ticket ${summary.id} entered red-writing. Capture the SDET RED final message to a file, then rerun with --run-ticket --output-file <path>${values.dryRun ? '' : ' to advance deterministically'}.`;
 }
 
+function initWorkflowMaintenanceRunState(state, report, summary, values) {
+  const orchestrator = cloneState(state.orchestrator);
+  const ticket = cloneState(state.ticket);
+  const branch = orchestrator.branch || ticket.branch || currentBranchName(report);
+  const baseBranch = orchestrator.baseBranch || ticket.baseBranch || null;
+
+  orchestrator.currentPlan = summary.planId;
+  orchestrator.currentTicket = summary.id;
+  orchestrator.currentFeature = null;
+  orchestrator.currentTestCase = null;
+  orchestrator.status = WORKFLOW_MAINTENANCE_STAGE;
+  orchestrator.iteration = 0;
+  orchestrator.branch = branch;
+  orchestrator.baseBranch = baseBranch;
+
+  ticket.currentPlan = summary.planId;
+  ticket.currentTicket = summary.id;
+  ticket.currentFeature = null;
+  ticket.currentTestCase = null;
+  ticket.currentTicketType = summary.ticketType;
+  ticket.status = WORKFLOW_MAINTENANCE_STAGE;
+  ticket.branch = branch;
+  ticket.baseBranch = baseBranch;
+
+  state.orchestrator = orchestrator;
+  state.ticket = ticket;
+  persistRuntimeState(state, report, values);
+  report.outcome = 'partial';
+  report.exitCode = 0;
+  report.nextStep = `Ticket ${summary.id} entered workflow-maintenance. Dispatch workflow-engineer via --next-task, capture its final message, then rerun with --run-ticket --output-file <path>.`;
+}
+
+function runWorkflowMaintenanceTicket(report, values, state, projectConfig) {
+  const runtime = state.orchestrator;
+  const summary = report.targetSummary;
+
+  if (report.targetType !== 'ticket') {
+    report.blockers.push('--run-ticket requires --target TICKET-YYYYMMDD-NNN.');
+  }
+
+  if (summary?.status === 'complete') {
+    report.outcome = 'complete';
+    report.exitCode = 0;
+    report.nextStep = `Ticket ${summary.id} is already complete; no runner-owned phase execution needed.`;
+    return;
+  }
+
+  if (summary?.workflowStage !== WORKFLOW_MAINTENANCE_STAGE || !NON_STRICT_POLICIES.has(summary?.qualityPolicy)) {
+    report.blockers.push(`Ticket ${summary?.id || values.target} has no lightweight deterministic executor for ${summary?.workflowStage || 'unknown'} / ${summary?.qualityPolicy || 'unknown'}.`);
+  }
+
+  if (report.blockers.length) {
+    report.outcome = 'blocked';
+    report.exitCode = 1;
+    report.nextStep = 'Resolve lightweight ticket blockers before advancing workflow-maintenance execution.';
+    return;
+  }
+
+  const activeForTarget = runtime?.currentTicket === summary.id && runtime?.status === WORKFLOW_MAINTENANCE_STAGE;
+  if (!activeForTarget) {
+    if (!values.dryRun && !requireCleanExecutionWorktree(report, 'workflow-maintenance start')) {
+      blockOnExecutionWorktree(report, 'Clean the worktree before starting workflow-maintenance execution.');
+      return;
+    }
+    initWorkflowMaintenanceRunState(state, report, summary, values);
+    return;
+  }
+
+  if (!values.outputFile) {
+    report.outcome = 'partial';
+    report.exitCode = 0;
+    report.nextStep = `Capture the workflow-engineer final message for ${summary.id} to a file, then rerun with --run-ticket --output-file <path>.`;
+    return;
+  }
+
+  const fields = validateWorkerOutputFile(report, 'workflow-maintenance', values.outputFile, summary);
+  if (!fields) {
+    report.outcome = 'blocked';
+    report.exitCode = 1;
+    report.nextStep = 'Workflow-engineer output failed deterministic validation.';
+    addCheck(report, 'run-ticket-phase', 'failed', WORKFLOW_MAINTENANCE_STAGE);
+    return;
+  }
+
+  if (!requireNoDirtyProductRoots(report, projectConfig, WORKFLOW_MAINTENANCE_STAGE)) {
+    blockOnExecutionWorktree(report, 'Workflow-maintenance output touched product roots; revert or move that work to a product ticket before completion.');
+    return;
+  }
+
+  if (fields.OUTCOME === 'blocked') {
+    const orchestrator = cloneState(state.orchestrator);
+    const ticket = cloneState(state.ticket);
+    orchestrator.status = 'blocked';
+    ticket.status = 'blocked';
+    state.orchestrator = orchestrator;
+    state.ticket = ticket;
+    persistRuntimeState(state, report, values);
+    report.outcome = 'blocked';
+    report.exitCode = 1;
+    report.nextStep = `Workflow-engineer blocked ${summary.id}: ${fields.NOTES || fields.SUMMARY}`;
+    addCheck(report, 'run-ticket-phase', 'blocked', `${WORKFLOW_MAINTENANCE_STAGE}:blocked`);
+    return;
+  }
+
+  if (fields.OUTCOME === 'partial') {
+    report.outcome = 'partial';
+    report.exitCode = 0;
+    report.nextStep = `Workflow-engineer reported partial progress for ${summary.id}. Continue workflow-maintenance and ingest a final success or blocked output.`;
+    addCheck(report, 'run-ticket-phase', 'passed', `${WORKFLOW_MAINTENANCE_STAGE}:partial`);
+    return;
+  }
+
+  finalizeTicketComplete(state, summary, report, values);
+  addCheck(report, 'run-ticket-phase', report.blockers.length ? 'failed' : 'passed', `${WORKFLOW_MAINTENANCE_STAGE} -> ticket-complete`);
+}
+
 function runTicketGreenPhase(report, values, state, manifest, projectConfig) {
   const greenValues = { ...values, runGreen: true };
   runGreenRerun(report, greenValues, state, manifest, projectConfig);
@@ -2147,7 +2454,7 @@ function finalizeTicketComplete(state, summary, report, values) {
 
   orchestrator.status = 'ticket-complete';
   if (!Array.isArray(orchestrator.completedTestCases)) orchestrator.completedTestCases = [];
-  if (!orchestrator.completedTestCases.includes(summary.testCaseId)) orchestrator.completedTestCases.push(summary.testCaseId);
+  if (summary.testCaseId && !orchestrator.completedTestCases.includes(summary.testCaseId)) orchestrator.completedTestCases.push(summary.testCaseId);
 
   ticket.status = 'ticket-complete';
   if (ticket.tickets?.[summary.id]) ticket.tickets[summary.id].status = 'complete';
@@ -2171,6 +2478,11 @@ function runTicket(report, values, state, manifest, projectConfig) {
 
   if (report.targetType !== 'ticket') {
     report.blockers.push('--run-ticket requires --target TICKET-YYYYMMDD-NNN.');
+  }
+
+  if (summary?.executionKind === WORKFLOW_MAINTENANCE_STAGE) {
+    runWorkflowMaintenanceTicket(report, values, state, projectConfig);
+    return;
   }
 
   if (!summary?.testCaseId) {
@@ -2781,7 +3093,7 @@ function readPlanTickets(planId, report) {
   return tickets.sort(compareTickets);
 }
 
-function validatePlan(planId, manifest, report) {
+function validatePlan(planId, manifest, report, projectConfig) {
   const filePath = planPath(planId);
   const parsed = parseFrontmatter(filePath);
 
@@ -2802,20 +3114,51 @@ function validatePlan(planId, manifest, report) {
     if (Object.prototype.hasOwnProperty.call(counts, status)) counts[status] += 1;
   }
 
-  const missingManifest = tickets
-    .filter(ticket => EXECUTABLE_TYPES.has(ticket.frontmatter.type))
-    .filter(ticket => !manifest?.test_cases?.[ticket.frontmatter.test_case_id])
-    .map(ticket => `${ticket.id}:${ticket.frontmatter.test_case_id}`);
+  const ticketsById = new Map(tickets.map(ticket => [ticket.id, ticket]));
+  const executableTickets = tickets.map(ticket => ({
+    ticket,
+    workflow: normalizeTicketWorkflow(ticket.frontmatter, projectConfig),
+    dependencies: analyzeDependencies(ticket, ticketsById),
+  }));
+
+  const missingManifest = executableTickets
+    .filter(item => item.workflow.qualityPolicy === STRICT_TDD_POLICY)
+    .filter(item => !manifest?.test_cases?.[item.ticket.frontmatter.test_case_id])
+    .map(item => `${item.ticket.id}:${item.ticket.frontmatter.test_case_id}`);
 
   if (missingManifest.length) {
-    report.blockers.push(`Plan ${planId} has executable tickets missing manifest entries: ${missingManifest.join(', ')}`);
+    report.blockers.push(`Plan ${planId} has strict-tdd tickets missing manifest entries: ${missingManifest.join(', ')}`);
+  }
+
+  const invalidDependencies = executableTickets
+    .filter(item => item.dependencies.invalid.length)
+    .map(item => `${item.ticket.id}:${item.dependencies.invalid.join(',')}`);
+  if (invalidDependencies.length) {
+    report.blockers.push(`Plan ${planId} has invalid depends_on ticket id(s): ${invalidDependencies.join('; ')}`);
+  }
+
+  const missingDependencies = executableTickets
+    .filter(item => item.dependencies.missing.length)
+    .map(item => `${item.ticket.id}:${item.dependencies.missing.join(',')}`);
+  if (missingDependencies.length) {
+    report.blockers.push(`Plan ${planId} has depends_on ticket(s) outside this plan or missing from docs/tickets: ${missingDependencies.join('; ')}`);
   }
 
   const reviewTicket = tickets.find(ticket => ticket.frontmatter.status === 'review');
-  const readyTicket = tickets.find(ticket => ticket.frontmatter.status === 'ready' && EXECUTABLE_TYPES.has(ticket.frontmatter.type));
-  const inProgressTicket = tickets.find(ticket => ticket.frontmatter.status === 'in_progress' && EXECUTABLE_TYPES.has(ticket.frontmatter.type));
+  const readyItems = executableTickets.filter(item => (
+    item.ticket.frontmatter.status === 'ready'
+    && hasDeterministicExecutor(item.workflow)
+  ));
+  const deferredReadyItems = readyItems.filter(item => item.dependencies.unmet.length);
+  const readyTicket = readyItems.find(item => item.dependencies.unmet.length === 0)?.ticket || null;
+  const inProgressTicket = executableTickets.find(item => (
+    item.ticket.frontmatter.status === 'in_progress'
+    && hasDeterministicExecutor(item.workflow)
+  ))?.ticket || null;
   const planBranch = `tdd/${planId}`;
-  const completedExecutableTickets = tickets.filter(ticket => ticket.frontmatter.status === 'complete' && EXECUTABLE_TYPES.has(ticket.frontmatter.type));
+  const completedExecutableTickets = executableTickets
+    .filter(item => item.ticket.frontmatter.status === 'complete' && hasDeterministicExecutor(item.workflow))
+    .map(item => item.ticket);
   const pendingIntegrationTickets = completedExecutableTickets
     .map(ticket => {
       const branch = `tdd/${ticket.id}`;
@@ -2837,6 +3180,7 @@ function validatePlan(planId, manifest, report) {
     nextReviewTicket: reviewTicket?.id ?? null,
     nextReadyTicket: readyTicket?.id ?? null,
     inProgressTicket: inProgressTicket?.id ?? null,
+    deferredReadyTickets: deferredReadyItems.map(item => ({ ticketId: item.ticket.id, unmet: item.dependencies.unmet })),
     planBranch,
     pendingIntegrationTickets,
   };
@@ -2848,7 +3192,12 @@ function validatePlan(planId, manifest, report) {
   } else {
     addCheck(report, 'plan-integration', 'passed', 'no pending completed ticket branches detected');
   }
-  return { frontmatter: fm, tickets, reviewTicket, readyTicket, inProgressTicket };
+  if (deferredReadyItems.length) {
+    addCheck(report, 'plan-dependencies', 'warning', `${deferredReadyItems.length} ready ticket(s) deferred by unmet depends_on`);
+  } else {
+    addCheck(report, 'plan-dependencies', 'passed', 'no ready tickets deferred by dependencies');
+  }
+  return { frontmatter: fm, tickets, reviewTicket, readyTicket, inProgressTicket, projectConfig };
 }
 
 function activeRunBlocksTarget(target, type, runtime, report) {
@@ -3002,6 +3351,16 @@ function chooseNextStep(report, type, target, planAnalysis = null) {
     }
 
     if (summary.status === 'ready' || summary.status === 'in_progress') {
+      if (summary.executionKind === WORKFLOW_MAINTENANCE_STAGE) {
+        report.outcome = 'ready';
+        report.nextStep = `Would start workflow-maintenance for ${target}: run --run-ticket to initialize, then use --next-task for workflow-engineer.`;
+        return;
+      }
+      if (summary.qualityPolicy !== STRICT_TDD_POLICY) {
+        report.outcome = 'ready';
+        report.nextStep = `Ticket ${target} uses ${summary.workflowStage}/${summary.qualityPolicy}; no lightweight deterministic executor is configured except workflow-maintenance.`;
+        return;
+      }
       report.outcome = 'ready';
       report.nextStep = `Would start strict TDD for ${target}: run --run-ticket to create the pre-red checkpoint, then use --next-task for SDET RED.`;
       return;
@@ -3038,7 +3397,10 @@ function chooseNextStep(report, type, target, planAnalysis = null) {
 
   if (planAnalysis?.readyTicket) {
     report.outcome = 'ready';
-    report.nextStep = `Would select ready executable ticket ${planAnalysis.readyTicket.id} for strict TDD.`;
+    const workflow = normalizeTicketWorkflow(planAnalysis.readyTicket.frontmatter, planAnalysis.projectConfig);
+    report.nextStep = workflow.executionKind === WORKFLOW_MAINTENANCE_STAGE
+      ? `Would select ready workflow-maintenance ticket ${planAnalysis.readyTicket.id}.`
+      : `Would select ready executable ticket ${planAnalysis.readyTicket.id} for ${workflow.workflowStage}/${workflow.qualityPolicy}.`;
     return;
   }
 
@@ -3130,6 +3492,7 @@ function buildReport(values) {
 
   checkProjectRoot(report);
   const projectConfig = checkProjectConfig(report);
+  checkWorkflowMode(report, projectConfig, values);
   const executionTarget = Boolean(values.target && (values.runGreen || values.runTicket || values.runPlan || values.ingestWorkerOutput));
   checkWorktree(report, executionTarget, values.runGreen, Boolean(values.runTicket || values.runPlan || values.ingestWorkerOutput));
   const manifest = checkManifest(report, Boolean(values.target));
@@ -3198,9 +3561,9 @@ function buildReport(values) {
   let planAnalysis = null;
   if (type === 'ticket') {
     const ticket = loadTicket(values.target, report);
-    if (ticket) validateTicket(ticket, manifest, report);
+    if (ticket) validateTicket(ticket, manifest, report, projectConfig);
   } else {
-    planAnalysis = validatePlan(values.target, manifest, report);
+    planAnalysis = validatePlan(values.target, manifest, report, projectConfig);
   }
 
   if (values.reconcile) {
@@ -3214,7 +3577,7 @@ function buildReport(values) {
   }
 
   if (values.nextTask) {
-    emitNextTask(report, values, state, manifest, planAnalysis);
+    emitNextTask(report, values, state, manifest, planAnalysis, projectConfig);
     return report;
   }
 
@@ -3264,9 +3627,12 @@ function printText(report) {
 
   if (report.targetSummary) {
     console.log(`TARGET_STATUS: ${report.targetSummary.status || 'unknown'}`);
+    if (report.targetSummary.workflowStage) console.log(`WORKFLOW_STAGE: ${report.targetSummary.workflowStage}`);
+    if (report.targetSummary.qualityPolicy) console.log(`QUALITY_POLICY: ${report.targetSummary.qualityPolicy}`);
     if (report.targetSummary.testCaseId) console.log(`TEST_CASE_ID: ${report.targetSummary.testCaseId}`);
     if (report.targetSummary.nextReadyTicket) console.log(`NEXT_READY_TICKET: ${report.targetSummary.nextReadyTicket}`);
     if (report.targetSummary.nextReviewTicket) console.log(`NEXT_REVIEW_TICKET: ${report.targetSummary.nextReviewTicket}`);
+    if (report.targetSummary.deferredReadyTickets?.length) console.log(`DEFERRED_READY_TICKETS: ${report.targetSummary.deferredReadyTickets.map(item => `${item.ticketId}(${item.unmet.join(',')})`).join(', ')}`);
     if (report.targetSummary.pendingIntegrationTickets?.length) console.log(`PENDING_INTEGRATION: ${report.targetSummary.pendingIntegrationTickets.map(item => item.ticketId).join(', ')}`);
   }
 

@@ -57,9 +57,9 @@ export const availabilityIcon = {
 };
 
 export const adminNav = [
-  { id: 'requests', key: 'admin.nav.requests', icon: ClipboardList, path: '/admin/requests' },
-  { id: 'rentals', key: 'admin.nav.rentals', icon: PackageCheck, path: '/admin/rentals' },
-  { id: 'catalogue', key: 'admin.nav.catalogue', icon: LayoutDashboard, path: '/admin/catalogue' },
-  { id: 'clients', key: 'admin.nav.clients', icon: Users, path: '/admin/clients' },
-  { id: 'settings', key: 'admin.nav.settings', icon: SlidersHorizontal, path: '/admin/settings' },
+  { id: 'requests', key: 'admin.nav.requests', mobileKey: 'admin.nav.short.requests', icon: ClipboardList, path: '/admin/requests' },
+  { id: 'rentals', key: 'admin.nav.rentals', mobileKey: 'admin.nav.short.rentals', icon: PackageCheck, path: '/admin/rentals' },
+  { id: 'catalogue', key: 'admin.nav.catalogue', mobileKey: 'admin.nav.short.catalogue', icon: LayoutDashboard, path: '/admin/catalogue' },
+  { id: 'clients', key: 'admin.nav.clients', mobileKey: 'admin.nav.short.clients', icon: Users, path: '/admin/clients' },
+  { id: 'settings', key: 'admin.nav.settings', mobileKey: 'admin.nav.short.settings', icon: SlidersHorizontal, path: '/admin/settings' },
 ];

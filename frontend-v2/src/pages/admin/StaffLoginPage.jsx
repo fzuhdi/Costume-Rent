@@ -4,7 +4,7 @@ import { Field } from '../../components/shared.jsx';
 
 export default function StaffLoginPage({ t, staffSession, setStaffSession }) {
   const location = useLocation();
-  const [username, setUsername] = useState(staffSession.username || 'staff');
+  const [username, setUsername] = useState(staffSession.username || 'admin');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 

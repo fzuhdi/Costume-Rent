@@ -1,1 +1,1 @@
-export { default } from './CustomerCataloguePage.jsx';
+export { default } from './CustomerHomePage.jsx';

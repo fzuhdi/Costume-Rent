@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend Design"
+  short_description: "Primary UI design and frontend polish"
+  default_prompt: "Use $frontend-design to design, critique, or improve a frontend interface."

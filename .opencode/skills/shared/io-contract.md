@@ -29,8 +29,9 @@ NOTES:
 ## Ticket Semantics
 
 - Normal TDD workflow calls require `TEST_CASE_ID`, `TICKET_ID`, `TICKET_FILE`, `TICKET_TYPE`, `TICKET_ACCEPTANCE_CRITERION`, `EXPECTED_OUTCOME`, `TEST_INTERFACE`, `RED_EXPECTATION`, and `GREEN_EXPECTATION`.
-- Executable workflow calls use `TICKET_TYPE: feature | bug`.
-- One worker call operates on exactly one ticket and one `TEST_CASE_ID`.
+- Strict-TDD workflow calls use `TICKET_TYPE: feature | bug`.
+- Non-strict workflow-maintenance calls use `WORKFLOW_STAGE: workflow-maintenance` and `QUALITY_POLICY: exploratory | light-checks` without `TEST_CASE_ID`, `RED_EXPECTATION`, or `GREEN_EXPECTATION`.
+- One strict-TDD worker call operates on exactly one ticket and one `TEST_CASE_ID`; one workflow-maintenance worker call operates on exactly one ticket and no test case.
 - Sibling test cases belong in `DEFERRED_TEST_CASE_IDS` and must not be implemented or tested opportunistically.
 
 ## SDET RED Extension
@@ -84,6 +85,22 @@ REVIEW_VERDICT: ticket-ready | ticket-still-ambiguous | red-test-wrong | ticket-
 REASON: {plain-language explanation citing ticket/test case}
 DIFF_SIZE_LINES: N | not_applicable
 CHECKPOINT_SHA_REVIEWED: {sha or "none"}
+```
+
+## Workflow Maintenance Extension
+
+Used only for non-strict `workflow_stage: workflow-maintenance` tickets.
+
+```text
+OUTCOME: success | partial | blocked
+TICKET_ID: {TICKET-YYYYMMDD-NNN}
+CHANGE_ID: {WF-YYYYMMDD-name or none}
+SUMMARY: {one-line summary}
+VALIDATION: {commands/checks run and result}
+FILES_MODIFIED:
+- path/to/file - {what changed, or "none"}
+RESTART_REQUIRED: yes | no
+NOTES: {blockers, risks, or none}
 ```
 
 ## Outcome Semantics

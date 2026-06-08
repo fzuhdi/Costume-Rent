@@ -6,7 +6,8 @@ const devPort = Number(process.env.VITE_DEV_PORT || process.env.PORT || 5174);
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: '127.0.0.1',
+    host: '0.0.0.0',
     port: devPort,
+    strictPort: true,
   },
 });

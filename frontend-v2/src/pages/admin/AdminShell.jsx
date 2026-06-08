@@ -1,8 +1,9 @@
-import { AlertTriangle, Bell, ChevronRight, Clock, Info, Menu, X } from 'lucide-react';
+import { AlertTriangle, Bell, ChevronRight, Clock, Info, LogOut, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, Navigate, NavLink, useParams } from 'react-router-dom';
+import { Link, Navigate, NavLink, useLocation, useParams } from 'react-router-dom';
 import { adminNav } from '../../constants/ui.js';
-import { LocaleButton, Metric, StatusPill } from '../../components/shared.jsx';
+import AdminBottomSheet from '../../components/admin/AdminBottomSheet.jsx';
+import { LocaleButton, Metric, NotificationRow, StatusPill } from '../../components/shared.jsx';
 import { getAdminCopy, getAdminMetrics, getAdminTitle, localizedData, resolveTagline } from '../../lib/rental-utils.js';
 import CatalogueAdmin from './CatalogueAdmin.jsx';
 import ClientsAdmin from './ClientsAdmin.jsx';
@@ -12,6 +13,7 @@ import SettingsAdmin from './SettingsAdmin.jsx';
 
 export default function AdminShell(props) {
   const { section = 'requests' } = useParams();
+  const location = useLocation();
   const { locale, setLocale, t, settings, rentals, notifications, setStaffSession } = props;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -25,6 +27,8 @@ export default function AdminShell(props) {
   const metrics = getAdminMetrics(rentals);
   const activeNotifications = notifications.filter((notification) => notification.resolved !== true);
   const unresolvedNotifications = activeNotifications.length;
+  const isOperationalSection = section === 'requests' || section === 'rentals';
+  const hasSelectedOrder = isOperationalSection && new URLSearchParams(location.search).has('reference');
 
   if (section === 'notifications') {
     return <Navigate to="/admin/requests" replace />;
@@ -36,15 +40,29 @@ export default function AdminShell(props) {
         {t('common.skip')}
       </a>
       <div className="ops-shell">
-        <button className={`sidebar-backdrop ${sidebarOpen ? 'open' : ''}`} type="button" aria-label={t('common.close')} onClick={() => setSidebarOpen(false)} />
-        <aside className={`ops-sidebar ${sidebarOpen ? 'open' : ''}`} aria-label={t('admin.sidebar.aria')}>
-          <Link className="brand" to="/admin/requests" aria-label={t('brand.adminAria')}>
-            <span className="brand-mark">CR</span>
-            <span>
-              <strong>{settings.brandName}</strong>
-              <small>{resolveTagline(settings, 'staff', t)}</small>
-            </span>
-          </Link>
+        <AdminBottomSheet
+          as="aside"
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          mountWhenClosed
+          modal={false}
+          className="ops-sidebar"
+          backdropClassName="sidebar-backdrop"
+          ariaLabel={t('admin.sidebar.aria')}
+          closeLabel={t('common.close')}
+        >
+          <div className="sidebar-head">
+            <Link className="brand" to="/admin/requests" aria-label={t('brand.adminAria')}>
+              <span className="brand-mark">CR</span>
+              <span>
+                <strong>{settings.brandName}</strong>
+                <small>{resolveTagline(settings, 'staff', t)}</small>
+              </span>
+            </Link>
+            <button className="sidebar-close-button" type="button" aria-label={t('common.close')} onClick={() => setSidebarOpen(false)}>
+              <X aria-hidden="true" />
+            </button>
+          </div>
           <nav className="workspace-nav">
             {adminNav.map((item) => {
               const Icon = item.icon;
@@ -56,18 +74,18 @@ export default function AdminShell(props) {
               );
             })}
           </nav>
-          <div className="sidebar-card">
-            <StatusPill type="custom" value={t('admin.sidebar.stale')} tone="warning" icon={Clock} />
-            <p>{t('admin.sidebar.copy')}</p>
+          <div className="sidebar-utility-row">
+            <LocaleButton locale={locale} setLocale={setLocale} t={t} />
+            <button className="outline-button sidebar-logout-button" type="button" onClick={() => setStaffSession({ isAuthenticated: false, username: '' })}>
+              <LogOut aria-hidden="true" />
+              <span>{t('staff.logout')}</span>
+            </button>
           </div>
-        </aside>
+        </AdminBottomSheet>
 
-        <main className="ops-main" id="admin-content">
+        <main className={`ops-main ${hasSelectedOrder ? 'mobile-detail-active' : ''}`} id="admin-content">
           <header className="ops-header">
             <div className="ops-title-row">
-              <button className="admin-menu-button" type="button" onClick={() => setSidebarOpen(true)} aria-label={t('admin.sidebar.aria')}>
-                <Menu aria-hidden="true" />
-              </button>
               <div>
                 <span className="section-kicker">{t('admin.header.kicker')}</span>
                 <h1>{getAdminTitle(section, t)}</h1>
@@ -78,20 +96,33 @@ export default function AdminShell(props) {
               <LocaleButton locale={locale} setLocale={setLocale} t={t} />
               <div className="notification-popover">
                 <button
-                  className="notification-nav-button"
+                  className={`notification-nav-button ${notificationsOpen ? 'active' : ''}`}
                   type="button"
                   aria-expanded={notificationsOpen}
                   aria-label={t('admin.notifications.headerAria', { count: unresolvedNotifications })}
                   onClick={() => setNotificationsOpen((open) => !open)}
                 >
-                  {notificationsOpen ? <X aria-hidden="true" /> : <Bell aria-hidden="true" />}
+                  <span className="notification-nav-button-icon-stack" aria-hidden="true">
+                    <Bell className="notification-nav-button-icon bell" />
+                    <X className="notification-nav-button-icon close" />
+                  </span>
                   {unresolvedNotifications > 0 ? <b>{unresolvedNotifications}</b> : null}
                 </button>
-                {notificationsOpen ? (
-                  <div className="notification-popover-panel" role="dialog" aria-label={t('admin.notifications.open')}>
+                <AdminBottomSheet
+                  open={notificationsOpen}
+                  onClose={() => setNotificationsOpen(false)}
+                  role="dialog"
+                  className="notification-popover-panel"
+                  backdropClassName="notification-popover-scrim"
+                  ariaLabel={t('admin.notifications.open')}
+                  closeLabel={t('common.close')}
+                >
                     <div className="notification-popover-head">
                       <strong>{t('admin.notifications.short')}</strong>
                       <span>{t('admin.notifications.unresolvedCount', { count: unresolvedNotifications })}</span>
+                      <button className="icon-button notification-popover-close" type="button" aria-label={t('common.close')} onClick={() => setNotificationsOpen(false)}>
+                        <X aria-hidden="true" />
+                      </button>
                     </div>
                     {activeNotifications.length === 0 ? (
                       <p className="notification-empty">{t('admin.notifications.empty')}</p>
@@ -99,43 +130,42 @@ export default function AdminShell(props) {
                       activeNotifications.map((notification) => {
                         const Icon = notificationToneIcon(notification.tone);
                         return (
-                          <Link
+                          <NotificationRow
+                            as={Link}
                             className="notification-popover-item"
                             to={notificationTarget(notification)}
                             key={notification.id}
                             onClick={() => setNotificationsOpen(false)}
+                            tone={notification.tone}
+                            severityLabel={t(`admin.notifications.tone.${notification.tone}`)}
+                            severityIcon={Icon}
+                            title={localizedData(notification, 'title', t)}
+                            copy={localizedData(notification, 'copy', t)}
                           >
-                            <span className={`notification-severity ${notification.tone}`}>
-                              <Icon aria-hidden="true" />
-                              {t(`admin.notifications.tone.${notification.tone}`)}
-                            </span>
-                            <div>
-                              <strong>{localizedData(notification, 'title', t)}</strong>
-                              <p>{localizedData(notification, 'copy', t)}</p>
-                            </div>
                             <span className="notification-context">
                               {t('admin.notifications.context')}
                               <ChevronRight aria-hidden="true" />
                             </span>
-                          </Link>
+                          </NotificationRow>
                         );
                       })
                     )}
-                  </div>
-                ) : null}
+                </AdminBottomSheet>
               </div>
-              <button className="outline-button" type="button" onClick={() => setStaffSession({ isAuthenticated: false, username: '' })}>
-                {t('staff.logout')}
+              <button className="outline-button admin-logout-button" type="button" onClick={() => setStaffSession({ isAuthenticated: false, username: '' })}>
+                <LogOut aria-hidden="true" />
+                <span>{t('staff.logout')}</span>
               </button>
             </div>
           </header>
 
-          <section className="ops-metrics" aria-label={t('admin.metrics.aria')}>
-            <Metric value={metrics.requested} title={t('admin.metrics.new')} copy={t('admin.metrics.newCopy')} to="/admin/requests?tab=all&sort=stale" />
-            <Metric value={metrics.ready} title={t('admin.metrics.pickup')} copy={t('admin.metrics.pickupCopy')} to="/admin/rentals?status=ready" />
-            <Metric value={metrics.returnedOpen} title={t('admin.metrics.returned')} copy={t('admin.metrics.returnedCopy')} to="/admin/requests?tab=returned" />
-            <Metric value={metrics.overdue} title={t('admin.metrics.overdue')} copy={t('admin.metrics.overdueCopy')} to="/admin/rentals?status=on_rent" />
+          <section className="mobile-page-heading" aria-label={getAdminTitle(section, t)}>
+            <span className="section-kicker">{t('admin.header.kicker')}</span>
+            <h1>{getAdminTitle(section, t)}</h1>
+            <p>{getAdminCopy(section, t)}</p>
           </section>
+
+          {isOperationalSection ? <SectionOperationsSummary section={section} metrics={metrics} t={t} /> : null}
 
           {section === 'requests' ? <RequestsAdmin {...props} /> : null}
           {section === 'rentals' ? <RentalsAdmin {...props} /> : null}
@@ -143,8 +173,52 @@ export default function AdminShell(props) {
           {section === 'clients' ? <ClientsAdmin {...props} /> : null}
           {section === 'settings' ? <SettingsAdmin {...props} /> : null}
         </main>
+        <nav className="mobile-admin-tabbar" aria-label={t('nav.adminAria')}>
+          {adminNav.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink to={item.path} key={item.id}>
+                <Icon aria-hidden="true" />
+                <span>{t(item.mobileKey ?? item.key)}</span>
+              </NavLink>
+            );
+          })}
+        </nav>
       </div>
     </>
+  );
+}
+
+function SectionOperationsSummary({ section, metrics, t }) {
+  if (section === 'requests') {
+    return (
+      <section className="ops-operations-summary intake-summary" data-section="requests" aria-label={t('admin.metrics.aria')}>
+        <div className="ops-alert-banner">
+          <StatusPill type="custom" value={t('admin.requests.summaryBadge')} tone="warning" icon={Clock} />
+          <p>{t('admin.requests.summaryCopy')}</p>
+        </div>
+        <div className="ops-metrics">
+          <Metric tone="neutral" value={metrics.requested} title={t('admin.metrics.new')} copy={t('admin.metrics.newCopy')} to="/admin/requests?tab=all&sort=stale" />
+          <Metric tone="warning" value={metrics.staleRequests} title={t('admin.metrics.stale')} copy={t('admin.metrics.staleCopy')} to="/admin/requests?tab=stale&sort=stale" />
+          <Metric tone="success" value={metrics.deliveryRequests} title={t('admin.metrics.delivery')} copy={t('admin.metrics.deliveryCopy')} to="/admin/requests?tab=delivery&sort=stale" />
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="ops-operations-summary lifecycle-summary" data-section="rentals" aria-label={t('admin.metrics.aria')}>
+      <div className="ops-alert-banner">
+        <StatusPill type="custom" value={t('admin.rentals.summaryBadge')} tone="warning" icon={AlertTriangle} />
+        <p>{t('admin.rentals.summaryCopy')}</p>
+      </div>
+      <div className="ops-metrics">
+        <Metric tone="success" value={metrics.ready} title={t('admin.metrics.pickup')} copy={t('admin.metrics.pickupCopy')} to="/admin/rentals?status=ready" />
+        <Metric tone="neutral" value={metrics.outWithCustomer} title={t('admin.metrics.overdue')} copy={t('admin.metrics.overdueCopy')} to="/admin/rentals?status=on_rent" />
+        <Metric tone="warning" value={metrics.returnedOpen} title={t('admin.metrics.returned')} copy={t('admin.metrics.returnedCopy')} to="/admin/rentals?status=returned" />
+        <Metric tone="success" value={metrics.completed} title={t('admin.metrics.completed')} copy={t('admin.metrics.completedCopy')} to="/admin/rentals?status=completed" />
+      </div>
+    </section>
   );
 }
 

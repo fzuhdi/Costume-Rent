@@ -8,7 +8,14 @@
       "*.db",
       "frontend/dist/**",
       "frontend/build/**",
+      ".artifacts/**",
+      ".playwright-mcp/**",
+      "test-results/**",
+      "playwright-report/**",
       "test/test-results/**",
+      "test/test-results-*/**",
+      "test/playwright-report/**",
+      "test/playwright-report-*/**",
       "*.log",
       ".git/**"
     ]

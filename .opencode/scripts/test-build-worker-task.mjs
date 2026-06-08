@@ -75,6 +75,22 @@ const exploreTask = run([
 if (exploreTask.prompt.includes('.opencode/agents/explore.md')) fail('explore prompt should not reference a project agent file', exploreTask.prompt);
 if (!exploreTask.prompt.includes('built-in explore subagent')) fail('explore prompt should identify the built-in subagent contract', exploreTask.prompt);
 
+const workflowTask = run([
+  '--role', 'workflow-engineer',
+  '--mode', 'workflow-maintenance',
+  '--ticket-id', fixtureTicketId,
+  '--worktree-root', '.\\tmp-worktree',
+  '--plan-id', fixturePlanId,
+  '--workflow-stage', 'workflow-maintenance',
+  '--quality-policy', 'light-checks',
+  '--json',
+]);
+if (workflowTask.subagent_type !== 'workflow-engineer') fail('workflow-maintenance task should dispatch workflow-engineer', JSON.stringify(workflowTask, null, 2));
+for (const marker of ['MODE: workflow-maintenance', 'WORKFLOW_STAGE: workflow-maintenance', 'QUALITY_POLICY: light-checks', 'do not edit backend/** or frontend/**']) {
+  if (!workflowTask.prompt.includes(marker)) fail(`workflow-maintenance prompt missing marker: ${marker}`, workflowTask.prompt);
+}
+if (workflowTask.prompt.includes('TEST_CASE_ID')) fail('workflow-maintenance prompt should not require TEST_CASE_ID', workflowTask.prompt);
+
 const invalidMode = runRaw([
   '--role', 'reviewer',
   '--mode', 'green',
@@ -102,6 +118,18 @@ function writeFile(filePath, text) {
   fs.writeFileSync(filePath, text);
 }
 
+function copyScriptLib(fixtureRoot) {
+  const libRoot = path.join(cwd, '.opencode', 'scripts', 'lib');
+  for (const entry of fs.readdirSync(libRoot, { withFileTypes: true })) {
+    if (entry.isFile()) {
+      writeFile(
+        path.join(fixtureRoot, '.opencode', 'scripts', 'lib', entry.name),
+        fs.readFileSync(path.join(libRoot, entry.name), 'utf8'),
+      );
+    }
+  }
+}
+
 function runFixtureGit(fixtureRoot, args) {
   const result = spawnSync('git', args, {
     cwd: fixtureRoot,
@@ -114,11 +142,23 @@ function runFixtureGit(fixtureRoot, args) {
 
 const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'worker-task-launch-fixture-'));
 try {
+  copyScriptLib(fixtureRoot);
   writeFile(path.join(fixtureRoot, '.opencode/scripts/launch-parallel-plan.mjs'), fs.readFileSync(path.join(cwd, '.opencode/scripts/launch-parallel-plan.mjs'), 'utf8'));
   writeFile(path.join(fixtureRoot, '.opencode/opencode.json'), '{}\n');
   writeFile(path.join(fixtureRoot, '.opencode/project.json'), JSON.stringify({
     schema_version: 1,
     project: { name: 'Worker Task Fixture', adapter_path: '.opencode/project.json' },
+    workflow: { enabled_modes: ['ui-tracer', 'light-implementation', 'strict-tdd', 'parallel-runtime'], default_mode: 'ui-tracer', max_parallel: 3 },
+    artifacts: {
+      root: '.artifacts',
+      playwright: {
+        output_dir: '.artifacts/playwright/test-results',
+        html_report: '.artifacts/playwright/html-report',
+        screenshots: '.artifacts/playwright/screenshots',
+      },
+      playwright_mcp: '.artifacts/playwright-mcp',
+      opencode: '.artifacts/opencode',
+    },
     runtime: {
       slot_step: 100,
       base_ports: { frontend: 5173, backend: 8081, sqlite: 8080 },

@@ -3,11 +3,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { loadProjectConfig } from './lib/config.mjs';
 
 const root = process.cwd();
 const opencodeRoot = path.join(root, '.opencode');
 const adapterFile = '.opencode/project.json';
-const projectConfig = loadProjectConfig();
+const projectConfig = loadProjectConfig(root).config;
 const projectName = path.basename(root);
 
 const ignoredPrefixes = [
@@ -48,12 +49,6 @@ const reusableOnlyRules = (projectConfig.portability_audit?.forbidden_reusable_p
     message: 'Adapter-declared project pattern found outside the adapter; move project knowledge to docs/* or adapter config.',
     regex: new RegExp(pattern),
   }));
-
-function loadProjectConfig() {
-  const file = path.join(root, adapterFile);
-  if (!fs.existsSync(file)) return {};
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
-}
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

@@ -1,16 +1,16 @@
 ---
-description: Show runnable plans or dispatch one strict TDD ticket/plan run. Usage /engineering/orchestrator [ticket-id|plan-id]
+description: Show workflow status or dispatch one enabled strict-TDD ticket/plan run. Usage /engineering/orchestrator [ticket-id|plan-id]
 ---
 
-Load the orchestrator skill (`.opencode/skills/orchestrator/SKILL.md`).
+Load the orchestrator skill (`.opencode/skills/orchestrator/SKILL.md`) and obey the workflow modes in `.opencode/project.json`.
 
 Raw arguments: **$ARGUMENTS**
 
 Interpret arguments as one of these modes:
 
 - Empty: run `node .opencode/scripts/workflow-runner.mjs --json`, summarize the read-only status and reconciliation report, then show existing `status: ready` or `status: in_progress` plans the user can run next. Do not list individual ticket commands in this mode.
-- Ticket: `$1` is a ready feature/bug `TICKET-YYYYMMDD-NNN` id from `docs/tickets/`.
-- Plan: `$1` is a `PLAN-YYYYMMDD-*` id; this direct command runs inside one worktree. For default max-3 parallel tracer execution, use `/coordinator $1` or `node .opencode/scripts/launch-parallel-plan.mjs --target $1 --parallel 3 --json` and dispatch the returned orchestrator task handoffs.
+- Ticket: `$1` is a ready feature/bug `TICKET-YYYYMMDD-NNN` id from `docs/tickets/`; requires `strict-tdd` mode.
+- Plan: `$1` is a `PLAN-YYYYMMDD-*` id; this direct command runs inside one worktree and requires `strict-tdd`. For parallel tracer execution, `parallel-runtime` must also be enabled.
 
 If `$1` is empty:
 

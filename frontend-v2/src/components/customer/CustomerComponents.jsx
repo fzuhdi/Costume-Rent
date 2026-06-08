@@ -12,17 +12,15 @@ import {
   MapPin,
   Minus,
   Plus,
-  Search,
   ShoppingBag,
   ShoppingCart,
   Trash2,
   Truck,
-  X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { EmptyState, Field, InfoBlock, LocaleButton, StatusPill } from '../shared.jsx';
+import { EmptyState, Field, InfoBlock, LocaleButton, PhoneField, SheetHeader, StatusPill, StepProgress } from '../shared.jsx';
 import {
   firstAvailableVariant,
   formatDate,
@@ -32,6 +30,7 @@ import {
   productAlt,
   productCoverImage,
   productGallery,
+  getMaintenanceReason,
   productMeta,
   productName,
   getProductAvailability,
@@ -40,7 +39,9 @@ import {
   makeBookingSchema,
   makeLookupSchema,
   normalizePhone,
+  productDescription,
   variantLabel,
+  selectedVariantNotes,
   variantSummary,
 } from '../../lib/rental-utils.js';
 
@@ -55,7 +56,7 @@ function useCheckoutLink() {
 export function CustomerNav({ brandName, tagline, locale, setLocale, t, cartCount, onOpenCart }) {
   const location = useLocation();
   const catalogueTo = {
-    pathname: '/',
+    pathname: '/catalogue',
     search: location.pathname.startsWith('/costumes/') || location.pathname === '/checkout' ? location.search : '',
   };
 
@@ -70,6 +71,9 @@ export function CustomerNav({ brandName, tagline, locale, setLocale, t, cartCoun
           </span>
         </Link>
         <nav className="nav-links" aria-label={t('nav.customerAria')}>
+          <NavLink to="/" end>
+            {t('nav.home')}
+          </NavLink>
           <NavLink to={catalogueTo} end>
             {t('nav.catalogue')}
           </NavLink>
@@ -90,11 +94,18 @@ export function CustomerNav({ brandName, tagline, locale, setLocale, t, cartCoun
 export function ProductCard({ product, dates, detailTo, locale, t, rentals, availabilityOverride }) {
   const availability = availabilityOverride ?? getProductAvailability(product, dates, rentals);
   const isBlocked = availability === 'fully_booked' || availability === 'unavailable';
+  const maintenanceReason = availability === 'unavailable' ? getMaintenanceReason(product, dates) : '';
   const nextWindow = isBlocked ? findNextAvailableWindow(product, null, dates, rentals) : null;
+  const configuredDetailAria = product.detailAriaKey ? t(product.detailAriaKey) : '';
+  const detailAria =
+    product.detailAria ||
+    (configuredDetailAria && configuredDetailAria !== product.detailAriaKey
+      ? configuredDetailAria
+      : t('customer.product.detailAria', { product: productName(product, t) }));
 
   return (
     <article className={`product-card ${isBlocked ? 'muted' : ''}`}>
-      <Link className="product-media product-card-link" to={detailTo} aria-label={t(product.detailAriaKey)}>
+      <Link className="product-media product-card-link" to={detailTo} aria-label={detailAria}>
         <img src={productCoverImage(product, t)} alt={productAlt(product, t)} loading="lazy" />
         <StatusPill type="availability" value={availability} t={t} />
       </Link>
@@ -107,10 +118,12 @@ export function ProductCard({ product, dates, detailTo, locale, t, rentals, avai
             <small>{t(product.unitKey)}</small>
           </strong>
         </div>
-        <p>{t(product.copyKey)}</p>
+        <p>{productDescription(product, locale, t)}</p>
         <div className="product-footer">
           <span>
-            {nextWindow
+            {maintenanceReason
+              ? t('customer.product.unavailableReason', { reason: maintenanceReason })
+              : nextWindow
               ? t('customer.product.nextAvailable', { range: formatDateRange(nextWindow, locale) })
               : variantSummary(product, dates, locale, t, rentals)}
           </span>
@@ -166,21 +179,39 @@ export function ProductDetail({
   onFavoriteToggle,
 }) {
   const availability = getProductAvailability(product, dates, rentals);
+  const maintenanceReason = availability === 'unavailable' ? getMaintenanceReason(product, dates) : '';
   const isInCart = cart.some((item) => item.productId === product.id && item.variantId === selectedVariantId);
   const canAdd = selectedVariantId && selectedAvailability > 0;
   const nextWindow = selectedVariantId && selectedAvailability <= 0 ? findNextAvailableWindow(product, selectedVariantId, dates, rentals) : null;
   const images = useMemo(() => productGallery(product, t), [product, t]);
   const [selectedImageId, setSelectedImageId] = useState(images[0]?.id ?? '');
+  const [favoriteNotice, setFavoriteNotice] = useState(false);
   const selectedImage = images.find((image) => image.id === selectedImageId) ?? images[0];
+  const description = productDescription(product, locale, t);
+  const variantNotes = selectedVariantNotes(product, selectedVariantId, locale, t);
 
   useEffect(() => {
     setSelectedImageId(images[0]?.id ?? '');
   }, [product.id, images]);
 
+  useEffect(() => {
+    if (!favoriteNotice) return undefined;
+    const timeoutId = window.setTimeout(() => setFavoriteNotice(false), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [favoriteNotice]);
+
+  const handleFavoriteToggle = () => {
+    onFavoriteToggle();
+    setFavoriteNotice(true);
+  };
+
   return (
     <section className="product-detail" id="product-detail">
       <div className="shell product-detail-layout">
         <div className={`detail-gallery ${images.length > 1 ? '' : 'single-image'}`} aria-label={t('customer.detail.galleryAria')}>
+          <div className="detail-photo">
+            <img src={selectedImage?.src ?? product.image} alt={selectedImage?.alt ?? productAlt(product, t)} />
+          </div>
           {images.length > 1 ? (
             <div className="thumb-rail" aria-label={t('customer.detail.thumbsAria')}>
               {images.map((thumb) => (
@@ -197,9 +228,6 @@ export function ProductDetail({
               ))}
             </div>
           ) : null}
-          <div className="detail-photo">
-            <img src={selectedImage?.src ?? product.image} alt={selectedImage?.alt ?? productAlt(product, t)} />
-          </div>
         </div>
 
         <aside className="detail-purchase" aria-label={t('customer.detail.panelAria')}>
@@ -211,21 +239,11 @@ export function ProductDetail({
               {formatRupiah(product.price)}
               <span>{t(product.unitKey)}</span>
             </strong>
-            <p>{t(product.copyKey)}</p>
           </div>
 
-          <div className="info-grid compact">
-            <InfoBlock title={t('customer.detail.measurement')} copy={locale === 'id' ? product.measurementId : product.measurementEn} />
-            <InfoBlock title={t('customer.detail.bundle')} copy={locale === 'id' ? product.bundleId : product.bundleEn} />
-          </div>
-
-          <div className="option-group">
-            <span className="option-label">{t('customer.detail.dateLabel')}</span>
-            <div className="date-summary">
-              <span>{formatDate(dates.start, locale)}</span>
-              <b>{t('customer.detail.until')}</b>
-              <span>{formatDate(dates.end, locale)}</span>
-            </div>
+          <div className="detail-description-block">
+            <span className="option-label">{t('customer.detail.description')}</span>
+            <p className="detail-copy">{description}</p>
           </div>
 
           <div className="option-group">
@@ -247,7 +265,13 @@ export function ProductDetail({
                 );
               })}
             </div>
-            <p className={canAdd ? 'helper-text' : 'validation-message'}>{canAdd ? t('customer.detail.variantHelp') : t('customer.detail.unavailable')}</p>
+            <p className={canAdd ? 'helper-text' : 'validation-message'}>
+              {canAdd
+                ? t('customer.detail.variantHelp')
+                : maintenanceReason
+                  ? t('customer.detail.unavailableReason', { reason: maintenanceReason })
+                  : t('customer.detail.unavailable')}
+            </p>
             {selectedVariantId && selectedAvailability <= 0 ? (
               <p className="helper-text availability-suggestion">
                 {nextWindow
@@ -257,33 +281,50 @@ export function ProductDetail({
             ) : null}
           </div>
 
+          <div className="detail-description-block variant-note-block" aria-live="polite">
+            <span className="option-label">{t('customer.detail.variantNotes')}</span>
+            <p className="detail-copy">{variantNotes}</p>
+          </div>
+
+          <div className="option-group">
+            <span className="option-label">{t('customer.detail.dateLabel')}</span>
+            <div className="date-summary">
+              <span>{formatDate(dates.start, locale)}</span>
+              <b>{t('customer.detail.until')}</b>
+              <span>{formatDate(dates.end, locale)}</span>
+            </div>
+          </div>
+
+          <div className="detail-quick-actions">
+            <button className={`outline-button full favorite-button ${isFavorite ? 'selected' : ''}`} type="button" aria-pressed={isFavorite} onClick={handleFavoriteToggle}>
+              <Heart aria-hidden="true" fill={isFavorite ? 'currentColor' : 'none'} />
+              {isFavorite ? t('customer.detail.favoriteSaved') : t('customer.detail.favorite')}
+            </button>
+            {favoriteNotice ? <p className="success-message favorite-feedback">{t('customer.detail.favoriteUndo')}</p> : null}
+            <div className="detail-cta-bar">
+              <button className="secondary-button full" type="button" disabled={!canAdd} onClick={onAdd}>
+                <ShoppingCart aria-hidden="true" />
+                {isInCart ? t('customer.status.added') : t('customer.detail.add')}
+              </button>
+            </div>
+          </div>
+
           <ProductAvailabilityCalendar
             product={product}
             selectedVariantId={selectedVariantId}
-            setSelectedVariantId={setSelectedVariantId}
             dates={dates}
             locale={locale}
             t={t}
             rentals={rentals}
             dataAdapter={dataAdapter}
           />
-
-          <button className="secondary-button full" type="button" disabled={!canAdd} onClick={onAdd}>
-            <ShoppingCart aria-hidden="true" />
-            {isInCart ? t('customer.status.added') : t('customer.detail.add')}
-          </button>
-          <button className={`outline-button full favorite-button ${isFavorite ? 'selected' : ''}`} type="button" aria-pressed={isFavorite} onClick={onFavoriteToggle}>
-            <Heart aria-hidden="true" fill={isFavorite ? 'currentColor' : 'none'} />
-            {isFavorite ? t('customer.detail.favoriteSaved') : t('customer.detail.favorite')}
-          </button>
-          {isFavorite ? <p className="success-message favorite-feedback">{t('customer.detail.favoriteUndo')}</p> : null}
         </aside>
       </div>
     </section>
   );
 }
 
-function ProductAvailabilityCalendar({ product, selectedVariantId, setSelectedVariantId, dates, locale, t, rentals, dataAdapter }) {
+function ProductAvailabilityCalendar({ product, selectedVariantId, dates, locale, t, rentals, dataAdapter }) {
   const [monthCursor, setMonthCursor] = useState(monthKey(dates.start));
   const [inspectedDate, setInspectedDate] = useState(dates.start);
   const [availabilityRows, setAvailabilityRows] = useState([]);
@@ -411,15 +452,13 @@ function ProductAvailabilityCalendar({ product, selectedVariantId, setSelectedVa
         </div>
         <div className="calendar-stock-list">
           {inspected.variants.map((variant) => (
-            <button
-              className={selectedVariantId === variant.variantId ? 'selected' : ''}
-              type="button"
+            <span
+              className={`calendar-stock-chip ${selectedVariantId === variant.variantId ? 'selected' : ''}`}
               key={variant.variantId}
-              onClick={() => setSelectedVariantId(variant.variantId)}
             >
               <span>{variantLabel(t, variant.label)}</span>
               <b>{variant.available}/{variant.total}</b>
-            </button>
+            </span>
           ))}
         </div>
       </div>
@@ -510,25 +549,30 @@ export function CartSummary({ cartItems, cartTotal, t, locale, onQty, onRemove }
       ) : (
         cartItems.map((item) => (
           <div className="summary-item editable" key={`${item.product.id}-${item.variantId}`}>
-            <img src={productCoverImage(item.product, t)} alt={productAlt(item.product, t)} />
-            <div>
-              <strong>{productName(item.product, t)}</strong>
-              <span>{t('customer.cart.itemDates', { start: formatDate(item.start, locale), end: formatDate(item.end, locale) })}</span>
-              <span>{variantLabel(t, item.variantId)}</span>
+            <div className="cart-item-main">
+              <img src={productCoverImage(item.product, t)} alt={productAlt(item.product, t)} />
+              <div className="cart-item-copy">
+                <strong>{productName(item.product, t)}</strong>
+                <span className="cart-item-meta">
+                  {variantLabel(t, item.variantId)} | {t('customer.cart.itemDates', { start: formatDate(item.start, locale), end: formatDate(item.end, locale) })}
+                </span>
+                <b className="cart-item-price">{formatRupiah(item.product.price * item.qty)}</b>
+              </div>
             </div>
-            <b>{formatRupiah(item.product.price * item.qty)}</b>
-            <div className="quantity-control" aria-label={t('common.qty')}>
-              <button type="button" onClick={() => onQty(item, -1)} aria-label={t('common.remove')}>
-                <Minus aria-hidden="true" />
-              </button>
-              <span>{item.qty}</span>
-              <button type="button" onClick={() => onQty(item, 1)} aria-label={t('common.apply')}>
-                <Plus aria-hidden="true" />
+            <div className="cart-item-actions">
+              <div className="quantity-control" aria-label={t('common.qty')}>
+                <button type="button" onClick={() => onQty(item, -1)} aria-label={t('common.remove')}>
+                  <Minus aria-hidden="true" />
+                </button>
+                <span>{item.qty}</span>
+                <button type="button" onClick={() => onQty(item, 1)} aria-label={t('common.apply')}>
+                  <Plus aria-hidden="true" />
+                </button>
+              </div>
+              <button className="icon-button danger" type="button" onClick={() => onRemove(item)} aria-label={t('common.remove')}>
+                <Trash2 aria-hidden="true" />
               </button>
             </div>
-            <button className="icon-button danger" type="button" onClick={() => onRemove(item)} aria-label={t('common.remove')}>
-              <Trash2 aria-hidden="true" />
-            </button>
           </div>
         ))
       )}
@@ -541,6 +585,8 @@ export function CartSummary({ cartItems, cartTotal, t, locale, onQty, onRemove }
 }
 
 export function CheckoutForm({ t, cartCount, createBooking, submittedBooking }) {
+  const checkoutStepOrder = ['contact', 'fulfillment', 'review'];
+  const [activeStep, setActiveStep] = useState('contact');
   const [simulateFailure, setSimulateFailure] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const schema = useMemo(() => makeBookingSchema(t), [t]);
@@ -550,6 +596,7 @@ export function CheckoutForm({ t, cartCount, createBooking, submittedBooking }) 
     register,
     handleSubmit,
     watch,
+    trigger,
     reset,
     formState: { errors, isSubmitting },
   } = useForm({
@@ -567,6 +614,34 @@ export function CheckoutForm({ t, cartCount, createBooking, submittedBooking }) 
     },
   });
   const fulfillment = watch('fulfillment');
+  const values = watch();
+  const activeStepIndex = checkoutStepOrder.indexOf(activeStep);
+  const activeStepFields = {
+    contact: ['name', 'phone', 'email'],
+    fulfillment: fulfillment === 'delivery'
+      ? ['fulfillment', 'address', 'deliveryWindow', 'returnWindow']
+      : ['fulfillment', 'pickupWindow', 'returnWindow'],
+    review: ['notes'],
+  };
+  const checkoutSteps = checkoutStepOrder.map((step, index) => ({
+    key: step,
+    label: t(`customer.checkout.step.${step}`),
+    state: index < activeStepIndex ? 'done' : index === activeStepIndex ? 'current' : '',
+    icon: index < activeStepIndex ? Check : undefined,
+    marker: index + 1,
+  }));
+
+  const goNext = async () => {
+    const valid = await trigger(activeStepFields[activeStep], { shouldFocus: true });
+    if (!valid) return;
+    setSubmitError('');
+    setActiveStep(checkoutStepOrder[Math.min(activeStepIndex + 1, checkoutStepOrder.length - 1)]);
+  };
+
+  const goBack = () => {
+    setSubmitError('');
+    setActiveStep(checkoutStepOrder[Math.max(activeStepIndex - 1, 0)]);
+  };
 
   const onSubmit = async (values) => {
     setSubmitError('');
@@ -585,6 +660,7 @@ export function CheckoutForm({ t, cartCount, createBooking, submittedBooking }) 
       return;
     }
     reset();
+    setActiveStep('contact');
   };
 
   return (
@@ -594,73 +670,115 @@ export function CheckoutForm({ t, cartCount, createBooking, submittedBooking }) 
         <h2>{t('customer.summary.continue')}</h2>
         <p>{t('customer.checkout.copy')}</p>
       </div>
+      {!submittedBooking ? <StepProgress steps={checkoutSteps} ariaLabel={t('customer.checkout.stepsAria')} className="checkout-form-steps" /> : null}
+      {!submittedBooking ? (
+        <div className="checkout-mobile-submitbar">
+          <CheckoutStepActions
+            t={t}
+            isFirst={activeStepIndex === 0}
+            isLast={activeStepIndex === checkoutStepOrder.length - 1}
+            isSubmitting={isSubmitting}
+            cartCount={cartCount}
+            onBack={goBack}
+            onNext={goNext}
+          />
+        </div>
+      ) : null}
 
-      <div className="form-grid">
-        <Field label={t('common.name')} error={errors.name?.message}>
-          <input {...register('name')} autoComplete="name" />
-        </Field>
-        <Field label={t('common.phone')} error={errors.phone?.message}>
-          <input {...register('phone')} autoComplete="tel" inputMode="tel" />
-        </Field>
-        <Field label={`${t('common.email')} (${t('common.optional')})`} error={errors.email?.message}>
-          <input {...register('email')} autoComplete="email" type="email" />
-        </Field>
-      </div>
+      {!submittedBooking && activeStep === 'contact' ? (
+        <section className="checkout-step-panel" aria-label={t('customer.checkout.step.contact')}>
+          <div className="form-grid">
+            <Field label={t('common.name')} error={errors.name?.message}>
+              <input {...register('name')} autoComplete="name" />
+            </Field>
+            <PhoneField label={t('common.phone')} error={errors.phone?.message} inputProps={register('phone')} />
+            <Field label={`${t('common.email')} (${t('common.optional')})`} error={errors.email?.message}>
+              <input {...register('email')} autoComplete="email" type="email" />
+            </Field>
+          </div>
+        </section>
+      ) : null}
 
-      <Controller
-        control={control}
-        name="fulfillment"
-        render={({ field }) => (
-          <RadioGroup.Root className="radio-grid" value={field.value} onValueChange={field.onChange}>
-            <RadioGroup.Item className="radio-card" value="pickup">
-              <MapPin aria-hidden="true" />
-              <span>{t('enum.fulfillment.pickup')}</span>
-              <RadioGroup.Indicator className="radio-indicator" />
-            </RadioGroup.Item>
-            <RadioGroup.Item className="radio-card" value="delivery">
-              <Truck aria-hidden="true" />
-              <span>{t('enum.fulfillment.delivery')}</span>
-              <RadioGroup.Indicator className="radio-indicator" />
-            </RadioGroup.Item>
-          </RadioGroup.Root>
-        )}
-      />
+      {!submittedBooking && activeStep === 'fulfillment' ? (
+        <section className="checkout-step-panel" aria-label={t('customer.checkout.step.fulfillment')}>
+          <Controller
+            control={control}
+            name="fulfillment"
+            render={({ field }) => (
+              <RadioGroup.Root className="radio-grid" value={field.value} onValueChange={field.onChange}>
+                <RadioGroup.Item className="radio-card" value="pickup">
+                  <MapPin aria-hidden="true" />
+                  <span>{t('enum.fulfillment.pickup')}</span>
+                  <RadioGroup.Indicator className="radio-indicator" />
+                </RadioGroup.Item>
+                <RadioGroup.Item className="radio-card" value="delivery">
+                  <Truck aria-hidden="true" />
+                  <span>{t('enum.fulfillment.delivery')}</span>
+                  <RadioGroup.Indicator className="radio-indicator" />
+                </RadioGroup.Item>
+              </RadioGroup.Root>
+            )}
+          />
 
-      <div className="form-grid">
-        {fulfillment === 'pickup' ? (
-          <Field label={t('customer.checkout.pickupWindow')} error={errors.pickupWindow?.message}>
-            <input {...register('pickupWindow')} />
+          <div className="form-grid">
+            {fulfillment === 'pickup' ? (
+              <Field label={t('customer.checkout.pickupWindow')} error={errors.pickupWindow?.message}>
+                <input {...register('pickupWindow')} />
+              </Field>
+            ) : (
+              <>
+                <Field label={t('common.address')} error={errors.address?.message}>
+                  <input {...register('address')} autoComplete="street-address" />
+                </Field>
+                <Field label={t('customer.checkout.deliveryWindow')} error={errors.deliveryWindow?.message}>
+                  <input {...register('deliveryWindow')} />
+                </Field>
+              </>
+            )}
+            <Field label={t('customer.checkout.returnWindow')} error={errors.returnWindow?.message}>
+              <input {...register('returnWindow')} />
+            </Field>
+          </div>
+        </section>
+      ) : null}
+
+      {!submittedBooking && activeStep === 'review' ? (
+        <section className="checkout-step-panel" aria-label={t('customer.checkout.step.review')}>
+          <div className="checkout-review-grid">
+            <InfoBlock title={t('common.name')} copy={values.name || '-'} />
+            <InfoBlock title={t('common.phone')} copy={values.phone || '-'} />
+            <InfoBlock title={t('admin.table.fulfillment')} copy={t(`enum.fulfillment.${values.fulfillment}`)} />
+            <InfoBlock
+              title={t('common.window')}
+              copy={values.fulfillment === 'delivery' ? values.deliveryWindow || '-' : values.pickupWindow || '-'}
+            />
+          </div>
+          <Field label={`${t('common.notes')} (${t('common.optional')})`} error={errors.notes?.message}>
+            <textarea {...register('notes')} rows="3" />
           </Field>
-        ) : (
-          <>
-            <Field label={t('common.address')} error={errors.address?.message}>
-              <input {...register('address')} autoComplete="street-address" />
-            </Field>
-            <Field label={t('customer.checkout.deliveryWindow')} error={errors.deliveryWindow?.message}>
-              <input {...register('deliveryWindow')} />
-            </Field>
-          </>
-        )}
-        <Field label={t('customer.checkout.returnWindow')} error={errors.returnWindow?.message}>
-          <input {...register('returnWindow')} />
-        </Field>
-      </div>
 
-      <Field label={`${t('common.notes')} (${t('common.optional')})`} error={errors.notes?.message}>
-        <textarea {...register('notes')} rows="3" />
-      </Field>
-
-      {showFailureToggle ? (
-        <label className="checkbox-row">
-          <input type="checkbox" checked={simulateFailure} onChange={(event) => setSimulateFailure(event.target.checked)} />
-          <span>{t('customer.checkout.simulateFailure')}</span>
-        </label>
+          {showFailureToggle ? (
+            <label className="checkbox-row">
+              <input type="checkbox" checked={simulateFailure} onChange={(event) => setSimulateFailure(event.target.checked)} />
+              <span>{t('customer.checkout.simulateFailure')}</span>
+            </label>
+          ) : null}
+        </section>
       ) : null}
 
       {submitError ? <p className="validation-message">{submitError}</p> : null}
-      <button className="primary-button full" type="submit" disabled={cartCount === 0 || isSubmitting}>
-        {isSubmitting ? t('common.loading') : t('customer.checkout.submit')}
-      </button>
+      {!submittedBooking ? (
+        <CheckoutStepActions
+          className="checkout-submit-inline"
+          t={t}
+          isFirst={activeStepIndex === 0}
+          isLast={activeStepIndex === checkoutStepOrder.length - 1}
+          isSubmitting={isSubmitting}
+          cartCount={cartCount}
+          onBack={goBack}
+          onNext={goNext}
+        />
+      ) : null}
 
       {submittedBooking ? (
         <div className="confirmation-panel" id="confirmation">
@@ -668,7 +786,8 @@ export function CheckoutForm({ t, cartCount, createBooking, submittedBooking }) 
             <BadgeCheck aria-hidden="true" />
             <span className="status-badge-label">{t('customer.checkout.successTitle')}</span>
           </span>
-          <h3>{t('customer.confirmation.title')}: {submittedBooking.reference}</h3>
+          <h3>{t('customer.confirmation.title')}: {submittedBooking.groupedReferences?.join(', ') ?? submittedBooking.reference}</h3>
+          {submittedBooking.groupedReferences?.length > 1 ? <p>{t('customer.checkout.splitByDate')}</p> : null}
           <p>{t('customer.checkout.successCopy')}</p>
           <div className="info-grid compact">
             <InfoBlock title={t('common.status')} copy={t(`enum.lifecycle.${submittedBooking.lifecycle}`)} />
@@ -680,43 +799,92 @@ export function CheckoutForm({ t, cartCount, createBooking, submittedBooking }) 
   );
 }
 
-export function RequestSummarySheet({ open, onOpenChange, t, locale, cartItems, cartTotal, cartCount, onQty, onRemove }) {
+function CheckoutStepActions({ className = '', t, isFirst, isLast, isSubmitting, cartCount, onBack, onNext }) {
+  return (
+    <div className={`checkout-step-actions ${className}`.trim()}>
+      {!isFirst ? (
+        <button className="outline-button" type="button" onClick={(event) => {
+          event.preventDefault();
+          onBack();
+        }} disabled={isSubmitting}>
+          {t('customer.checkout.back')}
+        </button>
+      ) : null}
+      {isLast ? (
+        <button className="primary-button" type="submit" disabled={cartCount === 0 || isSubmitting}>
+          {isSubmitting ? t('common.loading') : t('customer.checkout.submit')}
+        </button>
+      ) : (
+        <button className="primary-button" type="button" onClick={(event) => {
+          event.preventDefault();
+          onNext();
+        }}>
+          {t('customer.checkout.next')}
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function RequestSummarySheet({
+  open,
+  onOpenChange,
+  t,
+  locale,
+  cartItems,
+  cartTotal,
+  cartCount,
+  onQty,
+  onRemove,
+  createBooking,
+  submittedBooking,
+}) {
   const checkoutLink = useCheckoutLink();
+  const [checkoutActive, setCheckoutActive] = useState(false);
+
+  useEffect(() => {
+    if (!open) setCheckoutActive(false);
+  }, [open]);
+
+  const handleOpenChange = (nextOpen) => {
+    if (!nextOpen) setCheckoutActive(false);
+    onOpenChange(nextOpen);
+  };
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content className="request-sheet-content" aria-describedby="request-summary-description">
-          <div className="sheet-header">
-            <div>
-              <span className="section-kicker">{t('customer.requestSheet.kicker')}</span>
-              <Dialog.Title className="sheet-title">{t('customer.requestSheet.title')}</Dialog.Title>
-              <Dialog.Description id="request-summary-description">{t('customer.requestSheet.copy')}</Dialog.Description>
-            </div>
-            <Dialog.Close asChild>
-              <button className="icon-button" type="button" aria-label={t('customer.requestSheet.close')}>
-                <X aria-hidden="true" />
-              </button>
-            </Dialog.Close>
-          </div>
+        <Dialog.Content className={`request-sheet-content ${checkoutActive ? 'checkout-active' : ''}`} aria-describedby="request-summary-description">
+          <SheetHeader
+            kicker={t('customer.requestSheet.kicker')}
+            title={checkoutActive ? t('customer.checkout.modalTitle') : t('customer.requestSheet.title')}
+            description={checkoutActive ? t('customer.checkout.modalCopy') : t('customer.requestSheet.copy')}
+            descriptionId="request-summary-description"
+            closeLabel={t('customer.requestSheet.close')}
+          />
 
-          <CartSummary cartItems={cartItems} cartTotal={cartTotal} t={t} locale={locale} onQty={onQty} onRemove={onRemove} />
-
-          <div className="sheet-actions">
-            {cartCount > 0 ? (
-              <Link className="primary-button full" to={checkoutLink.to} state={checkoutLink.state} onClick={() => onOpenChange(false)}>
-                {t('customer.requestSheet.checkout')}
-              </Link>
+          <div className="request-sheet-body">
+            {checkoutActive ? (
+              <div className="checkout-modal-layout">
+                <CheckoutForm t={t} cartCount={cartCount} createBooking={createBooking} submittedBooking={submittedBooking} />
+                <CartSummary cartItems={cartItems} cartTotal={cartTotal} t={t} locale={locale} onQty={onQty} onRemove={onRemove} />
+              </div>
             ) : (
-              <button className="primary-button full" type="button" disabled>
+              <CartSummary cartItems={cartItems} cartTotal={cartTotal} t={t} locale={locale} onQty={onQty} onRemove={onRemove} />
+            )}
+          </div>
+
+          {!checkoutActive ? (
+            <div className="sheet-actions">
+              <button className="primary-button full" type="button" disabled={cartCount === 0} onClick={() => setCheckoutActive(true)}>
                 {t('customer.requestSheet.checkout')}
               </button>
-            )}
-            <Link className="outline-button full" to={{ pathname: '/', search: checkoutLink.to.search }} onClick={() => onOpenChange(false)}>
-              {t('customer.requestSheet.continue')}
-            </Link>
-          </div>
+              <Link className="outline-button full" to={{ pathname: '/catalogue', search: checkoutLink.to.search }} onClick={() => handleOpenChange(false)}>
+                {t('customer.requestSheet.continue')}
+              </Link>
+            </div>
+          ) : null}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
@@ -741,31 +909,17 @@ export function CheckoutModal({
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
         <Dialog.Content className="checkout-sheet" aria-describedby="checkout-modal-description">
-          <div className="checkout-sheet-header">
-            <div>
-              <span className="section-kicker">{t('customer.checkout.modalKicker')}</span>
-              <Dialog.Title className="sheet-title">{t('customer.checkout.modalTitle')}</Dialog.Title>
-              <Dialog.Description id="checkout-modal-description">{t('customer.checkout.modalCopy')}</Dialog.Description>
-            </div>
-            <Dialog.Close asChild>
-              <button className="icon-button" type="button" aria-label={t('customer.checkout.close')}>
-                <X aria-hidden="true" />
-              </button>
-            </Dialog.Close>
-          </div>
-
-          <div className="checkout-steps" aria-label={t('customer.checkout.stepsAria')}>
-            <span className="step-chip done">
-              <Check aria-hidden="true" />
-              {t('customer.checkout.stepReview')}
-            </span>
-            <span className="step-chip current">{t('customer.checkout.stepContact')}</span>
-            <span className="step-chip">{t('customer.checkout.stepFulfillment')}</span>
-          </div>
+          <SheetHeader
+            kicker={t('customer.checkout.modalKicker')}
+            title={t('customer.checkout.modalTitle')}
+            description={t('customer.checkout.modalCopy')}
+            descriptionId="checkout-modal-description"
+            closeLabel={t('customer.checkout.close')}
+          />
 
           <div className="checkout-modal-layout">
-            <CartSummary cartItems={cartItems} cartTotal={cartTotal} t={t} locale={locale} onQty={onQty} onRemove={onRemove} />
             <CheckoutForm t={t} cartCount={cartCount} createBooking={createBooking} submittedBooking={submittedBooking} />
+            <CartSummary cartItems={cartItems} cartTotal={cartTotal} t={t} locale={locale} onQty={onQty} onRemove={onRemove} />
           </div>
         </Dialog.Content>
       </Dialog.Portal>
@@ -783,11 +937,22 @@ export function LookupSection({ t, locale, rentals, products, setNotifications, 
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryError, setRecoveryError] = useState('');
   const [recoveryDraft, setRecoveryDraft] = useState({ phone: '', name: '', hint: '' });
+  const lookupResultRef = useRef(null);
   const schema = useMemo(() => makeLookupSchema(t), [t]);
   const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: { reference: 'CR-0142', phone: '+62 812 0000 0142', changeType: 'reschedule', changeNotes: '' },
   });
+
+  useEffect(() => {
+    if (!result && !notFound) return;
+    const node = lookupResultRef.current;
+    if (!node) return;
+    window.requestAnimationFrame(() => {
+      node.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      node.focus({ preventScroll: true });
+    });
+  }, [result, notFound]);
 
   const onLookup = ({ reference, phone }) => {
     const match = rentals.find((rental) => rental.reference.toLowerCase() === reference.toLowerCase() && normalizePhone(rental.phone) === normalizePhone(phone));
@@ -848,8 +1013,8 @@ export function LookupSection({ t, locale, rentals, products, setNotifications, 
           {
             id: `lookup-change-${Date.now()}`,
             tone: values.changeType === 'cancel' ? 'warning' : 'info',
-            titleId: 'Pelanggan meminta perubahan',
-            titleEn: 'Customer requested a change',
+            titleId: 'Pelanggan meminta perubahan pesanan',
+            titleEn: 'Customer order change',
             copyId: `${result.reference} - ${result.customerName}: ${values.changeNotes || values.changeType}.`,
             copyEn: `${result.reference} - ${result.customerName}: ${values.changeNotes || values.changeType}.`,
             targetRoute: `/admin/requests?reference=${encodeURIComponent(result.reference)}`,
@@ -876,9 +1041,7 @@ export function LookupSection({ t, locale, rentals, products, setNotifications, 
             <Field label={t('customer.lookup.refLabel')} error={errors.reference?.message}>
               <input {...register('reference')} />
             </Field>
-            <Field label={t('customer.lookup.phoneLabel')} error={errors.phone?.message}>
-              <input {...register('phone')} inputMode="tel" />
-            </Field>
+            <PhoneField label={t('customer.lookup.phoneLabel')} error={errors.phone?.message} inputProps={register('phone')} />
             <button className="secondary-button" type="submit">
               {t('customer.lookup.submit')}
             </button>
@@ -889,15 +1052,12 @@ export function LookupSection({ t, locale, rentals, products, setNotifications, 
             </button>
             {recoveryOpen ? (
               <form className="recovery-fields" onSubmit={submitRecovery}>
-                <Field label={t('customer.lookup.recoveryPhone')}>
-                  <input
-                    value={recoveryDraft.phone}
-                    onChange={(event) => setRecoveryDraft((current) => ({ ...current, phone: event.target.value }))}
-                    inputMode="tel"
-                    autoComplete="tel"
-                    required
-                  />
-                </Field>
+                <PhoneField
+                  label={t('customer.lookup.recoveryPhone')}
+                  value={recoveryDraft.phone}
+                  onChange={(event) => setRecoveryDraft((current) => ({ ...current, phone: event.target.value }))}
+                  required
+                />
                 <Field label={t('customer.lookup.recoveryName')}>
                   <input
                     value={recoveryDraft.name}
@@ -921,72 +1081,76 @@ export function LookupSection({ t, locale, rentals, products, setNotifications, 
           </div>
         </div>
 
-        {notFound ? <EmptyState title={t('customer.lookup.notFound')} copy={t('common.retry')} icon={AlertTriangle} /> : null}
-        {result ? (
-          <div className="lookup-result">
-            <div>
-              <span className="section-kicker">{t('customer.lookup.resultTitle')}</span>
-              <h2>{result.reference}</h2>
-              <div className="inline-status">
-                <StatusPill type="lifecycle" value={result.lifecycle} t={t} />
-                <StatusPill type="payment" value={result.paymentStatus} t={t} />
-              </div>
-            </div>
-            <div className="info-grid">
-              <InfoBlock title={t('common.name')} copy={result.customerName} />
-              <InfoBlock title={t('admin.table.dates')} copy={formatDateRange(result, locale)} />
-              <InfoBlock title={t('admin.table.fulfillment')} copy={t(`enum.fulfillment.${result.fulfillment}`)} />
-              <InfoBlock title={t('common.address')} copy={result.address || '-'} />
-            </div>
-            <div className="summary-card compact-card">
-              {result.items.map((item) => {
-                const product = products.find((entry) => entry.id === item.productId);
-                return product ? (
-                  <div className="summary-item" key={`${item.productId}-${item.variantId}`}>
-                    <img src={product.image} alt={productAlt(product, t)} />
-                    <div>
-                      <strong>{productName(product, t)}</strong>
-                      <span>{variantLabel(t, item.variantId)} x {item.qty}</span>
-                    </div>
-                    <b>{formatRupiah(product.price * item.qty)}</b>
+        {notFound || result ? (
+          <div className="lookup-feedback-region" ref={lookupResultRef} tabIndex="-1">
+            {notFound ? <EmptyState title={t('customer.lookup.notFound')} copy={t('common.retry')} icon={AlertTriangle} /> : null}
+            {result ? (
+              <div className="lookup-result">
+                <div>
+                  <span className="section-kicker">{t('customer.lookup.resultTitle')}</span>
+                  <h2>{result.reference}</h2>
+                  <div className="inline-status">
+                    <StatusPill type="lifecycle" value={result.lifecycle} t={t} />
+                    <StatusPill type="payment" value={result.paymentStatus} t={t} />
                   </div>
-                ) : null;
-              })}
-            </div>
-            <form className="change-request-form" onSubmit={submitChange}>
-              <div>
-                <span className="section-kicker">{t('customer.lookup.changeTitle')}</span>
-                <p>{t('customer.lookup.changeCopy')}</p>
+                </div>
+                <div className="info-grid">
+                  <InfoBlock title={t('common.name')} copy={result.customerName} />
+                  <InfoBlock title={t('admin.table.dates')} copy={formatDateRange(result, locale)} />
+                  <InfoBlock title={t('admin.table.fulfillment')} copy={t(`enum.fulfillment.${result.fulfillment}`)} />
+                  <InfoBlock title={t('common.address')} copy={result.address || '-'} />
+                </div>
+                <div className="summary-card compact-card">
+                  {result.items.map((item) => {
+                    const product = products.find((entry) => entry.id === item.productId);
+                    return product ? (
+                      <div className="summary-item" key={`${item.productId}-${item.variantId}`}>
+                        <img src={product.image} alt={productAlt(product, t)} />
+                        <div>
+                          <strong>{productName(product, t)}</strong>
+                          <span>{variantLabel(t, item.variantId)} x {item.qty}</span>
+                        </div>
+                        <b>{formatRupiah(product.price * item.qty)}</b>
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+                <form className="change-request-form" onSubmit={submitChange}>
+                  <div>
+                    <span className="section-kicker">{t('customer.lookup.changeTitle')}</span>
+                    <p>{t('customer.lookup.changeCopy')}</p>
+                  </div>
+                  <Controller
+                    control={control}
+                    name="changeType"
+                    render={({ field }) => (
+                      <Select.Root value={field.value} onValueChange={field.onChange}>
+                        <Select.Trigger className="select-trigger" aria-label={t('customer.lookup.changeTitle')}>
+                          <Select.Value />
+                        </Select.Trigger>
+                        <Select.Portal>
+                          <Select.Content className="select-content">
+                            {['cancel', 'reschedule', 'items', 'contact'].map((type) => (
+                              <Select.Item className="select-item" value={type} key={type}>
+                                <Select.ItemText>{t(`enum.change.${type}`)}</Select.ItemText>
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Portal>
+                      </Select.Root>
+                    )}
+                  />
+                  <Field label={t('common.notes')} error={errors.changeNotes?.message}>
+                    <textarea {...register('changeNotes')} rows="3" />
+                  </Field>
+                  <button className="outline-button" type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? t('common.loading') : t('customer.lookup.changeSubmit')}
+                  </button>
+                  {changeSent ? <p className="success-message">{t('customer.lookup.changeSent')}</p> : null}
+                  {changeError ? <p className="validation-message">{changeError}</p> : null}
+                </form>
               </div>
-              <Controller
-                control={control}
-                name="changeType"
-                render={({ field }) => (
-                  <Select.Root value={field.value} onValueChange={field.onChange}>
-                    <Select.Trigger className="select-trigger" aria-label={t('customer.lookup.changeTitle')}>
-                      <Select.Value />
-                    </Select.Trigger>
-                    <Select.Portal>
-                      <Select.Content className="select-content">
-                        {['cancel', 'reschedule', 'items', 'contact'].map((type) => (
-                          <Select.Item className="select-item" value={type} key={type}>
-                            <Select.ItemText>{t(`enum.change.${type}`)}</Select.ItemText>
-                          </Select.Item>
-                        ))}
-                      </Select.Content>
-                    </Select.Portal>
-                  </Select.Root>
-                )}
-              />
-              <Field label={t('common.notes')} error={errors.changeNotes?.message}>
-                <textarea {...register('changeNotes')} rows="3" />
-              </Field>
-              <button className="outline-button" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? t('common.loading') : t('customer.lookup.changeSubmit')}
-              </button>
-              {changeSent ? <p className="success-message">{t('customer.lookup.changeSent')}</p> : null}
-              {changeError ? <p className="validation-message">{changeError}</p> : null}
-            </form>
+            ) : null}
           </div>
         ) : null}
       </div>

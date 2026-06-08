@@ -26,6 +26,18 @@ function copyScript(fixtureRoot, scriptName) {
   );
 }
 
+function copyScriptLib(fixtureRoot) {
+  const libRoot = path.join(root, '.opencode', 'scripts', 'lib');
+  for (const entry of fs.readdirSync(libRoot, { withFileTypes: true })) {
+    if (entry.isFile()) {
+      writeFile(
+        path.join(fixtureRoot, '.opencode', 'scripts', 'lib', entry.name),
+        fs.readFileSync(path.join(libRoot, entry.name), 'utf8'),
+      );
+    }
+  }
+}
+
 function run(command, args, cwd, options = {}) {
   const result = spawnSync(command, args, {
     cwd,
@@ -55,6 +67,7 @@ const featureId = 'FEATURE';
 const testCaseId = 'FEATURE-001';
 
 try {
+  copyScriptLib(fixtureRoot);
   copyScript(fixtureRoot, 'workflow-runner.mjs');
   copyScript(fixtureRoot, 'build-worker-task.mjs');
   copyScript(fixtureRoot, 'build-test-case-manifest.mjs');
@@ -70,6 +83,17 @@ try {
     code_roots: ['src'],
     test_roots: ['test'],
     test_types: ['e2e'],
+    workflow: { enabled_modes: ['ui-tracer', 'light-implementation', 'strict-tdd'], default_mode: 'ui-tracer', max_parallel: 1 },
+    artifacts: {
+      root: '.artifacts',
+      playwright: {
+        output_dir: '.artifacts/playwright/test-results',
+        html_report: '.artifacts/playwright/html-report',
+        screenshots: '.artifacts/playwright/screenshots',
+      },
+      playwright_mcp: '.artifacts/playwright-mcp',
+      opencode: '.artifacts/opencode',
+    },
     commands: {
       test_case: 'cd test && npx playwright test {test_runner_spec_files} --grep "{test_case_id}"',
       manifest: 'node .opencode/scripts/build-test-case-manifest.mjs',
@@ -154,6 +178,12 @@ try {
   if (nextTaskReport.outcome !== 'success' || nextTaskReport.nextTask?.role !== 'sdet' || nextTaskReport.nextTask?.mode !== 'red') {
     fail('Expected next-task to emit SDET RED after initialization.', JSON.stringify(nextTaskReport, null, 2));
   }
+
+  run('git', ['switch', '-c', `tdd/${ticketId}`], fixtureRoot);
+  writeFile(path.join(fixtureRoot, 'src', 'ticket-output.txt'), 'ticket branch output\n');
+  run('git', ['add', 'src/ticket-output.txt'], fixtureRoot);
+  run('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'ticket branch output'], fixtureRoot);
+  run('git', ['switch', `tdd/${planId}`], fixtureRoot);
 
   writeFile(path.join(fixtureRoot, 'docs', 'plans', `${planId}.md`), `---\nid: ${planId}\nstatus: in_progress\n---\n\n# Runner Fixture Plan\n\n## Tickets\n- ${ticketId} - complete - feature - Fixture ticket\n\n## Status Summary\n- draft: 0\n- review: 0\n- ready: 0\n- in_progress: 0\n- blocked: 0\n- complete: 1\n`);
   writeFile(path.join(fixtureRoot, 'docs', 'tickets', `${ticketId}.md`), `---\nid: ${ticketId}\nplan_id: ${planId}\ntype: feature\nstatus: complete\ntest_case_id: ${testCaseId}\npriority: 1\nsource_plan: docs/plans/${planId}.md\nred_expectation: The new acceptance test fails for the fixture reason.\ngreen_expectation: The same acceptance test passes after the minimal fixture implementation.\n---\n\n# Fixture Ticket\n`);

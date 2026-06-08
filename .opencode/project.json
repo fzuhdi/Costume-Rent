@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "project": {
     "name": "Costume Rental",
     "adapter_path": ".opencode/project.json"
@@ -79,6 +79,63 @@
   "test_roots": [
     "test"
   ],
+  "docs": {
+    "root": "docs",
+    "acceptance": "docs/acceptance",
+    "plans": "docs/plans",
+    "tickets": "docs/tickets",
+    "workflow_changes": "docs/workflow-changes",
+    "runbooks": "docs/runbooks"
+  },
+  "workflow": {
+    "product_stages": [
+      "design-ui",
+      "integrate-backend",
+      "deployment"
+    ],
+    "internal_stages": [
+      "workflow-maintenance"
+    ],
+    "quality_policies": [
+      "exploratory",
+      "light-checks",
+      "strict-tdd"
+    ],
+    "default_stage": "design-ui",
+    "default_quality_policy": "exploratory",
+    "legacy_mode_map": {
+      "ui-tracer": {
+        "workflow_stage": "design-ui",
+        "quality_policy": "exploratory"
+      },
+      "light-implementation": {
+        "workflow_stage": "integrate-backend",
+        "quality_policy": "light-checks"
+      },
+      "strict-tdd": {
+        "workflow_stage": "integrate-backend",
+        "quality_policy": "strict-tdd"
+      }
+    },
+    "enabled_modes": [
+      "ui-tracer",
+      "light-implementation",
+      "strict-tdd",
+      "parallel-runtime"
+    ],
+    "default_mode": "ui-tracer",
+    "max_parallel": 3
+  },
+  "artifacts": {
+    "root": ".artifacts",
+    "playwright": {
+      "output_dir": ".artifacts/playwright/test-results",
+      "html_report": ".artifacts/playwright/html-report",
+      "screenshots": ".artifacts/playwright/screenshots"
+    },
+    "playwright_mcp": ".artifacts/playwright-mcp",
+    "opencode": ".artifacts/opencode"
+  },
   "protected_paths": [
     ".env",
     ".env.*",
@@ -100,6 +157,11 @@
     "api"
   ],
   "commands": {
+    "ui_smoke": "cd test && npx playwright test --project=ui:smoke",
+    "ui_review": "cd test && npx playwright test --project=ui:review",
+    "e2e_tdd": "cd test && npx playwright test --project=e2e:tdd {test_runner_spec_files} --grep \"{test_case_id}\"",
+    "api": "cd test && npx playwright test --project=api",
+    "visual": "cd test && npx playwright test --project=visual",
     "test_case": "cd test && npx playwright test {test_runner_spec_files} --grep \"{test_case_id}\"",
     "feature": "cd test && npx playwright test {test_runner_spec_files}",
     "manifest": "node .opencode/scripts/build-test-case-manifest.mjs",
@@ -155,7 +217,8 @@
       "playwright_base_url": "PW_BASE_URL",
       "playwright_output_dir": "PW_OUTPUT_DIR",
       "playwright_json_output": "PW_JSON_OUTPUT",
-      "playwright_html_report": "PW_HTML_REPORT"
+      "playwright_html_report": "PW_HTML_REPORT",
+      "playwright_screenshots": "PW_SCREENSHOT_DIR"
     },
     "env_values": {
       "BUSANA_BACKEND_ENV_FILE": "backend/.env.ticket"

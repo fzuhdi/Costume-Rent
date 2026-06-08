@@ -15,6 +15,8 @@ function parseArgs(argv) {
     planId: null,
     ticketFile: null,
     ticketType: null,
+    workflowStage: null,
+    qualityPolicy: null,
     branch: null,
     baseBranch: null,
     testInterface: null,
@@ -42,6 +44,8 @@ function parseArgs(argv) {
     else if (key === '--plan-id') values.planId = next;
     else if (key === '--ticket-file') values.ticketFile = next;
     else if (key === '--ticket-type') values.ticketType = next;
+    else if (key === '--workflow-stage') values.workflowStage = next;
+    else if (key === '--quality-policy') values.qualityPolicy = next;
     else if (key === '--branch') values.branch = next;
     else if (key === '--base-branch') values.baseBranch = next;
     else if (key === '--test-interface') values.testInterface = next;
@@ -53,27 +57,49 @@ function parseArgs(argv) {
 }
 
 function usage() {
-  return 'Usage: node .opencode/scripts/build-worker-task.mjs --role sdet|developer|reviewer|explore --mode red|green|final-review|explore --ticket-id TICKET-* --test-case-id ID --worktree-root <path> [context options] [--json]';
+  return 'Usage: node .opencode/scripts/build-worker-task.mjs --role sdet|developer|reviewer|explore|workflow-engineer --mode red|green|final-review|explore|workflow-maintenance --ticket-id TICKET-* [--test-case-id ID] --worktree-root <path> [context options] [--json]';
 }
 
 function validate(values) {
-  if (!['sdet', 'developer', 'reviewer', 'explore'].includes(values.role)) throw new Error('role must be one of sdet|developer|reviewer|explore');
+  if (values.role === 'workflow_engineer') values.role = 'workflow-engineer';
+  if (!['sdet', 'developer', 'reviewer', 'explore', 'workflow-engineer'].includes(values.role)) throw new Error('role must be one of sdet|developer|reviewer|explore|workflow-engineer');
   if (!values.mode) throw new Error('mode is required');
   if (!values.ticketId || !ticketPattern.test(values.ticketId)) throw new Error('ticket-id must match TICKET-YYYYMMDD-NNN');
-  if (!values.testCaseId) throw new Error('test-case-id is required');
+  if (values.role !== 'workflow-engineer' && !values.testCaseId) throw new Error('test-case-id is required');
   if (!values.worktreeRoot) throw new Error('worktree-root is required');
   const modeByRole = {
     sdet: new Set(['red']),
     developer: new Set(['green', 'refactor']),
     reviewer: new Set(['ticket-audit', 'red-arbitrate', 'already-green-audit', 'final-review']),
     explore: new Set(['explore']),
+    'workflow-engineer': new Set(['workflow-maintenance']),
   };
   if (!modeByRole[values.role]?.has(values.mode)) {
     throw new Error(`mode ${values.mode} is not valid for role ${values.role}`);
   }
 }
 
+function buildWorkflowEngineerPrompt(values) {
+  return [
+    'Load .opencode/agents/workflow-engineer.md and follow its contract.',
+    `MODE: ${values.mode}`,
+    `WORKTREE_ROOT: ${path.resolve(values.worktreeRoot)}`,
+    `TICKET_ID: ${values.ticketId}`,
+    values.planId ? `PLAN_ID: ${values.planId}` : null,
+    values.ticketFile ? `TICKET_FILE: ${values.ticketFile}` : `TICKET_FILE: docs/tickets/${values.ticketId}.md`,
+    values.workflowStage ? `WORKFLOW_STAGE: ${values.workflowStage}` : 'WORKFLOW_STAGE: workflow-maintenance',
+    values.qualityPolicy ? `QUALITY_POLICY: ${values.qualityPolicy}` : 'QUALITY_POLICY: light-checks',
+    'SCOPE: workflow/config/docs/scripts maintenance only; do not edit backend/** or frontend/**.',
+    'VALIDATION_REQUIRED: script syntax, workflow tests, doctor, portability audit, manifest check, and runner preflight when relevant to the touched files.',
+    '',
+    'Run all file and shell operations under WORKTREE_ROOT.',
+    'Return concise workflow-engineer output and include exact blocker if execution cannot proceed.',
+  ].filter(Boolean).join('\n');
+}
+
 function buildPrompt(values) {
+  if (values.role === 'workflow-engineer') return buildWorkflowEngineerPrompt(values);
+
   const agentLoad = values.role === 'explore'
     ? 'Use the built-in explore subagent contract for read-only implementation discovery.'
     : `Load .opencode/agents/${values.role}.md and follow its contract.`;
@@ -82,10 +108,12 @@ function buildPrompt(values) {
     `MODE: ${values.mode}`,
     `WORKTREE_ROOT: ${path.resolve(values.worktreeRoot)}`,
     `TICKET_ID: ${values.ticketId}`,
-    `TEST_CASE_ID: ${values.testCaseId}`,
+    values.testCaseId ? `TEST_CASE_ID: ${values.testCaseId}` : null,
     values.planId ? `PLAN_ID: ${values.planId}` : null,
     values.ticketFile ? `TICKET_FILE: ${values.ticketFile}` : `TICKET_FILE: docs/tickets/${values.ticketId}.md`,
     values.ticketType ? `TICKET_TYPE: ${values.ticketType}` : null,
+    values.workflowStage ? `WORKFLOW_STAGE: ${values.workflowStage}` : null,
+    values.qualityPolicy ? `QUALITY_POLICY: ${values.qualityPolicy}` : null,
     values.branch ? `BRANCH: ${values.branch}` : null,
     values.baseBranch ? `BASE_BRANCH: ${values.baseBranch}` : null,
     values.testInterface ? `TEST_INTERFACE: ${values.testInterface}` : 'TEST_INTERFACE: manifest-resolved targeted test interface from .opencode/state/test-case-manifest.json',
