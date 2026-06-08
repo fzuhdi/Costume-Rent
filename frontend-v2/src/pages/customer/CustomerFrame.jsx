@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { CustomerNav } from '../../components/customer/CustomerComponents.jsx';
+import { CustomerNav } from '../../components/customer/common/CustomerNav.jsx';
 import { resolveTagline } from '../../lib/rental-utils.js';
 
 export default function CustomerFrame({

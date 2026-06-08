@@ -1,22 +1,22 @@
-import * as Tabs from '@radix-ui/react-tabs';
-import { ArrowRight, BadgeCheck, CalendarDays, CheckCircle2, Clock3, Search, Star, Truck } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import {
+  HomeFeaturedSection,
+  HomeGuideSection,
+  HomeHeroSection,
+  HomeLocationSection,
+  HomeTestimonialsSection,
+  HomeTrustSection,
+} from '../../components/customer/home/HomeSections.jsx';
 import { defaultDates, normalizeHomeContent } from '../../mockData.js';
 import {
   formatDateRange,
-  formatRupiah,
-  getProductAvailability,
   getVariantAvailability,
   localizeContent,
   productAlt,
   productCoverImage,
-  productDescription,
-  productMeta,
-  productName,
   validateDates,
 } from '../../lib/rental-utils.js';
-import { StatusPill } from '../../components/shared.jsx';
 import CustomerFrame from './CustomerFrame.jsx';
 
 export default function CustomerHomePage({
@@ -40,17 +40,15 @@ export default function CustomerHomePage({
   const heroImageAlt = localizeContent(homeContent.heroImageAlt, locale, fallbackHeroAlt) || fallbackHeroAlt;
   const articles = homeContent.articles.slice(0, 3);
   const testimonials = homeContent.testimonials.slice(0, 3);
+  const locationAddress = localizeContent(homeContent.locationAddress, locale);
+  const locationMapSrc = resolveMapEmbedSource(homeContent.locationMapEmbed, locationAddress);
+  const locationMapUrl = resolveMapLink(homeContent.locationMapUrl, locationAddress);
   const rentalPeriod = formatDateRange({ start: draft.start, end: draft.end }, locale);
   const activeProducts = products.filter((product) => product.active);
   const totalAvailableUnits = activeProducts.reduce((total, product) => total + availableUnits(product, draft, rentals), 0);
   const catalogueSearch = buildCatalogueSearch(draft);
   const collections = buildHomeCollections(activeProducts, t);
   const defaultCollection = collections.find((collection) => collection.products.length > 0)?.value ?? collections[0]?.value;
-  const trustItems = [
-    { icon: CalendarDays, title: t('customer.home.trustDateTitle'), copy: t('customer.home.trustDateCopy') },
-    { icon: CheckCircle2, title: t('customer.home.trustStockTitle'), copy: t('customer.home.trustStockCopy') },
-    { icon: Truck, title: t('customer.home.trustFulfillmentTitle'), copy: t('customer.home.trustFulfillmentCopy') },
-  ];
 
   const submitSearch = (event) => {
     event.preventDefault();
@@ -78,228 +76,69 @@ export default function CustomerHomePage({
       cartCount={cart.length}
       onOpenCart={onOpenCart}
     >
-      <section
-        className="customer-home-hero"
-        id="customer-home"
-        style={heroImage ? { backgroundImage: `linear-gradient(90deg, rgb(15 23 42 / 0.90) 0%, rgb(15 23 42 / 0.70) 45%, rgb(15 23 42 / 0.22) 100%), url(${heroImage})` } : undefined}
-        aria-label={heroImageAlt || undefined}
-      >
-        <div className="shell home-hero-inner">
-          <div className="home-hero-copy">
-            <span className="section-kicker">{localizeContent(homeContent.heroKicker, locale)}</span>
-            <h1>{localizeContent(homeContent.heroTitle, locale)}</h1>
-            <p>{localizeContent(homeContent.heroCopy, locale)}</p>
-            <div className="home-hero-actions" aria-label={t('customer.home.heroActionsAria')}>
-              <Link className="secondary-button" to={{ pathname: '/catalogue', search: catalogueSearch }}>
-                <CalendarDays aria-hidden="true" />
-                {t('customer.home.catalogueAction')}
-              </Link>
-              <Link className="home-lookup-link" to="/lookup">
-                <BadgeCheck aria-hidden="true" />
-                {t('customer.home.lookupCta')}
-              </Link>
-            </div>
-            <div className="home-hero-stats" aria-label={t('customer.home.statsAria')}>
-              <span>
-                <strong>{activeProducts.length}</strong>
-                {t('customer.home.statActive')}
-              </span>
-              <span>
-                <strong>{totalAvailableUnits}</strong>
-                {t('customer.home.statUnits')}
-              </span>
-              <span>
-                <strong>
-                  <Clock3 aria-hidden="true" />
-                </strong>
-                {t('customer.home.statReview')}
-              </span>
-            </div>
-          </div>
-          <form className="home-search-panel" onSubmit={submitSearch} aria-label={t('customer.home.searchAria')}>
-            <div className="home-search-heading">
-              <span className="section-kicker">{t('customer.home.searchKicker')}</span>
-              <strong>{t('customer.home.searchTitle')}</strong>
-              <p>{t('customer.home.searchHint')}</p>
-            </div>
-            <label className="search-field search-query">
-              <span>{t('customer.search.queryLabel')}</span>
-              <input
-                value={draft.q}
-                onChange={(event) => setDraft((current) => ({ ...current, q: event.target.value }))}
-                placeholder={t('customer.search.queryValue')}
-                type="search"
-              />
-            </label>
-            <label className="search-field">
-              <span>{t('customer.search.startLabel')}</span>
-              <input value={draft.start} onChange={(event) => setDraft((current) => ({ ...current, start: event.target.value }))} type="date" />
-            </label>
-            <label className="search-field">
-              <span>{t('customer.search.endLabel')}</span>
-              <input value={draft.end} onChange={(event) => setDraft((current) => ({ ...current, end: event.target.value }))} type="date" />
-            </label>
-            <p className="home-search-period">{t('customer.home.periodSummary', { range: rentalPeriod })}</p>
-            <button className="primary-button" type="submit">
-              <Search aria-hidden="true" />
-              {t('customer.home.searchCta')}
-            </button>
-            {dateError ? <p className="validation-message">{dateError}</p> : null}
-          </form>
-        </div>
-      </section>
-
-      <section className="home-trust-strip" aria-label={t('customer.home.trustAria')}>
-        <div className="shell home-trust-grid">
-          {trustItems.map((item) => (
-            <article className="home-trust-item" key={item.title}>
-              <item.icon aria-hidden="true" />
-              <div>
-                <h2>{item.title}</h2>
-                <p>{item.copy}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="home-section home-featured-section">
-        <div className="shell">
-          <div className="home-featured-head">
-            <div>
-              <span className="section-kicker">{t('customer.home.featuredKicker')}</span>
-              <h2>{t('customer.home.featuredTitle')}</h2>
-              <p>{t('customer.home.featuredCopy')}</p>
-            </div>
-            <Link className="outline-button" to={{ pathname: '/catalogue', search: catalogueSearch }}>
-              <Search aria-hidden="true" />
-              {t('customer.home.searchCta')}
-            </Link>
-          </div>
-
-          <Tabs.Root className="home-collection-tabs" defaultValue={defaultCollection}>
-            <Tabs.List className="home-tab-list" aria-label={t('customer.home.tabsAria')}>
-              {collections.map((collection) => (
-                <Tabs.Trigger className="home-tab-trigger" value={collection.value} key={collection.value}>
-                  {collection.label}
-                  <span>{collection.products.length}</span>
-                </Tabs.Trigger>
-              ))}
-            </Tabs.List>
-            {collections.map((collection) => (
-              <Tabs.Content className="home-tab-panel" value={collection.value} key={collection.value}>
-                {collection.products.length > 0 ? (
-                  <div className="home-product-grid">
-                    {collection.products.map((product) => (
-                      <HomeProductCard
-                        product={product}
-                        dates={draft}
-                        locale={locale}
-                        t={t}
-                        rentals={rentals}
-                        catalogueSearch={catalogueSearch}
-                        key={product.id}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="home-empty-note">{t('customer.home.featuredEmpty')}</p>
-                )}
-              </Tabs.Content>
-            ))}
-          </Tabs.Root>
-        </div>
-      </section>
-
-      <section className="home-section home-catalogue-cta">
-        <div className="shell home-cta-grid">
-          <div>
-            <span className="section-kicker">{localizeContent(homeContent.catalogueKicker, locale)}</span>
-            <h2>{localizeContent(homeContent.catalogueTitle, locale)}</h2>
-            <p>{localizeContent(homeContent.catalogueCopy, locale)}</p>
-          </div>
-          <Link className="secondary-button" to={{ pathname: '/catalogue', search: catalogueSearch }}>
-            <CalendarDays aria-hidden="true" />
-            {t('customer.home.catalogueAction')}
-          </Link>
-        </div>
-      </section>
-
-      <section className="home-section">
-        <div className="shell">
-          <div className="home-section-head">
-            <span className="section-kicker">{localizeContent(homeContent.articlesKicker, locale)}</span>
-            <h2>{localizeContent(homeContent.articlesTitle, locale)}</h2>
-          </div>
-          <div className="home-card-grid">
-            {articles.map((article, index) => (
-              <article className="home-article-card" key={`home-article-${index}`}>
-                <span>{localizeContent(article.label, locale)}</span>
-                <h3>{localizeContent(article.title, locale)}</h3>
-                <p>{localizeContent(article.copy, locale)}</p>
-                <Link className="text-button" to="/catalogue">
-                  {t('customer.home.articleAction')}
-                  <ArrowRight aria-hidden="true" />
-                </Link>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="home-section home-testimonials">
-        <div className="shell">
-          <div className="home-section-head">
-            <span className="section-kicker">{localizeContent(homeContent.testimonialsKicker, locale)}</span>
-            <h2>{localizeContent(homeContent.testimonialsTitle, locale)}</h2>
-          </div>
-          <div className="home-card-grid">
-            {testimonials.map((testimonial, index) => (
-              <figure className="testimonial-card" key={`home-testimonial-${index}`}>
-                <div className="testimonial-stars" aria-hidden="true">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <Star key={index} />
-                  ))}
-                </div>
-                <blockquote>{localizeContent(testimonial.quote, locale)}</blockquote>
-                <figcaption>{localizeContent(testimonial.name, locale)}</figcaption>
-              </figure>
-            ))}
-          </div>
-        </div>
-      </section>
+      <HomeHeroSection
+        t={t}
+        locale={locale}
+        homeContent={homeContent}
+        heroImage={heroImage}
+        heroImageAlt={heroImageAlt}
+        activeProductCount={activeProducts.length}
+        totalAvailableUnits={totalAvailableUnits}
+        draft={draft}
+        setDraft={setDraft}
+        rentalPeriod={rentalPeriod}
+        dateError={dateError}
+        onSubmit={submitSearch}
+      />
+      <HomeTrustSection t={t} />
+      <HomeFeaturedSection
+        t={t}
+        locale={locale}
+        collections={collections}
+        defaultCollection={defaultCollection}
+        draft={draft}
+        rentals={rentals}
+        catalogueSearch={catalogueSearch}
+        getAvailableUnits={availableUnits}
+      />
+      <HomeGuideSection homeContent={homeContent} articles={articles} locale={locale} />
+      <HomeTestimonialsSection t={t} homeContent={homeContent} testimonials={testimonials} locale={locale} />
+      <HomeLocationSection
+        t={t}
+        homeContent={homeContent}
+        locale={locale}
+        locationAddress={locationAddress}
+        locationMapSrc={locationMapSrc}
+        locationMapUrl={locationMapUrl}
+      />
     </CustomerFrame>
   );
 }
 
-function HomeProductCard({ product, dates, locale, t, rentals, catalogueSearch }) {
-  const availability = getProductAvailability(product, dates, rentals);
-  const units = availableUnits(product, dates, rentals);
-  const detailTo = { pathname: `/costumes/${product.id}`, search: catalogueSearch };
+function resolveMapEmbedSource(value, address) {
+  const fallback = `https://www.google.com/maps?q=${encodeURIComponent(address || 'Denpasar, Bali')}&output=embed`;
+  const source = extractIframeSource(value) || String(value ?? '').trim();
+  return isSafeGoogleMapUrl(source) ? source : fallback;
+}
 
-  return (
-    <article className="home-product-card">
-      <Link className="home-product-media" to={detailTo} aria-label={t('customer.product.detailAria', { product: productName(product, t) })}>
-        <img src={productCoverImage(product, t)} alt={productAlt(product, t)} loading="lazy" />
-        <StatusPill type="availability" value={availability} t={t} />
-      </Link>
-      <div className="home-product-body">
-        <span className="product-meta">{productMeta(product, t)}</span>
-        <h3>{productName(product, t)}</h3>
-        <p>{productDescription(product, locale, t)}</p>
-        <div className="home-product-footer">
-          <span>{t('customer.home.fromPrice', { price: formatRupiah(product.price) })}</span>
-          <Link className="text-button" to={detailTo}>
-            {t('customer.home.viewProduct')}
-            <ArrowRight aria-hidden="true" />
-          </Link>
-        </div>
-        <small className={units > 0 ? 'home-product-stock' : 'home-product-stock unavailable'}>
-          {units > 0 ? t('customer.home.availableUnits', { count: units }) : t('customer.home.unavailableNow')}
-        </small>
-      </div>
-    </article>
-  );
+function resolveMapLink(value, address) {
+  const fallback = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || 'Denpasar, Bali')}`;
+  const source = String(value ?? '').trim();
+  return isSafeGoogleMapUrl(source) ? source : fallback;
+}
+
+function extractIframeSource(value) {
+  const match = String(value ?? '').match(/\ssrc=["']([^"']+)["']/i);
+  return match?.[1]?.trim() ?? '';
+}
+
+function isSafeGoogleMapUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && (url.hostname.includes('google.') || url.hostname === 'maps.app.goo.gl');
+  } catch {
+    return false;
+  }
 }
 
 function buildCatalogueSearch(draft) {

@@ -1,5 +1,5 @@
 import { ShoppingBag } from 'lucide-react';
-import { CartSummary, CheckoutForm } from '../../components/customer/CustomerComponents.jsx';
+import { CartSummary, CheckoutForm } from '../../components/customer/checkout/CustomerCheckoutComponents.jsx';
 import CustomerFrame from './CustomerFrame.jsx';
 
 export default function CheckoutRoutePage({

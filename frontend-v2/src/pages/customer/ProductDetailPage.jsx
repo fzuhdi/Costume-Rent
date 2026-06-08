@@ -1,7 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
-import { ProductDetail } from '../../components/customer/CustomerComponents.jsx';
+import { ProductDetail } from '../../components/customer/product/ProductDetail.jsx';
 import { usePersistentState } from '../../hooks/usePersistentState.js';
 import { defaultDates } from '../../mockData.js';
 import {

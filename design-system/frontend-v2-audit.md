@@ -36,3 +36,35 @@ Date: 2026-05-27
 - Admin create flows still use direct local state for new product/client/rental insertion, while saves use the adapter boundary.
 - Image assets are large and Vite warns about bundle/chunk size; route-level splitting and image optimization remain future hardening work.
 - Full keyboard and axe runs were not automated in this pass; build verification is green.
+
+## Structural Cleanup Update
+
+Date: 2026-06-08
+
+### Reviewed
+
+- Admin component ownership for common, catalogue, clients, requests, rentals, and settings.
+- Customer component ownership for common, catalogue, checkout, home, lookup, and product.
+- Compatibility barrels, Radix sheet/dialog behavior, catalogue filters, product availability calendar, checkout sheets, and catalogue editor modules.
+
+### Fixes Made
+
+- Reorganized `frontend-v2/src/components` into feature folders while keeping `AdminComponents.jsx` and `CustomerComponents.jsx` as compatibility barrels.
+- Split catalogue editor into shell, details/media/variants/maintenance tabs, save bar, switch dialog, and utilities.
+- Split customer product components into product card, availability panel, product detail, product availability calendar, and calendar utilities.
+- Split checkout components into cart summary, checkout form, step actions, request summary sheet, checkout modal, and checkout link helper.
+- Moved catalogue admin clone, validation, save normalization, media, and ID helpers into feature utilities.
+- Converted admin bottom sheets and customer catalogue filters to Radix-backed dialog/sheet patterns while preserving existing class hooks.
+- Added architecture and future-update principles to `design-system/MASTER.md`.
+
+### Verification
+
+- Production build passed.
+- Internal import scan found no `AdminComponents` or `CustomerComponents` usage.
+- Old root component-path import scan passed.
+- Temporary Playwright smoke checks passed for customer catalogue/product/cart/checkout/lookup and admin requests/catalogue/clients/rentals, including mobile overflow checks.
+
+### Remaining Known Risks
+
+- Browser plugin setup failed in the Windows sandbox during this cleanup; direct Playwright was used for smoke verification.
+- Route-level code splitting and image optimization remain future hardening work.

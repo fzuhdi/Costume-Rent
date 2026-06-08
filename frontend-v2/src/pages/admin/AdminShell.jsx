@@ -2,7 +2,7 @@ import { AlertTriangle, Bell, ChevronRight, Clock, Info, LogOut, X } from 'lucid
 import { useEffect, useState } from 'react';
 import { Link, Navigate, NavLink, useLocation, useParams } from 'react-router-dom';
 import { adminNav } from '../../constants/ui.js';
-import AdminBottomSheet from '../../components/admin/AdminBottomSheet.jsx';
+import AdminBottomSheet from '../../components/admin/common/AdminBottomSheet.jsx';
 import { LocaleButton, Metric, NotificationRow, StatusPill } from '../../components/shared.jsx';
 import { getAdminCopy, getAdminMetrics, getAdminTitle, localizedData, resolveTagline } from '../../lib/rental-utils.js';
 import CatalogueAdmin from './CatalogueAdmin.jsx';

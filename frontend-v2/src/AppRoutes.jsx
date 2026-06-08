@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { CheckoutModal, RequestSummarySheet } from './components/customer/CustomerComponents.jsx';
+import { CheckoutModal, RequestSummarySheet } from './components/customer/checkout/CustomerCheckoutComponents.jsx';
 import { useI18n } from './hooks/useI18n.js';
 import { usePersistentState } from './hooks/usePersistentState.js';
 import {

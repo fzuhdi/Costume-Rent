@@ -28,6 +28,10 @@ export const defaultHomeContent = {
   articlesTitle: sourceContent('Catatan singkat sebelum memilih kostum'),
   testimonialsKicker: sourceContent('Pengalaman pelanggan'),
   testimonialsTitle: sourceContent('Pesanan tetap ditinjau staf sebelum sewa final'),
+  locationTitle: sourceContent('Datangi Butik Kami'),
+  locationAddress: sourceContent('Jl. Melati 12, Denpasar, Bali'),
+  locationMapEmbed: 'https://www.google.com/maps?q=Jl.%20Melati%2012%2C%20Denpasar%2C%20Bali&output=embed',
+  locationMapUrl: 'https://www.google.com/maps/search/?api=1&query=Jl.%20Melati%2012%2C%20Denpasar%2C%20Bali',
   articles: [
     {
       label: sourceContent('Ukuran'),
@@ -49,14 +53,17 @@ export const defaultHomeContent = {
     {
       quote: sourceContent('Tanggal dan ukuran terlihat jelas, lalu staf cepat mengonfirmasi sebelum acara sekolah.'),
       name: sourceContent('Maya, acara sekolah'),
+      photoUrl: '',
     },
     {
       quote: sourceContent('Saya bisa pilih pengantaran dan menulis catatan lokasi aula tanpa membuat akun.'),
       name: sourceContent('Dimas, pentas budaya'),
+      photoUrl: '',
     },
     {
       quote: sourceContent('Aksesori tari mudah disaring, dan stok penuh tidak masuk ke pesanan saya.'),
       name: sourceContent('Rina, sanggar tari'),
+      photoUrl: '',
     },
   ],
 };
@@ -72,6 +79,8 @@ const homeFields = [
   'articlesTitle',
   'testimonialsKicker',
   'testimonialsTitle',
+  'locationTitle',
+  'locationAddress',
 ];
 
 const articleFields = ['label', 'title', 'copy'];
@@ -86,21 +95,27 @@ export function normalizeHomeContent(content = {}) {
       ...result,
       [field]: normalizeContentField(current, defaultHomeContent, field),
     }), {}),
+    locationMapEmbed: typeof current.locationMapEmbed === 'string' ? current.locationMapEmbed : defaultHomeContent.locationMapEmbed,
+    locationMapUrl: typeof current.locationMapUrl === 'string' ? current.locationMapUrl : defaultHomeContent.locationMapUrl,
     articles: normalizeContentList(current.articles, defaultHomeContent.articles, articleFields),
-    testimonials: normalizeContentList(current.testimonials, defaultHomeContent.testimonials, testimonialFields),
+    testimonials: normalizeContentList(current.testimonials, defaultHomeContent.testimonials, testimonialFields, ['photoUrl']),
   };
 }
 
-function normalizeContentList(listValue, fallbackList, fields) {
+function normalizeContentList(listValue, fallbackList, fields, stringFields = []) {
   const list = Array.isArray(listValue) ? listValue : [];
   const count = Math.max(fallbackList.length, list.length);
   return Array.from({ length: count }).map((_, index) => {
     const current = list[index] ?? {};
     const fallback = fallbackList[index] ?? {};
-    return fields.reduce((result, field) => ({
+    const contentFields = fields.reduce((result, field) => ({
       ...result,
       [field]: normalizeContentField(current, fallback, field),
     }), {});
+    return stringFields.reduce((result, field) => ({
+      ...result,
+      [field]: typeof current[field] === 'string' ? current[field] : fallback[field] ?? '',
+    }), contentFields);
   });
 }
 

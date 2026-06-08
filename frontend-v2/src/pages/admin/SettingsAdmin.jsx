@@ -1,8 +1,8 @@
-import * as Switch from '@radix-ui/react-switch';
 import { useState } from 'react';
+import { HomeContentEditor, SettingsSectionHeader, SettingsToggleCard } from '../../components/admin/settings/SettingsPanels.jsx';
 import { Field } from '../../components/shared.jsx';
 import { normalizeHomeContent } from '../../mockData.js';
-import { contentSource, toSourceContent } from '../../lib/rental-utils.js';
+import { toSourceContent } from '../../lib/rental-utils.js';
 
 export default function SettingsAdmin({ t, settings, setSettings, dataAdapter }) {
   const [saveMessage, setSaveMessage] = useState('');
@@ -42,6 +42,22 @@ export default function SettingsAdmin({ t, settings, setSettings, dataAdapter })
       const merged = normalizeHomeContent(current.homeContent);
       const nextList = merged[listName].map((item, itemIndex) => (
         itemIndex === index ? { ...item, [field]: updateSource(item[field], value) } : item
+      ));
+      return {
+        ...current,
+        homeContent: {
+          ...merged,
+          [listName]: nextList,
+        },
+      };
+    });
+  };
+
+  const updateHomeListValue = (listName, index, field, value) => {
+    setDraft((current) => {
+      const merged = normalizeHomeContent(current.homeContent);
+      const nextList = merged[listName].map((item, itemIndex) => (
+        itemIndex === index ? { ...item, [field]: value } : item
       ));
       return {
         ...current,
@@ -102,104 +118,14 @@ export default function SettingsAdmin({ t, settings, setSettings, dataAdapter })
           copy={t('admin.settings.homeContentCopy')}
         />
 
-        <div className="home-content-admin-groups">
-          <HomeEditorGroup title={t('admin.settings.homeHeroSection')} copy={t('admin.settings.homeHeroSectionCopy')}>
-            <div className="form-grid home-editor-grid">
-              <Field label={t('admin.settings.homeHeroImageUrl')} hint={t('admin.settings.homeHeroImageHelp')}>
-                <input
-                  type="text"
-                  inputMode="url"
-                  value={homeContent.heroImageUrl}
-                  onChange={(event) => updateHomeValue('heroImageUrl', event.target.value)}
-                  placeholder={t('admin.settings.homeHeroImagePlaceholder')}
-                />
-              </Field>
-              <SettingsField label={t('admin.settings.homeHeroImageAlt')} className="field-wide">
-                <textarea rows="2" value={contentSource(homeContent.heroImageAlt)} onChange={(event) => updateHomeContent('heroImageAlt', event.target.value)} />
-              </SettingsField>
-              <Field label={t('admin.settings.homeHeroKicker')}>
-                <input value={contentSource(homeContent.heroKicker)} onChange={(event) => updateHomeContent('heroKicker', event.target.value)} />
-              </Field>
-              <SettingsField label={t('admin.settings.homeHeroTitle')} className="field-wide">
-                <textarea rows="2" value={contentSource(homeContent.heroTitle)} onChange={(event) => updateHomeContent('heroTitle', event.target.value)} />
-              </SettingsField>
-              <SettingsField label={t('admin.settings.homeHeroCopy')} className="field-wide">
-                <textarea rows="3" value={contentSource(homeContent.heroCopy)} onChange={(event) => updateHomeContent('heroCopy', event.target.value)} />
-              </SettingsField>
-            </div>
-          </HomeEditorGroup>
-
-          <HomeEditorGroup title={t('admin.settings.homeCatalogueSection')} copy={t('admin.settings.homeCatalogueSectionCopy')}>
-            <div className="form-grid home-editor-grid">
-              <Field label={t('admin.settings.homeCatalogueKicker')}>
-                <input value={contentSource(homeContent.catalogueKicker)} onChange={(event) => updateHomeContent('catalogueKicker', event.target.value)} />
-              </Field>
-              <SettingsField label={t('admin.settings.homeCatalogueTitle')} className="field-wide">
-                <textarea rows="2" value={contentSource(homeContent.catalogueTitle)} onChange={(event) => updateHomeContent('catalogueTitle', event.target.value)} />
-              </SettingsField>
-              <SettingsField label={t('admin.settings.homeCatalogueCopy')} className="field-wide">
-                <textarea rows="3" value={contentSource(homeContent.catalogueCopy)} onChange={(event) => updateHomeContent('catalogueCopy', event.target.value)} />
-              </SettingsField>
-            </div>
-          </HomeEditorGroup>
-
-          <HomeEditorGroup title={t('admin.settings.homeGuideSection')} copy={t('admin.settings.homeGuideSectionCopy')}>
-            <div className="form-grid home-editor-grid">
-              <Field label={t('admin.settings.homeArticlesKicker')}>
-                <input value={contentSource(homeContent.articlesKicker)} onChange={(event) => updateHomeContent('articlesKicker', event.target.value)} />
-              </Field>
-              <SettingsField label={t('admin.settings.homeArticlesTitle')} className="field-wide">
-                <textarea rows="2" value={contentSource(homeContent.articlesTitle)} onChange={(event) => updateHomeContent('articlesTitle', event.target.value)} />
-              </SettingsField>
-            </div>
-
-            <div className="home-content-admin-list">
-              {homeContent.articles.map((article, index) => (
-                <div className="home-content-admin-item" key={`article-${index}`}>
-                  <span className="section-kicker">{t('admin.settings.homeArticle', { count: index + 1 })}</span>
-                  <div className="form-grid home-editor-grid">
-                    <Field label={t('admin.settings.homeLabel')}>
-                      <input value={contentSource(article.label)} onChange={(event) => updateHomeList('articles', index, 'label', event.target.value)} />
-                    </Field>
-                    <SettingsField label={t('admin.settings.homeTitle')} className="field-wide">
-                      <textarea rows="2" value={contentSource(article.title)} onChange={(event) => updateHomeList('articles', index, 'title', event.target.value)} />
-                    </SettingsField>
-                    <SettingsField label={t('admin.settings.homeCopy')} className="field-wide">
-                      <textarea rows="3" value={contentSource(article.copy)} onChange={(event) => updateHomeList('articles', index, 'copy', event.target.value)} />
-                    </SettingsField>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </HomeEditorGroup>
-
-          <HomeEditorGroup title={t('admin.settings.homeTestimonialsSection')} copy={t('admin.settings.homeTestimonialsSectionCopy')}>
-            <div className="form-grid home-editor-grid">
-              <Field label={t('admin.settings.homeTestimonialsKicker')}>
-                <input value={contentSource(homeContent.testimonialsKicker)} onChange={(event) => updateHomeContent('testimonialsKicker', event.target.value)} />
-              </Field>
-              <SettingsField label={t('admin.settings.homeTestimonialsTitle')} className="field-wide">
-                <textarea rows="2" value={contentSource(homeContent.testimonialsTitle)} onChange={(event) => updateHomeContent('testimonialsTitle', event.target.value)} />
-              </SettingsField>
-            </div>
-
-            <div className="home-content-admin-list">
-              {homeContent.testimonials.map((testimonial, index) => (
-                <div className="home-content-admin-item" key={`testimonial-${index}`}>
-                  <span className="section-kicker">{t('admin.settings.homeTestimonial', { count: index + 1 })}</span>
-                  <div className="form-grid home-editor-grid">
-                    <SettingsField label={t('admin.settings.homeQuote')} className="field-wide">
-                      <textarea rows="3" value={contentSource(testimonial.quote)} onChange={(event) => updateHomeList('testimonials', index, 'quote', event.target.value)} />
-                    </SettingsField>
-                    <Field label={t('admin.settings.homeName')}>
-                      <input value={contentSource(testimonial.name)} onChange={(event) => updateHomeList('testimonials', index, 'name', event.target.value)} />
-                    </Field>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </HomeEditorGroup>
-        </div>
+        <HomeContentEditor
+          t={t}
+          homeContent={homeContent}
+          updateHomeContent={updateHomeContent}
+          updateHomeValue={updateHomeValue}
+          updateHomeList={updateHomeList}
+          updateHomeListValue={updateHomeListValue}
+        />
       </section>
 
       <section className="settings-toggle-grid">
@@ -228,51 +154,6 @@ export default function SettingsAdmin({ t, settings, setSettings, dataAdapter })
         ) : null}
       </div>
     </form>
-  );
-}
-
-function SettingsSectionHeader({ kicker, title, copy }) {
-  return (
-    <div className="settings-section-head">
-      <span className="section-kicker">{kicker}</span>
-      <h2>{title}</h2>
-      {copy ? <p>{copy}</p> : null}
-    </div>
-  );
-}
-
-function HomeEditorGroup({ title, copy, children }) {
-  return (
-    <section className="home-content-admin-group">
-      <div className="home-content-admin-group-head">
-        <h3>{title}</h3>
-        <p>{copy}</p>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function SettingsField({ label, className = '', children }) {
-  return (
-    <label className={`field-control ${className}`.trim()}>
-      <span>{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function SettingsToggleCard({ title, copy, checked, onCheckedChange }) {
-  return (
-    <label className="settings-toggle-card">
-      <span>
-        <strong>{title}</strong>
-        <small>{copy}</small>
-      </span>
-      <Switch.Root className="switch" checked={checked} onCheckedChange={onCheckedChange} aria-label={title}>
-        <Switch.Thumb className="switch-thumb" />
-      </Switch.Root>
-    </label>
   );
 }
 

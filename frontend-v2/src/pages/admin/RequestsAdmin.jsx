@@ -1,19 +1,20 @@
 import * as Tabs from '@radix-ui/react-tabs';
-import { AlertTriangle, CalendarDays, ListFilter, Plus, Search, UserRound, X } from 'lucide-react';
+import { AlertTriangle, ListFilter } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import AdminBottomSheet from '../../components/admin/AdminBottomSheet.jsx';
-import { EditRentalDialog, RecordPanel, RejectDialog, RentalItems } from '../../components/admin/AdminComponents.jsx';
-import { DataTable, EmptyState, Field, MobileDetailShell, PhoneField, SearchInput, SelectField, StatusPill } from '../../components/shared.jsx';
+import { AdminCreateAction, AdminCreateFab, AdminViewBar } from '../../components/admin/common/AdminManagement.jsx';
+import { EditRentalDialog, RejectDialog } from '../../components/admin/rentals/RentalDialogs.jsx';
+import { RentalItems } from '../../components/admin/rentals/RentalRecordComponents.jsx';
+import { RequestMobileDetail } from '../../components/admin/requests/RequestsView.jsx';
+import { RequestCreatePanel, RequestFilterSheet, RequestRecordsLayout } from '../../components/admin/requests/RequestManagement.jsx';
+import { StatusPill } from '../../components/shared.jsx';
 import { defaultDates } from '../../mockData.js';
 import {
   activityText,
   appendActivity,
   applyItemHoldDelta,
-  formatDateRange,
   getVariantAvailability,
   hasRentalChanged,
-  productName,
   shouldReleaseHold,
 } from '../../lib/rental-utils.js';
 import { resetMobileDetailScroll } from '../../lib/mobile-detail.js';
@@ -288,6 +289,11 @@ export default function RequestsAdmin({ t, locale, rentals, setRentals, setProdu
     }
   };
 
+  const closeAddPanel = () => {
+    setAddOpen(false);
+    setAddError('');
+  };
+
   const columns = useMemo(
     () => [
       {
@@ -341,7 +347,7 @@ export default function RequestsAdmin({ t, locale, rentals, setRentals, setProdu
     <section className={`base-window requests-window ${isDetailViewOpen ? 'detail-open' : ''}`}>
       <div className="request-list-view">
       <Tabs.Root value={tab} onValueChange={handleTabChange}>
-        <div className="view-bar">
+        <AdminViewBar>
           <Tabs.List className="view-tabs request-tabs" aria-label={t('admin.tabs.aria')}>
             {requestTabs.map((value) => (
               <Tabs.Trigger className="tab-trigger" value={value} key={value}>
@@ -351,10 +357,12 @@ export default function RequestsAdmin({ t, locale, rentals, setRentals, setProdu
             ))}
           </Tabs.List>
           <div className="view-actions">
-            <button className="primary-button desktop-create-action" type="button" aria-expanded={addOpen} aria-controls="request-add-panel" onClick={() => setAddOpen((open) => !open)}>
-              <Plus aria-hidden="true" />
-              {t('admin.requests.add')}
-            </button>
+            <AdminCreateAction
+              label={t('admin.requests.add')}
+              open={addOpen}
+              controls="request-add-panel"
+              onToggle={() => setAddOpen((open) => !open)}
+            />
             <div className="view-tools">
               <button
                 type="button"
@@ -367,177 +375,61 @@ export default function RequestsAdmin({ t, locale, rentals, setRentals, setProdu
               </button>
             </div>
           </div>
-        </div>
-        <AdminBottomSheet
-          as="div"
+        </AdminViewBar>
+        <RequestFilterSheet
           open={filtersOpen}
-          onClose={() => setFiltersOpen(false)}
-          className="filter-panel request-filter-sheet"
-          backdropClassName="request-filter-backdrop"
-          ariaLabel={t('admin.requests.filtersAria')}
-          closeLabel={t('common.close')}
-        >
-            <div className="bottom-sheet-header">
-              <span className="section-kicker">{t('admin.tools.filterSort')}</span>
-              <button className="icon-button" type="button" aria-label={t('common.close')} onClick={() => setFiltersOpen(false)}>
-                <X aria-hidden="true" />
-              </button>
-            </div>
-            <Field label={t('admin.requests.filterSearch')}>
-              <SearchInput
-                as="span"
-                value={query}
-                onChange={setQuery}
-                placeholder={t('admin.requests.filterSearchPlaceholder')}
-                clearLabel={t('common.clear')}
-              />
-            </Field>
-            <SelectField
-              label={t('admin.table.fulfillment')}
-              value={fulfillmentFilter}
-              onValueChange={setFulfillmentFilter}
-              options={fulfillmentFilters.map((value) => ({
-                value,
-                label: value === 'all' ? t('admin.requests.filterAllFulfillment') : t(`enum.fulfillment.${value}`),
-              }))}
-            />
-            <SelectField
-              label={t('admin.table.payment')}
-              value={paymentFilter}
-              onValueChange={setPaymentFilter}
-              options={paymentFilters.map((value) => ({
-                value,
-                label: value === 'all' ? t('admin.requests.filterAllPayment') : t(`enum.payment.${value}`),
-              }))}
-            />
-            <SelectField
-              label={t('admin.tools.sort')}
-              value={sortMode}
-              onValueChange={setSortMode}
-              options={sortModes.map((mode) => ({
-                value: mode,
-                label: t(`admin.tools.sort.${mode}`),
-              }))}
-            />
-            <div className="filter-actions">
-              <button className="secondary-button" type="button" onClick={applyFilters}>
-                {t('common.apply')}
-              </button>
-              <button className="outline-button" type="button" onClick={clearFilters}>
-                <X aria-hidden="true" />
-                {t('common.clear')}
-              </button>
-            </div>
-        </AdminBottomSheet>
+          setOpen={setFiltersOpen}
+          t={t}
+          query={query}
+          setQuery={setQuery}
+          fulfillmentFilter={fulfillmentFilter}
+          setFulfillmentFilter={setFulfillmentFilter}
+          fulfillmentFilters={fulfillmentFilters}
+          paymentFilter={paymentFilter}
+          setPaymentFilter={setPaymentFilter}
+          paymentFilters={paymentFilters}
+          sortMode={sortMode}
+          setSortMode={setSortMode}
+          sortModes={sortModes}
+          applyFilters={applyFilters}
+          clearFilters={clearFilters}
+        />
       </Tabs.Root>
 
-      <button className="primary-button mobile-fab" type="button" aria-expanded={addOpen} aria-controls="request-add-panel" aria-label={t('admin.requests.add')} onClick={() => setAddOpen((open) => !open)}>
-        <Plus aria-hidden="true" />
-        <span className="visually-hidden">{t('admin.requests.add')}</span>
-      </button>
+      <AdminCreateFab
+        label={t('admin.requests.add')}
+        open={addOpen}
+        controls="request-add-panel"
+        onToggle={() => setAddOpen((open) => !open)}
+      />
 
       {addOpen ? (
-        <div className="content-panel compact-panel request-add-panel" id="request-add-panel">
-          <div className="panel-form-head">
-            <div>
-              <span className="section-kicker">{t('admin.requests.add')}</span>
-              <h3>{t('admin.requests.addHelp')}</h3>
-            </div>
-            <button className="icon-button" type="button" aria-label={t('common.close')} onClick={() => {
-              setAddOpen(false);
-              setAddError('');
-            }}>
-              <X aria-hidden="true" />
-            </button>
-          </div>
-          <div className="form-grid">
-            <Field label={t('common.name')}>
-              <input value={newRequest.customerName} onChange={(event) => updateNewRequest({ customerName: event.target.value })} />
-            </Field>
-            <PhoneField label={t('common.phone')} value={newRequest.phone} onChange={(event) => updateNewRequest({ phone: event.target.value })} />
-            <Field label={t('common.email')}>
-              <input type="email" value={newRequest.email} onChange={(event) => updateNewRequest({ email: event.target.value })} />
-            </Field>
-            <Field label={t('common.dateStart')}>
-              <input type="date" value={newRequest.start} onChange={(event) => updateNewRequest({ start: event.target.value })} />
-            </Field>
-            <Field label={t('common.dateEnd')}>
-              <input type="date" value={newRequest.end} onChange={(event) => updateNewRequest({ end: event.target.value })} />
-            </Field>
-            <SelectField
-              label={t('admin.table.item')}
-              value={newRequest.productId}
-              onValueChange={handleNewRequestProduct}
-              options={products.map((product) => ({ value: product.id, label: productName(product, t) }))}
-            />
-            <SelectField
-              label={t('admin.catalogue.variantLabel')}
-              value={newRequest.variantId}
-              onValueChange={(variantId) => updateNewRequest({ variantId })}
-              options={(selectedRequestProduct?.variants ?? []).map((variant) => ({ value: variant.id, label: variant.label }))}
-            />
-            <Field label={t('common.qty')}>
-              <input type="number" min="1" value={newRequest.qty} onChange={(event) => updateNewRequest({ qty: event.target.value })} />
-            </Field>
-            <SelectField
-              label={t('admin.table.fulfillment')}
-              value={newRequest.fulfillment}
-              onValueChange={(fulfillment) => updateNewRequest({ fulfillment })}
-              options={[
-                { value: 'pickup', label: t('enum.fulfillment.pickup') },
-                { value: 'delivery', label: t('enum.fulfillment.delivery') },
-              ]}
-            />
-            <Field label={t('common.notes')}>
-              <input value={newRequest.notes} onChange={(event) => updateNewRequest({ notes: event.target.value })} />
-            </Field>
-          </div>
-          {addError ? <p className="validation-message" role="alert">{addError}</p> : null}
-          <div className="dialog-actions">
-            <button className="outline-button" type="button" onClick={() => {
-              setAddOpen(false);
-              setAddError('');
-            }}>
-              {t('common.cancel')}
-            </button>
-            <button className="secondary-button" type="button" onClick={createRequest} disabled={!newRequest.customerName.trim() || !newRequest.phone.trim()}>
-              {t('admin.requests.createDraft')}
-            </button>
-          </div>
-        </div>
+        <RequestCreatePanel
+          t={t}
+          products={products}
+          newRequest={newRequest}
+          updateNewRequest={updateNewRequest}
+          selectedRequestProduct={selectedRequestProduct}
+          handleNewRequestProduct={handleNewRequestProduct}
+          addError={addError}
+          createRequest={createRequest}
+          onClose={closeAddPanel}
+        />
       ) : null}
 
-      <div className="records-layout request-records-layout">
-        <RequestMobileCards
-          rentals={filtered}
-          selectedRef={selected?.reference}
-          t={t}
-          locale={locale}
-          onSelect={selectRequest}
-        />
-        <div className="desktop-request-table">
-          <DataTable columns={columns} data={filtered} selectedId={selected?.reference} getRowId={(row) => row.reference} onRowClick={(row) => selectRequest(row.reference)} emptyLabel={t('common.empty')} />
-        </div>
-        {selected ? (
-          <div className="desktop-record-panel">
-            <RecordPanel rental={selected} products={products} t={t} locale={locale}>
-              {canMutateRequest ? (
-                <div className="record-actions">
-                  <button type="button" onClick={() => acceptRequest(selected)}>
-                    {t('admin.requests.accept')}
-                  </button>
-                  <button type="button" onClick={() => editRequest(selected)}>{t('common.edit')}</button>
-                  <button className="danger-action" type="button" onClick={() => rejectRequest(selected)}>{t('admin.requests.reject')}</button>
-                </div>
-              ) : (
-                <div className="inline-alert warning">
-                  <p>{t('admin.requests.notPending')}</p>
-                </div>
-              )}
-            </RecordPanel>
-          </div>
-        ) : null}
-      </div>
+      <RequestRecordsLayout
+        rentals={filtered}
+        selected={selected}
+        columns={columns}
+        products={products}
+        t={t}
+        locale={locale}
+        canMutateRequest={canMutateRequest}
+        onSelect={selectRequest}
+        onAccept={acceptRequest}
+        onEdit={editRequest}
+        onReject={rejectRequest}
+      />
       </div>
 
       {selected ? (
@@ -557,87 +449,6 @@ export default function RequestsAdmin({ t, locale, rentals, setRentals, setProdu
       <RejectDialog open={rejectOpen} setOpen={setRejectOpen} t={t} onReject={rejectSelected} />
       <EditRentalDialog open={editOpen} setOpen={setEditOpen} rental={selected} t={t} onSave={(values) => updateRental(selected.reference, values, activityText('Pesanan diubah staf.', 'Order edited by staff.'))} />
     </section>
-  );
-}
-
-function RequestMobileDetail({ rental, products, t, locale, canMutate, onBack, onAccept, onEdit, onReject }) {
-  return (
-    <MobileDetailShell
-      className="request-mobile-detail-view request-detail-shell"
-      backLabel={t('admin.nav.requests')}
-      title={rental.reference}
-      onBack={onBack}
-      actionLabel={t('admin.common.detailActions')}
-      actionClassName="request-detail-actionbar"
-      actions={canMutate ? (
-        <>
-          <button type="button" onClick={() => onAccept(rental)}>
-            {t('admin.requests.accept')}
-          </button>
-          <button type="button" onClick={() => onEdit(rental)}>{t('common.edit')}</button>
-          <button className="danger-action" type="button" onClick={() => onReject(rental)}>{t('admin.requests.reject')}</button>
-        </>
-      ) : null}
-    >
-      <RecordPanel rental={rental} products={products} t={t} locale={locale}>
-        {!canMutate ? (
-          <div className="inline-alert warning">
-            <p>{t('admin.requests.notPending')}</p>
-          </div>
-        ) : null}
-      </RecordPanel>
-    </MobileDetailShell>
-  );
-}
-
-function RequestMobileCards({ rentals, selectedRef, t, locale, onSelect }) {
-  if (rentals.length === 0) {
-    return (
-      <div className="request-mobile-list">
-        <EmptyState title={t('common.empty')} copy="" icon={Search} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="request-mobile-list" aria-label={t('admin.tabs.aria')}>
-      {rentals.map((rental) => {
-        const isSelected = selectedRef === rental.reference;
-        const isStale = rental.staleHours >= 24;
-
-        return (
-          <article className={`request-mobile-card ${isSelected ? 'selected' : ''}`} key={rental.reference}>
-            <button className="request-card-summary" type="button" onClick={() => onSelect(rental.reference)}>
-              <span className="request-card-head">
-                <span className="request-card-title">
-                  <strong>{rental.reference}</strong>
-                  <small className={isStale ? 'stale-marker' : ''}>
-                    {isStale ? <AlertTriangle aria-hidden="true" /> : null}
-                    {isStale ? t('admin.record.staleAge') : t('admin.record.newAge')}
-                  </small>
-                </span>
-                <StatusPill type="lifecycle" value={rental.lifecycle} t={t} />
-              </span>
-              <span className="request-card-meta">
-                <span>
-                  <UserRound aria-hidden="true" />
-                  <span>{rental.customerName}</span>
-                </span>
-                <span>
-                  <CalendarDays aria-hidden="true" />
-                  <span>{formatDateRange(rental, locale)}</span>
-                </span>
-              </span>
-              <span className="request-card-badges">
-                <StatusPill type="fulfillment" value={rental.fulfillment} t={t} />
-                <StatusPill type="payment" value={rental.paymentStatus} t={t} />
-              </span>
-              <span className="request-card-view">{t('common.view')}</span>
-            </button>
-          </article>
-        );
-      })}
-    </div>
   );
 }
 

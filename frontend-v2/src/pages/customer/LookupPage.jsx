@@ -1,4 +1,4 @@
-import { LookupSection } from '../../components/customer/CustomerComponents.jsx';
+import { LookupSection } from '../../components/customer/lookup/CustomerLookupSection.jsx';
 import CustomerFrame from './CustomerFrame.jsx';
 
 export default function LookupPage({

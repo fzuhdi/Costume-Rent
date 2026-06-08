@@ -49,6 +49,36 @@ Use page files for route-specific rules. Use this file for global direction, tok
 | Card/panel/sheet radius | `8px max` |
 | Touch target | `44px minimum for buttons, icon buttons, table header sort controls, and calendar controls` |
 
+### Frontend Architecture Principles
+
+Feature folders are the component source of truth for future `frontend-v2` work:
+
+- Admin components live under `components/admin/common`, `catalogue`, `clients`, `requests`, `rentals`, and `settings`.
+- Customer components live under `components/customer/common`, `catalogue`, `checkout`, `home`, `lookup`, and `product`.
+- `components/admin/AdminComponents.jsx` and `components/customer/CustomerComponents.jsx` are compatibility barrels only. New internal imports must target the concrete feature module.
+- Pages orchestrate route state, query params, persistence, adapter calls, and cross-feature composition. Components render focused UI units. Feature-specific helpers live beside the feature as `*Utils.js`.
+- Do not recreate mini-monoliths. Split mixed-responsibility modules into shells, panels/tabs, dialogs/sheets, action bars, cards, calendars, and utilities once responsibilities diverge.
+- Cross-domain primitives stay in `components/shared.jsx`; feature modules may import shared primitives, but shared primitives must not import feature modules.
+- CSS remains the styling source of truth. Preserve existing tokens, class hooks, route copy, translation keys, data shapes, and storage keys during structural cleanup.
+
+### Component Library Principles
+
+- Use Radix primitives directly for dialogs, sheets, tabs, selects, switches, and radio groups in the current shadcn-like style.
+- Do not introduce a generated shadcn/ui component layer or Tailwind migration unless a separate design-system migration is approved.
+- Dialogs and sheets must use Radix for focus, Escape handling, overlay semantics, and portal behavior. Preserve existing CSS class hooks such as `dialog-overlay`, `bottom-sheet-panel`, `filter-panel-scrim`, and feature panel classes.
+- Use `AdminBottomSheet` for admin sheet/popover surfaces so sidebar, notification, request-filter, and detail-sheet behavior stays consistent.
+- Use lucide-react icons for actions and status. Icon-only controls need accessible names.
+- Keep custom availability calendars lightweight, bounded, and feature-owned. Do not replace them with `react-day-picker`, shadcn calendar, or another calendar dependency without an approved dependency migration.
+- Prefer existing libraries before manual UI logic: Radix for primitives, TanStack Table for staff grids, React Hook Form plus Zod for complex validated forms, and the local data adapter for availability/request contracts.
+
+### Future Update Principles
+
+- Update this design-system whenever a change alters component ownership, route responsibility, interaction patterns, accessibility behavior, responsive behavior, data mutation rules, or library policy.
+- Update the relevant `pages/*.md` file when a route gets a new surface, sheet, modal, tab, calendar, save flow, destructive action, or availability/checkout/lookup behavior.
+- Keep design-system rules implementation-specific enough to guide future agents: name the folder, wrapper, token, class hook, library, and route when the rule depends on them.
+- Structural refactors must preserve public routes, URL params, copy keys, locale behavior, storage keys, adapter contracts, and business rules unless the plan explicitly approves a behavior change.
+- Verification for UI structural changes must include a production build, an import scan for compatibility barrel usage, and mobile overflow checks for any touched customer catalogue or admin workspace route.
+
 ### Breakpoints And Responsive Order
 
 - Write styles base-first for `320-375px`.
@@ -544,6 +574,8 @@ These are non-negotiable:
 Before opening a pull request, verify:
 
 - [ ] `design-system/MASTER.md` and the relevant `design-system/pages/*.md` file were checked.
+- [ ] Design-system docs were updated if the work changed architecture, component ownership, interaction patterns, library policy, responsive rules, accessibility rules, or route behavior.
+- [ ] New internal imports target feature modules directly, not `AdminComponents.jsx` or `CustomerComponents.jsx`.
 - [ ] The UI uses the exact tokens above for colors, font, radius, and touch target minimums.
 - [ ] CSS is base-first for `320-375px` and uses only `min-width` media queries.
 - [ ] The page works at `320`, `375`, `768`, `1024`, and `1440` widths with no horizontal body overflow.
