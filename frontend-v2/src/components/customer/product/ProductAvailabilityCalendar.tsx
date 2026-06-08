@@ -92,7 +92,7 @@ export function ProductAvailabilityCalendar({
   }, [product.id, monthRange.start, monthRange.end, rentals, t]);
 
   return (
-    <section className="availability-calendar" aria-label={t('customer.calendar.aria')}>
+    <section className="availability-calendar availability-calendar-panel" aria-label={t('customer.calendar.aria')}>
       <div className="calendar-heading">
         <div>
           <span className="option-label">{t('customer.calendar.title')}</span>

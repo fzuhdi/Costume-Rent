@@ -45,7 +45,7 @@ export function DetailsTab({
           <strong>{formatRupiah(toNonNegativeNumber(productDraft.price))}</strong>
         </div>
       </div>
-      <div className="catalogue-edit-grid">
+      <div className="catalogue-edit-grid editor-field-grid">
         <Field label={t('common.name')} error={detailErrors.name} errorId="catalogue-name-error">
           <input
             value={productName(productDraft, t)}

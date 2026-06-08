@@ -217,9 +217,8 @@ function FilterPanel({
     <Dialog.Root open={Boolean(activeFilter)} onOpenChange={(open: boolean) => {
       if (!open) setActiveFilter('');
     }}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="filter-panel-scrim" />
-        <Dialog.Content className="catalogue-filter-panel" aria-label={panelTitle}>
+      <Dialog.Overlay className="filter-panel-scrim" />
+      <Dialog.Content className="catalogue-filter-panel" aria-label={panelTitle}>
         <div className="filter-panel-head">
           <div>
             <span className="section-kicker">{t('customer.filters.kicker')}</span>
@@ -332,8 +331,7 @@ function FilterPanel({
             {t('customer.filters.clearAll')}
           </button>
         </div>
-        </Dialog.Content>
-      </Dialog.Portal>
+      </Dialog.Content>
     </Dialog.Root>
   );
 }

@@ -33,7 +33,7 @@ export function CheckoutModal({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content className="checkout-sheet" aria-describedby="checkout-modal-description">
+        <Dialog.Content className="checkout-sheet checkout-shell" aria-describedby="checkout-modal-description">
           <SheetHeader
             kicker={t('customer.checkout.modalKicker')}
             title={t('customer.checkout.modalTitle')}
@@ -42,7 +42,7 @@ export function CheckoutModal({
             closeLabel={t('customer.checkout.close')}
           />
 
-          <div className="checkout-modal-layout">
+          <div className="checkout-modal-layout checkout-panel">
             <CheckoutForm t={t} cartCount={cartCount} createBooking={createBooking} submittedBooking={submittedBooking} />
             <CartSummary cartItems={cartItems} cartTotal={cartTotal} t={t} locale={locale} onQty={onQty} onRemove={onRemove} />
           </div>

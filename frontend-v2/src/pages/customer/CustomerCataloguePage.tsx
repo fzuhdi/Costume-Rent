@@ -3,7 +3,7 @@ import { CatalogueResults } from '../../components/customer/catalogue/CatalogueR
 import { optionLabel } from '../../components/customer/catalogue/catalogueControllerUtils';
 import { useCustomerCatalogueController } from '../../components/customer/catalogue/useCustomerCatalogueController';
 import { RentalSearchPanel } from '../../components/customer/home/RentalSearchPanel';
-import CustomerFrame from './CustomerFrame';
+import CustomerFrame, { CustomerContentShell, CustomerPageIntro } from './CustomerFrame';
 import type {
   CartItem,
   DataAdapter,
@@ -60,14 +60,15 @@ export default function CustomerCataloguePage({
       cartCount={cart.length}
       onOpenCart={onOpenCart}
     >
-      <section className="catalogue-page" id="catalogue">
+      <CustomerContentShell className="catalogue-page" id="catalogue">
         <div className="shell">
           <div className="catalogue-header">
-            <div className="catalogue-intro">
-              <span className="section-kicker">{t('customer.catalogue.kicker')}</span>
-              <h1>{t('customer.catalogue.title')}</h1>
-              <p>{t('customer.catalogue.copy')}</p>
-            </div>
+            <CustomerPageIntro
+              className="catalogue-intro"
+              kicker={t('customer.catalogue.kicker')}
+              title={t('customer.catalogue.title')}
+              copy={t('customer.catalogue.copy')}
+            />
           </div>
 
           <RentalSearchPanel
@@ -136,7 +137,7 @@ export default function CustomerCataloguePage({
             sentinelRef={catalogue.sentinelRef}
           />
         </div>
-      </section>
+      </CustomerContentShell>
     </CustomerFrame>
   );
 }

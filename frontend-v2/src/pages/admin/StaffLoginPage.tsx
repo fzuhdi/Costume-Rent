@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Field } from '../../components/shared';
+import { AuthCard, Field } from '../../components/shared';
 import type { StateSetter } from '../../types/app';
 import type { StaffSession, TFunction } from '../../types/domain';
 
@@ -38,12 +38,12 @@ export default function StaffLoginPage({ t, staffSession, setStaffSession }: Sta
 
   return (
     <main className="staff-login-page">
-      <section className="staff-login-card">
-        <div>
-          <span className="section-kicker">{t('staffLogin.kicker')}</span>
-          <h1>{t('brand.name')}</h1>
-          <p>{t('staffLogin.copy')}</p>
-        </div>
+      <AuthCard
+        className="staff-login-card"
+        kicker={t('staffLogin.kicker')}
+        title={t('brand.name')}
+        copy={t('staffLogin.copy')}
+      >
         <form className="checkout-card" onSubmit={onSubmit}>
           <Field label={t('staffLogin.username')}>
             <input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" />
@@ -54,7 +54,7 @@ export default function StaffLoginPage({ t, staffSession, setStaffSession }: Sta
           {error ? <p className="validation-message">{error}</p> : null}
           <button className="primary-button full" type="submit">{t('staffLogin.submit')}</button>
         </form>
-      </section>
+      </AuthCard>
     </main>
   );
 }

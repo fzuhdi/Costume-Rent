@@ -82,7 +82,7 @@ export function RentalListView({
           <EmptyState title={t('admin.rentals.emptyTitle')} copy={t('admin.rentals.emptyCopy')} icon={Search} />
         ) : (
           filteredRentals.map((rental) => (
-            <button className={`management-card rental-record-card ${selected?.reference === rental.reference ? 'selected' : ''}`} type="button" key={rental.reference} onClick={() => onSelectRental(rental.reference)}>
+            <button className={`management-card record-mobile-card rental-record-card ${selected?.reference === rental.reference ? 'selected' : ''}`} type="button" key={rental.reference} onClick={() => onSelectRental(rental.reference)}>
               <div className="rental-record-main">
                 <div>
                   <strong>{rental.reference}</strong>

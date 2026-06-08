@@ -70,7 +70,7 @@ export function RequestMobileCards({ rentals, selectedRef, t, locale, onSelect }
         const isStale = rental.staleHours >= 24;
 
         return (
-          <article className={`request-mobile-card ${isSelected ? 'selected' : ''}`} key={rental.reference}>
+          <article className={`record-mobile-card request-mobile-card ${isSelected ? 'selected' : ''}`} key={rental.reference}>
             <button className="request-card-summary" type="button" onClick={() => onSelect(rental.reference)}>
               <span className="request-card-head">
                 <span className="request-card-title">

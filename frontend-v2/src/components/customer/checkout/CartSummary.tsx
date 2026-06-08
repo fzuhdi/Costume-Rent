@@ -26,7 +26,7 @@ export function CartSummary({
   onRemove: (target: CartItem) => void;
 }) {
   return (
-    <aside className="summary-card cart-card" aria-label={t('customer.summary.aria')}>
+    <aside className="summary-card cart-card order-summary" aria-label={t('customer.summary.aria')}>
       <div className="summary-header">
         <span className="eyebrow">{t('customer.cart.title')}</span>
         <strong>{formatRupiah(cartTotal)}</strong>

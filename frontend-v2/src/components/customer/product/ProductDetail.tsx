@@ -78,9 +78,9 @@ export function ProductDetail({
   };
 
   return (
-    <section className="product-detail" id="product-detail">
-      <div className="shell product-detail-layout">
-        <div className={`detail-gallery ${images.length > 1 ? '' : 'single-image'}`} aria-label={t('customer.detail.galleryAria')}>
+    <section className="product-detail product-detail-shell" id="product-detail">
+      <div className="shell product-detail-layout product-detail-layout-shell">
+        <div className={`detail-gallery product-media-gallery ${images.length > 1 ? '' : 'single-image'}`} aria-label={t('customer.detail.galleryAria')}>
           <div className="detail-photo">
             <img src={selectedImage?.src ?? product.image} alt={selectedImage?.alt ?? productAlt(product, t)} />
           </div>
@@ -102,7 +102,7 @@ export function ProductDetail({
           ) : null}
         </div>
 
-        <aside className="detail-purchase" aria-label={t('customer.detail.panelAria')}>
+        <aside className="detail-purchase detail-purchase-panel" aria-label={t('customer.detail.panelAria')}>
           <div className="detail-heading">
             <StatusPill type="availability" value={availability} t={t} />
             <p className="product-meta">{productMeta(product, t)}</p>
@@ -120,7 +120,7 @@ export function ProductDetail({
 
           <div className="option-group">
             <span className="option-label">{t('customer.detail.variantLabel')}</span>
-            <div className="variant-grid" aria-label={t('customer.detail.variantAria')}>
+            <div className="variant-grid variant-selector" aria-label={t('customer.detail.variantAria')}>
               {product.variants.map((variant) => {
                 const available = getVariantAvailability(product, variant.id, dates, rentals);
                 return (
@@ -160,7 +160,7 @@ export function ProductDetail({
 
           <div className="option-group">
             <span className="option-label">{t('customer.detail.dateLabel')}</span>
-            <div className="date-summary">
+            <div className="date-summary date-range-control">
               <span>{formatDate(dates.start, locale)}</span>
               <b>{t('customer.detail.until')}</b>
               <span>{formatDate(dates.end, locale)}</span>
@@ -173,7 +173,7 @@ export function ProductDetail({
               {isFavorite ? t('customer.detail.favoriteSaved') : t('customer.detail.favorite')}
             </button>
             {favoriteNotice ? <p className="success-message favorite-feedback">{t('customer.detail.favoriteUndo')}</p> : null}
-            <div className="detail-cta-bar">
+            <div className="detail-cta-bar detail-action-bar">
               <button className="secondary-button full" type="button" disabled={!canAdd} onClick={onAdd}>
                 <ShoppingCart aria-hidden="true" />
                 {isInCart ? t('customer.status.added') : t('customer.detail.add')}

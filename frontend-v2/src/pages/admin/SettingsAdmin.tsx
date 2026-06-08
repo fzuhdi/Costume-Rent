@@ -1,5 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import {
+  SettingsPageLayout,
+} from '../../components/admin/common/AdminManagement';
+import {
   HomeContentEditor,
   SettingsSectionHeader,
   SettingsToggleCard,
@@ -129,7 +132,7 @@ export default function SettingsAdmin({ t, settings, setSettings, dataAdapter }:
   };
 
   return (
-    <form className={`settings-grid settings-form ${hasChanges ? 'has-pending-save' : ''}`} onSubmit={saveAllSettings}>
+    <SettingsPageLayout className={`settings-form ${hasChanges ? 'has-pending-save' : ''}`} onSubmit={saveAllSettings}>
       <section className="content-panel setting-section">
         <SettingsSectionHeader
           kicker={t('admin.settings.title')}
@@ -198,7 +201,7 @@ export default function SettingsAdmin({ t, settings, setSettings, dataAdapter }:
           </button>
         ) : null}
       </div>
-    </form>
+    </SettingsPageLayout>
   );
 }
 

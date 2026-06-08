@@ -125,7 +125,7 @@ export function MediaTab({
         </div>
       </div>
 
-      <div className="media-toolbar">
+      <div className="media-toolbar media-upload-row">
         <input ref={fileInputRef} className="visually-hidden" type="file" accept="image/*" multiple onChange={handleFiles} />
         <div className="media-upload-control">
           <button className="outline-button" type="button" aria-describedby="catalogue-media-upload-help" onClick={() => fileInputRef.current?.click()}>
@@ -167,9 +167,9 @@ export function MediaTab({
           <p>{t('admin.catalogue.noMediaCopy')}</p>
         </div>
       ) : (
-        <div className="media-carousel-card" aria-label={t('admin.catalogue.mediaGridAria')}>
+        <div className="media-carousel-card media-gallery-frame" aria-label={t('admin.catalogue.mediaGridAria')}>
           <div className="media-carousel-stage">
-            <div className="media-carousel-image">
+            <div className="media-carousel-image media-preview">
               <img src={selectedImage?.src} alt={productAlt(productDraft, t)} />
               {selectedImage?.isCover ? <span>{t('admin.catalogue.cover')}</span> : null}
               <button className="media-carousel-arrow previous" type="button" onClick={() => selectAdjacentImage(-1)} disabled={selectedIndex <= 0} aria-label={t('admin.catalogue.previousImage')}>
@@ -198,7 +198,7 @@ export function MediaTab({
           <div className="media-thumb-strip">
             {mediaItems.map((image, index) => (
               <button
-                className={`media-thumb-button ${selectedImage?.id === image.id ? 'selected' : ''}`}
+                className={`media-thumb-button image-badge ${selectedImage?.id === image.id ? 'selected' : ''}`}
                 type="button"
                 key={image.id}
                 aria-label={t('admin.catalogue.selectedImage', { index: index + 1, total: mediaItems.length })}

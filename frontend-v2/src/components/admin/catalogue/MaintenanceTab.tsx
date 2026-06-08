@@ -41,7 +41,7 @@ export function MaintenanceTab({
       {productDraft.maintenanceBlocks.length > 0 ? (
         <div className="maintenance-list">
           {productDraft.maintenanceBlocks.map((block, index) => (
-            <div className="maintenance-item" key={block.id ?? `${block.start}-${block.end}-${index}`}>
+            <div className="maintenance-item maintenance-block-card" key={block.id ?? `${block.start}-${block.end}-${index}`}>
               <div>
                 <strong>{formatDateRange(block, locale)}</strong>
                 <span>{block.reason || t('admin.catalogue.maintenanceNoReason')}</span>
@@ -61,7 +61,7 @@ export function MaintenanceTab({
       )}
 
       {maintenanceOpen ? (
-        <div className="maintenance-form">
+        <div className="maintenance-form maintenance-block-form">
           <div className="form-grid">
             <Field label={t('common.dateStart')}>
               <input type="date" value={maintenanceDraft.start} onChange={(event) => setMaintenanceDraft((current) => ({ ...current, start: event.target.value }))} />

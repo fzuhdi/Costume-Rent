@@ -1,3 +1,4 @@
+import { AdminWorkQueueLayout } from '../../components/admin/common/AdminManagement';
 import { OverrideDialog } from '../../components/admin/rentals/RentalDialogs';
 import { RentalListView, RentalWorkflowDetail } from '../../components/admin/rentals/RentalWorkflow';
 import { rentalFilters, useRentalsAdminController } from '../../components/admin/rentals/useRentalsAdminController';
@@ -18,7 +19,7 @@ export default function RentalsAdmin({ t, locale, rentals, setRentals, products,
   const controller = useRentalsAdminController({ t, rentals, setRentals, products, setProducts, settings });
 
   return (
-    <div className={`admin-feature-grid rentals-admin-grid ${controller.isDetailViewOpen ? 'detail-open' : ''}`}>
+    <AdminWorkQueueLayout featureGrid className="rentals-admin-grid" detailOpen={controller.isDetailViewOpen}>
       <RentalListView
         t={t}
         locale={locale}
@@ -62,6 +63,6 @@ export default function RentalsAdmin({ t, locale, rentals, setRentals, products,
         locale={locale}
         onOverride={controller.overrideSelected}
       />
-    </div>
+    </AdminWorkQueueLayout>
   );
 }

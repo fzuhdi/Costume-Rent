@@ -8,6 +8,7 @@ import { MediaTab } from './MediaTab';
 import { SwitchProductDialog } from './SwitchProductDialog';
 import { VariantsTab } from './VariantsTab';
 import { CATALOGUE_MAX_IMAGE_COUNT, editorTabs } from './catalogueEditorUtils';
+import { DetailPanel } from '../../shared';
 import { productAlt, productName } from '../../../lib/rental-utils';
 import type { CatalogueEditorProps } from './catalogueEditorTypes';
 
@@ -57,7 +58,7 @@ export function CatalogueEditor({
   readFileAsDataUrl,
 }: CatalogueEditorProps) {
   return (
-    <section className="record-panel feature-panel catalogue-editor-panel" aria-label={t('admin.catalogue.editorAria')}>
+    <DetailPanel className="catalogue-editor-panel inventory-editor-panel" aria-label={t('admin.catalogue.editorAria')}>
       <div className="catalogue-editor-head">
         <div className="catalogue-preview-thumb">
           <img src={coverImage?.src ?? productDraft.image} alt={coverImage?.alt ?? productAlt(productDraft, t)} />
@@ -81,7 +82,7 @@ export function CatalogueEditor({
       </div>
 
       <Tabs.Root value={activeTab} onValueChange={setActiveTab} className="catalogue-tabs">
-        <Tabs.List className="catalogue-tab-list" aria-label={t('admin.catalogue.editorTabs')}>
+        <Tabs.List className="catalogue-tab-list editor-tab-rail" aria-label={t('admin.catalogue.editorTabs')}>
           {editorTabs.map((tab) => (
             <Tabs.Trigger className="catalogue-tab-trigger" value={tab} key={tab}>
               {t(`admin.catalogue.tab.${tab}`)}
@@ -89,7 +90,7 @@ export function CatalogueEditor({
           ))}
         </Tabs.List>
 
-        <Tabs.Content className="catalogue-tab-panel" value="details">
+        <Tabs.Content className="catalogue-tab-panel editor-section" value="details">
           <DetailsTab
             t={t}
             locale={locale}
@@ -104,7 +105,7 @@ export function CatalogueEditor({
           />
         </Tabs.Content>
 
-        <Tabs.Content className="catalogue-tab-panel" value="media">
+        <Tabs.Content className="catalogue-tab-panel editor-section" value="media">
           <MediaTab
             t={t}
             productDraft={productDraft}
@@ -115,7 +116,7 @@ export function CatalogueEditor({
           />
         </Tabs.Content>
 
-        <Tabs.Content className="catalogue-tab-panel" value="variants">
+        <Tabs.Content className="catalogue-tab-panel editor-section" value="variants">
           <VariantsTab
             t={t}
             variants={productDraft.variants}
@@ -133,7 +134,7 @@ export function CatalogueEditor({
           />
         </Tabs.Content>
 
-        <Tabs.Content className="catalogue-tab-panel" value="maintenance">
+        <Tabs.Content className="catalogue-tab-panel editor-section" value="maintenance">
           <MaintenanceTab
             t={t}
             locale={locale}
@@ -156,6 +157,6 @@ export function CatalogueEditor({
         onSave={onSave}
         onDiscard={onDiscard}
       />
-    </section>
+    </DetailPanel>
   );
 }

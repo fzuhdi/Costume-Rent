@@ -2,7 +2,7 @@ import * as Tabs from '@radix-ui/react-tabs';
 import type { ColumnDef } from '@tanstack/react-table';
 import { AlertTriangle, ListFilter } from 'lucide-react';
 import { useMemo } from 'react';
-import { AdminCreateAction, AdminCreateFab, AdminViewBar } from '../../components/admin/common/AdminManagement';
+import { AdminCreateAction, AdminCreateFab, AdminViewBar, AdminWorkQueueLayout } from '../../components/admin/common/AdminManagement';
 import { EditRentalDialog, RejectDialog } from '../../components/admin/rentals/RentalDialogs';
 import { RentalItems } from '../../components/admin/rentals/RentalRecordComponents';
 import { RequestMobileDetail } from '../../components/admin/requests/RequestsView';
@@ -81,7 +81,7 @@ export default function RequestsAdmin({ t, locale, rentals, setRentals, setProdu
   );
 
   return (
-    <section className={`base-window requests-window ${controller.isDetailViewOpen ? 'detail-open' : ''}`}>
+    <AdminWorkQueueLayout as="section" baseWindow className="requests-window" detailOpen={controller.isDetailViewOpen}>
       <div className="request-list-view">
         <Tabs.Root value={controller.tab} onValueChange={controller.handleTabChange}>
           <AdminViewBar>
@@ -191,6 +191,6 @@ export default function RequestsAdmin({ t, locale, rentals, setRentals, setProdu
         t={t}
         onSave={(values) => controller.updateRental(values.reference, values, activityText('Pesanan diubah staf.', 'Order edited by staff.'))}
       />
-    </section>
+    </AdminWorkQueueLayout>
   );
 }

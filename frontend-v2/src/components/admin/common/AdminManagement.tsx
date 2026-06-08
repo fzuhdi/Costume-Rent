@@ -1,9 +1,80 @@
 import { Plus, X } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { ElementType, ReactNode } from 'react';
 
 export function AdminFeatureGrid({ className = '', detailOpen = false, children }: { className?: string; detailOpen?: boolean; children: ReactNode }) {
   return (
     <div className={`admin-feature-grid ${className} ${detailOpen ? 'detail-open' : ''}`.trim()}>
+      {children}
+    </div>
+  );
+}
+
+export function AdminWorkQueueLayout({
+  as: Element = 'div',
+  className = '',
+  detailOpen = false,
+  baseWindow = false,
+  featureGrid = false,
+  children,
+}: {
+  as?: ElementType;
+  className?: string;
+  detailOpen?: boolean;
+  baseWindow?: boolean;
+  featureGrid?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Element
+      className={`${baseWindow ? 'base-window' : ''} ${featureGrid ? 'admin-feature-grid' : ''} admin-work-queue-layout ${className} ${detailOpen ? 'detail-open' : ''}`.trim()}
+    >
+      {children}
+    </Element>
+  );
+}
+
+export function InventoryEditorLayout({ className = '', detailOpen = false, children }: { className?: string; detailOpen?: boolean; children: ReactNode }) {
+  return (
+    <AdminFeatureGrid className={`inventory-editor-layout ${className}`.trim()} detailOpen={detailOpen}>
+      {children}
+    </AdminFeatureGrid>
+  );
+}
+
+export function EntityDirectoryLayout({ className = '', detailOpen = false, children }: { className?: string; detailOpen?: boolean; children: ReactNode }) {
+  return (
+    <AdminFeatureGrid className={`entity-directory-layout ${className}`.trim()} detailOpen={detailOpen}>
+      {children}
+    </AdminFeatureGrid>
+  );
+}
+
+export function SettingsPageLayout({
+  className = '',
+  children,
+  ...props
+}: {
+  className?: string;
+  children: ReactNode;
+} & Record<string, unknown>) {
+  return (
+    <form className={`settings-grid settings-page-layout ${className}`.trim()} {...props}>
+      {children}
+    </form>
+  );
+}
+
+export function AdminMetricStrip({ className = '', children }: { className?: string; children: ReactNode }) {
+  return <div className={`ops-metrics admin-metric-strip ${className}`.trim()}>{children}</div>;
+}
+
+export function AdminAlertBanner({ className = '', children }: { className?: string; children: ReactNode }) {
+  return <div className={`ops-alert-banner admin-alert-banner ${className}`.trim()}>{children}</div>;
+}
+
+export function RecordActionBar({ className = '', label, children }: { className?: string; label?: string; children: ReactNode }) {
+  return (
+    <div className={`record-actions record-action-bar ${className}`.trim()} role="group" aria-label={label}>
       {children}
     </div>
   );

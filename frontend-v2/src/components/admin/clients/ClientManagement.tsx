@@ -3,7 +3,7 @@ import { ChevronRight, Pencil, Phone, Search } from 'lucide-react';
 import AdminBottomSheet, { AdminSheetHeader } from '../common/AdminBottomSheet';
 import { AdminCreatePanel } from '../common/AdminManagement';
 import { RentalItems } from '../rentals/RentalRecordComponents';
-import { EmptyState, Field, InfoBlock, PhoneField, StatusPill } from '../../shared';
+import { EmptyState, EntityCard, EntityList, Field, InfoBlock, PhoneField, StatusPill } from '../../shared';
 import { formatDateRange, normalizePhone } from '../../../lib/rental-utils';
 import type { Client, Locale, Product, Rental, TFunction } from '../../../types/domain';
 import type { StateSetter } from '../../../types/app';
@@ -60,13 +60,15 @@ type ClientListProps = {
 
 export function ClientList({ clients, selectedId, t, onView }: ClientListProps) {
   return (
-    <div className="management-list padded">
+    <EntityList className="management-list padded">
       {clients.length === 0 ? (
         <EmptyState title={t('admin.clients.emptyTitle')} copy={t('admin.clients.emptyCopy')} icon={Search} />
       ) : (
         clients.map((client) => (
-          <article
+          <EntityCard
+            as="article"
             className={`management-card client-card ${selectedId === client.id ? 'selected' : ''}`}
+            selected={selectedId === client.id}
             role="button"
             tabIndex={0}
             key={client.id}
@@ -77,20 +79,22 @@ export function ClientList({ clients, selectedId, t, onView }: ClientListProps) 
                 onView(client.id);
               }
             }}
+            avatar={(
+              <span className="client-avatar" aria-hidden="true">
+                <span>{clientInitials(client.name)}</span>
+              </span>
+            )}
+            meta={<small>{t('admin.clients.totalRentals')}: {client.totalRentals}</small>}
+            actions={<ChevronRight className="client-card-chevron" aria-hidden="true" />}
           >
-            <span className="client-avatar" aria-hidden="true">
-              <span>{clientInitials(client.name)}</span>
-            </span>
             <div className="client-card-main">
               <strong>{client.name}</strong>
               <PhoneLink phone={client.phone} />
             </div>
-            <small>{t('admin.clients.totalRentals')}: {client.totalRentals}</small>
-            <ChevronRight className="client-card-chevron" aria-hidden="true" />
-          </article>
+          </EntityCard>
         ))
       )}
-    </div>
+    </EntityList>
   );
 }
 

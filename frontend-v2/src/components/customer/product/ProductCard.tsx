@@ -44,7 +44,7 @@ export function ProductCard({
       : t('customer.product.detailAria', { product: productName(product, t) }));
 
   return (
-    <article className={`product-card ${isBlocked ? 'muted' : ''}`}>
+    <article className={`product-card customer-product-card ${isBlocked ? 'muted' : ''}`}>
       <Link className="product-media product-card-link" to={detailTo} aria-label={detailAria}>
         <img src={productCoverImage(product, t)} alt={productAlt(product, t)} loading="lazy" />
         <StatusPill type="availability" value={availability} t={t} />

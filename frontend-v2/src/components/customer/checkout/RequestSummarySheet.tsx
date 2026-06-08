@@ -48,7 +48,7 @@ export function RequestSummarySheet({
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content className={`request-sheet-content ${checkoutActive ? 'checkout-active' : ''}`} aria-describedby="request-summary-description">
+        <Dialog.Content className={`request-sheet-content ${checkoutActive ? 'checkout-active checkout-shell' : ''}`} aria-describedby="request-summary-description">
           <SheetHeader
             kicker={t('customer.requestSheet.kicker')}
             title={checkoutActive ? t('customer.checkout.modalTitle') : t('customer.requestSheet.title')}
@@ -59,7 +59,7 @@ export function RequestSummarySheet({
 
           <div className="request-sheet-body">
             {checkoutActive ? (
-              <div className="checkout-modal-layout">
+              <div className="checkout-modal-layout checkout-panel">
                 <CheckoutForm t={t} cartCount={cartCount} createBooking={createBooking} submittedBooking={submittedBooking} />
                 <CartSummary cartItems={cartItems} cartTotal={cartTotal} t={t} locale={locale} onQty={onQty} onRemove={onRemove} />
               </div>

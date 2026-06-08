@@ -50,7 +50,7 @@ export function VariantsTab({
           const total = Number(variant.total) || 0;
           const available = Math.max(0, total - held);
           return (
-            <div className="variant-row variant-admin-row" key={variant.id}>
+            <div className="variant-row variant-admin-row variant-card" key={variant.id}>
               <Field label={t('admin.catalogue.variantLabel')} error={errors.label} errorId={`variant-${variant.id}-label-error`}>
                 <input
                   value={variant.label}
@@ -81,7 +81,7 @@ export function VariantsTab({
                 <strong>{t('admin.catalogue.stockFraction', { available, total })}</strong>
                 <small>{t('admin.catalogue.heldQty', { count: held })}</small>
               </div>
-              <div className="quantity-control">
+              <div className="quantity-control variant-stock-control">
                 <button type="button" onClick={() => adjustVariantTotal(variant.id, -1)} aria-label={t('admin.catalogue.decreaseVariant')}>
                   <Minus aria-hidden="true" />
                 </button>
@@ -98,7 +98,7 @@ export function VariantsTab({
 
         {variants.length <= 1 ? <p className="helper-text">{t('admin.catalogue.requiredFirstVariant')}</p> : null}
 
-        <div className="variant-row variant-admin-row add-variant-row">
+        <div className="variant-row variant-admin-row variant-card add-variant-row">
           <Field label={t('admin.catalogue.newVariant')} error={newVariantErrors.label} errorId="new-variant-label-error">
             <input
               ref={variantLabelRef}

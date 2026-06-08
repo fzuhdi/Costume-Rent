@@ -1,7 +1,7 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { X } from 'lucide-react';
 import AdminBottomSheet, { AdminSheetHeader } from '../common/AdminBottomSheet';
-import { AdminCreatePanel } from '../common/AdminManagement';
+import { AdminCreatePanel, RecordActionBar } from '../common/AdminManagement';
 import { RecordPanel } from '../rentals/RentalRecordComponents';
 import { RequestMobileCards } from './RequestsView';
 import { DataTable, Field, PhoneField, SearchInput, SelectField } from '../../shared';
@@ -246,13 +246,13 @@ export function RequestRecordsLayout({
         <div className="desktop-record-panel">
           <RecordPanel rental={selected} products={products} t={t} locale={locale}>
             {canMutateRequest ? (
-              <div className="record-actions">
+              <RecordActionBar label={t('admin.common.detailActions')}>
                 <button type="button" onClick={() => onAccept(selected)}>
                   {t('admin.requests.accept')}
                 </button>
                 <button type="button" onClick={() => onEdit(selected)}>{t('common.edit')}</button>
                 <button className="danger-action" type="button" onClick={() => onReject(selected)}>{t('admin.requests.reject')}</button>
-              </div>
+              </RecordActionBar>
             ) : (
               <div className="inline-alert warning">
                 <p>{t('admin.requests.notPending')}</p>

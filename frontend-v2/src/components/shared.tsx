@@ -1,4 +1,4 @@
-import { type ComponentPropsWithoutRef, type ElementType, type ReactNode, useState } from 'react';
+import { type ComponentPropsWithoutRef, type ElementType, type ReactNode, useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Select from '@radix-ui/react-select';
@@ -17,6 +17,200 @@ type DataTableProps<TData extends object> = {
   onRowClick: (row: TData) => void;
   emptyLabel: string;
 };
+
+type PrimitiveProps = {
+  className?: string;
+  children?: ReactNode;
+};
+
+type SurfaceProps = PrimitiveProps & {
+  as?: ElementType;
+  variant?: 'card' | 'raised' | 'muted' | 'inverse' | 'panel';
+} & Record<string, unknown>;
+
+export function Surface({ as: Element = 'section', variant = 'card', className = '', children, ...props }: SurfaceProps) {
+  return (
+    <Element className={`surface surface-${variant} ${className}`.trim()} {...props}>
+      {children}
+    </Element>
+  );
+}
+
+type PageHeaderProps = PrimitiveProps & {
+  kicker?: ReactNode;
+  title: ReactNode;
+  copy?: ReactNode;
+  actions?: ReactNode;
+  id?: string;
+};
+
+export function PageHeader({ kicker, title, copy, actions, id, className = '', children }: PageHeaderProps) {
+  return (
+    <header className={`page-header ${className}`.trim()} id={id}>
+      <div className="page-header-copy">
+        {kicker ? <span className="section-kicker">{kicker}</span> : null}
+        <h1>{title}</h1>
+        {copy ? <p>{copy}</p> : null}
+        {children}
+      </div>
+      {actions ? <div className="page-header-actions">{actions}</div> : null}
+    </header>
+  );
+}
+
+type SectionHeaderProps = PrimitiveProps & {
+  kicker?: ReactNode;
+  title?: ReactNode;
+  copy?: ReactNode;
+  actions?: ReactNode;
+};
+
+export function SectionHeader({ kicker, title, copy, actions, className = '', children }: SectionHeaderProps) {
+  return (
+    <div className={`section-header ${className}`.trim()}>
+      <div className="section-header-copy">
+        {kicker ? <span className="section-kicker">{kicker}</span> : null}
+        {title ? <h2>{title}</h2> : null}
+        {copy ? <p>{copy}</p> : null}
+        {children}
+      </div>
+      {actions ? <div className="section-header-actions">{actions}</div> : null}
+    </div>
+  );
+}
+
+export function Toolbar({ className = '', children }: PrimitiveProps) {
+  return <div className={`toolbar ${className}`.trim()}>{children}</div>;
+}
+
+type FilterChipProps = ComponentPropsWithoutRef<'button'> & {
+  active?: boolean;
+  count?: ReactNode;
+};
+
+export function FilterChip({ active = false, count, className = '', children, ...props }: FilterChipProps) {
+  return (
+    <button className={`filter-chip ${active ? 'active' : ''} ${className}`.trim()} type="button" aria-pressed={active} {...props}>
+      <span>{children}</span>
+      {count !== undefined ? <strong className="filter-count">{count}</strong> : null}
+    </button>
+  );
+}
+
+export function EntityList({ className = '', children }: PrimitiveProps) {
+  return <div className={`entity-list ${className}`.trim()}>{children}</div>;
+}
+
+type EntityCardProps = PrimitiveProps & {
+  as?: ElementType;
+  selected?: boolean;
+  avatar?: ReactNode;
+  meta?: ReactNode;
+  actions?: ReactNode;
+} & Record<string, unknown>;
+
+export function EntityCard({
+  as: Element = 'article',
+  selected = false,
+  avatar,
+  meta,
+  actions,
+  className = '',
+  children,
+  ...props
+}: EntityCardProps) {
+  return (
+    <Element className={`entity-card ${selected ? 'selected' : ''} ${className}`.trim()} {...props}>
+      {avatar}
+      <div className="entity-card-main">{children}</div>
+      {meta ? <div className="entity-card-meta">{meta}</div> : null}
+      {actions ? <div className="entity-card-actions">{actions}</div> : null}
+    </Element>
+  );
+}
+
+type DetailPanelProps = PrimitiveProps & {
+  as?: ElementType;
+} & Record<string, unknown>;
+
+export function DetailPanel({ as: Element = 'section', className = '', children, ...props }: DetailPanelProps) {
+  return (
+    <Element className={`record-panel feature-panel detail-panel ${className}`.trim()} {...props}>
+      {children}
+    </Element>
+  );
+}
+
+type FormSectionProps = PrimitiveProps & {
+  title?: ReactNode;
+  copy?: ReactNode;
+  kicker?: ReactNode;
+} & Record<string, unknown>;
+
+export function FormSection({ title, copy, kicker, className = '', children, ...props }: FormSectionProps) {
+  return (
+    <section className={`form-section content-panel ${className}`.trim()} {...props}>
+      {title || copy || kicker ? <SectionHeader kicker={kicker} title={title} copy={copy} /> : null}
+      {children}
+    </section>
+  );
+}
+
+type StickyActionBarProps = PrimitiveProps & {
+  status?: ReactNode;
+} & Record<string, unknown>;
+
+export function StickyActionBar({ status, className = '', children, ...props }: StickyActionBarProps) {
+  return (
+    <div className={`sticky-action-bar ${className}`.trim()} {...props}>
+      {status ? <span className="sticky-action-status">{status}</span> : null}
+      {status ? <div className="sticky-action-buttons">{children}</div> : children}
+    </div>
+  );
+}
+
+type AuthCardProps = PrimitiveProps & {
+  kicker?: ReactNode;
+  title: ReactNode;
+  copy?: ReactNode;
+};
+
+export function AuthCard({ kicker, title, copy, className = '', children }: AuthCardProps) {
+  return (
+    <section className={`auth-card ${className}`.trim()}>
+      <div className="auth-card-copy">
+        {kicker ? <span className="section-kicker">{kicker}</span> : null}
+        <h1>{title}</h1>
+        {copy ? <p>{copy}</p> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+type AppDialogProps = PrimitiveProps & {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description?: string;
+  closeLabel: string;
+};
+
+export function AppDialog({ open, onOpenChange, title, description, closeLabel, className = '', children }: AppDialogProps) {
+  const descriptionId = useId();
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="dialog-overlay" />
+        <Dialog.Content className={`dialog-content app-dialog ${className}`.trim()} aria-describedby={description ? descriptionId : undefined}>
+          <SheetHeader title={title} description={description} descriptionId={description ? descriptionId : undefined} closeLabel={closeLabel} />
+          {children}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
 
 export function DataTable<TData extends object>({ data, columns, selectedId, getRowId, onRowClick, emptyLabel }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([]);

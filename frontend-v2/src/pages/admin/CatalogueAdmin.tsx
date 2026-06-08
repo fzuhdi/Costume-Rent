@@ -5,9 +5,9 @@ import {
 import {
   AdminCreateAction,
   AdminCreateFab,
-  AdminFeatureGrid,
   AdminListWindow,
   AdminViewBar,
+  InventoryEditorLayout,
 } from '../../components/admin/common/AdminManagement';
 import {
   CatalogueCreatePanel,
@@ -44,7 +44,7 @@ export default function CatalogueAdmin({
   const controller = useCatalogueAdminController({ t, products, setProducts, dataAdapter });
 
   return (
-    <AdminFeatureGrid className="catalogue-admin-grid" detailOpen={controller.editorOpen}>
+    <InventoryEditorLayout className="catalogue-admin-grid" detailOpen={controller.editorOpen}>
       <AdminListWindow>
         <AdminViewBar>
           <SearchInput value={controller.query} onChange={controller.setQuery} placeholder={t('common.search')} clearLabel={t('common.clear')} />
@@ -133,6 +133,6 @@ export default function CatalogueAdmin({
         onSave={controller.saveAndSwitch}
         saving={controller.saveState.status === 'saving'}
       />
-    </AdminFeatureGrid>
+    </InventoryEditorLayout>
   );
 }

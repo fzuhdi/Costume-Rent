@@ -1,4 +1,5 @@
 import { CheckCircle2, Loader2, RotateCcw, Save, XCircle } from 'lucide-react';
+import { StickyActionBar } from '../../shared';
 import type { SaveState } from './catalogueAdminUtils';
 import type { TFunction } from '../../../types/domain';
 
@@ -19,7 +20,7 @@ export function EditorSaveBar({
 }) {
   const saving = saveState.status === 'saving';
   return (
-    <div className="catalogue-savebar" role="status" aria-live="polite">
+    <StickyActionBar className="catalogue-savebar" role="status" aria-live="polite">
       <div className="savebar-state">
         {saving ? <Loader2 aria-hidden="true" className="spin-icon" /> : saveState.status === 'error' ? <XCircle aria-hidden="true" /> : <CheckCircle2 aria-hidden="true" />}
         <span>{hasValidationErrors ? t('admin.catalogue.fixValidation') : saveState.message || (isDirty ? t('admin.catalogue.unsaved') : t('admin.catalogue.noChanges'))}</span>
@@ -34,6 +35,6 @@ export function EditorSaveBar({
           {saving ? t('admin.catalogue.saving') : t('admin.catalogue.saveChanges')}
         </button>
       </div>
-    </div>
+    </StickyActionBar>
   );
 }

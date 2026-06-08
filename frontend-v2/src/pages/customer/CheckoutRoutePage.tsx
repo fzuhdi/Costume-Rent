@@ -44,7 +44,7 @@ export default function CheckoutRoutePage({
       cartCount={cart.length}
       onOpenCart={onOpenCart}
     >
-      <section className="checkout-route-page" id="checkout-route">
+      <section className="checkout-route-page checkout-shell" id="checkout-route">
         <div className="shell checkout-route-layout">
           <div className="checkout-route-head">
             <ShoppingBag aria-hidden="true" />
@@ -52,7 +52,7 @@ export default function CheckoutRoutePage({
             <h1>{t('customer.checkout.routeTitle')}</h1>
             <p>{t('customer.checkout.routeCopy')}</p>
           </div>
-          <div className="checkout-modal-layout route-checkout-layout">
+          <div className="checkout-modal-layout checkout-panel route-checkout-layout">
             <CheckoutForm t={t} cartCount={cartCount} createBooking={createBooking} submittedBooking={submittedBooking} />
             <CartSummary cartItems={cartItems} cartTotal={cartTotal} t={t} locale={locale} onQty={onQty} onRemove={onRemove} />
           </div>

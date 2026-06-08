@@ -102,7 +102,7 @@ export function HomeHeroSection({
         </div>
         <RentalSearchPanel
           as="form"
-          className="home-search-panel"
+          className="home-search-panel hero-search-panel"
           ariaLabel={t('customer.home.searchAria')}
           t={t}
           query={draft.q}
@@ -141,7 +141,7 @@ export function HomeTrustSection({ t }: { t: TFunction }) {
     <section className="home-trust-strip" aria-label={t('customer.home.trustAria')}>
       <div className="shell home-trust-grid">
         {trustItems.map((item) => (
-          <article className="home-trust-item" key={item.title}>
+          <article className="home-trust-item trust-item" key={item.title}>
             <item.icon aria-hidden="true" />
             <div>
               <h2>{item.title}</h2>
@@ -235,7 +235,7 @@ export function HomeGuideSection({ homeContent, articles, locale }: { homeConten
           {articles.map((article, index) => {
             const GuideIcon = guideIcons[index];
             return (
-              <article className="home-article-card" key={`home-article-${index}`}>
+              <article className="home-article-card article-card" key={`home-article-${index}`}>
                 {GuideIcon ? (
                   <span className="home-guide-icon" aria-hidden="true">
                     <GuideIcon />
@@ -300,7 +300,7 @@ export function HomeLocationSection({
             {t('customer.home.openMaps')}
           </a>
         </div>
-        <div className="home-map-frame">
+        <div className="home-map-frame location-panel">
           <div className="home-map-fallback" aria-hidden="true">
             <span>
               <MapPin />
@@ -378,7 +378,7 @@ function HomeProductCard({
   const detailTo = { pathname: `/costumes/${product.id}`, search: catalogueSearch };
 
   return (
-    <article className="home-product-card">
+    <article className="home-product-card customer-product-card">
       <Link className="home-product-media" to={detailTo} aria-label={t('customer.product.detailAria', { product: productName(product, t) })}>
         <img src={productCoverImage(product, t)} alt={productAlt(product, t)} loading="lazy" />
         <StatusPill type="availability" value={availability} t={t} />

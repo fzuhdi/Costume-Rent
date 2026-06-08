@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   AdminCreateAction,
   AdminCreateFab,
-  AdminFeatureGrid,
+  EntityDirectoryLayout,
   AdminListWindow,
   AdminViewBar,
 } from '../../components/admin/common/AdminManagement';
@@ -111,7 +111,7 @@ export default function ClientsAdmin({ t, locale, clients, setClients, rentals, 
   };
 
   return (
-    <AdminFeatureGrid className="clients-admin-grid" detailOpen={detailOpen}>
+    <EntityDirectoryLayout className="clients-admin-grid" detailOpen={detailOpen}>
       <AdminListWindow>
         <AdminViewBar>
           <SearchInput value={query} onChange={setQuery} placeholder={t('common.search')} clearLabel={t('common.clear')} />
@@ -154,6 +154,6 @@ export default function ClientsAdmin({ t, locale, clients, setClients, rentals, 
         history={history}
         products={products}
       />
-    </AdminFeatureGrid>
+    </EntityDirectoryLayout>
   );
 }

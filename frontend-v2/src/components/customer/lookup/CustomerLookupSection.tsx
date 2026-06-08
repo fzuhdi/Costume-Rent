@@ -125,7 +125,7 @@ export function LookupSection({
   });
 
   return (
-    <section className="lookup-section" id="lookup-page">
+    <section className="lookup-section lookup-shell" id="lookup-page">
       <div className="shell lookup-feature">
         <div className="lookup-card">
           <div>
@@ -181,7 +181,7 @@ export function LookupSection({
           <div className="lookup-feedback-region" ref={lookupResultRef} tabIndex={-1}>
             {notFound ? <EmptyState title={t('customer.lookup.notFound')} copy={t('common.retry')} icon={AlertTriangle} /> : null}
             {result ? (
-              <div className="lookup-result">
+              <div className="lookup-result lookup-result-card">
                 <div>
                   <span className="section-kicker">{t('customer.lookup.resultTitle')}</span>
                   <h2>{result.reference}</h2>
@@ -211,7 +211,7 @@ export function LookupSection({
                     ) : null;
                   })}
                 </div>
-                <form className="change-request-form" onSubmit={submitChange}>
+                <form className="change-request-form lookup-change-request-form" onSubmit={submitChange}>
                   <div>
                     <span className="section-kicker">{t('customer.lookup.changeTitle')}</span>
                     <p>{t('customer.lookup.changeCopy')}</p>
