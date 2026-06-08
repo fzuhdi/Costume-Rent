@@ -9,6 +9,17 @@
   --border: #D8DEE8;
   --primary: #0F766E;
   --accent: #B45309;
+  --home-hero-image: linear-gradient(135deg, var(--color-334155), var(--color-111827));
+  --hero-overlay-vertical: linear-gradient(180deg, rgb(7 12 20 / 0.56) 0%, rgb(7 12 20 / 0.22) 46%, rgb(7 12 20 / 0.68) 100%);
+  --hero-overlay-side: linear-gradient(90deg, rgb(7 12 20 / 0.78) 0%, rgb(7 12 20 / 0.30) 56%, rgb(7 12 20 / 0.06) 100%);
+  --hero-panel: rgb(10 17 27 / 0.30);
+  --hero-panel-raised: rgb(255 255 255 / 0.10);
+  --hero-panel-border: rgb(255 255 255 / 0.24);
+  --hero-control-bg: rgb(255 255 255 / 0.14);
+  --hero-control-border: rgb(255 255 255 / 0.34);
+  --hero-text-muted: rgb(255 255 255 / 0.88);
+  --hero-text-soft: rgb(255 255 255 / 0.76);
+  --hero-kicker: #F7D58A;
   /* Exact-value tokens centralize legacy one-off colors; prefer semantic aliases for new CSS. */
   --color-0d6b63: #0d6b63;
   --color-111827: #111827;
@@ -6619,6 +6630,7 @@ textarea:focus-visible,
   display: grid;
   align-items: end;
   background-color: var(--ink);
+  background-image: var(--hero-overlay-vertical), var(--hero-overlay-side), var(--home-hero-image);
   background-position: center 36%;
   background-repeat: no-repeat;
   background-size: cover;
@@ -6636,17 +6648,17 @@ textarea:focus-visible,
 .home-hero-copy {
   display: grid;
   gap: 12px;
-  max-width: 680px;
+  max-width: 640px;
   text-shadow: 0 2px 18px var(--color-rgb-0-0-0-0-26);
 }
 
 .home-hero-copy .section-kicker {
-  color: var(--color-f7d58a);
+  color: var(--hero-kicker);
 }
 
 .home-hero-copy p {
-  max-width: 620px;
-  color: var(--color-rgb-255-255-255-0-84);
+  max-width: 600px;
+  color: var(--hero-text-muted);
   font-size: 16px;
 }
 
@@ -6660,16 +6672,16 @@ textarea:focus-visible,
 
 .home-lookup-link {
   min-height: 44px;
-  border: 1px solid var(--color-rgb-255-255-255-0-34);
+  border: 1px solid var(--hero-control-border);
   border-radius: var(--control-radius);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: var(--color-rgb-255-255-255-0-12);
+  background: var(--hero-control-bg);
   color: var(--surface);
   padding: 0 14px;
-  font-weight: 850;
+  font-weight: 800;
   backdrop-filter: blur(10px);
 }
 
@@ -6682,12 +6694,13 @@ textarea:focus-visible,
 
 .home-hero-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  max-width: 620px;
-  overflow: hidden;
-  border: 1px solid var(--color-rgb-255-255-255-0-18);
+  grid-template-columns: repeat(3, minmax(88px, 1fr));
+  gap: 4px;
+  max-width: 560px;
+  border: 1px solid var(--hero-panel-border);
   border-radius: var(--radius);
-  background: var(--color-rgb-10-17-27-0-34);
+  background: var(--hero-panel);
+  padding: 4px;
   backdrop-filter: blur(12px);
 }
 
@@ -6695,11 +6708,12 @@ textarea:focus-visible,
   min-width: 0;
   display: grid;
   gap: 2px;
-  border-right: 1px solid var(--color-rgb-255-255-255-0-14);
-  padding: 10px;
-  color: var(--color-rgb-255-255-255-0-76);
+  border-radius: var(--control-radius);
+  background: var(--hero-panel-raised);
+  padding: 10px 12px;
+  color: var(--hero-text-soft);
   font-size: 12px;
-  font-weight: 780;
+  font-weight: 700;
 }
 
 .home-hero-stats span:last-child {
@@ -6711,8 +6725,8 @@ textarea:focus-visible,
   display: inline-flex;
   align-items: center;
   color: var(--surface);
-  font-size: 21px;
-  font-weight: 900;
+  font-size: 20px;
+  font-weight: 800;
   line-height: 1;
 }
 
@@ -6724,12 +6738,12 @@ textarea:focus-visible,
 .home-search-panel {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  border: 1px solid var(--color-rgb-255-255-255-0-26);
+  gap: 10px;
+  border: 1px solid var(--color-rgb-255-255-255-0-60);
   border-radius: var(--radius);
-  background: var(--color-rgb-255-255-255-0-94);
+  background: var(--color-rgb-255-255-255-0-96);
   color: var(--ink);
-  padding: 12px;
+  padding: 14px;
   box-shadow: var(--shadow-float);
   backdrop-filter: blur(14px);
 }
@@ -6745,7 +6759,7 @@ textarea:focus-visible,
 .home-search-heading {
   display: grid;
   gap: 4px;
-  padding: 2px 2px 4px;
+  padding: 2px 2px 2px;
 }
 
 .home-search-heading strong {
@@ -6761,7 +6775,7 @@ textarea:focus-visible,
 .home-search-period {
   border-top: 1px solid var(--line-soft);
   color: var(--muted);
-  padding-top: 8px;
+  padding-top: 10px;
   font-size: 13px;
   font-weight: 800;
 }
@@ -8216,7 +8230,7 @@ body.customer-page .customer-home-hero::before {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: linear-gradient(0deg, var(--color-rgb-0-0-0-0-16), var(--color-rgb-0-0-0-0) 42%);
+  background: linear-gradient(0deg, var(--color-rgb-0-0-0-0-10), var(--color-rgb-0-0-0-0) 44%);
   content: "";
 }
 
@@ -8227,14 +8241,14 @@ body.customer-page .home-hero-inner {
 }
 
 body.customer-page .home-hero-copy {
-  max-width: 760px;
-  gap: 10px;
+  max-width: 680px;
+  gap: 12px;
   text-shadow: 0 1px 2px var(--color-rgb-0-0-0-0-18), 0 18px 44px var(--color-rgb-0-0-0-0-26);
 }
 
 body.customer-page .home-hero-copy .section-kicker,
 body.customer-page .home-cta-grid .section-kicker {
-  color: var(--color-f6c96f);
+  color: var(--hero-kicker);
 }
 
 body.customer-page .home-hero-copy h1 {
@@ -8245,8 +8259,8 @@ body.customer-page .home-hero-copy h1 {
 }
 
 body.customer-page .home-hero-copy p {
-  max-width: 620px;
-  color: var(--color-rgb-255-255-255-0-86);
+  max-width: 600px;
+  color: var(--hero-text-muted);
   font-size: 15px;
   line-height: 1.6;
 }
@@ -8266,16 +8280,16 @@ body.customer-page .home-hero-actions .secondary-button {
 
 body.customer-page .home-lookup-link {
   min-height: 44px;
-  border-color: var(--color-rgb-255-255-255-0-30);
-  background: var(--color-rgb-255-255-255-0-12);
+  border-color: var(--hero-control-border);
+  background: var(--hero-control-bg);
   box-shadow: inset 0 1px 0 var(--color-rgb-255-255-255-0-18);
 }
 
 body.customer-page .home-hero-stats {
   max-width: 560px;
-  border-color: var(--color-rgb-255-255-255-0-20);
+  border-color: var(--hero-panel-border);
   border-radius: var(--radius);
-  background: var(--color-rgb-10-17-27-0-42);
+  background: var(--hero-panel);
   box-shadow: 0 16px 38px var(--color-rgb-0-0-0-0-18);
 }
 
@@ -8295,11 +8309,11 @@ body.customer-page .home-hero-stats strong {
 body.customer-page .home-search-panel {
   width: 100%;
   max-width: 1040px;
-  gap: 8px;
+  gap: 10px;
   border-color: var(--color-rgb-255-255-255-0-60);
   border-radius: var(--radius);
   background: var(--color-rgb-255-255-255-0-96);
-  padding: 10px;
+  padding: 12px;
   box-shadow:
     0 1px 2px var(--color-rgb-0-0-0-0-10),
     0 24px 60px var(--color-rgb-0-0-0-0-22);

@@ -1,5 +1,5 @@
 import * as Tabs from '@radix-ui/react-tabs';
-import type { Dispatch, FormEvent, SetStateAction } from 'react';
+import type { CSSProperties, Dispatch, FormEvent, SetStateAction } from 'react';
 import {
   ArrowRight,
   BadgeCheck,
@@ -69,13 +69,7 @@ export function HomeHeroSection({
     <section
       className="customer-home-hero"
       id="customer-home"
-      style={
-        heroImage
-          ? {
-              backgroundImage: `linear-gradient(180deg, rgb(7 12 20 / 0.70) 0%, rgb(7 12 20 / 0.38) 46%, rgb(7 12 20 / 0.78) 100%), linear-gradient(90deg, rgb(7 12 20 / 0.88) 0%, rgb(7 12 20 / 0.38) 58%, rgb(7 12 20 / 0.18) 100%), url(${heroImage})`,
-            }
-          : undefined
-      }
+      style={heroImageStyle(heroImage)}
       aria-label={heroImageAlt || undefined}
     >
       <div className="shell home-hero-inner">
@@ -129,6 +123,11 @@ export function HomeHeroSection({
       </div>
     </section>
   );
+}
+
+function heroImageStyle(heroImage: string): CSSProperties | undefined {
+  if (!heroImage) return undefined;
+  return { '--home-hero-image': `url(${JSON.stringify(heroImage)})` } as CSSProperties;
 }
 
 export function HomeTrustSection({ t }: { t: TFunction }) {
