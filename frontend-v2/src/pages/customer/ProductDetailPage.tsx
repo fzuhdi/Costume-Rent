@@ -93,7 +93,12 @@ export default function ProductDetailPage({
             <ArrowLeft aria-hidden="true" />
             {t('customer.detail.back')}
           </Link>
-          <span className="eyebrow">{formatDateRange(dates, locale)}</span>
+          <div className="detail-route-dates">
+            <strong>{formatDateRange(dates, locale)}</strong>
+            <Link className="text-button detail-change-link" to={catalogueTo}>
+              {t('customer.detail.changeDates')}
+            </Link>
+          </div>
         </div>
       </section>
       <ProductDetail

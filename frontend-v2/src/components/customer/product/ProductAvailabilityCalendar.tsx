@@ -93,66 +93,71 @@ export function ProductAvailabilityCalendar({
 
   return (
     <section className="availability-calendar availability-calendar-panel" aria-label={t('customer.calendar.aria')}>
-      <div className="calendar-heading">
-        <div>
-          <span className="option-label">{t('customer.calendar.title')}</span>
-          <strong>{variantLabel(t, selectedVariant?.label ?? selectedVariantId)}</strong>
-        </div>
-        <div className="calendar-controls">
-          <button type="button" onClick={() => setMonthCursor((current) => shiftMonth(current, -1))} aria-label={t('customer.calendar.previous')}>
-            <ChevronLeft aria-hidden="true" />
-          </button>
-          <span>{formatMonth(monthCursor, locale)}</span>
-          <button type="button" onClick={() => setMonthCursor((current) => shiftMonth(current, 1))} aria-label={t('customer.calendar.next')}>
-            <ChevronRight aria-hidden="true" />
-          </button>
-        </div>
-      </div>
-
-      <div className="calendar-grid" role="grid" aria-label={formatMonth(monthCursor, locale)}>
-        {weekdayLabels.map((label) => (
-          <span className="calendar-weekday" key={label}>
-            {label}
-          </span>
-        ))}
-        {monthDays.map((day, index) => {
-          if (!day) return <span className="calendar-day empty" aria-hidden="true" key={`empty-${index}`} />;
-
-          const dayInfo = getDayAvailability(day);
-          const inSelectedRange = day >= dates.start && day <= dates.end;
-          return (
-            <button
-              className={`calendar-day ${dayInfo.state} ${inspectedDate === day ? 'selected' : ''} ${inSelectedRange ? 'in-range' : ''}`}
-              type="button"
-              key={day}
-              onClick={() => setInspectedDate(day)}
-              aria-label={t('customer.calendar.dayAria', {
-                date: formatDate(day, locale),
-                state: t(`enum.availability.${dayInfo.state}`),
-                available: dayInfo.available,
-              })}
-            >
-              <span>{Number(day.slice(-2))}</span>
-              <small>{dayInfo.available}</small>
+      <div className="calendar-board">
+        <div className="calendar-heading">
+          <div>
+            <span className="visually-hidden">{t('customer.calendar.title')}</span>
+            <strong>{variantLabel(t, selectedVariant?.label ?? selectedVariantId)}</strong>
+          </div>
+          <div className="calendar-controls">
+            <button type="button" onClick={() => setMonthCursor((current) => shiftMonth(current, -1))} aria-label={t('customer.calendar.previous')}>
+              <ChevronLeft aria-hidden="true" />
             </button>
-          );
-        })}
+            <span>{formatMonth(monthCursor, locale)}</span>
+            <button type="button" onClick={() => setMonthCursor((current) => shiftMonth(current, 1))} aria-label={t('customer.calendar.next')}>
+              <ChevronRight aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+
+        <div className="calendar-grid" role="grid" aria-label={formatMonth(monthCursor, locale)}>
+          {weekdayLabels.map((label) => (
+            <span className="calendar-weekday" key={label}>
+              {label}
+            </span>
+          ))}
+          {monthDays.map((day, index) => {
+            if (!day) return <span className="calendar-day empty" aria-hidden="true" key={`empty-${index}`} />;
+
+            const dayInfo = getDayAvailability(day);
+            const inSelectedRange = day >= dates.start && day <= dates.end;
+            return (
+              <button
+                className={`calendar-day ${dayInfo.state} ${inspectedDate === day ? 'selected' : ''} ${inSelectedRange ? 'in-range' : ''}`}
+                type="button"
+                key={day}
+                onClick={() => setInspectedDate(day)}
+                aria-label={t('customer.calendar.dayAria', {
+                  date: formatDate(day, locale),
+                  state: t(`enum.availability.${dayInfo.state}`),
+                  available: dayInfo.available,
+                })}
+              >
+                <span>{Number(day.slice(-2))}</span>
+                <small>{dayInfo.available}</small>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="calendar-legend" aria-label={t('customer.calendar.legend')}>
+          {['unavailable', 'fully_booked', 'partially_booked', 'available'].map((state) => (
+            <span className={`legend-item ${state}`} key={state}>
+              <i aria-hidden="true" />
+              {t(`enum.availability.${state}`)}
+            </span>
+          ))}
+        </div>
+
+        {availabilityLoading || availabilityError ? (
+          <div className="calendar-feedback">
+            {availabilityLoading ? <p className="calendar-hint">{t('customer.calendar.loading')}</p> : null}
+            {availabilityError ? <p className="validation-message">{availabilityError}</p> : null}
+          </div>
+        ) : null}
       </div>
 
-      <div className="calendar-legend" aria-label={t('customer.calendar.legend')}>
-        {['unavailable', 'fully_booked', 'partially_booked', 'available'].map((state) => (
-          <span className={`legend-item ${state}`} key={state}>
-            <i aria-hidden="true" />
-            {t(`enum.availability.${state}`)}
-          </span>
-        ))}
-      </div>
-
-      <p className="calendar-hint">{t('customer.calendar.clickHint')}</p>
-      {availabilityLoading ? <p className="calendar-hint">{t('customer.calendar.loading')}</p> : null}
-      {availabilityError ? <p className="validation-message">{availabilityError}</p> : null}
-
-      <div className="calendar-inspector">
+      <aside className="calendar-inspector">
         <div>
           <span className="eyebrow">{formatDate(inspectedDate, locale)}</span>
           <strong>{t(`enum.availability.${inspected.state}`)}</strong>
@@ -168,7 +173,7 @@ export function ProductAvailabilityCalendar({
             </span>
           ))}
         </div>
-      </div>
+      </aside>
     </section>
   );
 }

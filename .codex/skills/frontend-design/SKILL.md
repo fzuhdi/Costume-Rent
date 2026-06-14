@@ -1,13 +1,20 @@
 ---
 name: frontend-design
-description: Primary project skill for UI design, frontend implementation, UI review, critique, polish, visual improvements, responsive fixes, and frontend UX improvements. Use when Codex designs, builds, reviews, critiques, fixes, or improves web or mobile frontend interfaces, components, pages, admin dashboards, customer and e-commerce flows, visual systems, interaction states, or responsive behavior. Leads design judgment and execution; use ui-ux-pro-max only as a supporting searchable design database.
+description: Primary project skill for frontend UI implementation, visual design execution, polish, responsive fixes, and applying audit recommendations. Use when Codex builds, fixes, implements, polishes, or applies chosen frontend changes to web or mobile interfaces, components, pages, admin dashboards, customer and e-commerce flows, visual systems, interaction states, or responsive behavior. For UI review, audit, critique, feedback, screenshot critique, "make this better", or "what looks wrong" requests, use global ui-refactor instead. Leads frontend execution; use ui-ux-pro-max only as a supporting searchable design database.
 ---
 
 # Frontend Design
 
 This project skill is adapted from Anthropic's `frontend-design` skill and modified for Codex plus `ui-ux-pro-max` integration. The upstream terms are copied in `LICENSE.txt`.
 
-Use this skill as the primary source of design judgment for frontend work in this repository. Use `ui-ux-pro-max` as a database for product patterns, UX rules, stack guidance, palettes, typography, accessibility, and chart recommendations when those facts would improve the decision.
+Use this skill as the primary source of frontend implementation and design execution for this repository. Use `ui-ux-pro-max` as a database for product patterns, UX rules, stack guidance, palettes, typography, accessibility, and chart recommendations when those facts would improve the decision.
+
+## Skill Routing
+
+- Use this skill by default for building, fixing, implementing, polishing, and applying frontend UI changes in this repository.
+- Use global `ui-refactor` for UI review, audit, critique, feedback, screenshot critique, "what looks wrong", "make this better", visual redesign planning, ASCII wireframes, and mockup planning.
+- After `ui-refactor` identifies recommendations, use this skill to implement the chosen fixes.
+- Use project-local `ui-ux-pro-max` only as a searchable support database. Query it from this skill and synthesize the result; do not hand off primary design judgment to it.
 
 ## Workflow
 
@@ -46,11 +53,11 @@ python .codex/skills/ui-ux-pro-max/scripts/search.py "<need>" --stack react
 - Keep motion purposeful and brief. Use it to clarify feedback, hierarchy, and continuity rather than to decorate every element.
 - For 3D or canvas-heavy UI, verify the scene is nonblank, correctly framed, responsive, and interactive before delivery.
 
-## Review And Critique
+## Applying Review Findings
 
-Lead with concrete findings and fixes. Identify the user-facing problem, the screen or file affected, why it matters, and the change that would correct it. Prioritize usability, accessibility, responsive behavior, visual hierarchy, task efficiency, data density, and consistency with the current app.
+For plain UI review, audit, critique, feedback, screenshot critique, or "what looks wrong" requests, use global `ui-refactor`.
 
-For implementation reviews, call out missing verification and likely regressions. For design critiques, avoid vague taste language; tie feedback to user goals, layout mechanics, and measurable interface quality.
+When implementing review findings, translate them into concrete frontend changes. Identify the screen or file affected, apply the correction using the repo's existing patterns, and verify the result with the relevant checks and screenshots when practical.
 
 ## Pre-Delivery Checks
 

@@ -323,17 +323,25 @@ export function productGallery(product: Product, t: TFunction): ProductImage[] {
       };
     })
     .filter((image): image is ProductImage => Boolean(image));
+  const uniqueImages = normalized.reduce<ProductImage[]>((unique, image) => {
+    const existingIndex = unique.findIndex((entry) => entry.src === image.src);
+    if (existingIndex < 0) return [...unique, image];
+    if (image.isCover && !unique[existingIndex].isCover) {
+      return unique.map((entry, index) => (index === existingIndex ? image : entry));
+    }
+    return unique;
+  }, []);
 
-  if (normalized.length === 0) {
+  if (uniqueImages.length === 0) {
     return fallbackSrc
       ? [{ id: `${product.id}-legacy-cover`, src: fallbackSrc, alt: fallbackAlt, label: fallbackLabel, isCover: true }]
       : [];
   }
 
-  const markedCoverIndex = normalized.findIndex((image) => image.isCover);
-  const legacyCoverIndex = fallbackSrc ? normalized.findIndex((image) => image.src === fallbackSrc) : -1;
+  const markedCoverIndex = uniqueImages.findIndex((image) => image.isCover);
+  const legacyCoverIndex = fallbackSrc ? uniqueImages.findIndex((image) => image.src === fallbackSrc) : -1;
   const coverIndex = markedCoverIndex >= 0 ? markedCoverIndex : legacyCoverIndex >= 0 ? legacyCoverIndex : 0;
-  const gallery = normalized.map((image, index) => ({ ...image, isCover: index === coverIndex }));
+  const gallery = uniqueImages.map((image, index) => ({ ...image, isCover: index === coverIndex }));
   const cover = gallery[coverIndex];
   return cover ? [cover, ...gallery.filter((_, index) => index !== coverIndex)] : gallery;
 }

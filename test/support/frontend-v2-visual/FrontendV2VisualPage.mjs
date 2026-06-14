@@ -337,7 +337,10 @@ class CustomerVisualPage {
 
   async addProductToCart() {
     await this.openFirstProduct();
-    await this.app.click('.detail-cta-bar .secondary-button:not([disabled])', 'customer add to cart');
+    await this.app.click([
+      '.detail-cta-bar .secondary-button:not([disabled])',
+      '.product-detail-mobile-bar .secondary-button:not([disabled])',
+    ], 'customer add to cart');
     await this.app.waitForUi('.request-sheet-content');
   }
 

@@ -9,6 +9,9 @@ import type { TFunction } from '../../../types/domain';
 
 const GENDER_OPTIONS = ['women', 'men', 'unisex', 'kids'] as const;
 const SORT_OPTIONS = ['relevance', 'price_asc', 'price_desc', 'availability'] as const;
+const PRICE_MIN = 0;
+const PRICE_MAX = 100_000_000;
+const PRICE_STEP = 5_000;
 
 type CatalogueFilters = {
   region: string;
@@ -29,7 +32,16 @@ type ParamUpdates = Partial<Record<string, string | undefined | null>>;
 
 type UpdateCatalogueParams = (updates: ParamUpdates, options?: NavigateOptions) => void;
 
-type PriceDraft = Pick<CatalogueFilters, 'minPrice' | 'maxPrice'>;
+type PriceDraft = {
+  minPrice: string;
+  maxPrice: string;
+};
+
+type MoreFilterDraft = PriceDraft & {
+  favorites: boolean;
+  gender: string;
+  sort: string;
+};
 
 export function CatalogueFilterBoard({
   t,
@@ -122,7 +134,6 @@ export function CatalogueFilterBoard({
         regionOptions={regionOptions}
         typeOptions={typeOptions}
         updateCatalogueParams={updateCatalogueParams}
-        clearFilters={clearFilters}
         optionLabel={optionLabel}
       />
     </div>
@@ -177,7 +188,6 @@ function FilterPanel({
   regionOptions,
   typeOptions,
   updateCatalogueParams,
-  clearFilters,
   optionLabel,
 }: {
   activeFilter: string;
@@ -189,14 +199,15 @@ function FilterPanel({
   regionOptions: string[];
   typeOptions: string[];
   updateCatalogueParams: UpdateCatalogueParams;
-  clearFilters: () => void;
   optionLabel: (value: string, t: TFunction, prefix: string) => string;
 }) {
-  const [priceDraft, setPriceDraft] = useState({ minPrice: filters.minPrice, maxPrice: filters.maxPrice });
+  const [moreDraft, setMoreDraft] = useState<MoreFilterDraft>(() => createMoreFilterDraft(filters, favoritesOnly));
 
   useEffect(() => {
-    setPriceDraft({ minPrice: filters.minPrice, maxPrice: filters.maxPrice });
-  }, [filters.minPrice, filters.maxPrice, activeFilter]);
+    if (activeFilter === 'more') {
+      setMoreDraft(createMoreFilterDraft(filters, favoritesOnly));
+    }
+  }, [activeFilter, favoritesOnly, filters.gender, filters.maxPrice, filters.minPrice, filters.sort]);
 
   if (!activeFilter) return null;
 
@@ -204,17 +215,30 @@ function FilterPanel({
     updateCatalogueParams({ [key]: value }, { replace: false });
     setActiveFilter('');
   };
-  const applyPrice = () => {
+
+  const cancelMoreFilters = () => {
+    setActiveFilter('');
+  };
+  const clearMoreDraft = () => {
+    setMoreDraft(createEmptyMoreFilterDraft());
+  };
+  const draftActiveCount = countMoreDraftFilters(moreDraft);
+  const applyMoreFilters = () => {
+    const priceDraft = serializePriceDraft(moreDraft);
     updateCatalogueParams({
+      favorites: moreDraft.favorites ? '1' : undefined,
       minPrice: priceDraft.minPrice,
       maxPrice: priceDraft.maxPrice,
+      gender: moreDraft.gender,
+      sort: moreDraft.sort,
+      search: '1',
     }, { replace: false });
     setActiveFilter('');
   };
-  const panelTitle = activeFilter === 'more' ? t('customer.filters.kicker') : t(`customer.filters.panel.${activeFilter}`);
+  const panelTitle = activeFilter === 'more' ? t('customer.filters.allFilters') : t(`customer.filters.panel.${activeFilter}`);
 
   return (
-    <Dialog.Root open={Boolean(activeFilter)} onOpenChange={(open: boolean) => {
+    <Dialog.Root modal={false} open={Boolean(activeFilter)} onOpenChange={(open: boolean) => {
       if (!open) setActiveFilter('');
     }}>
       <Dialog.Overlay className="filter-panel-scrim" />
@@ -249,44 +273,21 @@ function FilterPanel({
           />
         ) : null}
 
-        {activeFilter === 'gender' ? (
-          <FilterOptionList
-            options={['all', ...GENDER_OPTIONS]}
-            selected={filters.gender}
-            labelFor={(value) => optionLabel(value, t, 'enum.gender')}
-            onSelect={(value) => applyValue('gender', value)}
-          />
-        ) : null}
-
-        {activeFilter === 'sort' ? (
-          <FilterOptionList
-            options={SORT_OPTIONS}
-            selected={filters.sort}
-            labelFor={(value) => t(`customer.sort.${value}`)}
-            onSelect={(value) => applyValue('sort', value)}
-          />
-        ) : null}
-
-        {activeFilter === 'price' ? (
-          <PriceFilterFields t={t} priceDraft={priceDraft} setPriceDraft={setPriceDraft} applyPrice={applyPrice} />
-        ) : null}
-
         {activeFilter === 'more' ? (
           <div className="more-filter-stack">
             <button
-              className={`more-filter-toggle ${favoritesOnly ? 'selected' : ''}`}
+              className={`more-filter-toggle ${moreDraft.favorites ? 'selected' : ''}`}
               type="button"
-              aria-pressed={favoritesOnly}
-              onClick={() => updateCatalogueParams({ favorites: favoritesOnly ? undefined : '1', search: '1' }, { replace: false })}
+              aria-pressed={moreDraft.favorites}
+              onClick={() => setMoreDraft((current) => ({ ...current, favorites: !current.favorites }))}
             >
               <span className="filter-card-icon">
-                <Heart aria-hidden="true" fill={favoritesOnly ? 'currentColor' : 'none'} />
+                <Heart aria-hidden="true" fill={moreDraft.favorites ? 'currentColor' : 'none'} />
               </span>
               <span>
-                <strong>{t('customer.filters.favorites')}</strong>
-                <small>{favoritesCount}</small>
+                <strong>{t('customer.filters.favoritesOnly')}</strong>
+                <small>{t('customer.filters.savedCount', { count: favoritesCount })}</small>
               </span>
-              <span className="filter-card-state" aria-hidden="true" />
             </button>
 
             <section className="more-filter-section">
@@ -294,7 +295,11 @@ function FilterPanel({
                 <DollarSign aria-hidden="true" />
                 <strong>{t('customer.filters.price')}</strong>
               </div>
-              <PriceFilterFields t={t} priceDraft={priceDraft} setPriceDraft={setPriceDraft} applyPrice={applyPrice} />
+              <PriceFilterFields
+                t={t}
+                priceDraft={moreDraft}
+                setPriceDraft={(priceDraft) => setMoreDraft((current) => ({ ...current, ...priceDraft }))}
+              />
             </section>
 
             <section className="more-filter-section">
@@ -304,9 +309,9 @@ function FilterPanel({
               </div>
               <FilterOptionList
                 options={['all', ...GENDER_OPTIONS]}
-                selected={filters.gender}
+                selected={moreDraft.gender}
                 labelFor={(value) => optionLabel(value, t, 'enum.gender')}
-                onSelect={(value) => applyValue('gender', value)}
+                onSelect={(value) => setMoreDraft((current) => ({ ...current, gender: value }))}
               />
             </section>
 
@@ -317,20 +322,33 @@ function FilterPanel({
               </div>
               <FilterOptionList
                 options={SORT_OPTIONS}
-                selected={filters.sort}
+                selected={moreDraft.sort}
                 labelFor={(value) => t(`customer.sort.${value}`)}
-                onSelect={(value) => applyValue('sort', value)}
+                onSelect={(value) => setMoreDraft((current) => ({ ...current, sort: value }))}
               />
             </section>
           </div>
         ) : null}
 
-        <div className="filter-panel-actions">
-          <button className="text-button filter-reset-button" type="button" onClick={clearFilters}>
-            <RotateCcw aria-hidden="true" />
-            {t('customer.filters.clearAll')}
-          </button>
-        </div>
+        {activeFilter === 'more' ? (
+          <div className="filter-panel-actions">
+            <div className="filter-panel-reset-row">
+              <button className="text-button filter-reset-button" type="button" onClick={clearMoreDraft} disabled={draftActiveCount === 0}>
+                <RotateCcw aria-hidden="true" />
+                {t('customer.filters.clearAll')}
+              </button>
+              <span>{draftActiveCount} {t('customer.filters.activeCount')}</span>
+            </div>
+            <div className="filter-apply-actions">
+              <button className="outline-button" type="button" onClick={cancelMoreFilters}>
+                {t('common.cancel')}
+              </button>
+              <button className="primary-button" type="button" onClick={applyMoreFilters}>
+                {t('common.apply')}
+              </button>
+            </div>
+          </div>
+        ) : null}
       </Dialog.Content>
     </Dialog.Root>
   );
@@ -340,34 +358,68 @@ function PriceFilterFields({
   t,
   priceDraft,
   setPriceDraft,
-  applyPrice,
 }: {
   t: TFunction;
   priceDraft: PriceDraft;
-  setPriceDraft: Dispatch<SetStateAction<PriceDraft>>;
-  applyPrice: () => void;
+  setPriceDraft: (priceDraft: PriceDraft) => void;
 }) {
+  const updateMinPrice = (value: string) => {
+    if (!value) {
+      setPriceDraft({ ...priceDraft, minPrice: '' });
+      return;
+    }
+    const nextMin = clampPriceValue(value, PRICE_MIN);
+    const currentMax = priceNumberFromInput(priceDraft.maxPrice);
+    setPriceDraft({
+      ...priceDraft,
+      minPrice: String(currentMax === null ? nextMin : Math.min(nextMin, currentMax)),
+    });
+  };
+  const updateMaxPrice = (value: string) => {
+    if (!value) {
+      setPriceDraft({ ...priceDraft, maxPrice: '' });
+      return;
+    }
+    const nextMax = clampPriceValue(value, PRICE_MAX);
+    const currentMin = priceNumberFromInput(priceDraft.minPrice);
+    setPriceDraft({
+      ...priceDraft,
+      maxPrice: String(currentMin === null ? nextMax : Math.max(nextMax, currentMin)),
+    });
+  };
+
   return (
     <div className="price-filter-fields">
       <Field label={t('customer.filters.minPrice')}>
-        <input
-          type="number"
-          min="0"
-          value={priceDraft.minPrice}
-          onChange={(event) => setPriceDraft((current) => ({ ...current, minPrice: event.target.value }))}
-        />
+        <span className="price-input-shell">
+          <span className="price-input-prefix">Rp</span>
+          <input
+            type="number"
+            min={PRICE_MIN}
+            max={PRICE_MAX}
+            step={PRICE_STEP}
+            inputMode="numeric"
+            placeholder={t('customer.filters.minPricePlaceholder')}
+            value={priceDraft.minPrice}
+            onChange={(event) => updateMinPrice(event.target.value)}
+          />
+        </span>
       </Field>
       <Field label={t('customer.filters.maxPrice')}>
-        <input
-          type="number"
-          min="0"
-          value={priceDraft.maxPrice}
-          onChange={(event) => setPriceDraft((current) => ({ ...current, maxPrice: event.target.value }))}
-        />
+        <span className="price-input-shell">
+          <span className="price-input-prefix">Rp</span>
+          <input
+            type="number"
+            min={PRICE_MIN}
+            max={PRICE_MAX}
+            step={PRICE_STEP}
+            inputMode="numeric"
+            placeholder={t('customer.filters.maxPricePlaceholder')}
+            value={priceDraft.maxPrice}
+            onChange={(event) => updateMaxPrice(event.target.value)}
+          />
+        </span>
       </Field>
-      <button className="secondary-button full" type="button" onClick={applyPrice}>
-        {t('common.apply')}
-      </button>
     </div>
   );
 }
@@ -396,4 +448,66 @@ function FilterOptionList({
       })}
     </div>
   );
+}
+
+function createMoreFilterDraft(filters: CatalogueFilters, favoritesOnly: boolean): MoreFilterDraft {
+  return {
+    minPrice: priceInputFromParam(filters.minPrice, PRICE_MIN),
+    maxPrice: priceInputFromParam(filters.maxPrice, PRICE_MAX),
+    favorites: favoritesOnly,
+    gender: filters.gender || 'all',
+    sort: filters.sort || 'relevance',
+  };
+}
+
+function createEmptyMoreFilterDraft(): MoreFilterDraft {
+  return {
+    favorites: false,
+    minPrice: '',
+    maxPrice: '',
+    gender: 'all',
+    sort: 'relevance',
+  };
+}
+
+function countMoreDraftFilters(draft: MoreFilterDraft) {
+  const priceDraft = serializePriceDraft(draft);
+  return [
+    draft.favorites,
+    Boolean(priceDraft.minPrice || priceDraft.maxPrice),
+    draft.gender !== 'all',
+    draft.sort !== 'relevance',
+  ].filter(Boolean).length;
+}
+
+function priceInputFromParam(value: string, emptyValue: number) {
+  if (!value) return '';
+  const clamped = clampPriceValue(value, emptyValue);
+  if (emptyValue === PRICE_MIN && clamped <= PRICE_MIN) return '';
+  if (emptyValue === PRICE_MAX && clamped >= PRICE_MAX) return '';
+  return String(clamped);
+}
+
+function serializePriceDraft(priceDraft: PriceDraft): Partial<PriceDraft> {
+  const minPrice = priceNumberFromInput(priceDraft.minPrice) ?? PRICE_MIN;
+  const maxPrice = priceNumberFromInput(priceDraft.maxPrice) ?? PRICE_MAX;
+  const normalizedMin = Math.min(minPrice, maxPrice);
+  const normalizedMax = Math.max(minPrice, maxPrice);
+  return {
+    minPrice: normalizedMin > PRICE_MIN ? String(normalizedMin) : undefined,
+    maxPrice: normalizedMax < PRICE_MAX ? String(normalizedMax) : undefined,
+  };
+}
+
+function priceNumberFromInput(value: string, fallback: number | null = null) {
+  if (!value) return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(PRICE_MAX, Math.max(PRICE_MIN, parsed));
+}
+
+function clampPriceValue(value: string | number, fallback: number) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(PRICE_MAX, Math.max(PRICE_MIN, parsed));
 }

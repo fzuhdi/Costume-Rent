@@ -1,11 +1,10 @@
-import { Heart, ShoppingCart } from 'lucide-react';
-import type { Dispatch, SetStateAction } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, ArrowRight, Heart, ShoppingCart } from 'lucide-react';
+import type { Dispatch, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, SetStateAction } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StatusPill } from '../../shared';
 import { ProductAvailabilityCalendar } from './ProductAvailabilityCalendar';
 import {
   findNextAvailableWindow,
-  formatDate,
   formatDateRange,
   formatRupiah,
   getMaintenanceReason,
@@ -53,17 +52,29 @@ export function ProductDetail({
   const availability = getProductAvailability(product, dates, rentals);
   const maintenanceReason = availability === 'unavailable' ? getMaintenanceReason(product, dates) : '';
   const isInCart = cart.some((item) => item.productId === product.id && item.variantId === selectedVariantId);
-  const canAdd = selectedVariantId && selectedAvailability > 0;
+  const canAdd = Boolean(selectedVariantId && selectedAvailability > 0);
   const nextWindow = selectedVariantId && selectedAvailability <= 0 ? findNextAvailableWindow(product, selectedVariantId, dates, rentals) : null;
   const images = useMemo(() => productGallery(product, t), [product, t]);
   const [selectedImageId, setSelectedImageId] = useState(images[0]?.id ?? '');
+  const previousProductIdRef = useRef(product.id);
   const [favoriteNotice, setFavoriteNotice] = useState(false);
-  const selectedImage = images.find((image) => image.id === selectedImageId) ?? images[0];
+  const selectedImageIndex = images.findIndex((image) => image.id === selectedImageId);
+  const activeImageIndex = selectedImageIndex >= 0 ? selectedImageIndex : 0;
+  const selectedImage = images[activeImageIndex];
+  const selectedVariant = product.variants.find((variant) => variant.id === selectedVariantId) ?? product.variants[0];
+  const selectedVariantText = variantLabel(t, selectedVariant?.label ?? selectedVariantId);
   const description = productDescription(product, locale, t);
   const variantNotes = selectedVariantNotes(product, selectedVariantId, locale, t);
+  const dateRangeText = formatDateRange(dates, locale);
 
   useEffect(() => {
-    setSelectedImageId(images[0]?.id ?? '');
+    const productChanged = previousProductIdRef.current !== product.id;
+    previousProductIdRef.current = product.id;
+    setSelectedImageId((currentId) => {
+      if (productChanged) return images[0]?.id ?? '';
+      if (currentId && images.some((image) => image.id === currentId)) return currentId;
+      return images[0]?.id ?? '';
+    });
   }, [product.id, images]);
 
   useEffect(() => {
@@ -77,49 +88,91 @@ export function ProductDetail({
     setFavoriteNotice(true);
   };
 
+  const selectAdjacentImage = (delta: number) => {
+    setSelectedImageId((currentId) => {
+      const currentIndex = images.findIndex((image) => image.id === currentId);
+      const normalizedIndex = currentIndex >= 0 ? currentIndex : 0;
+      const nextImage = images[normalizedIndex + delta];
+      return nextImage?.id ?? currentId;
+    });
+  };
+
+  const handleCarouselPointerDown = (event: ReactPointerEvent<HTMLButtonElement>, delta: number) => {
+    if (event.button !== 0) return;
+    selectAdjacentImage(delta);
+  };
+
+  const handleCarouselClick = (event: ReactMouseEvent<HTMLButtonElement>, delta: number) => {
+    if (event.detail !== 0) return;
+    selectAdjacentImage(delta);
+  };
+
   return (
     <section className="product-detail product-detail-shell" id="product-detail">
       <div className="shell product-detail-layout product-detail-layout-shell">
-        <div className={`detail-gallery product-media-gallery ${images.length > 1 ? '' : 'single-image'}`} aria-label={t('customer.detail.galleryAria')}>
-          <div className="detail-photo">
-            <img src={selectedImage?.src ?? product.image} alt={selectedImage?.alt ?? productAlt(product, t)} />
-          </div>
-          {images.length > 1 ? (
-            <div className="thumb-rail" aria-label={t('customer.detail.thumbsAria')}>
-              {images.map((thumb) => (
-                <button
-                  className={`thumb-button ${selectedImage?.id === thumb.id ? 'selected' : ''}`}
-                  type="button"
-                  key={thumb.id}
-                  aria-label={t('customer.detail.thumbSelect', { item: thumb.label })}
-                  aria-pressed={selectedImage?.id === thumb.id}
-                  onClick={() => setSelectedImageId(thumb.id)}
-                >
-                  <img src={thumb.src} alt={thumb.alt} />
-                </button>
-              ))}
+        <div className="product-detail-main">
+          <div className={`detail-gallery product-media-gallery ${images.length > 1 ? '' : 'single-image'}`} aria-label={t('customer.detail.galleryAria')}>
+            <div className="detail-photo">
+              <img src={selectedImage?.src ?? product.image} alt={selectedImage?.alt ?? productAlt(product, t)} />
+              {images.length > 1 ? (
+                <>
+                  <button
+                    className="detail-carousel-arrow previous"
+                    type="button"
+                    onPointerDown={(event) => handleCarouselPointerDown(event, -1)}
+                    onClick={(event) => handleCarouselClick(event, -1)}
+                    disabled={activeImageIndex <= 0}
+                    aria-label={t('customer.detail.previousImage')}
+                  >
+                    <ArrowLeft aria-hidden="true" />
+                  </button>
+                  <button
+                    className="detail-carousel-arrow next"
+                    type="button"
+                    onPointerDown={(event) => handleCarouselPointerDown(event, 1)}
+                    onClick={(event) => handleCarouselClick(event, 1)}
+                    disabled={activeImageIndex >= images.length - 1}
+                    aria-label={t('customer.detail.nextImage')}
+                  >
+                    <ArrowRight aria-hidden="true" />
+                  </button>
+                </>
+              ) : null}
             </div>
-          ) : null}
+            {images.length > 1 ? (
+              <div className="thumb-rail" aria-label={t('customer.detail.thumbsAria')}>
+                {images.map((thumb) => (
+                  <button
+                    className={`thumb-button ${selectedImage?.id === thumb.id ? 'selected' : ''}`}
+                    type="button"
+                    key={thumb.id}
+                    aria-label={t('customer.detail.thumbSelect', { item: thumb.label })}
+                    aria-pressed={selectedImage?.id === thumb.id}
+                    onClick={() => setSelectedImageId(thumb.id)}
+                  >
+                    <img src={thumb.src} alt={thumb.alt} />
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <aside className="detail-purchase detail-purchase-panel" aria-label={t('customer.detail.panelAria')}>
           <div className="detail-heading">
-            <StatusPill type="availability" value={availability} t={t} />
-            <p className="product-meta">{productMeta(product, t)}</p>
-            <h2>{productName(product, t)}</h2>
+            <h1>{productName(product, t)}</h1>
+            <div className="detail-meta-row">
+              <p className="product-meta">{productMeta(product, t)}</p>
+              <StatusPill type="availability" value={availability} t={t} />
+            </div>
             <strong className="detail-price">
               {formatRupiah(product.price)}
               <span>{t(product.unitKey)}</span>
             </strong>
           </div>
 
-          <div className="detail-description-block">
-            <span className="option-label">{t('customer.detail.description')}</span>
-            <p className="detail-copy">{description}</p>
-          </div>
-
           <div className="option-group">
-            <span className="option-label">{t('customer.detail.variantLabel')}</span>
+            <span className="visually-hidden">{t('customer.detail.variantLabel')}</span>
             <div className="variant-grid variant-selector" aria-label={t('customer.detail.variantAria')}>
               {product.variants.map((variant) => {
                 const available = getVariantAvailability(product, variant.id, dates, rentals);
@@ -131,15 +184,15 @@ export function ProductDetail({
                     disabled={available <= 0}
                     onClick={() => setSelectedVariantId(variant.id)}
                   >
-                    {variantLabel(t, variant.label)}
-                    <small>{available}</small>
+                    <span>{variantLabel(t, variant.label)}</span>
+                    <small>{t('customer.detail.availableCount', { count: available })}</small>
                   </button>
                 );
               })}
             </div>
             <p className={canAdd ? 'helper-text' : 'validation-message'}>
               {canAdd
-                ? t('customer.detail.variantHelp')
+                ? `${selectedVariantText}: ${variantNotes}`
                 : maintenanceReason
                   ? t('customer.detail.unavailableReason', { reason: maintenanceReason })
                   : t('customer.detail.unavailable')}
@@ -153,44 +206,72 @@ export function ProductDetail({
             ) : null}
           </div>
 
-          <div className="detail-description-block variant-note-block" aria-live="polite">
-            <span className="option-label">{t('customer.detail.variantNotes')}</span>
-            <p className="detail-copy">{variantNotes}</p>
-          </div>
-
-          <div className="option-group">
-            <span className="option-label">{t('customer.detail.dateLabel')}</span>
-            <div className="date-summary date-range-control">
-              <span>{formatDate(dates.start, locale)}</span>
-              <b>{t('customer.detail.until')}</b>
-              <span>{formatDate(dates.end, locale)}</span>
-            </div>
-          </div>
-
           <div className="detail-quick-actions">
-            <button className={`outline-button full favorite-button ${isFavorite ? 'selected' : ''}`} type="button" aria-pressed={isFavorite} onClick={handleFavoriteToggle}>
-              <Heart aria-hidden="true" fill={isFavorite ? 'currentColor' : 'none'} />
-              {isFavorite ? t('customer.detail.favoriteSaved') : t('customer.detail.favorite')}
-            </button>
-            {favoriteNotice ? <p className="success-message favorite-feedback">{t('customer.detail.favoriteUndo')}</p> : null}
-            <div className="detail-cta-bar detail-action-bar">
-              <button className="secondary-button full" type="button" disabled={!canAdd} onClick={onAdd}>
+            <div className="detail-action-row detail-cta-bar">
+              <button
+                className={`icon-button favorite-button detail-save-button ${isFavorite ? 'selected' : ''}`}
+                type="button"
+                aria-label={isFavorite ? t('customer.detail.favoriteSaved') : t('customer.detail.favorite')}
+                aria-pressed={isFavorite}
+                onClick={handleFavoriteToggle}
+              >
+                <Heart aria-hidden="true" fill={isFavorite ? 'currentColor' : 'none'} />
+              </button>
+              <button className="secondary-button detail-add-button" type="button" disabled={!canAdd} onClick={onAdd}>
                 <ShoppingCart aria-hidden="true" />
                 {isInCart ? t('customer.status.added') : t('customer.detail.add')}
               </button>
             </div>
+            <p className="helper-text detail-stock-advisory">{t('customer.detail.staffConfirms')}</p>
+            {favoriteNotice ? <p className="success-message favorite-feedback">{t('customer.detail.favoriteUndo')}</p> : null}
           </div>
-
-          <ProductAvailabilityCalendar
-            product={product}
-            selectedVariantId={selectedVariantId}
-            dates={dates}
-            locale={locale}
-            t={t}
-            rentals={rentals}
-            dataAdapter={dataAdapter}
-          />
         </aside>
+
+        <div className="product-detail-info-grid" aria-label={t('customer.detail.infoAria')}>
+          <article className="detail-info-block">
+            <span className="option-label">{t('customer.detail.included')}</span>
+            <p className="detail-copy">{description}</p>
+          </article>
+        </div>
+      </div>
+
+      <div className="shell product-availability-shell">
+        <div className="availability-section-head">
+          <h2>{t('customer.detail.availabilityTitle')}</h2>
+        </div>
+        <ProductAvailabilityCalendar
+          product={product}
+          selectedVariantId={selectedVariantId}
+          dates={dates}
+          locale={locale}
+          t={t}
+          rentals={rentals}
+          dataAdapter={dataAdapter}
+        />
+      </div>
+
+      <div className="product-detail-mobile-bar" role="region" aria-label={t('customer.detail.mobileActionAria')}>
+        <div className="mobile-purchase-summary">
+          <strong>
+            {formatRupiah(product.price)}
+            <span>{t(product.unitKey)}</span>
+          </strong>
+          <small>{selectedVariantText ? `${selectedVariantText}, ${dateRangeText}` : dateRangeText}</small>
+        </div>
+        <button
+          className={`icon-button favorite-button ${isFavorite ? 'selected' : ''}`}
+          type="button"
+          aria-label={isFavorite ? t('customer.detail.favoriteSaved') : t('customer.detail.favorite')}
+          aria-pressed={isFavorite}
+          onClick={handleFavoriteToggle}
+        >
+          <Heart aria-hidden="true" fill={isFavorite ? 'currentColor' : 'none'} />
+        </button>
+        <button className="secondary-button mobile-add-button" type="button" disabled={!canAdd} onClick={onAdd}>
+          <ShoppingCart aria-hidden="true" />
+          {isInCart ? t('customer.status.added') : t('customer.detail.add')}
+        </button>
+        {favoriteNotice ? <p className="success-message favorite-feedback product-detail-mobile-feedback">{t('customer.detail.favoriteUndo')}</p> : null}
       </div>
     </section>
   );
