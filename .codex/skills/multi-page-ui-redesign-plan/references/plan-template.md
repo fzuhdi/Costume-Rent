@@ -21,6 +21,8 @@ Use this exact section order when generating a plan. Replace bracketed placehold
 - [Principle that applies to all phases.]
 - [Principle that applies to all phases.]
 
+Each phase below is backed by its own `$ui-refactor` redesign pass. The `ASCII Frame` content comes from that target-specific `$ui-refactor` wireframe.
+
 ## Phase 1 - [Page/Component Name]
 
 ### Target
@@ -38,7 +40,7 @@ Use this exact section order when generating a plan. Replace bracketed placehold
 ### ASCII Frame
 
 ```text
-[ASCII layout for this specific page/component after redesign]
+[ASCII frame from the per-target `$ui-refactor` pass for this page/component]
 ```
 
 ### Accessibility And Responsive Notes
@@ -68,7 +70,7 @@ Use this exact section order when generating a plan. Replace bracketed placehold
 ### ASCII Frame
 
 ```text
-[ASCII layout for this specific page/component after redesign]
+[ASCII frame from the per-target `$ui-refactor` pass for this page/component]
 ```
 
 ### Accessibility And Responsive Notes

@@ -1,6 +1,6 @@
 ---
 name: multi-page-ui-redesign-plan
-description: Planning-only skill for creating multi-page or multi-component UI redesign plans in this project. Use when the user asks to plan, redesign, clean up, reshape, simplify, or improve multiple pages/components using principles like reducing duplication, improving hierarchy, simplifying controls, consolidating repeated UI, or applying the same product detail cleanup approach across several screens. Creates a markdown plan with exactly one phase per page/component and a redesigned ASCII frame for every phase; does not edit product code.
+description: Planning-only skill for creating multi-page or multi-component UI redesign plans in this project. Use when the user asks to plan, redesign, clean up, reshape, simplify, or improve multiple pages/components using principles like reducing duplication, improving hierarchy, simplifying controls, consolidating repeated UI, or applying the same product detail cleanup approach across several screens. Requires a per-page/component `$ui-refactor` redesign pass and uses its ASCII wireframe for each phase; creates a markdown plan with exactly one phase per page/component and does not edit product code.
 ---
 
 # Multi-Page UI Redesign Plan
@@ -31,11 +31,23 @@ Before writing the plan, do non-mutating exploration only:
 
 Do not make exploratory edits. Do not run mutating workflow commands. Prefer read-only searches and file reads.
 
+## UI Refactor Pass Per Target
+
+Before drafting plan phases, use `$ui-refactor` separately for each target page/component:
+
+1. Load and follow the `ui-refactor` skill if it is not already active.
+2. Give `$ui-refactor` the target-specific route/component/files, available screenshots, relevant CSS/design-system notes, and the primary user task for that page/component.
+3. Ask for a redesign/layout-planning output with an improved ASCII wireframe for that single target.
+4. Use the resulting wireframe as the source for that target's phase `ASCII Frame`. You may adapt labels to match the final plan, but do not invent the frame without a target-specific `$ui-refactor` pass.
+5. Summarize useful `$ui-refactor` findings into the phase direction, information/control decisions, accessibility notes, and acceptance checks.
+
+Run this pass once per target. Do not combine multiple pages/components into one `$ui-refactor` prompt when they will become separate phases.
+
 ## Planning Rules
 
 - Produce exactly one phase per page/component target.
 - Each phase must describe a redesigned end state, not a cleanup checklist.
-- Each phase must include a specific ASCII frame for that page/component after redesign.
+- Each phase must include a specific ASCII frame sourced from that page/component's `$ui-refactor` redesign pass.
 - Frames must show structure, grouping, hierarchy, primary actions, secondary actions, and responsive/sticky surfaces where relevant.
 - Keep shared redesign principles consistent across phases: reduce duplication, improve hierarchy, simplify controls, consolidate repeated surfaces, and reshape layout around the primary task.
 - Make page-specific decisions instead of repeating generic guidance in every phase.
