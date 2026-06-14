@@ -60,28 +60,7 @@ export function RentalListView({
 
   return (
     <section className="base-window management-window rental-list-view">
-      <div className="view-bar rentals-view-bar">
-        <div className="view-title-stack">
-          <strong>{t('admin.rentals.title')}</strong>
-          <span>{t(`admin.rentals.filter.${statusFilter}`)}</span>
-        </div>
-      </div>
-
       <div className="rental-filter-strip" aria-label={t('admin.rentals.filtersAria')}>
-        <div className="rental-queue-summary" aria-label={t('admin.rentals.queueSummaryAria')}>
-          <div className="rental-queue-summary-copy">
-            <span className="section-kicker">{t('admin.rentals.summaryBadge')}</span>
-            <p>{t('admin.rentals.summaryCopy')}</p>
-          </div>
-          <div className="rental-queue-counts">
-            {queueSummary.map((summary) => (
-              <span className="rental-queue-count" key={summary.key}>
-                <strong>{summary.count}</strong>
-                <span>{t(`admin.rentals.summary.${summary.key}`)}</span>
-              </span>
-            ))}
-          </div>
-        </div>
         <SearchInput value={query} onChange={setQuery} placeholder={t('admin.rentals.searchPlaceholder')} clearLabel={t('common.clear')} />
         <div className="filter-row rental-filter-row">
           {rentalFilters.map((filter) => {

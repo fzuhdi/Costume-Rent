@@ -316,10 +316,6 @@ function SectionOperationsSummary({ section, metrics, t }: SectionOperationsSumm
   if (section === 'requests') {
     return (
       <section className="ops-operations-summary intake-summary" data-section="requests" aria-label={t('admin.metrics.aria')}>
-        <AdminAlertBanner>
-          <StatusPill value={t('admin.requests.summaryBadge')} t={t} tone="warning" icon={Clock} />
-          <p>{t('admin.requests.summaryCopy')}</p>
-        </AdminAlertBanner>
         <AdminMetricStrip>
           <Metric tone="neutral" value={metrics.requested} title={t('admin.metrics.new')} copy={t('admin.metrics.newCopy')} to="/admin/requests?tab=all&sort=stale" />
           <Metric tone="warning" value={metrics.staleRequests} title={t('admin.metrics.stale')} copy={t('admin.metrics.staleCopy')} to="/admin/requests?tab=stale&sort=stale" />
@@ -331,10 +327,6 @@ function SectionOperationsSummary({ section, metrics, t }: SectionOperationsSumm
 
   return (
     <section className="ops-operations-summary lifecycle-summary" data-section="rentals" aria-label={t('admin.metrics.aria')}>
-      <AdminAlertBanner>
-        <StatusPill value={t('admin.rentals.summaryBadge')} t={t} tone="warning" icon={AlertTriangle} />
-        <p>{t('admin.rentals.summaryCopy')}</p>
-      </AdminAlertBanner>
       <AdminMetricStrip>
         <Metric tone="success" value={metrics.ready} title={t('admin.metrics.pickup')} copy={t('admin.metrics.pickupCopy')} to="/admin/rentals?status=ready" />
         <Metric tone="neutral" value={metrics.outWithCustomer} title={t('admin.metrics.overdue')} copy={t('admin.metrics.overdueCopy')} to="/admin/rentals?status=on_rent" />
