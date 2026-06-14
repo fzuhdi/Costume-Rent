@@ -1,9 +1,9 @@
-import { type ComponentPropsWithoutRef, type ElementType, type ReactNode, useId, useState } from 'react';
+import { type ComponentPropsWithoutRef, type ElementType, type ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Select from '@radix-ui/react-select';
 import { type ColumnDef, type SortingState, flexRender, getCoreRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table';
-import { AlertTriangle, ArrowLeft, Bell, Check, CheckCircle, ChevronDown, Languages, Search, Truck, WalletCards, X } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, Bell, Check, CheckCircle, ChevronDown, Languages, Search, Truck, WalletCards, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { availabilityIcon, lifecycleIcon, lifecycleTone, paymentTone } from '../constants/ui';
 import { availabilityTone } from '../lib/rental-utils';
@@ -16,6 +16,14 @@ type DataTableProps<TData extends object> = {
   getRowId: (row: TData) => string;
   onRowClick: (row: TData) => void;
   emptyLabel: string;
+  ariaLabel?: string;
+  sortLabels?: Partial<DataTableSortLabels>;
+};
+
+type DataTableSortLabels = {
+  ascending: string;
+  descending: string;
+  none: string;
 };
 
 type PrimitiveProps = {
@@ -171,13 +179,15 @@ export function StickyActionBar({ status, className = '', children, ...props }: 
 
 type AuthCardProps = PrimitiveProps & {
   kicker?: ReactNode;
+  mark?: ReactNode;
   title: ReactNode;
   copy?: ReactNode;
 };
 
-export function AuthCard({ kicker, title, copy, className = '', children }: AuthCardProps) {
+export function AuthCard({ kicker, mark, title, copy, className = '', children }: AuthCardProps) {
   return (
     <section className={`auth-card ${className}`.trim()}>
+      {mark ? <div className="auth-card-mark">{mark}</div> : null}
       <div className="auth-card-copy">
         {kicker ? <span className="section-kicker">{kicker}</span> : null}
         <h1>{title}</h1>
@@ -197,14 +207,13 @@ type AppDialogProps = PrimitiveProps & {
 };
 
 export function AppDialog({ open, onOpenChange, title, description, closeLabel, className = '', children }: AppDialogProps) {
-  const descriptionId = useId();
-
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content className={`dialog-content app-dialog ${className}`.trim()} aria-describedby={description ? descriptionId : undefined}>
-          <SheetHeader title={title} description={description} descriptionId={description ? descriptionId : undefined} closeLabel={closeLabel} />
+        <Dialog.Content className={`dialog-content app-dialog ${className}`.trim()}>
+          <SheetHeader title={title} description={description} closeLabel={closeLabel} />
+          {!description ? <Dialog.Description className="visually-hidden">{title}</Dialog.Description> : null}
           {children}
         </Dialog.Content>
       </Dialog.Portal>
@@ -212,8 +221,85 @@ export function AppDialog({ open, onOpenChange, title, description, closeLabel, 
   );
 }
 
-export function DataTable<TData extends object>({ data, columns, selectedId, getRowId, onRowClick, emptyLabel }: DataTableProps<TData>) {
+type DestructiveConfirmDialogProps = PrimitiveProps & {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description: string;
+  cancelLabel: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+  confirmDisabled?: boolean;
+  confirmClassName?: string;
+  icon?: LucideIcon;
+};
+
+export function DestructiveConfirmDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  cancelLabel,
+  confirmLabel,
+  onConfirm,
+  confirmDisabled = false,
+  confirmClassName = 'danger-button',
+  icon: ExplicitIcon = AlertTriangle,
+  className = '',
+  children,
+}: DestructiveConfirmDialogProps) {
+  const Icon = ExplicitIcon;
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="dialog-overlay" />
+        <Dialog.Content className={`dialog-content destructive-dialog confirm-dialog ${className}`.trim()}>
+          <div className="dialog-icon danger">
+            <Icon aria-hidden="true" />
+          </div>
+          <Dialog.Title>{title}</Dialog.Title>
+          <Dialog.Description className="dialog-description">{description}</Dialog.Description>
+          {children}
+          <div className="dialog-actions confirm-dialog-actions">
+            <Dialog.Close asChild>
+              <button className="outline-button" type="button">{cancelLabel}</button>
+            </Dialog.Close>
+            <button
+              className={confirmClassName}
+              type="button"
+              disabled={confirmDisabled}
+              onClick={() => {
+                onConfirm();
+                onOpenChange(false);
+              }}
+            >
+              {confirmLabel}
+            </button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+export function DataTable<TData extends object>({
+  data,
+  columns,
+  selectedId,
+  getRowId,
+  onRowClick,
+  emptyLabel,
+  ariaLabel,
+  sortLabels,
+}: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const resolvedSortLabels: DataTableSortLabels = {
+    ascending: 'Sorted ascending',
+    descending: 'Sorted descending',
+    none: 'Not sorted',
+    ...sortLabels,
+  };
   const table = useReactTable({
     data,
     columns,
@@ -226,25 +312,54 @@ export function DataTable<TData extends object>({ data, columns, selectedId, get
 
   if (data.length === 0) return <EmptyState title={emptyLabel} copy="" icon={Search} />;
 
+  const selectRow = (row: TData) => onRowClick(row);
+
   return (
-    <div className="record-table data-table-wrap">
+    <div className="record-table data-table-wrap" role="region" aria-label={ariaLabel ?? emptyLabel}>
       <table className="data-table">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th key={header.id}>
-                  <button type="button" onClick={header.column.getToggleSortingHandler()}>
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                  </button>
-                </th>
-              ))}
+              {headerGroup.headers.map((header) => {
+                const canSort = header.column.getCanSort();
+                const sorted = header.column.getIsSorted();
+                const ariaSort = sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none';
+                const SortIcon = sorted === 'asc' ? ArrowUp : sorted === 'desc' ? ArrowDown : ArrowUpDown;
+                const sortLabel = sorted === 'asc' ? resolvedSortLabels.ascending : sorted === 'desc' ? resolvedSortLabels.descending : resolvedSortLabels.none;
+                const headerLabel = String(header.column.columnDef.header ?? '');
+
+                return (
+                  <th key={header.id} aria-sort={canSort ? ariaSort : undefined}>
+                    {header.isPlaceholder ? null : canSort ? (
+                      <button type="button" onClick={header.column.getToggleSortingHandler()} aria-label={headerLabel ? `${headerLabel}: ${sortLabel}` : sortLabel}>
+                        <span className="data-table-heading">{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                        <span className={`data-table-sort-indicator ${sorted || 'none'}`} aria-hidden="true">
+                          <SortIcon />
+                        </span>
+                        <span className="visually-hidden">{sortLabel}</span>
+                      </button>
+                    ) : (
+                      <span className="data-table-heading">{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                    )}
+                  </th>
+                );
+              })}
             </tr>
           ))}
         </thead>
         <tbody>
           {table.getRowModel().rows.map((row) => (
-            <tr className={selectedId === row.id ? 'selected' : ''} key={row.id} onClick={() => onRowClick(row.original)}>
+            <tr
+              className={selectedId === row.id ? 'selected' : ''}
+              key={row.id}
+              onClick={() => selectRow(row.original)}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                selectRow(row.original);
+              }}
+              tabIndex={0}
+            >
               {row.getVisibleCells().map((cell) => (
                 <td data-label={String(cell.column.columnDef.header ?? '')} key={cell.id}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -310,16 +425,27 @@ type SearchInputProps = {
   onChange: (value: string) => void;
   placeholder: string;
   clearLabel: string;
+  ariaLabel?: string;
+  inputId?: string;
   className?: string;
   as?: ElementType<{ className?: string; children?: ReactNode }>;
 };
 
-export function SearchInput({ value, onChange, placeholder, clearLabel, className = '', as: Element = 'label' }: SearchInputProps) {
+export function SearchInput({ value, onChange, placeholder, clearLabel, ariaLabel, inputId, className = '', as: Element = 'label' }: SearchInputProps) {
   const hasValue = String(value ?? '').length > 0;
   return (
     <Element className={`search-inline compact-search ${className}`.trim()}>
       <Search aria-hidden="true" />
-      <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
+      <input
+        id={inputId}
+        type="search"
+        value={value}
+        aria-label={ariaLabel ?? placeholder}
+        autoComplete="off"
+        enterKeyHint="search"
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+      />
       {hasValue ? (
         <button className="search-clear-button" type="button" aria-label={clearLabel} onClick={() => onChange('')}>
           <X aria-hidden="true" />
@@ -463,20 +589,38 @@ export function NotificationRow({ as: Element = 'article', tone = 'info', resolv
 
 type FieldProps = {
   label: string;
+  className?: string;
   error?: string;
   hint?: string;
   errorId?: string;
   hintId?: string;
+  htmlFor?: string;
   children: ReactNode;
 };
 
-export function Field({ label, error, hint, errorId, hintId, children }: FieldProps) {
-  return (
-    <label className="field-control">
-      <span>{label}</span>
-      {children}
+export function Field({ label, className = '', error, hint, errorId, hintId, htmlFor, children }: FieldProps) {
+  const feedback = (
+    <>
       {error ? <small className="validation-message" id={errorId}>{error}</small> : null}
       {!error && hint ? <small className="field-hint" id={hintId}>{hint}</small> : null}
+    </>
+  );
+
+  if (htmlFor) {
+    return (
+      <div className={`field-control ${className}`.trim()}>
+        <label htmlFor={htmlFor}>{label}</label>
+        {children}
+        {feedback}
+      </div>
+    );
+  }
+
+  return (
+    <label className={`field-control ${className}`.trim()}>
+      <span>{label}</span>
+      {children}
+      {feedback}
     </label>
   );
 }

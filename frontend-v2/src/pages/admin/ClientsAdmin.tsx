@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   AdminCreateAction,
@@ -9,12 +9,14 @@ import {
 } from '../../components/admin/common/AdminManagement';
 import {
   ClientCreatePanel,
+  ClientDeleteConfirmSheet,
   ClientDetailSheet,
   ClientList,
+  type ClientRentalSummary,
   type NewClientDraft,
 } from '../../components/admin/clients/ClientManagement';
 import { SearchInput } from '../../components/shared';
-import { normalizePhone } from '../../lib/rental-utils';
+import { BLOCKING_LIFECYCLES, normalizePhone } from '../../lib/rental-utils';
 import { resetMobileDetailScroll } from '../../lib/mobile-detail';
 import type { StateSetter } from '../../types/app';
 import type { Client, DataAdapter, Locale, Product, Rental, TFunction } from '../../types/domain';
@@ -36,16 +38,32 @@ export default function ClientsAdmin({ t, locale, clients, setClients, rentals, 
   const [editMode, setEditMode] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
   const [newClient, setNewClient] = useState<NewClientDraft>({ name: '', phone: '', email: '', notes: '' });
   const [draft, setDraft] = useState<Client | null>(null);
   const [saveMessage, setSaveMessage] = useState('');
   const normalizedQuery = normalizePhone(query);
-  const filtered = clients.filter((client) => {
-    const text = `${client.name} ${client.phone}`.toLowerCase();
-    return text.includes(query.toLowerCase()) || (normalizedQuery && normalizePhone(client.phone).includes(normalizedQuery));
-  });
+  const visibleQuery = query.trim().toLowerCase();
+  const summariesByClientId = useMemo(() => buildClientSummaries(clients, rentals), [clients, rentals]);
+  const filtered = useMemo(() => clients.filter((client) => {
+    const visiblePhone = String(client.phone ?? '').toLowerCase();
+    const normalizedPhone = normalizePhone(client.phone);
+    return (
+      !visibleQuery ||
+      client.name.toLowerCase().includes(visibleQuery) ||
+      visiblePhone.includes(visibleQuery) ||
+      (normalizedQuery.length > 0 && normalizedPhone.includes(normalizedQuery))
+    );
+  }), [clients, normalizedQuery, visibleQuery]);
   const selected = clients.find((client) => client.id === selectedId) ?? null;
-  const history = selected ? rentals.filter((rental) => normalizePhone(rental.phone) === normalizePhone(selected.phone)) : [];
+  const selectedSummary = selected ? summariesByClientId[selected.id] : undefined;
+  const history = useMemo(() => (
+    selected
+      ? rentals
+          .filter((rental) => normalizePhone(rental.phone) === normalizePhone(selected.phone))
+          .sort(compareRentalRecency)
+      : []
+  ), [rentals, selected?.phone]);
 
   useEffect(() => {
     const phone = searchParams.get('phone');
@@ -110,6 +128,22 @@ export default function ClientsAdmin({ t, locale, clients, setClients, rentals, 
     setDetailOpen(false);
   };
 
+  const confirmDeleteClient = () => {
+    if (!deleteTarget) return;
+    const remainingClients = clients.filter((client) => client.id !== deleteTarget.id);
+    setClients(remainingClients);
+    if (selectedId === deleteTarget.id) {
+      const nextClient = remainingClients[0];
+      setSelectedId(nextClient?.id);
+      setDraft(nextClient ?? null);
+      setEditMode(false);
+      setDetailOpen(false);
+    }
+    setDeleteTarget(null);
+    setSaveMessage(t('admin.clients.deleted'));
+    window.setTimeout(() => setSaveMessage(''), 2400);
+  };
+
   return (
     <EntityDirectoryLayout className="clients-admin-grid" detailOpen={detailOpen}>
       <AdminListWindow>
@@ -137,23 +171,63 @@ export default function ClientsAdmin({ t, locale, clients, setClients, rentals, 
             onClose={() => setAddOpen(false)}
           />
         ) : null}
-        <ClientList clients={filtered} selectedId={selected?.id} t={t} onView={viewClient} />
+        <ClientList
+          clients={filtered}
+          selectedId={selected?.id}
+          summariesByClientId={summariesByClientId}
+          t={t}
+          onView={viewClient}
+        />
       </AdminListWindow>
-      <ClientDetailSheet
+      {detailOpen ? (
+        <ClientDetailSheet
+          t={t}
+          locale={locale}
+          selected={selected}
+          draft={draft}
+          setDraft={setDraft}
+          editMode={editMode}
+          setEditMode={setEditMode}
+          open={detailOpen}
+          onClose={closeDetail}
+          onSave={saveClient}
+          saveMessage={saveMessage}
+          history={history}
+          products={products}
+          summary={selectedSummary}
+          onRequestDelete={setDeleteTarget}
+        />
+      ) : null}
+      <ClientDeleteConfirmSheet
         t={t}
-        locale={locale}
-        selected={selected}
-        draft={draft}
-        setDraft={setDraft}
-        editMode={editMode}
-        setEditMode={setEditMode}
-        open={detailOpen}
-        onClose={closeDetail}
-        onSave={saveClient}
-        saveMessage={saveMessage}
-        history={history}
-        products={products}
+        target={deleteTarget}
+        open={Boolean(deleteTarget)}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDeleteClient}
       />
     </EntityDirectoryLayout>
   );
+}
+
+function buildClientSummaries(clients: Client[], rentals: Rental[]): Record<string, ClientRentalSummary> {
+  return clients.reduce<Record<string, ClientRentalSummary>>((summaries, client) => {
+    const clientPhone = normalizePhone(client.phone);
+    const clientRentals = rentals.filter((rental) => normalizePhone(rental.phone) === clientPhone);
+    const activeRentals = clientRentals.filter((rental) => BLOCKING_LIFECYCLES.includes(rental.lifecycle));
+    const overdueRentals = clientRentals.filter((rental) => rental.lifecycle === 'on_rent');
+    const latestRental = [...clientRentals].sort(compareRentalRecency)[0];
+
+    summaries[client.id] = {
+      totalRentals: Math.max(client.totalRentals ?? 0, clientRentals.length),
+      activeCount: activeRentals.length,
+      overdueCount: overdueRentals.length,
+      latestLifecycle: latestRental?.lifecycle,
+    };
+
+    return summaries;
+  }, {});
+}
+
+function compareRentalRecency(a: Rental, b: Rental) {
+  return `${b.end}-${b.start}-${b.reference}`.localeCompare(`${a.end}-${a.start}-${a.reference}`);
 }

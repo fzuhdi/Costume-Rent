@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react';
-import { NotificationRow, StatusPill } from '../../components/shared';
-import { localizedData } from '../../lib/rental-utils';
+import { AdminNotificationList } from '../../components/admin/common/AdminNotifications';
+import { StatusPill } from '../../components/shared';
 import type { StateSetter } from '../../types/app';
 import type { Notification, TFunction } from '../../types/domain';
 
@@ -24,25 +24,20 @@ export default function NotificationsAdmin({ t, notifications, setNotifications 
         <strong>{t('admin.notifications.unresolvedCount', { count: unresolved.length })}</strong>
       </div>
       <div className="notification-list">
-        {notifications.map((notification) => (
-          <NotificationRow
-            className="notification-item"
-            key={notification.id}
-            tone={notification.tone}
-            resolved={notification.resolved}
-            severityLabel={t(`admin.notifications.tone.${notification.tone}`)}
-            title={localizedData(notification, 'title', t)}
-            copy={localizedData(notification, 'copy', t)}
-          >
-            {notification.resolved ? (
+        <AdminNotificationList
+          notifications={notifications}
+          t={t}
+          itemClassName="notification-item"
+          renderAction={(notification) =>
+            notification.resolved ? (
               <StatusPill value={t('admin.notifications.resolved')} t={t} tone="success" icon={Check} />
             ) : (
               <button className="outline-button" type="button" onClick={() => setNotifications((current) => current.map((item) => (item.id === notification.id ? { ...item, resolved: true } : item)))}>
                 {t('admin.notifications.resolve')}
               </button>
-            )}
-          </NotificationRow>
-        ))}
+            )
+          }
+        />
       </div>
     </section>
   );

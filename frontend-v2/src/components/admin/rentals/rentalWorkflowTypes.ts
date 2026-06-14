@@ -26,6 +26,7 @@ export type RentalTransitionAction = {
   label: string;
   icon: LucideIcon;
   disabled?: boolean;
+  disabledReason?: string;
   tone?: Tone;
   onClick: () => void;
 };

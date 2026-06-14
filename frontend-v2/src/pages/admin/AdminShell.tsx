@@ -1,19 +1,19 @@
-import type { LucideIcon } from 'lucide-react';
-import { AlertTriangle, Bell, ChevronRight, Clock, Info, LogOut, X } from 'lucide-react';
-import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { AlertTriangle, Bell, Clock, LogOut, Menu, X } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type Dispatch, type ReactNode, type RefObject, type SetStateAction } from 'react';
 import { Link, Navigate, NavLink, useLocation, useParams } from 'react-router-dom';
 import { adminNav, type AdminSectionId } from '../../constants/ui';
 import AdminBottomSheet from '../../components/admin/common/AdminBottomSheet';
 import { AdminAlertBanner, AdminMetricStrip } from '../../components/admin/common/AdminManagement';
-import { LocaleButton, Metric, NotificationRow, StatusPill } from '../../components/shared';
-import { getAdminCopy, getAdminMetrics, getAdminTitle, localizedData, resolveTagline } from '../../lib/rental-utils';
+import { AdminNotificationList } from '../../components/admin/common/AdminNotifications';
+import { LocaleButton, Metric, StatusPill } from '../../components/shared';
+import { getAdminCopy, getAdminMetrics, getAdminTitle, resolveTagline } from '../../lib/rental-utils';
 import CatalogueAdmin from './CatalogueAdmin';
 import ClientsAdmin from './ClientsAdmin';
 import RentalsAdmin from './RentalsAdmin';
 import RequestsAdmin from './RequestsAdmin';
 import SettingsAdmin from './SettingsAdmin';
 import type { AdminPageProps } from '../../types/app';
-import type { Notification, Tone, TFunction } from '../../types/domain';
+import type { Notification, TFunction } from '../../types/domain';
 
 type AdminMetrics = ReturnType<typeof getAdminMetrics>;
 
@@ -23,6 +23,7 @@ export default function AdminShell(props: AdminPageProps) {
   const { locale, setLocale, t, settings, rentals, notifications, setStaffSession } = props;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const sidebarTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     document.body.classList.remove('customer-page');
@@ -49,6 +50,7 @@ export default function AdminShell(props: AdminPageProps) {
         <AdminSidebar
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
+          returnFocusRef={sidebarTriggerRef}
           locale={locale}
           setLocale={setLocale}
           settings={settings}
@@ -63,6 +65,9 @@ export default function AdminShell(props: AdminPageProps) {
             locale={locale}
             setLocale={setLocale}
             setStaffSession={setStaffSession}
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            sidebarTriggerRef={sidebarTriggerRef}
             notificationsOpen={notificationsOpen}
             setNotificationsOpen={setNotificationsOpen}
             activeNotifications={activeNotifications}
@@ -92,16 +97,25 @@ export default function AdminShell(props: AdminPageProps) {
 type AdminSidebarProps = Pick<AdminPageProps, 'locale' | 'setLocale' | 'settings' | 'setStaffSession' | 't'> & {
   open: boolean;
   onClose: () => void;
+  returnFocusRef?: RefObject<HTMLElement | null>;
 };
 
-function AdminSidebar({ open, onClose, locale, setLocale, settings, setStaffSession, t }: AdminSidebarProps) {
+function AdminSidebar({ open, onClose, returnFocusRef, locale, setLocale, settings, setStaffSession, t }: AdminSidebarProps) {
+  const inline = useMediaQuery('(min-width: 820px)');
+
+  useEffect(() => {
+    if (inline && open) onClose();
+  }, [inline, open, onClose]);
+
   return (
     <AdminBottomSheet
       as="aside"
+      id="admin-sidebar-menu"
       open={open}
       onClose={onClose}
-      mountWhenClosed
-      modal={false}
+      returnFocusRef={returnFocusRef}
+      mountWhenClosed={inline}
+      modal={!inline}
       className="ops-sidebar admin-sidebar"
       backdropClassName="sidebar-backdrop"
       ariaLabel={t('admin.sidebar.aria')}
@@ -141,8 +155,27 @@ function AdminSidebar({ open, onClose, locale, setLocale, settings, setStaffSess
   );
 }
 
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => (
+    typeof window !== 'undefined' ? window.matchMedia(query).matches : false
+  ));
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(query);
+    const syncMatches = () => setMatches(mediaQuery.matches);
+    syncMatches();
+    mediaQuery.addEventListener('change', syncMatches);
+    return () => mediaQuery.removeEventListener('change', syncMatches);
+  }, [query]);
+
+  return matches;
+}
+
 type AdminTopbarProps = Pick<AdminPageProps, 'locale' | 'setLocale' | 'setStaffSession' | 't'> & {
   section: AdminSectionId | 'notifications' | undefined;
+  sidebarOpen: boolean;
+  setSidebarOpen: Dispatch<SetStateAction<boolean>>;
+  sidebarTriggerRef: RefObject<HTMLButtonElement | null>;
   notificationsOpen: boolean;
   setNotificationsOpen: Dispatch<SetStateAction<boolean>>;
   activeNotifications: Notification[];
@@ -155,6 +188,9 @@ function AdminTopbar({
   locale,
   setLocale,
   setStaffSession,
+  sidebarOpen,
+  setSidebarOpen,
+  sidebarTriggerRef,
   notificationsOpen,
   setNotificationsOpen,
   activeNotifications,
@@ -178,6 +214,17 @@ function AdminTopbar({
           unresolvedCount={unresolvedNotifications}
           t={t}
         />
+        <button
+          ref={sidebarTriggerRef}
+          className="outline-button admin-menu-button"
+          type="button"
+          aria-label={t('admin.sidebar.open')}
+          aria-controls="admin-sidebar-menu"
+          aria-expanded={sidebarOpen}
+          onClick={() => setSidebarOpen((current) => !current)}
+        >
+          <Menu aria-hidden="true" />
+        </button>
         <button className="outline-button admin-logout-button" type="button" onClick={() => setStaffSession({ isAuthenticated: false, username: '' })}>
           <LogOut aria-hidden="true" />
           <span>{t('staff.logout')}</span>
@@ -196,12 +243,18 @@ type NotificationPopoverProps = {
 };
 
 function NotificationPopover({ open, setOpen, notifications, unresolvedCount, t }: NotificationPopoverProps) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
+
   return (
     <div className="notification-popover admin-notification-popover">
       <button
+        ref={triggerRef}
         className={`notification-nav-button ${open ? 'active' : ''}`}
         type="button"
+        aria-controls={panelId}
         aria-expanded={open}
+        aria-haspopup="dialog"
         aria-label={t('admin.notifications.headerAria', { count: unresolvedCount })}
         onClick={() => setOpen((current) => !current)}
       >
@@ -212,66 +265,27 @@ function NotificationPopover({ open, setOpen, notifications, unresolvedCount, t 
         {unresolvedCount > 0 ? <b>{unresolvedCount}</b> : null}
       </button>
       <AdminBottomSheet
+        id={panelId}
         open={open}
         onClose={() => setOpen(false)}
+        returnFocusRef={triggerRef}
         role="dialog"
         className="notification-popover-panel"
         backdropClassName="notification-popover-scrim"
         ariaLabel={t('admin.notifications.open')}
         closeLabel={t('common.close')}
       >
-        <NotificationList notifications={notifications} unresolvedCount={unresolvedCount} t={t} onSelect={() => setOpen(false)} />
+        <div className="notification-list">
+          <div className="notification-popover-head">
+            <strong>{t('admin.notifications.short')}</strong>
+            <span>{t('admin.notifications.unresolvedCount', { count: unresolvedCount })}</span>
+            <button className="icon-button notification-popover-close" type="button" aria-label={t('common.close')} onClick={() => setOpen(false)}>
+              <X aria-hidden="true" />
+            </button>
+          </div>
+          <AdminNotificationList notifications={notifications} t={t} onSelect={() => setOpen(false)} />
+        </div>
       </AdminBottomSheet>
-    </div>
-  );
-}
-
-function NotificationList({
-  notifications,
-  unresolvedCount,
-  t,
-  onSelect,
-}: {
-  notifications: Notification[];
-  unresolvedCount: number;
-  t: TFunction;
-  onSelect: () => void;
-}) {
-  return (
-    <div className="notification-list">
-      <div className="notification-popover-head">
-        <strong>{t('admin.notifications.short')}</strong>
-        <span>{t('admin.notifications.unresolvedCount', { count: unresolvedCount })}</span>
-        <button className="icon-button notification-popover-close" type="button" aria-label={t('common.close')} onClick={onSelect}>
-          <X aria-hidden="true" />
-        </button>
-      </div>
-      {notifications.length === 0 ? (
-        <p className="notification-empty">{t('admin.notifications.empty')}</p>
-      ) : (
-        notifications.map((notification) => {
-          const Icon = notificationToneIcon(notification.tone);
-          return (
-            <NotificationRow
-              as={Link}
-              className="notification-popover-item"
-              to={notificationTarget(notification)}
-              key={notification.id}
-              onClick={onSelect}
-              tone={notification.tone}
-              severityLabel={t(`admin.notifications.tone.${notification.tone}`)}
-              severityIcon={Icon}
-              title={localizedData(notification, 'title', t)}
-              copy={localizedData(notification, 'copy', t)}
-            >
-              <span className="notification-context">
-                {t('admin.notifications.context')}
-                <ChevronRight aria-hidden="true" />
-              </span>
-            </NotificationRow>
-          );
-        })
-      )}
     </div>
   );
 }
@@ -329,19 +343,4 @@ function SectionOperationsSummary({ section, metrics, t }: SectionOperationsSumm
       </AdminMetricStrip>
     </section>
   );
-}
-
-function notificationToneIcon(tone: Tone): LucideIcon {
-  if (tone === 'danger') return AlertTriangle;
-  if (tone === 'warning') return Clock;
-  return Info;
-}
-
-function notificationTarget(notification: Notification): string {
-  if (notification.targetRoute) return notification.targetRoute;
-  const text = `${notification.titleId ?? ''} ${notification.copyId ?? ''} ${notification.titleEn ?? ''} ${notification.copyEn ?? ''}`;
-  const reference = text.match(/CR-\d+/i)?.[0];
-  if (reference) return `/admin/rentals?reference=${reference.toUpperCase()}`;
-  if (notification.tone === 'warning') return '/admin/requests';
-  return '/admin/rentals';
 }

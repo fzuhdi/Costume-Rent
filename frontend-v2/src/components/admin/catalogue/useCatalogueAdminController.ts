@@ -117,6 +117,7 @@ export function useCatalogueAdminController({ t, products, setProducts, dataAdap
   };
 
   const adjustVariantTotal = (variantId: string, delta: number) => {
+    resetSavedState(setSaveState);
     setProductDraft((current) => {
       if (!current) return current;
       return {
@@ -141,6 +142,7 @@ export function useCatalogueAdminController({ t, products, setProducts, dataAdap
       return;
     }
 
+    resetSavedState(setSaveState);
     const id = makeVariantId(label, productDraft.variants);
     setProductDraft((current) => {
       if (!current) return current;
@@ -205,7 +207,7 @@ export function useCatalogueAdminController({ t, products, setProducts, dataAdap
   };
 
   const removeVariant = (variantId: string) => {
-    if (!window.confirm(t('common.remove'))) return;
+    resetSavedState(setSaveState);
     setProductDraft((current) => {
       if (!current) return current;
       if (current.variants.length <= 1) {
@@ -282,6 +284,7 @@ export function useCatalogueAdminController({ t, products, setProducts, dataAdap
 
   const saveMaintenanceBlock = () => {
     if (!maintenanceDraft.start || !maintenanceDraft.end || !productDraft) return;
+    resetSavedState(setSaveState);
     setProductDraft((current) => (current ? {
       ...current,
       maintenanceBlocks: [
@@ -299,7 +302,7 @@ export function useCatalogueAdminController({ t, products, setProducts, dataAdap
   };
 
   const removeMaintenanceBlock = (blockIndex: number) => {
-    if (!window.confirm(t('common.remove'))) return;
+    resetSavedState(setSaveState);
     setProductDraft((current) => (current ? {
       ...current,
       maintenanceBlocks: current.maintenanceBlocks.filter((_, index) => index !== blockIndex),

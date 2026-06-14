@@ -243,6 +243,7 @@ function FilterPanel({
     }}>
       <Dialog.Overlay className="filter-panel-scrim" />
       <Dialog.Content className="catalogue-filter-panel" aria-label={panelTitle}>
+        <Dialog.Description className="visually-hidden">{panelTitle}</Dialog.Description>
         <div className="filter-panel-head">
           <div>
             <span className="section-kicker">{t('customer.filters.kicker')}</span>

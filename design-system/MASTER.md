@@ -71,6 +71,7 @@ Feature folders are the component source of truth for future `frontend-v2` work:
 - Shared public domain contracts live in `src/types/domain.ts`; app/page state contracts live in `src/types/app.ts`. New data shapes must be represented there before they cross page or adapter boundaries.
 - Do not recreate mini-monoliths. Split mixed-responsibility modules into shells, panels/tabs, dialogs/sheets, action bars, cards, calendars, and utilities once responsibilities diverge.
 - Cross-domain primitives stay in `components/shared.tsx`; feature modules may import shared primitives, but shared primitives must not import feature modules.
+- `/admin/login` is a staff gate, not a marketing page. It uses one `AuthCard` panel with optional `auth-card-mark`, visible `Field` labels, inline error feedback tied through `aria-describedby`, an `aria-pressed` password reveal icon button, and a compact utility footer for the pre-auth `LocaleButton`. Do not nest a `checkout-card` or another bordered card inside the auth panel.
 - CSS remains the styling source of truth. Preserve existing tokens, class hooks, route copy, translation keys, data shapes, and storage keys during structural cleanup.
 
 ### Component Library Principles
@@ -79,9 +80,52 @@ Feature folders are the component source of truth for future `frontend-v2` work:
 - Do not introduce a generated shadcn/ui component layer or Tailwind migration unless a separate design-system migration is approved.
 - Dialogs and sheets must use Radix for focus, Escape handling, overlay semantics, and portal behavior. Preserve existing CSS class hooks such as `dialog-overlay`, `bottom-sheet-panel`, `filter-panel-scrim`, and feature panel classes.
 - Use `AdminBottomSheet` for admin sheet/popover surfaces so sidebar, notification, request-filter, and detail-sheet behavior stays consistent.
+- `AdminShell` owns staff navigation and utilities. Desktop uses the fixed sidebar plus topbar language, notifications, and logout controls. Mobile uses one bottom tabbar plus a compact utility row for language, notifications, and an explicit menu button; the sidebar appears only as the `AdminBottomSheet` menu sheet.
+- Staff notifications use the shared `AdminNotificationList` body. The bell opens it as a desktop/tablet popover and mobile sheet with grouped Critical, Needs review, and Info sections. Rows must link with meaningful accessible labels to the related admin context. `/admin/notifications` intentionally redirects to `/admin/requests`; the dormant inbox component must reuse the same grouped list body if it is mounted later.
+- Mobile admin fixed and sticky action surfaces must reserve the shell bottom navigation through `--admin-shell-bottom-reserve` instead of ad hoc `bottom` offsets.
+- Shared admin workflow primitives live in `components/admin/common/AdminManagement.tsx` and `components/shared.tsx`. Use them before adding feature-local variants.
+- Use `RecordActionBar` for detail and sticky record actions. Prefer its `primary`, `secondary`, `destructive`, and optional `status` slots so action order remains Primary, Secondary, Danger; legacy child buttons are only for compatibility.
+- Use `AdminCreateAction` for desktop create controls and `AdminCreateFab` for mobile create controls. Both expose `aria-expanded`, `aria-controls`, and active state through `aria-pressed`; do not add a second create affordance inside the same viewport unless it opens a different surface.
+- Use `DataTable` for staff desktop tables that need sorting. Header controls must show a visible sort affordance and expose `aria-sort`; focusable rows must support Enter and Space selection.
+- Use `SearchInput` for compact admin search. It renders a labeled `type="search"` input and the clear affordance must remain a 44px target.
+- Use `StatusPill` with a typed enum prop (`lifecycle`, `payment`, `availability`, or `fulfillment`) whenever the value is domain state. Raw enum strings must not be rendered directly.
+- Use `DestructiveConfirmDialog` or a documented undo pattern for admin destructive actions. Browser `window.confirm` is not allowed in admin flows.
 - Use lucide-react icons for actions and status. Icon-only controls need accessible names.
+- `/admin/settings` is documented here because it has no route-specific page file. `SettingsAdmin.tsx` owns the indexed editor shell and save state; `components/admin/settings/SettingsPanels.tsx` owns the anchored home-content sections. Keep Brand, Policy, and Rental gates before long home-content editing, then Home hero, Catalogue copy, Guide articles, Testimonials, and Location.
+- Settings must use a keyboard-reachable section index with anchor links and `aria-current="location"` for the observed section when feasible. The save/status surface is persistent: bottom-sticky on mobile with `--admin-shell-bottom-reserve` padding, and a left rail on desktop.
+- Settings edits stay in local draft state until explicit Save all. The status readout must show idle, unsaved, saving, saved, and error states without moving primary fields. Use a polite live region only after staff interaction and only for unsaved/saved/error changes.
+- Settings long textareas need visible labels plus helper text wired with `aria-describedby`. Toggle cards must expose real Radix switches with title/copy labels and visible On/Off text so checked state is not color-only.
 - Keep custom availability calendars lightweight, bounded, and feature-owned. Do not replace them with `react-day-picker`, shadcn calendar, or another calendar dependency without an approved dependency migration.
 - Prefer existing libraries before manual UI logic: Radix for primitives, TanStack Table for staff grids, React Hook Form plus Zod for complex validated forms, and the local data adapter for availability/request contracts.
+
+#### Settings Admin Frame
+
+```text
++----------------------+---------------------------------------+
+| Section index        | Brand                                 |
+| > Brand              | Brand name, customer/staff taglines   |
+|   Policy             | Compact brand preview                 |
+|   Rental gates       |                                       |
+|   Home hero          | Policy                                |
+|   Catalogue copy     | Public policy textarea                |
+|   Guide articles     |                                       |
+|   Testimonials       | Rental gates                          |
+|   Location           | Public catalogue + proof switches     |
+|                      |                                       |
+| Save status          | Home content sections                 |
+| Unsaved/Saved/Error  | Hero, catalogue, articles, reviews,   |
+| [Save all]           | location with textarea helper copy    |
++----------------------+---------------------------------------+
+
+Mobile:
++--------------------------------------+
+| Settings section chips               |
+| Brand fields + preview               |
+| Policy and rental gates              |
+| Home content sections                |
+| Sticky status: Unsaved [Save all]    |
++--------------------------------------+
+```
 
 ### Future Update Principles
 
@@ -432,11 +476,16 @@ Destructive actions require confirmation or an undo/recovery pattern. Variant de
   Delete variant
 </button>
 
-<ConfirmDialog
+<DestructiveConfirmDialog
   open={Boolean(pendingDelete)}
-  tone="destructive"
+  title={t('admin.common.confirmRemoveTitle')}
+  description={t('admin.catalogue.confirmRemoveVariantCopy')}
+  cancelLabel={t('common.cancel')}
+  confirmLabel={t('common.remove')}
   onConfirm={() => deleteVariant(pendingDelete.id)}
-  onCancel={() => setPendingDelete(null)}
+  onOpenChange={(open) => {
+    if (!open) setPendingDelete(null);
+  }}
 />
 ```
 

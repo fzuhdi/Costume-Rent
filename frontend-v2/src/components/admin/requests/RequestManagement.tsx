@@ -1,14 +1,14 @@
-import type { ColumnDef } from '@tanstack/react-table';
-import { X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Search, UserRound, X } from 'lucide-react';
 import AdminBottomSheet, { AdminSheetHeader } from '../common/AdminBottomSheet';
-import { AdminCreatePanel, RecordActionBar } from '../common/AdminManagement';
-import { RecordPanel } from '../rentals/RentalRecordComponents';
-import { RequestMobileCards } from './RequestsView';
-import { DataTable, Field, PhoneField, SearchInput, SelectField } from '../../shared';
-import { productName } from '../../../lib/rental-utils';
+import { AdminCreatePanel } from '../common/AdminManagement';
+import { RequestMobileCards, RequestReviewPanel } from './RequestsView';
+import { EmptyState, Field, PhoneField, SearchInput, SelectField, StatusPill } from '../../shared';
+import { formatDateRange, productName, variantLabel } from '../../../lib/rental-utils';
 import type { StateSetter } from '../../../types/app';
 import type { Locale, Product, Rental, TFunction } from '../../../types/domain';
 import type {
+  RequestActiveFilter,
+  RequestActiveFilterKey,
   NewRequestDraft,
   RequestFulfillmentFilter,
   RequestPaymentFilter,
@@ -64,6 +64,7 @@ export function RequestFilterSheet({
     >
       <AdminSheetHeader
         kicker={t('admin.tools.filterSort')}
+        title={t('admin.requests.filtersTitle')}
         closeLabel={t('common.close')}
         onClose={() => setOpen(false)}
       />
@@ -113,6 +114,46 @@ export function RequestFilterSheet({
         </button>
       </div>
     </AdminBottomSheet>
+  );
+}
+
+type RequestActiveFilterChipsProps = {
+  filters: RequestActiveFilter[];
+  t: TFunction;
+  onClearFilter: (key: RequestActiveFilterKey) => void;
+  onClearAll: () => void;
+};
+
+export function RequestActiveFilterChips({ filters, t, onClearFilter, onClearAll }: RequestActiveFilterChipsProps) {
+  if (filters.length === 0) return null;
+
+  return (
+    <div className="request-active-filters" aria-label={t('admin.requests.activeFilters')}>
+      <span className="request-active-filters-label">{t('admin.requests.activeFilters')}</span>
+      <div className="request-active-filter-list">
+        {filters.map((filter) => (
+          <button
+            className="filter-chip active request-filter-chip"
+            type="button"
+            aria-label={`${t('admin.requests.clearFilter')} ${filter.label}`}
+            onClick={() => onClearFilter(filter.key)}
+            key={filter.key}
+          >
+            <span>
+              <strong>{filter.label}</strong>
+              {filter.value}
+            </span>
+            <X aria-hidden="true" />
+          </button>
+        ))}
+        {filters.length > 1 ? (
+          <button className="outline-button request-clear-filters" type="button" onClick={onClearAll}>
+            <X aria-hidden="true" />
+            {t('common.clear')}
+          </button>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -206,7 +247,6 @@ export function RequestCreatePanel({
 type RequestRecordsLayoutProps = {
   rentals: Rental[];
   selected?: Rental;
-  columns: ColumnDef<Rental, unknown>[];
   products: Product[];
   t: TFunction;
   locale: Locale;
@@ -220,7 +260,6 @@ type RequestRecordsLayoutProps = {
 export function RequestRecordsLayout({
   rentals,
   selected,
-  columns,
   products,
   t,
   locale,
@@ -235,32 +274,86 @@ export function RequestRecordsLayout({
       <RequestMobileCards
         rentals={rentals}
         selectedRef={selected?.reference}
+        products={products}
         t={t}
         locale={locale}
         onSelect={onSelect}
       />
-      <div className="desktop-request-table">
-        <DataTable<Rental> columns={columns} data={rentals} selectedId={selected?.reference} getRowId={(row) => row.reference} onRowClick={(row) => onSelect(row.reference)} emptyLabel={t('common.empty')} />
+      <div className="desktop-request-queue" role="list" aria-label={t('admin.tabs.aria')}>
+        {rentals.length === 0 ? (
+          <EmptyState title={t('common.empty')} copy="" icon={Search} />
+        ) : (
+          rentals.map((rental) => {
+            const selectedRow = selected?.reference === rental.reference;
+            const stale = rental.staleHours >= 24;
+            const ageLabel = requestQueueAge(rental, locale);
+            return (
+              <button
+                className={`request-queue-card ${selectedRow ? 'selected' : ''} ${stale ? 'is-stale' : ''}`.trim()}
+                type="button"
+                role="listitem"
+                aria-current={selectedRow ? 'true' : undefined}
+                onClick={() => onSelect(rental.reference)}
+                key={rental.reference}
+              >
+                <span className="request-queue-card-head">
+                  <strong>{rental.reference}</strong>
+                  <span className={stale ? 'stale-marker' : ''}>
+                    {stale ? <AlertTriangle aria-hidden="true" /> : null}
+                    {ageLabel}
+                  </span>
+                </span>
+                <span className="request-queue-customer">
+                  <UserRound aria-hidden="true" />
+                  <span>{rental.customerName}</span>
+                </span>
+                <span className="request-queue-items">
+                  <span>{t('admin.requests.requestedItems')}</span>
+                  <strong>{requestQueueItems(rental, products, t)}</strong>
+                </span>
+                <span className="request-queue-meta">
+                  <StatusPill type="fulfillment" value={rental.fulfillment} t={t} />
+                  <StatusPill type="payment" value={rental.paymentStatus} t={t} />
+                </span>
+                <span className="request-queue-date">
+                  <CalendarDays aria-hidden="true" />
+                  <span>{formatDateRange(rental, locale)}</span>
+                </span>
+              </button>
+            );
+          })
+        )}
       </div>
       {selected ? (
         <div className="desktop-record-panel">
-          <RecordPanel rental={selected} products={products} t={t} locale={locale}>
-            {canMutateRequest ? (
-              <RecordActionBar label={t('admin.common.detailActions')}>
-                <button type="button" onClick={() => onAccept(selected)}>
-                  {t('admin.requests.accept')}
-                </button>
-                <button type="button" onClick={() => onEdit(selected)}>{t('common.edit')}</button>
-                <button className="danger-action" type="button" onClick={() => onReject(selected)}>{t('admin.requests.reject')}</button>
-              </RecordActionBar>
-            ) : (
-              <div className="inline-alert warning">
-                <p>{t('admin.requests.notPending')}</p>
-              </div>
-            )}
-          </RecordPanel>
+          <RequestReviewPanel
+            rental={selected}
+            products={products}
+            t={t}
+            locale={locale}
+            canMutate={canMutateRequest}
+            onAccept={onAccept}
+            onEdit={onEdit}
+            onReject={onReject}
+          />
         </div>
       ) : null}
     </div>
   );
+}
+
+function requestQueueAge(rental: Rental, locale: Locale) {
+  if (rental.staleHours >= 24) {
+    return locale === 'id' ? `${rental.staleHours} jam` : `${rental.staleHours}h`;
+  }
+  return locale === 'id' ? 'Baru' : 'New';
+}
+
+function requestQueueItems(rental: Rental, products: Product[], t: TFunction) {
+  const labels = rental.items.map((item) => {
+    const product = products.find((candidate) => candidate.id === item.productId);
+    const productLabel = product ? productName(product, t) : item.productId;
+    return `${productLabel} - ${variantLabel(t, item.variantId)} x ${item.qty}`;
+  });
+  return labels.length > 2 ? `${labels.slice(0, 2).join(', ')} +${labels.length - 2}` : labels.join(', ');
 }

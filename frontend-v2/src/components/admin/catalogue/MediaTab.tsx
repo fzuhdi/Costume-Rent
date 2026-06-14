@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight, CheckCircle2, ImagePlus, Link2, Trash2, Upload } from 'lucide-react';
 import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { CATALOGUE_MAX_IMAGE_COUNT, MAX_IMAGE_SIZE } from './catalogueEditorUtils';
+import { DestructiveConfirmDialog } from '../../shared';
 import { productAlt, productName } from '../../../lib/rental-utils';
 import type { CatalogueEditorProps } from './catalogueEditorTypes';
 import type { ProductImage } from '../../../types/domain';
@@ -16,6 +17,7 @@ export function MediaTab({
   const [urlDraft, setUrlDraft] = useState('');
   const [mediaError, setMediaError] = useState('');
   const [selectedMediaId, setSelectedMediaId] = useState(mediaItems[0]?.id ?? '');
+  const [removeImageOpen, setRemoveImageOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const urlInputRef = useRef<HTMLInputElement | null>(null);
   const selectedImage = mediaItems.find((image) => image.id === selectedMediaId) ?? mediaItems[0] ?? null;
@@ -109,7 +111,7 @@ export function MediaTab({
   };
 
   const removeSelectedImage = () => {
-    if (!selectedImage || !window.confirm(t('common.remove'))) return;
+    if (!selectedImage) return;
     const fallback = mediaItems[selectedIndex + 1] ?? mediaItems[selectedIndex - 1] ?? null;
     updateMediaItems((current) => current.filter((item) => item.id !== selectedImage.id));
     setSelectedMediaId(fallback?.id ?? '');
@@ -183,12 +185,17 @@ export function MediaTab({
 
           {selectedImage ? (
             <div className="media-carousel-meta">
+              {selectedIndex >= 0 ? (
+                <span className="media-carousel-count" aria-live="polite">
+                  {t('admin.catalogue.selectedImage', { index: selectedIndex + 1, total: mediaItems.length })}
+                </span>
+              ) : null}
               <div className="media-actions">
                 <button className="outline-button" type="button" onClick={() => updateMediaItems((current) => current.map((item) => ({ ...item, isCover: item.id === selectedImage.id })))} disabled={selectedImage.isCover}>
                   <CheckCircle2 aria-hidden="true" />
                   {t('admin.catalogue.setCover')}
                 </button>
-                <button className="icon-button danger" type="button" onClick={removeSelectedImage} aria-label={t('admin.catalogue.removeImage')}>
+                <button className="icon-button danger" type="button" onClick={() => setRemoveImageOpen(true)} aria-label={t('admin.catalogue.removeImage')}>
                   <Trash2 aria-hidden="true" />
                 </button>
               </div>
@@ -196,21 +203,35 @@ export function MediaTab({
           ) : null}
 
           <div className="media-thumb-strip">
-            {mediaItems.map((image, index) => (
-              <button
-                className={`media-thumb-button image-badge ${selectedImage?.id === image.id ? 'selected' : ''}`}
-                type="button"
-                key={image.id}
-                aria-label={t('admin.catalogue.selectedImage', { index: index + 1, total: mediaItems.length })}
-                aria-pressed={selectedImage?.id === image.id}
-                onClick={() => setSelectedMediaId(image.id)}
-              >
-                <img src={image.src} alt={productAlt(productDraft, t)} />
-              </button>
-            ))}
+            {mediaItems.map((image, index) => {
+              const selected = selectedImage?.id === image.id;
+              return (
+                <button
+                  className={`media-thumb-button image-badge ${selected ? 'selected' : ''}`}
+                  type="button"
+                  key={image.id}
+                  aria-current={selected ? 'true' : undefined}
+                  aria-label={t(selected ? 'admin.catalogue.currentImage' : 'admin.catalogue.selectImage', { index: index + 1, total: mediaItems.length })}
+                  aria-pressed={selected}
+                  onClick={() => setSelectedMediaId(image.id)}
+                >
+                  <img src={image.src} alt={productAlt(productDraft, t)} />
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
+
+      <DestructiveConfirmDialog
+        open={removeImageOpen}
+        onOpenChange={setRemoveImageOpen}
+        title={t('admin.common.confirmRemoveTitle')}
+        description={t('admin.catalogue.confirmRemoveImageCopy')}
+        cancelLabel={t('common.cancel')}
+        confirmLabel={t('common.remove')}
+        onConfirm={removeSelectedImage}
+      />
     </div>
   );
 }

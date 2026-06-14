@@ -1,7 +1,7 @@
 
 import * as Dialog from '@radix-ui/react-dialog';
 import { FileCheck2, FileText, Upload, XCircle } from 'lucide-react';
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useId, useRef, useState, type ChangeEvent } from 'react';
 import { Field, InfoBlock } from '../../shared';
 import { activityText } from '../../../lib/rental-utils';
 import { DestructiveDialogShell } from './RentalDialogs';
@@ -18,7 +18,9 @@ type PaymentPanelProps = {
 };
 
 export function PaymentPanel({ rental, t, updateRental, readOnly = false }: PaymentPanelProps) {
+  const proofControlId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const rejectButtonRef = useRef<HTMLButtonElement | null>(null);
   const [error, setError] = useState('');
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -26,6 +28,10 @@ export function PaymentPanel({ rental, t, updateRental, readOnly = false }: Paym
   const proofName = rental.paymentProof?.name;
   const proofUrl = rental.paymentProof?.dataUrl;
   const proofIsImage = String(rental.paymentProof?.type ?? '').startsWith('image/') || String(proofUrl ?? '').startsWith('data:image/');
+  const uploadLabelId = `${proofControlId}-label`;
+  const uploadHelpId = `${proofControlId}-help`;
+  const uploadErrorId = `${proofControlId}-error`;
+  const proofReviewReason = canReviewProof ? t('admin.payment.reviewReady') : t('admin.payment.reviewDisabled');
 
   const attachProof = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -107,34 +113,49 @@ export function PaymentPanel({ rental, t, updateRental, readOnly = false }: Paym
           <>
             <input
               className="visually-hidden"
+              id={`${proofControlId}-file`}
               ref={fileInputRef}
               type="file"
               accept="image/*,application/pdf"
+              aria-labelledby={uploadLabelId}
+              aria-describedby={`${uploadHelpId}${error ? ` ${uploadErrorId}` : ''}`}
               onChange={attachProof}
             />
-            <div className="record-actions wide payment-review-actions">
-              <button type="button" onClick={() => fileInputRef.current?.click()}>
-                <Upload aria-hidden="true" />
-                {t('admin.payment.attach')}
-              </button>
-              <button type="button" disabled={!canReviewProof} onClick={() => updateRental(rental.reference, { paymentStatus: 'verified' }, activityText('Bukti bayar diverifikasi.', 'Payment proof verified.'))}>
-                <FileCheck2 aria-hidden="true" />
-                {t('admin.payment.verify')}
-              </button>
-              <button className="danger-action" type="button" disabled={!canReviewProof} onClick={() => setRejectOpen(true)}>
-                <XCircle aria-hidden="true" />
-                {t('admin.payment.reject')}
-              </button>
+            <div className="payment-upload-control" aria-labelledby={uploadLabelId} aria-describedby={`${uploadHelpId}${error ? ` ${uploadErrorId}` : ''}`}>
+              <span className="section-kicker" id={uploadLabelId}>{t('admin.payment.uploadLabel')}</span>
+              <p className="helper-text" id={uploadHelpId}>{t('admin.payment.uploadHelp')}</p>
+              <p className="helper-text payment-review-reason">{proofReviewReason}</p>
+              <div className="record-actions wide payment-review-actions">
+                <button type="button" aria-describedby={uploadHelpId} onClick={() => fileInputRef.current?.click()}>
+                  <Upload aria-hidden="true" />
+                  {t('admin.payment.attach')}
+                </button>
+                <button type="button" disabled={!canReviewProof} onClick={() => updateRental(rental.reference, { paymentStatus: 'verified' }, activityText('Bukti bayar diverifikasi.', 'Payment proof verified.'))}>
+                  <FileCheck2 aria-hidden="true" />
+                  {t('admin.payment.verify')}
+                </button>
+                <button
+                  className="danger-action"
+                  ref={rejectButtonRef}
+                  type="button"
+                  disabled={!canReviewProof}
+                  onClick={() => setRejectOpen(true)}
+                >
+                  <XCircle aria-hidden="true" />
+                  {t('admin.payment.reject')}
+                </button>
+              </div>
             </div>
           </>
         ) : null}
-        {error ? <p className="validation-message" role="alert">{error}</p> : null}
+        {error ? <p className="validation-message" id={uploadErrorId} role="alert">{error}</p> : null}
       </div>
       <DestructiveDialogShell
         open={rejectOpen}
         setOpen={setRejectOpen}
         title={t('admin.payment.rejectDialogTitle')}
         description={t('admin.payment.rejectDialogCopy')}
+        returnFocusRef={rejectButtonRef}
         actions={(
           <>
             <Dialog.Close asChild>
@@ -152,7 +173,7 @@ export function PaymentPanel({ rental, t, updateRental, readOnly = false }: Paym
           <InfoBlock title={t('admin.payment.proof')} copy={proofName || t(`enum.payment.${rental.paymentStatus}`)} />
         </div>
         <Field label={t('admin.payment.rejectReason')}>
-          <textarea rows={4} value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} />
+          <textarea rows={4} required value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} />
         </Field>
       </DestructiveDialogShell>
     </>

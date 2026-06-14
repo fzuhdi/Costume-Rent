@@ -12,7 +12,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { PaymentPanel } from './PaymentPanel';
 import { ActivityLog, Checklist, RentalItems } from './RentalRecordComponents';
-import { EmptyState, Field, InfoBlock, MobileDetailShell, SearchInput, SelectField, StatusPill, StepProgress } from '../../shared';
+import { EmptyState, Field, InfoBlock, MobileDetailShell, SearchInput, SelectField, StatusPill } from '../../shared';
 import { activityText, formatDateRange } from '../../../lib/rental-utils';
 import type { StateSetter } from '../../../types/app';
 import type { FulfillmentMethod, Locale, PaymentMethod, Product, Rental, RentalLifecycle, TFunction } from '../../../types/domain';
@@ -51,6 +51,13 @@ export function RentalListView({
   onStatusFilterChange,
   onSelectRental,
 }: RentalListViewProps) {
+  const queueSummary = [
+    { key: 'ready', count: filterCounts.ready },
+    { key: 'on_rent', count: filterCounts.on_rent },
+    { key: 'returned', count: filterCounts.returned },
+    { key: 'completed', count: filterCounts.completed },
+  ] as const;
+
   return (
     <section className="base-window management-window rental-list-view">
       <div className="view-bar rentals-view-bar">
@@ -61,19 +68,44 @@ export function RentalListView({
       </div>
 
       <div className="rental-filter-strip" aria-label={t('admin.rentals.filtersAria')}>
+        <div className="rental-queue-summary" aria-label={t('admin.rentals.queueSummaryAria')}>
+          <div className="rental-queue-summary-copy">
+            <span className="section-kicker">{t('admin.rentals.summaryBadge')}</span>
+            <p>{t('admin.rentals.summaryCopy')}</p>
+          </div>
+          <div className="rental-queue-counts">
+            {queueSummary.map((summary) => (
+              <span className="rental-queue-count" key={summary.key}>
+                <strong>{summary.count}</strong>
+                <span>{t(`admin.rentals.summary.${summary.key}`)}</span>
+              </span>
+            ))}
+          </div>
+        </div>
         <SearchInput value={query} onChange={setQuery} placeholder={t('admin.rentals.searchPlaceholder')} clearLabel={t('common.clear')} />
         <div className="filter-row rental-filter-row">
-          {rentalFilters.map((filter) => (
-            <button
-              className={`filter-chip ${statusFilter === filter ? 'active' : ''}`}
-              type="button"
-              onClick={() => onStatusFilterChange(filter)}
-              key={filter}
-            >
-              <span>{t(`admin.rentals.filter.${filter}`)}</span>
-              <strong className="filter-count">{filterCounts[filter]}</strong>
-            </button>
-          ))}
+          {rentalFilters.map((filter) => {
+            const active = statusFilter === filter;
+            const label = t(`admin.rentals.filter.${filter}`);
+
+            return (
+              <button
+                className={`filter-chip ${active ? 'active' : ''}`}
+                type="button"
+                aria-pressed={active}
+                aria-label={t('admin.rentals.filterChipAria', {
+                  filter: label,
+                  count: filterCounts[filter],
+                  state: active ? t('admin.rentals.filterStateActive') : t('admin.rentals.filterStateInactive'),
+                })}
+                onClick={() => onStatusFilterChange(filter)}
+                key={filter}
+              >
+                <span>{label}</span>
+                <strong className="filter-count">{filterCounts[filter]}</strong>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -82,7 +114,13 @@ export function RentalListView({
           <EmptyState title={t('admin.rentals.emptyTitle')} copy={t('admin.rentals.emptyCopy')} icon={Search} />
         ) : (
           filteredRentals.map((rental) => (
-            <button className={`management-card record-mobile-card rental-record-card ${selected?.reference === rental.reference ? 'selected' : ''}`} type="button" key={rental.reference} onClick={() => onSelectRental(rental.reference)}>
+            <button
+              className={`management-card record-mobile-card rental-record-card ${selected?.reference === rental.reference ? 'selected' : ''}`}
+              type="button"
+              aria-current={selected?.reference === rental.reference ? 'true' : undefined}
+              key={rental.reference}
+              onClick={() => onSelectRental(rental.reference)}
+            >
               <div className="rental-record-main">
                 <div>
                   <strong>{rental.reference}</strong>
@@ -149,6 +187,11 @@ export function RentalWorkflowDetail({
   planningEditable,
   showChecklist,
 }: RentalWorkflowDetailProps) {
+  const nextActionDesktopReasonId = `${selected.reference}-next-action-desktop-reason`;
+  const nextActionMobileReasonId = `${selected.reference}-next-action-mobile-reason`;
+  const nextActionReason = nextAction?.disabledReason ?? nextAction?.copy;
+  const showProofBlocker = selected.lifecycle === 'returned' && !canComplete;
+
   return (
     <MobileDetailShell
       className="rental-detail-view rental-detail-shell"
@@ -158,15 +201,18 @@ export function RentalWorkflowDetail({
       actionLabel={t('admin.common.detailActions')}
       actionClassName="rental-detail-actionbar"
       actions={nextAction && !isCompleted ? (
-        <button
-          type="button"
-          disabled={nextAction.disabled}
-          title={nextAction.disabled ? nextAction.copy : undefined}
-          onClick={nextAction.onClick}
-        >
-          <NextActionIcon aria-hidden="true" />
-          {nextAction.label}
-        </button>
+        <div className="rental-mobile-next-action">
+          <button
+            type="button"
+            disabled={nextAction.disabled}
+            aria-describedby={nextAction.disabled ? nextActionMobileReasonId : undefined}
+            onClick={nextAction.onClick}
+          >
+            <NextActionIcon aria-hidden="true" />
+            {nextAction.label}
+          </button>
+          {nextAction.disabled ? <p id={nextActionMobileReasonId}>{nextActionReason}</p> : null}
+        </div>
       ) : null}
     >
       <section className="record-panel feature-panel rental-workspace" aria-label={t('admin.rentals.workflowAria')}>
@@ -189,12 +235,17 @@ export function RentalWorkflowDetail({
             <span>{t('admin.rentals.nextAction')}</span>
             <strong>{nextAction?.title}</strong>
             <p>{nextAction?.copy}</p>
-            {nextAction ? (
+            {nextAction?.disabled ? (
+              <p className="next-action-disabled-reason" id={nextActionDesktopReasonId}>
+                {nextActionReason}
+              </p>
+            ) : null}
+            {nextAction && !isCompleted ? (
               <button
                 className="primary-button rental-primary-action"
                 type="button"
                 disabled={nextAction.disabled}
-                title={nextAction.disabled ? nextAction.copy : undefined}
+                aria-describedby={nextAction.disabled ? nextActionDesktopReasonId : undefined}
                 onClick={nextAction.onClick}
               >
                 <NextActionIcon aria-hidden="true" />
@@ -204,10 +255,18 @@ export function RentalWorkflowDetail({
           </div>
         </div>
 
-        <LifecycleRoadmap rental={selected} t={t} />
+        {showProofBlocker ? (
+          <div className="inline-alert warning rental-blocker-alert" role="status">
+            <AlertTriangle aria-hidden="true" />
+            <div>
+              <strong>{t('admin.rentals.completeBlockedTitle')}</strong>
+              <p>{nextAction?.disabled ? nextActionReason : t('admin.rentals.completeBlocked')}</p>
+            </div>
+          </div>
+        ) : null}
 
         {isCompleted ? (
-          <div className="inline-alert warning">
+          <div className="inline-alert warning rental-blocker-alert" role="status">
             <AlertTriangle aria-hidden="true" />
             <div>
               <strong>{t('admin.rentals.completedLockedTitle')}</strong>
@@ -215,6 +274,8 @@ export function RentalWorkflowDetail({
             </div>
           </div>
         ) : null}
+
+        <LifecycleRoadmap rental={selected} t={t} />
 
         <div className="rental-detail-grid">
           <section className="rental-section">
@@ -296,10 +357,15 @@ export function RentalWorkflowDetail({
         ) : null}
 
         {isCompleted ? (
-          <button className="ghost-button" type="button" onClick={() => setOverrideOpen(true)}>
-            <Settings aria-hidden="true" />
-            {t('admin.rentals.override')}
-          </button>
+          <div className="manual-correction override-gate">
+            <div className="manual-correction-panel">
+              <p>{t('admin.rentals.overrideConsequence')}</p>
+              <button className="ghost-button" type="button" onClick={() => setOverrideOpen(true)}>
+                <Settings aria-hidden="true" />
+                {t('admin.rentals.override')}
+              </button>
+            </div>
+          </div>
         ) : null}
 
         <ActivityLog rental={selected} locale={locale} t={t} />
@@ -448,19 +514,30 @@ function LifecycleRoadmap({ rental, t }: LifecycleRoadmapProps) {
   const steps: RentalLifecycle[] = ['confirmed', 'preparing', 'ready_pickup', rental.fulfillment === 'delivery' ? 'out_delivery' : 'on_rent', 'returned', 'completed'];
   const currentIndex = steps.indexOf(rental.lifecycle);
 
-  const roadmapSteps = steps.map((step, index) => ({
-    key: step,
-    label: t(`enum.lifecycle.${step}`),
-    marker: index + 1,
-    className: 'lifecycle-step',
-    state: currentIndex === -1
-      ? 'upcoming'
-      : index < currentIndex || rental.lifecycle === 'completed'
-        ? 'done'
-        : index === currentIndex
-          ? 'current'
-          : 'upcoming',
-  }));
+  return (
+    <ol className="checkout-steps lifecycle-roadmap" aria-label={t('admin.rentals.lifecycleAria')}>
+      {steps.map((step, index) => {
+        const state = currentIndex === -1
+          ? 'upcoming'
+          : index < currentIndex
+            ? 'done'
+            : index === currentIndex
+              ? 'current'
+              : 'upcoming';
+        const stateLabel = t(`admin.rentals.roadmapState.${state}`);
 
-  return <StepProgress steps={roadmapSteps} ariaLabel={t('admin.rentals.lifecycleAria')} className="lifecycle-roadmap" />;
+        return (
+          <li
+            className={`checkout-step lifecycle-step ${state}`.trim()}
+            aria-current={state === 'current' ? 'step' : undefined}
+            key={step}
+          >
+            <span aria-hidden="true">{index + 1}</span>
+            <strong>{t(`enum.lifecycle.${step}`)}</strong>
+            <small>{stateLabel}</small>
+          </li>
+        );
+      })}
+    </ol>
+  );
 }

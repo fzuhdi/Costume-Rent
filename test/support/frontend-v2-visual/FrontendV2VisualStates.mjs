@@ -5,8 +5,8 @@ export const adminRoutes = {
   },
   requests: {
     path: '/admin/requests',
-    ready: '.request-mobile-list, .desktop-request-table',
-    detailSelector: '.request-mobile-card .request-card-summary, .desktop-request-table tbody tr',
+    ready: '.request-mobile-list, .desktop-request-queue',
+    detailSelector: '.request-mobile-card .request-card-summary, .request-queue-card',
     detailReady: '.request-mobile-detail-view, .desktop-record-panel',
   },
   rentals: {
@@ -19,7 +19,7 @@ export const adminRoutes = {
     path: '/admin/catalogue',
     ready: '.catalogue-record, .management-window',
     detailSelector: '.catalogue-record',
-    detailIndex: 1,
+    detailIndex: 0,
     detailReady: '.catalogue-editor-panel',
   },
   clients: {

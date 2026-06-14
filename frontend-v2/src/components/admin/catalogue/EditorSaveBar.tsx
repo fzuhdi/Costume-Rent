@@ -19,11 +19,16 @@ export function EditorSaveBar({
   onDiscard: () => void;
 }) {
   const saving = saveState.status === 'saving';
+  const statusMessage = hasValidationErrors
+    ? t('admin.catalogue.fixValidation')
+    : saveState.message || (isDirty ? t('admin.catalogue.unsaved') : t('admin.catalogue.noChanges'));
+  const announcesStatus = saving || saveState.status === 'saved' || saveState.status === 'error' || hasValidationErrors || isDirty;
+
   return (
-    <StickyActionBar className="catalogue-savebar" role="status" aria-live="polite">
-      <div className="savebar-state">
+    <StickyActionBar className="catalogue-savebar">
+      <div className="savebar-state" role={announcesStatus ? 'status' : undefined} aria-live={announcesStatus ? 'polite' : 'off'}>
         {saving ? <Loader2 aria-hidden="true" className="spin-icon" /> : saveState.status === 'error' ? <XCircle aria-hidden="true" /> : <CheckCircle2 aria-hidden="true" />}
-        <span>{hasValidationErrors ? t('admin.catalogue.fixValidation') : saveState.message || (isDirty ? t('admin.catalogue.unsaved') : t('admin.catalogue.noChanges'))}</span>
+        <span>{statusMessage}</span>
       </div>
       <div className="savebar-actions">
         <button className="outline-button" type="button" onClick={onDiscard} disabled={!isDirty || saving}>

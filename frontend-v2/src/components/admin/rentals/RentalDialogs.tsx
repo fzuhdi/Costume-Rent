@@ -1,7 +1,7 @@
 
 import * as Dialog from '@radix-ui/react-dialog';
 import { AlertTriangle } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode, type RefObject } from 'react';
 import { Field, InfoBlock, PhoneField, SelectField } from '../../shared';
 import { formatDateRange } from '../../../lib/rental-utils';
 import type { StateSetter } from '../../../types/app';
@@ -116,14 +116,22 @@ type DestructiveDialogShellProps = {
   description: string;
   children?: ReactNode;
   actions: ReactNode;
+  returnFocusRef?: RefObject<HTMLElement | null>;
 };
 
-export function DestructiveDialogShell({ open, setOpen, title, description, children, actions }: DestructiveDialogShellProps) {
+export function DestructiveDialogShell({ open, setOpen, title, description, children, actions, returnFocusRef }: DestructiveDialogShellProps) {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content className="dialog-content destructive-dialog">
+        <Dialog.Content
+          className="dialog-content destructive-dialog"
+          onCloseAutoFocus={(event) => {
+            if (!returnFocusRef?.current) return;
+            event.preventDefault();
+            returnFocusRef.current.focus();
+          }}
+        >
           <div className="dialog-icon danger">
             <AlertTriangle aria-hidden="true" />
           </div>
@@ -170,6 +178,7 @@ export function EditRentalDialog({ open, setOpen, rental, t, onSave }: EditRenta
         <Dialog.Overlay className="dialog-overlay" />
         <Dialog.Content className="dialog-content wide-dialog">
           <Dialog.Title>{t('admin.requests.editRental')}</Dialog.Title>
+          <Dialog.Description className="dialog-description">{t('admin.requests.editDialogCopy')}</Dialog.Description>
           <div className="form-grid">
             <Field label={t('common.name')}>
               <input value={draft.customerName ?? ''} onChange={(event) => setDraft((current) => (current ? { ...current, customerName: event.target.value } : current))} />

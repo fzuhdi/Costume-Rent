@@ -33,12 +33,11 @@ export function CheckoutModal({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content className="checkout-sheet checkout-shell" aria-describedby="checkout-modal-description">
+        <Dialog.Content className="checkout-sheet checkout-shell">
           <SheetHeader
             kicker={t('customer.checkout.modalKicker')}
             title={t('customer.checkout.modalTitle')}
             description={t('customer.checkout.modalCopy')}
-            descriptionId="checkout-modal-description"
             closeLabel={t('customer.checkout.close')}
           />
 

@@ -1,5 +1,6 @@
 import { Minus, Plus, Trash2 } from 'lucide-react';
-import { Field } from '../../shared';
+import { useState } from 'react';
+import { DestructiveConfirmDialog, Field } from '../../shared';
 import { contentSource } from '../../../lib/rental-utils';
 import type { CatalogueEditorProps } from './catalogueEditorTypes';
 
@@ -34,6 +35,14 @@ export function VariantsTab({
   variants: CatalogueEditorProps['productDraft']['variants'];
   variantErrors: CatalogueEditorProps['variantErrors'];
 }) {
+  const [pendingRemovalId, setPendingRemovalId] = useState('');
+
+  const confirmRemoveVariant = () => {
+    if (!pendingRemovalId) return;
+    removeVariant(pendingRemovalId);
+    setPendingRemovalId('');
+  };
+
   return (
     <div className="editor-section">
       <div className="editor-section-head">
@@ -88,7 +97,7 @@ export function VariantsTab({
                 <button type="button" onClick={() => adjustVariantTotal(variant.id, 1)} aria-label={t('admin.catalogue.increaseVariant')}>
                   <Plus aria-hidden="true" />
                 </button>
-                <button className="icon-button danger" type="button" onClick={() => removeVariant(variant.id)} aria-label={t('admin.catalogue.removeVariant')} disabled={variants.length <= 1}>
+                <button className="icon-button danger" type="button" onClick={() => setPendingRemovalId(variant.id)} aria-label={t('admin.catalogue.removeVariant')} disabled={variants.length <= 1}>
                   <Trash2 aria-hidden="true" />
                 </button>
               </div>
@@ -152,6 +161,17 @@ export function VariantsTab({
           </button>
         </div>
       </div>
+      <DestructiveConfirmDialog
+        open={Boolean(pendingRemovalId)}
+        onOpenChange={(open) => {
+          if (!open) setPendingRemovalId('');
+        }}
+        title={t('admin.common.confirmRemoveTitle')}
+        description={t('admin.catalogue.confirmRemoveVariantCopy')}
+        cancelLabel={t('common.cancel')}
+        confirmLabel={t('common.remove')}
+        onConfirm={confirmRemoveVariant}
+      />
     </div>
   );
 }

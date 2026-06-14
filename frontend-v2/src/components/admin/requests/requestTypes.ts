@@ -8,6 +8,14 @@ export type RequestPaymentFilter = 'all' | PaymentStatus;
 
 export type RequestSortMode = 'stale' | 'newest' | 'date';
 
+export type RequestActiveFilterKey = 'query' | 'fulfillment' | 'payment' | 'sort';
+
+export type RequestActiveFilter = {
+  key: RequestActiveFilterKey;
+  label: string;
+  value: string;
+};
+
 export type NewRequestDraft = {
   customerName: string;
   phone: string;

@@ -294,6 +294,7 @@ function getNextAction({
       label: t('admin.rentals.override'),
       icon: Settings,
       disabled: true,
+      disabledReason: t('admin.rentals.nextLockedDisabledCopy'),
       tone: 'warning',
       onClick: () => {},
     };
@@ -307,6 +308,7 @@ function getNextAction({
       label: canVerifyProof ? t('admin.payment.verify') : t('admin.payment.attach'),
       icon: CreditCard,
       disabled: !canVerifyProof,
+      disabledReason: canVerifyProof ? undefined : t('admin.rentals.nextPaymentDisabledCopy'),
       tone: 'warning',
       onClick: () => updateRental(selected.reference, { paymentStatus: 'verified' }, activityText('Bukti bayar diverifikasi.', 'Payment proof verified.')),
     };

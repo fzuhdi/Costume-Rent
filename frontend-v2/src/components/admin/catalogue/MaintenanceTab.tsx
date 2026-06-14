@@ -1,5 +1,6 @@
 import { Trash2, Wrench } from 'lucide-react';
-import { Field } from '../../shared';
+import { useState } from 'react';
+import { DestructiveConfirmDialog, Field } from '../../shared';
 import { formatDateRange } from '../../../lib/rental-utils';
 import type { CatalogueEditorProps } from './catalogueEditorTypes';
 
@@ -25,6 +26,14 @@ export function MaintenanceTab({
   | 'saveMaintenanceBlock'
   | 'removeMaintenanceBlock'
 >) {
+  const [pendingRemovalIndex, setPendingRemovalIndex] = useState<number | null>(null);
+
+  const confirmRemoveMaintenanceBlock = () => {
+    if (pendingRemovalIndex === null) return;
+    removeMaintenanceBlock(pendingRemovalIndex);
+    setPendingRemovalIndex(null);
+  };
+
   return (
     <div className="editor-section maintenance-panel flat-panel">
       <div className="maintenance-head">
@@ -46,7 +55,7 @@ export function MaintenanceTab({
                 <strong>{formatDateRange(block, locale)}</strong>
                 <span>{block.reason || t('admin.catalogue.maintenanceNoReason')}</span>
               </div>
-              <button className="icon-button danger" type="button" onClick={() => removeMaintenanceBlock(index)} aria-label={t('admin.catalogue.removeMaintenance')}>
+              <button className="icon-button danger" type="button" onClick={() => setPendingRemovalIndex(index)} aria-label={t('admin.catalogue.removeMaintenance')}>
                 <Trash2 aria-hidden="true" />
               </button>
             </div>
@@ -78,6 +87,17 @@ export function MaintenanceTab({
           </button>
         </div>
       ) : null}
+      <DestructiveConfirmDialog
+        open={pendingRemovalIndex !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingRemovalIndex(null);
+        }}
+        title={t('admin.common.confirmRemoveTitle')}
+        description={t('admin.catalogue.confirmRemoveMaintenanceCopy')}
+        cancelLabel={t('common.cancel')}
+        confirmLabel={t('common.remove')}
+        onConfirm={confirmRemoveMaintenanceBlock}
+      />
     </div>
   );
 }

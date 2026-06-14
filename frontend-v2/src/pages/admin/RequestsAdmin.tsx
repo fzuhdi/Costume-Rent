@@ -1,12 +1,9 @@
 import * as Tabs from '@radix-ui/react-tabs';
-import type { ColumnDef } from '@tanstack/react-table';
-import { AlertTriangle, ListFilter } from 'lucide-react';
-import { useMemo } from 'react';
+import { ListFilter } from 'lucide-react';
 import { AdminCreateAction, AdminCreateFab, AdminViewBar, AdminWorkQueueLayout } from '../../components/admin/common/AdminManagement';
 import { EditRentalDialog, RejectDialog } from '../../components/admin/rentals/RentalDialogs';
-import { RentalItems } from '../../components/admin/rentals/RentalRecordComponents';
 import { RequestMobileDetail } from '../../components/admin/requests/RequestsView';
-import { RequestCreatePanel, RequestFilterSheet, RequestRecordsLayout } from '../../components/admin/requests/RequestManagement';
+import { RequestActiveFilterChips, RequestCreatePanel, RequestFilterSheet, RequestRecordsLayout } from '../../components/admin/requests/RequestManagement';
 import {
   fulfillmentFilters,
   paymentFilters,
@@ -14,7 +11,6 @@ import {
   sortModes,
   useRequestsAdminController,
 } from '../../components/admin/requests/useRequestsAdminController';
-import { StatusPill } from '../../components/shared';
 import { activityText } from '../../lib/rental-utils';
 import type { StateSetter } from '../../types/app';
 import type { DataAdapter, Locale, Product, Rental, TFunction } from '../../types/domain';
@@ -31,54 +27,6 @@ type RequestsAdminProps = {
 
 export default function RequestsAdmin({ t, locale, rentals, setRentals, setProducts, products, dataAdapter }: RequestsAdminProps) {
   const controller = useRequestsAdminController({ t, rentals, setRentals, setProducts, products, dataAdapter });
-  const columns = useMemo<ColumnDef<Rental, unknown>[]>(
-    () => [
-      {
-        accessorKey: 'reference',
-        header: t('admin.table.reference'),
-        cell: ({ row }) => (
-          <div>
-            <strong>{row.original.reference}</strong>
-            {row.original.staleHours >= 24 ? (
-              <small className="stale-marker">
-                <AlertTriangle aria-hidden="true" />
-                {t('admin.record.staleAge')}
-              </small>
-            ) : (
-              <small>{t('admin.record.newAge')}</small>
-            )}
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'customerName',
-        header: t('admin.table.customer'),
-        cell: ({ row }) => (
-          <div>
-            <strong>{row.original.customerName}</strong>
-            <small>{row.original.phone}</small>
-          </div>
-        ),
-      },
-      {
-        id: 'items',
-        header: t('admin.table.item'),
-        cell: ({ row }) => <RentalItems rental={row.original} products={products} t={t} compact />,
-      },
-      {
-        id: 'status',
-        header: t('common.status'),
-        cell: ({ row }) => (
-          <div className="table-status-stack">
-            <StatusPill type="fulfillment" value={row.original.fulfillment} t={t} />
-            <StatusPill type="lifecycle" value={row.original.lifecycle} t={t} />
-            <StatusPill type="payment" value={row.original.paymentStatus} t={t} />
-          </div>
-        ),
-      },
-    ],
-    [products, t],
-  );
 
   return (
     <AdminWorkQueueLayout as="section" baseWindow className="requests-window" detailOpen={controller.isDetailViewOpen}>
@@ -109,6 +57,7 @@ export default function RequestsAdmin({ t, locale, rentals, setRentals, setProdu
                 >
                   <ListFilter aria-hidden="true" />
                   {t('admin.tools.filterSort')}
+                  {controller.activeFilters.length > 0 ? <strong className="filter-count">{controller.activeFilters.length}</strong> : null}
                 </button>
               </div>
             </div>
@@ -132,6 +81,13 @@ export default function RequestsAdmin({ t, locale, rentals, setRentals, setProdu
             clearFilters={controller.clearFilters}
           />
         </Tabs.Root>
+
+        <RequestActiveFilterChips
+          filters={controller.activeFilters}
+          t={t}
+          onClearFilter={controller.clearActiveFilter}
+          onClearAll={controller.clearFilters}
+        />
 
         <AdminCreateFab
           label={t('admin.requests.add')}
@@ -157,7 +113,6 @@ export default function RequestsAdmin({ t, locale, rentals, setRentals, setProdu
         <RequestRecordsLayout
           rentals={controller.filtered}
           selected={controller.selected}
-          columns={columns}
           products={products}
           t={t}
           locale={locale}

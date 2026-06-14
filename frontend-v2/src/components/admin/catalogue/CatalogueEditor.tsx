@@ -9,7 +9,7 @@ import { SwitchProductDialog } from './SwitchProductDialog';
 import { VariantsTab } from './VariantsTab';
 import { CATALOGUE_MAX_IMAGE_COUNT, editorTabs } from './catalogueEditorUtils';
 import { DetailPanel } from '../../shared';
-import { productAlt, productName } from '../../../lib/rental-utils';
+import { formatRupiah, productAlt, productName } from '../../../lib/rental-utils';
 import type { CatalogueEditorProps } from './catalogueEditorTypes';
 
 export { CATALOGUE_MAX_IMAGE_COUNT } from './catalogueEditorUtils';
@@ -57,6 +57,9 @@ export function CatalogueEditor({
   makeMediaId,
   readFileAsDataUrl,
 }: CatalogueEditorProps) {
+  const draftStatusMessage = saveState.message || (isDirty ? t('admin.catalogue.unsaved') : t('admin.catalogue.noChanges'));
+  const draftStatusClass = `save-state ${saveState.status} ${isDirty ? 'dirty' : ''}`.trim();
+
   return (
     <DetailPanel className="catalogue-editor-panel inventory-editor-panel" aria-label={t('admin.catalogue.editorAria')}>
       <div className="catalogue-editor-head">
@@ -67,12 +70,22 @@ export function CatalogueEditor({
         <div className="catalogue-editor-title">
           <span className="eyebrow">{t('admin.common.selected')}</span>
           <strong>{productName(productDraft, t)}</strong>
-          <div className="catalogue-editor-meta">
+          <div className="catalogue-editor-summary">
             <span className={`status-badge ${productDraft.active ? 'success' : 'warning'}`}>
-              {productDraft.active ? t('admin.catalogue.active') : t('admin.catalogue.inactive')}
+              <span aria-hidden="true" />
+              <span className="status-badge-label">{productDraft.active ? t('admin.catalogue.activeShort') : t('admin.catalogue.inactiveShort')}</span>
             </span>
-            <span className={`save-state ${saveState.status}`}>
-              {saveState.message || (isDirty ? t('admin.catalogue.unsaved') : t('admin.catalogue.noChanges'))}
+            <span className="catalogue-header-stat">
+              <span>{t('admin.catalogue.priceSummary')}</span>
+              <strong>{formatRupiah(toNonNegativeNumber(productDraft.price))}</strong>
+            </span>
+            <CatalogueStockFraction product={productDraft} t={t} showHealthy className="catalogue-header-stock" />
+            <span className="catalogue-header-stat">
+              <span>{t('admin.catalogue.imageSummary')}</span>
+              <strong>{t('admin.catalogue.imageCount', { count: mediaItems.length, total: CATALOGUE_MAX_IMAGE_COUNT })}</strong>
+            </span>
+            <span className={draftStatusClass}>
+              {draftStatusMessage}
             </span>
           </div>
         </div>
@@ -105,17 +118,6 @@ export function CatalogueEditor({
           />
         </Tabs.Content>
 
-        <Tabs.Content className="catalogue-tab-panel editor-section" value="media">
-          <MediaTab
-            t={t}
-            productDraft={productDraft}
-            mediaItems={mediaItems}
-            updateMediaItems={updateMediaItems}
-            makeMediaId={makeMediaId}
-            readFileAsDataUrl={readFileAsDataUrl}
-          />
-        </Tabs.Content>
-
         <Tabs.Content className="catalogue-tab-panel editor-section" value="variants">
           <VariantsTab
             t={t}
@@ -131,6 +133,17 @@ export function CatalogueEditor({
             addVariant={addVariant}
             variantLabelRef={variantLabelRef}
             updateSource={updateSource}
+          />
+        </Tabs.Content>
+
+        <Tabs.Content className="catalogue-tab-panel editor-section" value="media">
+          <MediaTab
+            t={t}
+            productDraft={productDraft}
+            mediaItems={mediaItems}
+            updateMediaItems={updateMediaItems}
+            makeMediaId={makeMediaId}
+            readFileAsDataUrl={readFileAsDataUrl}
           />
         </Tabs.Content>
 

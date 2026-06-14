@@ -72,10 +72,30 @@ export function AdminAlertBanner({ className = '', children }: { className?: str
   return <div className={`ops-alert-banner admin-alert-banner ${className}`.trim()}>{children}</div>;
 }
 
-export function RecordActionBar({ className = '', label, children }: { className?: string; label?: string; children: ReactNode }) {
+export function RecordActionBar({
+  className = '',
+  label,
+  status,
+  primary,
+  secondary,
+  destructive,
+  children,
+}: {
+  className?: string;
+  label?: string;
+  status?: ReactNode;
+  primary?: ReactNode;
+  secondary?: ReactNode;
+  destructive?: ReactNode;
+  children?: ReactNode;
+}) {
   return (
     <div className={`record-actions record-action-bar ${className}`.trim()} role="group" aria-label={label}>
+      {status ? <span className="record-action-status">{status}</span> : null}
       {children}
+      {primary ? <div className="record-action-group primary">{primary}</div> : null}
+      {secondary ? <div className="record-action-group secondary">{secondary}</div> : null}
+      {destructive ? <div className="record-action-group destructive">{destructive}</div> : null}
     </div>
   );
 }
@@ -99,10 +119,11 @@ export function AdminViewBar({ className = '', children }: { className?: string;
 export function AdminCreateAction({ label, open, controls, onToggle, className = '' }: { label: string; open: boolean; controls: string; onToggle: () => void; className?: string }) {
   return (
     <button
-      className={`primary-button desktop-create-action ${className}`.trim()}
+      className={`primary-button desktop-create-action ${open ? 'active' : ''} ${className}`.trim()}
       type="button"
       aria-expanded={open}
       aria-controls={controls}
+      aria-pressed={open}
       onClick={onToggle}
     >
       <Plus aria-hidden="true" />
@@ -114,10 +135,11 @@ export function AdminCreateAction({ label, open, controls, onToggle, className =
 export function AdminCreateFab({ label, open, controls, onToggle, className = '' }: { label: string; open: boolean; controls: string; onToggle: () => void; className?: string }) {
   return (
     <button
-      className={`primary-button mobile-fab ${className}`.trim()}
+      className={`primary-button mobile-fab ${open ? 'active' : ''} ${className}`.trim()}
       type="button"
       aria-expanded={open}
       aria-controls={controls}
+      aria-pressed={open}
       aria-label={label}
       onClick={onToggle}
     >

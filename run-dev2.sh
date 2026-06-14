@@ -12,5 +12,5 @@ else
   echo "Keeping existing Docker volumes. Use './run-dev2.sh --reset' to wipe them."
 fi
 
-docker compose -f "$COMPOSE_FILE" up -d --build
+docker compose -f docker-compose.dev2.yml up --watch
 docker compose -f "$COMPOSE_FILE" ps

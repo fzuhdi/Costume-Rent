@@ -241,7 +241,12 @@ class AdminVisualPage {
     await this.openCatalogueTab(route, 'details');
     await this.app.fill(activeCatalogueChildSelector(['input']), 'Visual audit draft', 'catalogue product name');
     await this.app.click('.catalogue-editor-close', 'catalogue editor close');
-    await this.app.click('.catalogue-record', 'catalogue switch target');
+    const switchTargets = this.app.page.locator('.catalogue-record');
+    if ((await switchTargets.count()) > 1) {
+      await switchTargets.nth(1).click();
+    } else {
+      await this.app.click('.catalogue-record', 'catalogue switch target');
+    }
     await this.app.waitForUi('.dialog-content');
   }
 
@@ -280,12 +285,19 @@ class AdminVisualPage {
   }
 
   async activateSettingsSavebar() {
-    await this.app.fill('.settings-form input', 'Costume Rental Visual', 'settings brand name');
+    await this.app.fill('#settings-brand-name', 'Costume Rental Visual', 'settings brand name');
     await this.app.waitForUi('.settings-savebar.is-active');
   }
 
   async openStaffLogin(route) {
-    await this.app.click('.admin-logout-button', 'staff logout');
+    const topbarLogout = this.app.page.locator('.admin-logout-button').first();
+    if (await topbarLogout.isVisible().catch(() => false)) {
+      await topbarLogout.click();
+    } else {
+      await this.app.click('.admin-menu-button', 'staff menu');
+      await this.app.waitForUi('#admin-sidebar-menu.open, .ops-sidebar.open');
+      await this.app.click('.sidebar-logout-button', 'staff logout');
+    }
     await this.app.waitForUi(route.ready);
   }
 }

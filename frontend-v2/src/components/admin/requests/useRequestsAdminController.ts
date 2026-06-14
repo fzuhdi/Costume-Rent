@@ -14,6 +14,8 @@ import type { StateSetter } from '../../../types/app';
 import type { DataAdapter, FulfillmentMethod, Product, Rental, TFunction } from '../../../types/domain';
 import type { RentalActivity, RentalUpdater, UpdateRental } from '../rentals/rentalWorkflowTypes';
 import type {
+  RequestActiveFilter,
+  RequestActiveFilterKey,
   NewRequestDraft,
   RequestFulfillmentFilter,
   RequestPaymentFilter,
@@ -46,19 +48,28 @@ export function useRequestsAdminController({
   dataAdapter,
 }: UseRequestsAdminControllerParams) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const referenceParam = searchParams.get('reference');
   const tabParam = searchParams.get('tab');
   const initialTab: RequestTab = isRequestTab(tabParam) ? tabParam : 'all';
-  const [tab, setTab] = useState<RequestTab>(initialTab);
-  const [selectedRef, setSelectedRef] = useState<string | undefined>(searchParams.get('reference') ?? rentals.find((rental) => rental.lifecycle === 'requested')?.reference);
-  const [filtersOpen, setFiltersOpen] = useState(Boolean(searchParams.get('q') || searchParams.get('fulfillment') || searchParams.get('payment')));
-  const [isDetailViewOpen, setIsDetailViewOpen] = useState(Boolean(searchParams.get('reference')));
-  const [query, setQuery] = useState(searchParams.get('q') ?? '');
+  const initialQuery = searchParams.get('q') ?? '';
   const fulfillmentParam = searchParams.get('fulfillment');
   const paymentParam = searchParams.get('payment');
   const sortParam = searchParams.get('sort');
-  const [fulfillmentFilter, setFulfillmentFilter] = useState<RequestFulfillmentFilter>(isFulfillmentFilter(fulfillmentParam) ? fulfillmentParam : 'all');
-  const [paymentFilter, setPaymentFilter] = useState<RequestPaymentFilter>(isPaymentFilter(paymentParam) ? paymentParam : 'all');
-  const [sortMode, setSortMode] = useState<RequestSortMode>(isSortMode(sortParam) ? sortParam : 'stale');
+  const initialFulfillmentFilter: RequestFulfillmentFilter = isFulfillmentFilter(fulfillmentParam) ? fulfillmentParam : 'all';
+  const initialPaymentFilter: RequestPaymentFilter = isPaymentFilter(paymentParam) ? paymentParam : 'all';
+  const initialSortMode: RequestSortMode = isSortMode(sortParam) ? sortParam : 'stale';
+  const [tab, setTab] = useState<RequestTab>(initialTab);
+  const [selectedRef, setSelectedRef] = useState<string | undefined>(referenceParam ?? rentals.find((rental) => rental.lifecycle === 'requested')?.reference);
+  const [filtersOpen, setFiltersOpen] = useState(Boolean(initialQuery || fulfillmentParam || paymentParam || (sortParam && initialSortMode !== 'stale')));
+  const [isDetailViewOpen, setIsDetailViewOpen] = useState(Boolean(referenceParam));
+  const [query, setQuery] = useState(initialQuery);
+  const [appliedQuery, setAppliedQuery] = useState(initialQuery);
+  const [fulfillmentFilter, setFulfillmentFilter] = useState<RequestFulfillmentFilter>(initialFulfillmentFilter);
+  const [appliedFulfillmentFilter, setAppliedFulfillmentFilter] = useState<RequestFulfillmentFilter>(initialFulfillmentFilter);
+  const [paymentFilter, setPaymentFilter] = useState<RequestPaymentFilter>(initialPaymentFilter);
+  const [appliedPaymentFilter, setAppliedPaymentFilter] = useState<RequestPaymentFilter>(initialPaymentFilter);
+  const [sortMode, setSortMode] = useState<RequestSortMode>(initialSortMode);
+  const [appliedSortMode, setAppliedSortMode] = useState<RequestSortMode>(initialSortMode);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -81,21 +92,40 @@ export function useRequestsAdminController({
   });
   const filtered = baseFiltered
     .filter((rental) => {
-      const normalized = query.trim().toLowerCase();
+      const normalized = appliedQuery.trim().toLowerCase();
       const matchesQuery =
         !normalized ||
         rental.reference.toLowerCase().includes(normalized) ||
         rental.customerName.toLowerCase().includes(normalized) ||
         rental.phone.toLowerCase().includes(normalized);
-      const matchesFulfillment = fulfillmentFilter === 'all' || rental.fulfillment === fulfillmentFilter;
-      const matchesPayment = paymentFilter === 'all' || rental.paymentStatus === paymentFilter;
+      const matchesFulfillment = appliedFulfillmentFilter === 'all' || rental.fulfillment === appliedFulfillmentFilter;
+      const matchesPayment = appliedPaymentFilter === 'all' || rental.paymentStatus === appliedPaymentFilter;
       return matchesQuery && matchesFulfillment && matchesPayment;
     })
-    .sort((a, b) => sortRequests(a, b, sortMode));
-  const selected = filtered.find((rental) => rental.reference === selectedRef) ?? filtered[0];
+    .sort((a, b) => sortRequests(a, b, appliedSortMode));
+  const selectedInQueue = filtered.find((rental) => rental.reference === selectedRef);
+  const selectedByReference = referenceParam && selectedRef ? rentals.find((rental) => rental.reference === selectedRef) : undefined;
+  const selected = selectedByReference ?? selectedInQueue ?? filtered[0];
   const canMutateRequest = selected?.lifecycle === 'requested';
   const selectedRequestProduct = products.find((product) => product.id === newRequest.productId) ?? products[0];
   const selectedRequestVariant = selectedRequestProduct?.variants.find((variant) => variant.id === newRequest.variantId) ?? selectedRequestProduct?.variants[0];
+  const activeFilters = useMemo<RequestActiveFilter[]>(() => {
+    const filters: RequestActiveFilter[] = [];
+    const trimmedQuery = appliedQuery.trim();
+    if (trimmedQuery) {
+      filters.push({ key: 'query', label: t('admin.requests.filterSearch'), value: trimmedQuery });
+    }
+    if (appliedFulfillmentFilter !== 'all') {
+      filters.push({ key: 'fulfillment', label: t('admin.table.fulfillment'), value: t(`enum.fulfillment.${appliedFulfillmentFilter}`) });
+    }
+    if (appliedPaymentFilter !== 'all') {
+      filters.push({ key: 'payment', label: t('admin.table.payment'), value: t(`enum.payment.${appliedPaymentFilter}`) });
+    }
+    if (appliedSortMode !== 'stale') {
+      filters.push({ key: 'sort', label: t('admin.tools.sort'), value: t(`admin.tools.sort.${appliedSortMode}`) });
+    }
+    return filters;
+  }, [appliedFulfillmentFilter, appliedPaymentFilter, appliedQuery, appliedSortMode, t]);
 
   useEffect(() => {
     rentalsRef.current = rentals;
@@ -108,7 +138,7 @@ export function useRequestsAdminController({
   const updateParams = (updates: SearchParamUpdates, options: { replace?: boolean } = { replace: true }) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
-      if (!value || value === 'all') {
+      if (!value || value === 'all' || (key === 'sort' && value === 'stale')) {
         next.delete(key);
       } else {
         next.set(key, value);
@@ -125,10 +155,16 @@ export function useRequestsAdminController({
   };
 
   const applyFilters = () => {
+    const nextQuery = query.trim();
+    setQuery(nextQuery);
+    setAppliedQuery(nextQuery);
+    setAppliedFulfillmentFilter(fulfillmentFilter);
+    setAppliedPaymentFilter(paymentFilter);
+    setAppliedSortMode(sortMode);
     setIsDetailViewOpen(false);
     setFiltersOpen(false);
     updateParams({
-      q: query.trim(),
+      q: nextQuery,
       fulfillment: fulfillmentFilter,
       payment: paymentFilter,
       sort: sortMode,
@@ -140,9 +176,37 @@ export function useRequestsAdminController({
     setQuery('');
     setFulfillmentFilter('all');
     setPaymentFilter('all');
+    setSortMode('stale');
+    setAppliedQuery('');
+    setAppliedFulfillmentFilter('all');
+    setAppliedPaymentFilter('all');
+    setAppliedSortMode('stale');
     setIsDetailViewOpen(false);
     setFiltersOpen(false);
-    updateParams({ q: '', fulfillment: '', payment: '', reference: '' });
+    updateParams({ q: '', fulfillment: '', payment: '', sort: '', reference: '' });
+  };
+
+  const clearActiveFilter = (key: RequestActiveFilterKey) => {
+    const nextQuery = key === 'query' ? '' : appliedQuery;
+    const nextFulfillment = key === 'fulfillment' ? 'all' : appliedFulfillmentFilter;
+    const nextPayment = key === 'payment' ? 'all' : appliedPaymentFilter;
+    const nextSort = key === 'sort' ? 'stale' : appliedSortMode;
+    setQuery(nextQuery);
+    setFulfillmentFilter(nextFulfillment);
+    setPaymentFilter(nextPayment);
+    setSortMode(nextSort);
+    setAppliedQuery(nextQuery);
+    setAppliedFulfillmentFilter(nextFulfillment);
+    setAppliedPaymentFilter(nextPayment);
+    setAppliedSortMode(nextSort);
+    setIsDetailViewOpen(false);
+    updateParams({
+      q: nextQuery.trim(),
+      fulfillment: nextFulfillment,
+      payment: nextPayment,
+      sort: nextSort,
+      reference: '',
+    });
   };
 
   const selectRequest = (reference: string | undefined, { openDetail = true }: { openDetail?: boolean } = {}) => {
@@ -167,13 +231,21 @@ export function useRequestsAdminController({
     const targetFulfillment = searchParams.get('fulfillment');
     const targetPayment = searchParams.get('payment');
     const targetSort = searchParams.get('sort');
+    const nextQuery = searchParams.get('q') ?? '';
+    const nextFulfillment = isFulfillmentFilter(targetFulfillment) ? targetFulfillment : 'all';
+    const nextPayment = isPaymentFilter(targetPayment) ? targetPayment : 'all';
+    const nextSort = isSortMode(targetSort) ? targetSort : 'stale';
     if (isRequestTab(targetTab) && targetTab !== tab) setTab(targetTab);
     if (targetReference && targetReference !== selectedRef) setSelectedRef(targetReference);
     setIsDetailViewOpen(Boolean(targetReference));
-    setQuery(searchParams.get('q') ?? '');
-    setFulfillmentFilter(isFulfillmentFilter(targetFulfillment) ? targetFulfillment : 'all');
-    setPaymentFilter(isPaymentFilter(targetPayment) ? targetPayment : 'all');
-    setSortMode(isSortMode(targetSort) ? targetSort : 'stale');
+    setQuery(nextQuery);
+    setAppliedQuery(nextQuery);
+    setFulfillmentFilter(nextFulfillment);
+    setAppliedFulfillmentFilter(nextFulfillment);
+    setPaymentFilter(nextPayment);
+    setAppliedPaymentFilter(nextPayment);
+    setSortMode(nextSort);
+    setAppliedSortMode(nextSort);
   }, [searchParams, selectedRef, tab]);
 
   useEffect(() => {
@@ -300,6 +372,11 @@ export function useRequestsAdminController({
       setQuery('');
       setFulfillmentFilter('all');
       setPaymentFilter('all');
+      setSortMode('stale');
+      setAppliedQuery('');
+      setAppliedFulfillmentFilter('all');
+      setAppliedPaymentFilter('all');
+      setAppliedSortMode('stale');
       setSelectedRef(result.rental.reference);
       setIsDetailViewOpen(true);
       setAddOpen(false);
@@ -311,6 +388,7 @@ export function useRequestsAdminController({
       next.delete('q');
       next.delete('fulfillment');
       next.delete('payment');
+      next.delete('sort');
       setSearchParams(next, { replace: true });
     }
   };
@@ -323,6 +401,7 @@ export function useRequestsAdminController({
   return {
     tab,
     requestCounts,
+    activeFilters,
     selected,
     canMutateRequest,
     selectedRequestProduct,
@@ -349,6 +428,7 @@ export function useRequestsAdminController({
     handleTabChange,
     applyFilters,
     clearFilters,
+    clearActiveFilter,
     selectRequest,
     closeDetailView,
     updateRental,
