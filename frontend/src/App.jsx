@@ -9,10 +9,12 @@ import Sidebar from './components/Sidebar';
 import BottomTabs from './components/BottomTabs';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import POSPage from './pages/POSPage';
+import CalendarPage from './pages/CalendarPage';
 import CataloguePage from './pages/CataloguePage';
 import CatalogueDetailPage from './pages/CatalogueDetailPage';
 import CatalogueFormPage from './pages/CatalogueFormPage';
-import RentFormPage from './pages/RentFormPage';
 import RentHistoryPage from './pages/RentHistoryPage';
 import RentDetailPage from './pages/RentDetailPage';
 import ClientListPage from './pages/ClientListPage';
@@ -124,15 +126,16 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<Navigate to="/catalogue" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/pos" element={<POSPage />} />
+        <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/catalogue" element={<CataloguePage />} />
         <Route path="/catalogue/:id" element={<CatalogueDetailPage />} />
         <Route path="/catalogue/new" element={<CatalogueFormPage />} />
         <Route path="/catalogue/:id/edit" element={<CatalogueFormPage />} />
         <Route path="/rents" element={<RentHistoryPage />} />
-        <Route path="/rents/new" element={<RentFormPage />} />
         <Route path="/rents/:id" element={<RentDetailPage />} />
-        <Route path="/rents/:id/edit" element={<RentFormPage />} />
         <Route path="/clients" element={<ClientListPage />} />
         <Route path="/clients/new" element={<ClientFormPage />} />
         <Route path="/clients/:id" element={<ClientDetailPage />} />

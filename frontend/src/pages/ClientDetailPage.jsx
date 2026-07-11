@@ -187,7 +187,7 @@ const ClientDetailPage = () => {
                     {client.rent_orders?.map((rent) => (
                       <Table.Row key={rent.id}>
                         <Table.Cell>#{rent.id}</Table.Cell>
-                        <Table.Cell>{rent.rent_start} - {rent.rent_end}</Table.Cell>
+                        <Table.Cell>{rent.pickup_date} - {rent.expected_return_date}</Table.Cell>
                         <Table.Cell>
                           <Chip size="sm" {...statusColors[rent.status]}>
                             {statusLabels[rent.status] || rent.status}

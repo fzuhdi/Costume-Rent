@@ -15,8 +15,9 @@ const CostumeTableView = ({ costumes, expandedKeys, onExpandedChange }) => {
             <Table.Column isRowHeader id="name">Nama</Table.Column>
             <Table.Column id="region">Wilayah</Table.Column>
             <Table.Column id="category">Kategori</Table.Column>
+            <Table.Column id="size">Ukuran</Table.Column>
             <Table.Column id="stock">Stok</Table.Column>
-            <Table.Column id="price">Harga/Set</Table.Column>
+            <Table.Column id="price">Sewa/Set</Table.Column>
             <Table.Column id="actions">Aksi</Table.Column>
           </Table.Header>
           <Table.Body items={costumes}>
@@ -38,8 +39,9 @@ const CostumeTableView = ({ costumes, expandedKeys, onExpandedChange }) => {
                 </Table.Cell>
                 <Table.Cell>{costume.region || '-'}</Table.Cell>
                 <Table.Cell>{costume.category || '-'}</Table.Cell>
-                 <Table.Cell>{costume.available_quantity ?? costume.quantity} unit</Table.Cell>
-                <Table.Cell>{formatPrice(costume.price)}</Table.Cell>
+                <Table.Cell>{costume.size || '-'}</Table.Cell>
+                <Table.Cell>{costume.available_quantity ?? costume.total_quantity} unit</Table.Cell>
+                <Table.Cell>{formatPrice(costume.rental_fee)}</Table.Cell>
                 <Table.Cell>
                    <Button isIconOnly variant="bordered" size="sm" aria-label={`Edit ${costume.name}`} onPress={() => navigate(`/catalogue/${costume.id}/edit`)}>
                     <Pencil size={16} />
@@ -71,8 +73,8 @@ const CostumeTableView = ({ costumes, expandedKeys, onExpandedChange }) => {
                               <p className="text-xs">{detail.category || '-'}</p>
                             </div>
                             <div>
-                               <span className="text-[var(--muted)] text-xs">Stok Tersedia</span>
-                               <p className="text-xs">{detail.available_quantity ?? detail.quantity} unit</p>
+                               <span className="text-[var(--muted)] text-xs">Stok Tersedia / Total</span>
+                               <p className="text-xs">{detail.available_quantity ?? detail.total_quantity} / {detail.total_quantity} unit</p>
                              </div>
                             {detail.acquired_at && (
                               <div>

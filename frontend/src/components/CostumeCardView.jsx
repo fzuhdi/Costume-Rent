@@ -22,10 +22,10 @@ const CostumeCardView = ({ costumes }) => {
               <div className="p-2 sm:p-3">
                 <h3 className="text-xs sm:text-sm font-medium truncate">{costume.name}</h3>
                 <p className="text-xs text-[var(--muted)] truncate">
-                  {costume.region} {costume.category && `• ${costume.category}`}
+                  {costume.region} {costume.category && `• ${costume.category}`} {costume.size && `• ${costume.size}`}
                 </p>
-                <p className="text-xs font-semibold mt-1">{formatPrice(costume.price)}/hari</p>
-                 <p className="text-xs text-[var(--muted)]">Tersedia: {costume.available_quantity ?? costume.quantity}</p>
+                <p className="text-xs font-semibold mt-1">{formatPrice(costume.rental_fee)}/hari</p>
+                 <p className="text-xs text-[var(--muted)]">Tersedia: {costume.available_quantity ?? costume.total_quantity} / {costume.total_quantity}</p>
               </div>
             </Card.Content>
           </Card>

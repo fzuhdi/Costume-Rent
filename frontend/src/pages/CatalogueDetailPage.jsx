@@ -120,16 +120,20 @@ const CatalogueDetailPage = () => {
                 <p>{costume.category?.name || '-'}</p>
               </div>
               <div>
-                <span className="text-[var(--muted)]">Harga Sewa/Hari</span>
-                <p>{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(costume.price)}</p>
+                <span className="text-[var(--muted)]">Ukuran</span>
+                <p>{costume.size || '-'}</p>
+              </div>
+              <div>
+                <span className="text-[var(--muted)]">Harga Sewa/Set</span>
+                <p>{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(costume.rental_fee)}</p>
               </div>
               <div>
                  <span className="text-[var(--muted)]">Total Stok</span>
-                 <p>{costume.quantity} unit</p>
+                 <p>{costume.total_quantity} unit</p>
                </div>
                <div>
                  <span className="text-[var(--muted)]">Stok Tersedia</span>
-                 <p>{costume.available_quantity} unit</p>
+                 <p>{costume.available_quantity ?? costume.total_quantity} unit</p>
                </div>
               {costume.acquired_at && (
                 <div>

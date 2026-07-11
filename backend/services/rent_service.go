@@ -37,12 +37,12 @@ func (s *RentService) List(filter dto.RentOrderFilter) (*dto.PaginatedResponse, 
 	}
 	if filter.From != "" {
 		if from, err := time.Parse("2006-01-02", filter.From); err == nil {
-			query = query.Where("rent_start >= ?", from)
+			query = query.Where("event_date >= ?", from)
 		}
 	}
 	if filter.To != "" {
 		if to, err := time.Parse("2006-01-02", filter.To); err == nil {
-			query = query.Where("rent_end <= ?", to)
+			query = query.Where("event_date <= ?", to)
 		}
 	}
 	if filter.Search != "" {
@@ -101,22 +101,17 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 		clientID = client.ID
 	}
 
-	rentStart, err := time.Parse("2006-01-02", req.RentStart)
+	eventDate, err := time.Parse("2006-01-02", req.EventDate)
 	if err != nil {
-		return nil, errors.New("invalid rent_start date format")
+		return nil, errors.New("invalid event_date format")
 	}
 
-	rentEnd, err := time.Parse("2006-01-02", req.RentEnd)
-	if err != nil {
-		return nil, errors.New("invalid rent_end date format")
-	}
+	pickupDate := eventDate.AddDate(0, 0, -2)
+	expectedReturnDate := eventDate.AddDate(0, 0, 1)
 
-	if rentEnd.Before(rentStart) {
-		return nil, errors.New("rent_end must be after rent_start")
-	}
-
+	costumeSvc := NewCostumeService()
 	for _, item := range req.Items {
-		available, err := NewCostumeService().GetAvailableQuantity(item.CostumeID)
+		available, err := costumeSvc.GetAvailableQuantity(item.CostumeID)
 		if err != nil {
 			return nil, errors.New("costume not found: " + strconv.Itoa(int(item.CostumeID)))
 		}
@@ -125,14 +120,17 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 		}
 	}
 
-  order := models.RentOrder{
-		ClientID:      clientID,
-		GuaranteeType: req.GuaranteeType,
-		RentStart:     rentStart,
-		RentEnd:       rentEnd,
-		Status:        "active",
-		Notes:         req.Notes,
-		CreatedBy:     userID,
+	order := models.RentOrder{
+		ClientID:           clientID,
+		GuaranteeType:      req.GuaranteeType,
+		EventDate:          eventDate,
+		PickupDate:         pickupDate,
+		ExpectedReturnDate: expectedReturnDate,
+		Downpayment:        req.Downpayment,
+		HasSecurityItem:    req.HasSecurityItem,
+		Status:             "active",
+		Notes:              req.Notes,
+		CreatedBy:          userID,
 	}
 
 	if err := config.DB.Create(&order).Error; err != nil {
@@ -140,10 +138,13 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 	}
 
 	for _, item := range req.Items {
+		costumeResp, _ := costumeSvc.GetByID(item.CostumeID)
+		
 		orderItem := models.RentOrderItem{
 			RentOrderID: order.ID,
 			CostumeID:   item.CostumeID,
 			Quantity:    item.Quantity,
+			RentalFee:   costumeResp.RentalFee,
 		}
 		if err := config.DB.Create(&orderItem).Error; err != nil {
 			config.DB.Delete(&order)
@@ -160,19 +161,27 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest) (*models.R
 		return nil, err
 	}
 
-  if req.GuaranteeType != "" {
-		order.GuaranteeType = req.GuaranteeType;
+	if req.GuaranteeType != "" {
+		order.GuaranteeType = req.GuaranteeType
 	}
-	if req.RentStart != "" {
-		if t, err := time.Parse("2006-01-02", req.RentStart); err == nil {
-			order.RentStart = t
+	if req.EventDate != "" {
+		if t, err := time.Parse("2006-01-02", req.EventDate); err == nil {
+			order.EventDate = t
+			order.PickupDate = t.AddDate(0, 0, -2)
+			order.ExpectedReturnDate = t.AddDate(0, 0, 1)
 		}
 	}
-	if req.RentEnd != "" {
-		if t, err := time.Parse("2006-01-02", req.RentEnd); err == nil {
-			order.RentEnd = t
+	if req.ActualReturnDate != nil {
+		if t, err := time.Parse("2006-01-02", *req.ActualReturnDate); err == nil {
+			order.ActualReturnDate = &t
 		}
 	}
+	
+	// Update these regardless of zero values for now (simple logic)
+	order.Downpayment = req.Downpayment
+	order.DamageFee = req.DamageFee
+	order.HasSecurityItem = req.HasSecurityItem
+	
 	if req.Status != "" {
 		order.Status = req.Status
 	}
@@ -186,12 +195,15 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest) (*models.R
 
 	if len(req.Items) > 0 {
 		config.DB.Where("rent_order_id = ?", id).Delete(&models.RentOrderItem{})
+		costumeSvc := NewCostumeService()
 
 		for _, item := range req.Items {
+			costumeResp, _ := costumeSvc.GetByID(item.CostumeID)
 			orderItem := models.RentOrderItem{
 				RentOrderID: order.ID,
 				CostumeID:   item.CostumeID,
 				Quantity:    item.Quantity,
+				RentalFee:   costumeResp.RentalFee,
 			}
 			config.DB.Create(&orderItem)
 		}
@@ -206,7 +218,12 @@ func (s *RentService) MarkReturned(id uint) (*models.RentOrder, error) {
 		return nil, err
 	}
 
+	now := time.Now()
 	order.Status = "returned"
+	order.ActualReturnDate = &now
+	// Return security item conceptually
+	order.HasSecurityItem = false 
+
 	if err := config.DB.Save(&order).Error; err != nil {
 		return nil, err
 	}
@@ -222,29 +239,41 @@ func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderR
 	items := make([]dto.RentOrderItemResponse, len(order.Items))
 	for i, item := range order.Items {
 		items[i] = dto.RentOrderItemResponse{
-			ID:         item.ID,
-			CostumeID:  item.CostumeID,
-			Quantity:   item.Quantity,
+			ID:          item.ID,
+			CostumeID:   item.CostumeID,
+			Quantity:    item.Quantity,
+			RentalFee:   item.RentalFee,
 		}
 		if item.Costume.Name != "" {
 			items[i].CostumeName = item.Costume.Name
 			items[i].CoverImage = item.Costume.CoverImage
 		}
 	}
+	
+	var actualReturn *string
+	if order.ActualReturnDate != nil {
+		str := order.ActualReturnDate.Format("2006-01-02")
+		actualReturn = &str
+	}
 
 	return dto.RentOrderResponse{
-		ID:            order.ID,
-		ClientID:      order.ClientID,
-		ClientName:    order.Client.Name,
-		ClientPhone:   order.Client.Phone,
-		ClientAddress: order.Client.Address,
-		GuaranteeType: order.GuaranteeType,
-		RentStart:     order.RentStart.Format("2006-01-02"),
-		RentEnd:       order.RentEnd.Format("2006-01-02"),
-		Status:        order.Status,
-		Notes:         order.Notes,
-		Items:         items,
-		CreatedAt:     order.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:     order.UpdatedAt.Format("2006-01-02 15:04:05"),
+		ID:                 order.ID,
+		ClientID:           order.ClientID,
+		ClientName:         order.Client.Name,
+		ClientPhone:        order.Client.Phone,
+		ClientAddress:      order.Client.Address,
+		GuaranteeType:      order.GuaranteeType,
+		EventDate:          order.EventDate.Format("2006-01-02"),
+		PickupDate:         order.PickupDate.Format("2006-01-02"),
+		ExpectedReturnDate: order.ExpectedReturnDate.Format("2006-01-02"),
+		ActualReturnDate:   actualReturn,
+		Downpayment:        order.Downpayment,
+		DamageFee:          order.DamageFee,
+		HasSecurityItem:    order.HasSecurityItem,
+		Status:             order.Status,
+		Notes:              order.Notes,
+		Items:              items,
+		CreatedAt:          order.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:          order.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}
 }

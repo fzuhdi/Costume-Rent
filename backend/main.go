@@ -192,44 +192,45 @@ func seedSampleCostumes() {
 		cat3ID := category3.ID
 
 		type costumeSeed struct {
-			name        string
-			description string
-			regionID    *uint
-			categoryID  *uint
-			price       int
-			quantity    int
-			imageFile   string
+			name          string
+			description   string
+			size          string
+			regionID      *uint
+			categoryID    *uint
+			rentalFee     int
+			totalQuantity int
+			imageFile     string
 		}
 
 		costumes := []costumeSeed{
 			{
-				name: "Kebaya Bali", description: "Kebaya Bali dengan motif songket tradisional",
-				regionID: &baliID, categoryID: &cat1ID, price: 75000, quantity: 5,
+				name: "Kebaya Bali", description: "Kebaya Bali dengan motif songket tradisional", size: "M",
+				regionID: &baliID, categoryID: &cat1ID, rentalFee: 75000, totalQuantity: 5,
 				imageFile: "kebaya_bali.jpg",
 			},
 			{
-				name: "Baju Joged", description: "Baju tari joged banteng untuk pertunjukan",
-				regionID: &baliID, categoryID: &cat1ID, price: 60000, quantity: 3,
+				name: "Baju Joged", description: "Baju tari joged banteng untuk pertunjukan", size: "L",
+				regionID: &baliID, categoryID: &cat1ID, rentalFee: 60000, totalQuantity: 3,
 				imageFile: "baju_joged.jpg",
 			},
 			{
-				name: "Topeng Keras", description: "Topeng keras untuk tari topeng khas Bali",
-				regionID: &baliID, categoryID: &cat2ID, price: 35000, quantity: 10,
+				name: "Topeng Keras", description: "Topeng keras untuk tari topeng khas Bali", size: "All Size",
+				regionID: &baliID, categoryID: &cat2ID, rentalFee: 35000, totalQuantity: 10,
 				imageFile: "topeng_bali.jpg",
 			},
 			{
-				name: "Baju Batik", description: "Baju batik Jawa untuk acara formal",
-				regionID: &jawaID, categoryID: &cat1ID, price: 50000, quantity: 8,
+				name: "Baju Batik", description: "Baju batik Jawa untuk acara formal", size: "XL",
+				regionID: &jawaID, categoryID: &cat1ID, rentalFee: 50000, totalQuantity: 8,
 				imageFile: "baju_batik.jpg",
 			},
 			{
-				name: "Baju Melayu", description: "Pakaian adat Melayu Sumatera",
-				regionID: &sumateraID, categoryID: &cat1ID, price: 65000, quantity: 4,
+				name: "Baju Melayu", description: "Pakaian adat Melayu Sumatera", size: "S",
+				regionID: &sumateraID, categoryID: &cat1ID, rentalFee: 65000, totalQuantity: 4,
 				imageFile: "baju_melayu.jpg",
 			},
 			{
-				name: "Selendang Songket", description: "Selendang songket dengan benang emas",
-				regionID: &baliID, categoryID: &cat3ID, price: 40000, quantity: 15,
+				name: "Selendang Songket", description: "Selendang songket dengan benang emas", size: "All Size",
+				regionID: &baliID, categoryID: &cat3ID, rentalFee: 40000, totalQuantity: 15,
 				imageFile: "selendang_songket.jpg",
 			},
 		}
@@ -243,14 +244,15 @@ func seedSampleCostumes() {
 			}
 
 			costume := models.Costume{
-				Name:        c.name,
-				Description: c.description,
-				RegionID:    c.regionID,
-				CategoryID:  c.categoryID,
-				Price:       c.price,
-				Quantity:    c.quantity,
-				AcquiredAt:  &acquired,
-				CoverImage:  imagePath,
+				Name:          c.name,
+				Description:   c.description,
+				Size:          c.size,
+				RegionID:      c.regionID,
+				CategoryID:    c.categoryID,
+				RentalFee:     c.rentalFee,
+				TotalQuantity: c.totalQuantity,
+				AcquiredAt:    &acquired,
+				CoverImage:    imagePath,
 			}
 			db.Create(&costume)
 
@@ -291,16 +293,21 @@ func seedSampleRentals(adminID uint) {
 		return
 	}
 
-	rentStart := time.Now()
-	rentEnd := time.Now().AddDate(0, 0, 7)
+	eventDate := time.Now().AddDate(0, 0, 7)
+	pickupDate := eventDate.AddDate(0, 0, -2)
+	expectedReturnDate := eventDate.AddDate(0, 0, 1)
+
 	rent := models.RentOrder{
-		ClientID:      client.ID,
-		GuaranteeType: "KTP",
-		RentStart:     rentStart,
-		RentEnd:       rentEnd,
-		Status:        "active",
-		Notes:         "Penyewaan untuk acara adat",
-		CreatedBy:     adminID,
+		ClientID:           client.ID,
+		GuaranteeType:      "KTP",
+		EventDate:          eventDate,
+		PickupDate:         pickupDate,
+		ExpectedReturnDate: expectedReturnDate,
+		Downpayment:        costume.RentalFee / 2, // 50% dp
+		HasSecurityItem:    true,
+		Status:             "active",
+		Notes:              "Penyewaan untuk acara adat",
+		CreatedBy:          adminID,
 	}
 	if err := db.Create(&rent).Error; err != nil {
 		log.Printf("Failed to seed rental: %v", err)
@@ -311,6 +318,7 @@ func seedSampleRentals(adminID uint) {
 		RentOrderID: rent.ID,
 		CostumeID:   costume.ID,
 		Quantity:    1,
+		RentalFee:   costume.RentalFee,
 	}
 	if err := db.Create(&item).Error; err != nil {
 		log.Printf("Failed to seed rental item: %v", err)

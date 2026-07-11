@@ -1,9 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { BookOpen, ClipboardList, Users, Settings, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, BookOpen, ClipboardList, Users, Settings, Layers, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Tooltip } from '@heroui/react';
 import { useSidebar } from '../context/SidebarContext';
 
 export const navItems = [
+  { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/pos', icon: ShoppingCart, label: 'POS Checkout' },
+  { path: '/calendar', icon: Calendar, label: 'Kalender' },
   { path: '/catalogue', icon: BookOpen, label: 'Katalog' },
   { path: '/rents', icon: ClipboardList, label: 'Peminjaman' },
   { path: '/clients', icon: Users, label: 'Data Klien' },

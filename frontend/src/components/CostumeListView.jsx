@@ -58,7 +58,7 @@ const CostumeListView = ({ costumes, expandedKeys, onExpandedChange }) => {
                     {costume.name}
                   </p>
                   <p className="text-xs text-[var(--muted)] truncate">
-                    {costume.region || '-'} • {costume.category || '-'}
+                    {costume.region || '-'} • {costume.category || '-'} • {costume.size || '-'}
                   </p>
                 </div>
               </a>
@@ -66,12 +66,12 @@ const CostumeListView = ({ costumes, expandedKeys, onExpandedChange }) => {
               {/* Price + Stock */}
                <div className="flex flex-col items-end gap-1 flex-shrink-0">
                  <span className={`text-sm font-bold ${costume.available_quantity > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                   {formatPrice(costume.price)}
+                   {formatPrice(costume.rental_fee)} / hari
                  </span>
                   {costume.available_quantity === 0 ? (
                     <Chip size="sm" variant="soft" color="danger" className="h-5 text-[10px]">Habis</Chip>
                   ) : (
-                   <span className="text-[10px] text-[var(--muted)]">{costume.available_quantity} unit tersedia</span>
+                   <span className="text-[10px] text-[var(--muted)]">{costume.available_quantity ?? costume.total_quantity} unit tersedia</span>
                  )}
                </div>
 
@@ -131,8 +131,8 @@ const CostumeListView = ({ costumes, expandedKeys, onExpandedChange }) => {
                       <p className="text-sm text-[var(--foreground)]">{detail.category || '-'}</p>
                     </div>
                     <div>
-                       <span className="text-[var(--muted)] text-[10px] uppercase tracking-wide">Stok Tersedia</span>
-                       <p className="text-sm text-[var(--foreground)]">{detail.available_quantity} unit</p>
+                       <span className="text-[var(--muted)] text-[10px] uppercase tracking-wide">Stok Tersedia / Total</span>
+                       <p className="text-sm text-[var(--foreground)]">{detail.available_quantity ?? detail.total_quantity} / {detail.total_quantity} unit</p>
                      </div>
                     {detail.acquired_at && (
                       <div>

@@ -58,11 +58,12 @@ func (s *CostumeService) List(filter dto.CostumeFilter) (*dto.PaginatedResponse,
 			ID:          c.ID,
 			Name:        c.Name,
 			Description: c.Description,
-			RegionID:    c.RegionID,
-			CategoryID:  c.CategoryID,
-			Price:       c.Price,
-			Quantity:    c.Quantity,
-			CoverImage:  c.CoverImage,
+			RegionID:      c.RegionID,
+			CategoryID:    c.CategoryID,
+			Size:          c.Size,
+			RentalFee:     c.RentalFee,
+			TotalQuantity: c.TotalQuantity,
+			CoverImage:    c.CoverImage,
 		}
 		if c.RegionID != nil {
 			item.Region = c.Region.Name
@@ -99,7 +100,7 @@ func (s *CostumeService) List(filter dto.CostumeFilter) (*dto.PaginatedResponse,
 	}
 	for i := range response {
 		rented := rentedMap[response[i].ID]
-		response[i].AvailableQuantity = response[i].Quantity - int(rented)
+		response[i].AvailableQuantity = response[i].TotalQuantity - int(rented)
 	}
 
 	totalPages := int(math.Ceil(float64(total) / float64(filter.Limit)))
@@ -127,8 +128,9 @@ func (s *CostumeService) GetByID(id uint) (*dto.CostumeDetailResponse, error) {
 		Description:       costume.Description,
 		RegionID:          costume.RegionID,
 		CategoryID:        costume.CategoryID,
-		Price:             costume.Price,
-		Quantity:          costume.Quantity,
+		Size:              costume.Size,
+		RentalFee:         costume.RentalFee,
+		TotalQuantity:     costume.TotalQuantity,
 		AvailableQuantity: availableQty,
 		CoverImage:        costume.CoverImage,
 	}
@@ -162,14 +164,15 @@ func (s *CostumeService) Create(req dto.CreateCostumeRequest) (*dto.CostumeDetai
 	costume := models.Costume{
 		Name:        req.Name,
 		Description: req.Description,
-		RegionID:    req.RegionID,
-		CategoryID:  req.CategoryID,
-		Price:       req.Price,
-		Quantity:    req.Quantity,
+		RegionID:      req.RegionID,
+		CategoryID:    req.CategoryID,
+		Size:          req.Size,
+		RentalFee:     req.RentalFee,
+		TotalQuantity: req.TotalQuantity,
 	}
 
-	if costume.Quantity < 1 {
-		costume.Quantity = 1
+	if costume.TotalQuantity < 1 {
+		costume.TotalQuantity = 1
 	}
 
 	if req.AcquiredAt != nil {
@@ -203,11 +206,14 @@ func (s *CostumeService) Update(id uint, req dto.UpdateCostumeRequest) (*dto.Cos
 	if req.CategoryID != nil {
 		costume.CategoryID = req.CategoryID
 	}
-	if req.Price > 0 {
-		costume.Price = req.Price
+	if req.Size != "" {
+		costume.Size = req.Size
 	}
-	if req.Quantity > 0 {
-		costume.Quantity = req.Quantity
+	if req.RentalFee > 0 {
+		costume.RentalFee = req.RentalFee
+	}
+	if req.TotalQuantity > 0 {
+		costume.TotalQuantity = req.TotalQuantity
 	}
 	if req.AcquiredAt != nil {
 		if t, err := time.Parse("2006-01-02", *req.AcquiredAt); err == nil {
@@ -288,14 +294,15 @@ func (s *CostumeService) GetAvailableQuantity(costumeID uint) (int, error) {
 		Select("COALESCE(SUM(rent_order_items.quantity), 0)").
 		Scan(&rentedQty)
 
-	return costume.Quantity - int(rentedQty), nil
+	return costume.TotalQuantity - int(rentedQty), nil
 }
 
 type CostumeSearchResponse struct {
 	ID                uint   `json:"id"`
 	Name              string `json:"name"`
-	Price             int    `json:"price"`
-	Quantity          int    `json:"quantity"`
+	Size              string `json:"size"`
+	RentalFee         int    `json:"rental_fee"`
+	TotalQuantity     int    `json:"total_quantity"`
 	AvailableQuantity int    `json:"available_quantity"`
 	CoverImage        string `json:"cover_image"`
 }
@@ -319,8 +326,9 @@ func (s *CostumeService) Search(query string, limit int) ([]CostumeSearchRespons
 		response = append(response, CostumeSearchResponse{
 			ID:                c.ID,
 			Name:              c.Name,
-			Price:             c.Price,
-			Quantity:          c.Quantity,
+			Size:              c.Size,
+			RentalFee:         c.RentalFee,
+			TotalQuantity:     c.TotalQuantity,
 			AvailableQuantity: avail,
 			CoverImage:        c.CoverImage,
 		})

@@ -12,8 +12,8 @@ export const createRent = (data) =>
 export const updateRent = (id, data) =>
   api.put(`/rents/${id}`, data);
 
-export const markReturned = (id) =>
-  api.put(`/rents/${id}/return`);
+export const markReturned = (id, data = {}) =>
+  api.put(`/rents/${id}/return`, data);
 
 export const deleteRent = (id) =>
   api.delete(`/rents/${id}`);

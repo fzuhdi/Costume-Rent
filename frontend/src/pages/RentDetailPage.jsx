@@ -39,6 +39,9 @@ const RentDetailPage = () => {
   const [isReturnOpen, setIsReturnOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  const [idReturned, setIdReturned] = useState(false);
+  const [isGoodCondition, setIsGoodCondition] = useState(true);
+  const [damageFee, setDamageFee] = useState('');
 
   useEffect(() => {
     fetchRent();
@@ -66,7 +69,10 @@ const RentDetailPage = () => {
   const handleMarkReturned = async () => {
     setProcessing(true);
     try {
-      await markReturned(id);
+      const payload = {
+        damage_fee: isGoodCondition ? 0 : (parseInt(damageFee) || 0)
+      };
+      await markReturned(id, payload);
       setIsReturnOpen(false);
       fetchRent();
     } catch (error) {
@@ -74,6 +80,13 @@ const RentDetailPage = () => {
     } finally {
       setProcessing(false);
     }
+  };
+
+  const openReturnModal = () => {
+    setIdReturned(false);
+    setIsGoodCondition(true);
+    setDamageFee('');
+    setIsReturnOpen(true);
   };
 
   const handleDelete = async () => {
@@ -130,7 +143,7 @@ const RentDetailPage = () => {
             </div>
             <div className="flex flex-wrap gap-2">
               {rent.status !== 'returned' && (
-                <Button variant="secondary" size="sm" onPress={() => setIsReturnOpen(true)} isPending={processing}><CheckCircle size={16} aria-hidden="true" />Kembalikan</Button>
+                <Button variant="secondary" size="sm" onPress={openReturnModal} isPending={processing}><CheckCircle size={16} aria-hidden="true" />Kembalikan</Button>
               )}
                <Button onPress={() => navigate(`/rents/${id}/edit`)} variant="bordered" size="sm" aria-label="Edit peminjaman"><Edit size={16} aria-hidden="true" />Edit</Button>
                <Button variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={processing} aria-label="Hapus peminjaman"><Trash2 size={16} aria-hidden="true" />Hapus</Button>
@@ -148,7 +161,7 @@ const RentDetailPage = () => {
               <Calendar size={20} className="text-[var(--muted)]" aria-hidden="true" />
               <div>
                 <span className="text-[var(--muted)]">Tanggal Pinjam</span>
-                 <p className="font-medium">{formatDate(rent.rent_start)} - {formatDate(rent.rent_end)}</p>
+                 <p className="font-medium">{formatDate(rent.pickup_date)} - {formatDate(rent.expected_return_date)}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -187,14 +200,14 @@ const RentDetailPage = () => {
                   {rent.items?.map((item) => (
                     <Table.Row key={item.id}>
                       <Table.Cell>
-                        {item.costume.cover_image ? (
+                        {item.costume?.cover_image ? (
                           <img src={item.costume.cover_image} alt="" className="w-10 h-10 object-cover rounded" />
                         ) : (
                           <span className="text-[var(--muted)]">-</span>
                         )}
                       </Table.Cell>
-                      <Table.Cell>{item.costume.name}</Table.Cell>
-                      <Table.Cell>{item.costume.quantity} unit</Table.Cell>
+                      <Table.Cell>{item.costume?.name}</Table.Cell>
+                      <Table.Cell>{item.quantity} unit</Table.Cell>
                     </Table.Row>
                   ))}
                 </Table.Body>
@@ -225,12 +238,41 @@ const RentDetailPage = () => {
           <Modal.Container>
             <Modal.Dialog>
               <Modal.Header>
-                <Modal.Heading>Konfirmasi</Modal.Heading>
+                <Modal.Heading>Konfirmasi Pengembalian</Modal.Heading>
               </Modal.Header>
-              <Modal.Body>Tandai kostum sudah dikembalikan?</Modal.Body>
+              <Modal.Body>
+                <div className="flex flex-col gap-4">
+                  <p>Tandai kostum sudah dikembalikan?</p>
+                  <div className="flex flex-col gap-2 p-3 bg-default-50 rounded-lg border border-default-200">
+                     <p className="text-sm font-semibold">Ceklist Pemeriksaan:</p>
+                     <label className="flex items-center gap-2 cursor-pointer">
+                       <input type="checkbox" checked={idReturned} onChange={(e) => setIdReturned(e.target.checked)} /> 
+                       <span className="text-sm">Kartu ID Dikembalikan ke Klien</span>
+                     </label>
+                     <label className="flex items-center gap-2 cursor-pointer">
+                       <input type="checkbox" checked={isGoodCondition} onChange={(e) => setIsGoodCondition(e.target.checked)} /> 
+                       <span className="text-sm">Kostum Dalam Kondisi Baik (Tidak Ada Denda)</span>
+                     </label>
+                  </div>
+
+                  {!isGoodCondition && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Denda Kerusakan (Rp)</label>
+                      <input 
+                        type="number"
+                        className="w-full px-3 py-2 border rounded-md"
+                        placeholder="Masukkan nominal denda"
+                        value={damageFee}
+                        onChange={(e) => setDamageFee(e.target.value)}
+                        min="0"
+                      />
+                    </div>
+                  )}
+                </div>
+              </Modal.Body>
               <Modal.Footer>
                 <Button variant="bordered" onPress={() => setIsReturnOpen(false)}>Batal</Button>
-                <Button variant="secondary" onPress={handleMarkReturned} isPending={processing} aria-label="Kembalikan peminjaman">Kembalikan</Button>
+                <Button variant="secondary" onPress={handleMarkReturned} isDisabled={!idReturned} isPending={processing} aria-label="Kembalikan peminjaman">Kembalikan</Button>
               </Modal.Footer>
             </Modal.Dialog>
           </Modal.Container>

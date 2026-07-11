@@ -3,21 +3,23 @@ package dto
 type CreateCostumeRequest struct {
 	Name        string  `json:"name" binding:"required"`
 	Description string  `json:"description"`
-	RegionID    *uint   `json:"region_id"`
-	CategoryID  *uint   `json:"category_id"`
-	Price       int     `json:"price"`
-	Quantity    int     `json:"quantity" binding:"min=0"`
-	AcquiredAt  *string `json:"acquired_at"`
+	Size          string  `json:"size"`
+	RegionID      *uint   `json:"region_id"`
+	CategoryID    *uint   `json:"category_id"`
+	RentalFee     int     `json:"rental_fee"`
+	TotalQuantity int     `json:"total_quantity" binding:"min=0"`
+	AcquiredAt    *string `json:"acquired_at"`
 }
 
 type UpdateCostumeRequest struct {
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
-	RegionID    *uint   `json:"region_id"`
-	CategoryID  *uint   `json:"category_id"`
-	Price       int     `json:"price"`
-	Quantity    int     `json:"quantity"`
-	AcquiredAt  *string `json:"acquired_at"`
+	Size          string  `json:"size"`
+	RegionID      *uint   `json:"region_id"`
+	CategoryID    *uint   `json:"category_id"`
+	RentalFee     int     `json:"rental_fee"`
+	TotalQuantity int     `json:"total_quantity"`
+	AcquiredAt    *string `json:"acquired_at"`
 }
 
 type CostumeListResponse struct {
@@ -28,8 +30,9 @@ type CostumeListResponse struct {
 	Region           string  `json:"region"`
 	CategoryID       *uint   `json:"category_id"`
 	Category         string  `json:"category"`
-	Price            int     `json:"price"`
-	Quantity         int     `json:"quantity"`
+	Size             string  `json:"size"`
+	RentalFee        int     `json:"rental_fee"`
+	TotalQuantity    int     `json:"total_quantity"`
 	AvailableQuantity int     `json:"available_quantity"`
 	CoverImage       string  `json:"cover_image"`
 	AcquiredAt       *string `json:"acquired_at"`
@@ -59,8 +62,9 @@ type CostumeDetailResponse struct {
 	Region           string                  `json:"region"`
 	CategoryID       *uint                   `json:"category_id"`
 	Category         string                  `json:"category"`
-	Price            int                     `json:"price"`
-	Quantity         int                     `json:"quantity"`
+	Size             string                  `json:"size"`
+	RentalFee        int                     `json:"rental_fee"`
+	TotalQuantity    int                     `json:"total_quantity"`
 	AvailableQuantity int                     `json:"available_quantity"`
 	CoverImage       string                  `json:"cover_image"`
 	AcquiredAt       *string                 `json:"acquired_at"`

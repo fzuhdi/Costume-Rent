@@ -50,10 +50,11 @@ func (h *ClientHandler) GetByID(c *gin.Context) {
 
 	// Build response with rent_history
 	type RentOrderSimple struct {
-		ID        uint   `json:"id"`
-		Status    string `json:"status"`
-		RentStart string `json:"rent_start"`
-		RentEnd   string `json:"rent_end"`
+		ID                 uint   `json:"id"`
+		Status             string `json:"status"`
+		EventDate          string `json:"event_date"`
+		PickupDate         string `json:"pickup_date"`
+		ExpectedReturnDate string `json:"expected_return_date"`
 	}
 
 	type ClientDetailResponse struct {
@@ -71,10 +72,11 @@ func (h *ClientHandler) GetByID(c *gin.Context) {
 			continue
 		}
 		rentHistory = append(rentHistory, RentOrderSimple{
-			ID:        order.ID,
-			Status:    order.Status,
-			RentStart: order.RentStart.Format("2006-01-02"),
-			RentEnd:   order.RentEnd.Format("2006-01-02"),
+			ID:                 order.ID,
+			Status:             order.Status,
+			EventDate:          order.EventDate.Format("2006-01-02"),
+			PickupDate:         order.PickupDate.Format("2006-01-02"),
+			ExpectedReturnDate: order.ExpectedReturnDate.Format("2006-01-02"),
 		})
 	}
 

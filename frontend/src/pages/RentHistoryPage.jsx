@@ -41,6 +41,9 @@ const RentHistoryPage = () => {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedRentId, setSelectedRentId] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [idReturned, setIdReturned] = useState(false);
+  const [isGoodCondition, setIsGoodCondition] = useState(true);
+  const [damageFee, setDamageFee] = useState('');
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -78,7 +81,10 @@ const RentHistoryPage = () => {
   const handleMarkReturned = async () => {
     setActionLoading(true);
     try {
-      await markReturned(selectedRentId);
+      const payload = {
+        damage_fee: isGoodCondition ? 0 : (parseInt(damageFee) || 0)
+      };
+      await markReturned(selectedRentId, payload);
       setIsReturnOpen(false);
       fetchRents();
     } catch (error) {
@@ -86,6 +92,14 @@ const RentHistoryPage = () => {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const openReturnModal = (rentId) => {
+    setSelectedRentId(rentId);
+    setIdReturned(false);
+    setIsGoodCondition(true);
+    setDamageFee('');
+    setIsReturnOpen(true);
   };
 
   const handleDelete = async () => {
@@ -108,11 +122,11 @@ const RentHistoryPage = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h1 className="text-2xl font-bold">Riwayat Peminjaman</h1>
           <Button
-            onPress={() => navigate('/rents/new')}
+            onPress={() => navigate('/pos')}
             variant="primary"
-            aria-label="Tambah Peminjaman Baru"
+            aria-label="Peminjaman Baru via POS"
           >
-            Peminjaman Baru
+            Peminjaman Baru (POS)
           </Button>
         </div>
 
@@ -192,7 +206,7 @@ const RentHistoryPage = () => {
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <dt className="text-[var(--muted)]">Tanggal</dt>
-                      <dd className="text-right font-medium">{rent.rent_start} - {rent.rent_end}</dd>
+                      <dd className="text-right font-medium">{rent.pickup_date} - {rent.expected_return_date}</dd>
                     </div>
                   </dl>
                   <span className="sr-only">{statusA11yLabels[rent.status] || `status ${rent.status}`}</span>
@@ -209,7 +223,7 @@ const RentHistoryPage = () => {
                       <Button
                         variant="secondary"
                         size="sm"
-                        onPress={() => { setSelectedRentId(rent.id); setIsReturnOpen(true); }}
+                        onPress={() => openReturnModal(rent.id)}
                         aria-label="Kembalikan peminjaman"
                       >
                         <CheckCircle size={14} aria-hidden="true" />
@@ -239,7 +253,7 @@ const RentHistoryPage = () => {
                           <Table.Cell>#{rent.id}</Table.Cell>
                           <Table.Cell>{rent.client_name}</Table.Cell>
                           <Table.Cell>{rent.items?.length || 0} kostum</Table.Cell>
-                          <Table.Cell>{rent.rent_start} - {rent.rent_end}</Table.Cell>
+                          <Table.Cell>{rent.pickup_date} - {rent.expected_return_date}</Table.Cell>
                           <Table.Cell>
                              <Chip size="sm" {...statusColors[rent.status]}>
                               {statusLabels[rent.status] || rent.status}
@@ -248,10 +262,10 @@ const RentHistoryPage = () => {
                           </Table.Cell>
                           <Table.Cell>
                             <div className="flex flex-col sm:flex-row gap-2">
-                               <Button onPress={() => navigate(`/rents/${rent.id}`)} variant="bordered" size="sm" aria-label={`Detail peminjaman #${rent.id}`}>Detail</Button>
-                               {rent.status !== 'returned' && (
-                                 <Button variant="secondary" size="sm" onPress={() => { setSelectedRentId(rent.id); setIsReturnOpen(true); }} aria-label="Kembalikan peminjaman"><CheckCircle size={14} aria-hidden="true" />Kembalikan</Button>
-                               )}
+                                <Button onPress={() => navigate(`/rents/${rent.id}`)} variant="bordered" size="sm" aria-label={`Detail peminjaman #${rent.id}`}>Detail</Button>
+                                {rent.status !== 'returned' && (
+                                  <Button variant="secondary" size="sm" onPress={() => openReturnModal(rent.id)} aria-label="Kembalikan peminjaman"><CheckCircle size={14} aria-hidden="true" />Kembalikan</Button>
+                                )}
                             </div>
                           </Table.Cell>
                         </Table.Row>
@@ -279,12 +293,38 @@ const RentHistoryPage = () => {
         <Modal.Container>
           <Modal.Dialog>
             <Modal.Header>
-              <Modal.Heading>Konfirmasi</Modal.Heading>
+              <Modal.Heading>Konfirmasi Pengembalian</Modal.Heading>
             </Modal.Header>
-            <Modal.Body>Tandai kostum sudah dikembalikan?</Modal.Body>
+            <Modal.Body>
+              <div className="flex flex-col gap-4">
+                <p>Tandai kostum sudah dikembalikan?</p>
+                <div className="flex flex-col gap-2 p-3 bg-default-50 rounded-lg border border-default-200">
+                   <p className="text-sm font-semibold">Ceklist Pemeriksaan:</p>
+                   <label className="flex items-center gap-2 cursor-pointer">
+                     <input type="checkbox" checked={idReturned} onChange={(e) => setIdReturned(e.target.checked)} /> 
+                     <span className="text-sm">Kartu ID Dikembalikan ke Klien</span>
+                   </label>
+                   <label className="flex items-center gap-2 cursor-pointer">
+                     <input type="checkbox" checked={isGoodCondition} onChange={(e) => setIsGoodCondition(e.target.checked)} /> 
+                     <span className="text-sm">Kostum Dalam Kondisi Baik (Tidak Ada Denda)</span>
+                   </label>
+                </div>
+
+                {!isGoodCondition && (
+                  <Input 
+                    type="number"
+                    label="Denda Kerusakan (Rp)"
+                    placeholder="Masukkan nominal denda"
+                    value={damageFee}
+                    onChange={(e) => setDamageFee(e.target.value)}
+                    min="0"
+                  />
+                )}
+              </div>
+            </Modal.Body>
             <Modal.Footer>
                <Button variant="bordered" onPress={() => setIsReturnOpen(false)} aria-label="Batal">Batal</Button>
-               <Button variant="secondary" onPress={handleMarkReturned} isPending={actionLoading} aria-label="Kembalikan peminjaman">Kembalikan</Button>
+               <Button variant="secondary" onPress={handleMarkReturned} isDisabled={!idReturned} isPending={actionLoading} aria-label="Kembalikan peminjaman">Kembalikan</Button>
             </Modal.Footer>
           </Modal.Dialog>
         </Modal.Container>

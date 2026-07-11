@@ -6,8 +6,11 @@ type CreateRentOrderRequest struct {
 	ClientPhone     string         `json:"client_phone"`
 	ClientAddress   string         `json:"client_address"`
 	GuaranteeType   string         `json:"guarantee_type" binding:"required"`
-	RentStart       string         `json:"rent_start" binding:"required"`
-	RentEnd         string         `json:"rent_end" binding:"required"`
+	EventDate       string         `json:"event_date" binding:"required"`
+	PickupDate      string         `json:"pickup_date"`
+	ExpectedReturnDate string      `json:"expected_return_date"`
+	Downpayment     int            `json:"downpayment"`
+	HasSecurityItem bool           `json:"has_security_item"`
 	Items           []RentItemInput `json:"items" binding:"required"`
 	Notes           string         `json:"notes"`
 }
@@ -18,12 +21,17 @@ type RentItemInput struct {
 }
 
 type UpdateRentOrderRequest struct {
-	GuaranteeType   string         `json:"guarantee_type"`
-	RentStart       string         `json:"rent_start"`
-	RentEnd         string         `json:"rent_end"`
-	Status          string         `json:"status"`
-	Notes           string         `json:"notes"`
-	Items           []RentItemInput `json:"items"`
+	GuaranteeType      string         `json:"guarantee_type"`
+	EventDate          string         `json:"event_date"`
+	PickupDate         string         `json:"pickup_date"`
+	ExpectedReturnDate string         `json:"expected_return_date"`
+	ActualReturnDate   *string        `json:"actual_return_date"`
+	Downpayment        int            `json:"downpayment"`
+	DamageFee          int            `json:"damage_fee"`
+	HasSecurityItem    bool           `json:"has_security_item"`
+	Status             string         `json:"status"`
+	Notes              string         `json:"notes"`
+	Items              []RentItemInput `json:"items"`
 }
 
 type RentOrderResponse struct {
@@ -31,15 +39,20 @@ type RentOrderResponse struct {
 	ClientID        uint              `json:"client_id"`
 	ClientName      string            `json:"client_name"`
 	ClientPhone      string            `json:"client_phone"`
-	ClientAddress   string            `json:"client_address"`
-	GuaranteeType   string            `json:"guarantee_type"`
-	RentStart       string            `json:"rent_start"`
-	RentEnd         string            `json:"rent_end"`
-	Status          string            `json:"status"`
-	Notes           string            `json:"notes"`
-	Items           []RentOrderItemResponse `json:"items"`
-	CreatedAt       string            `json:"created_at"`
-	UpdatedAt       string            `json:"updated_at"`
+	ClientAddress      string            `json:"client_address"`
+	GuaranteeType      string            `json:"guarantee_type"`
+	EventDate          string            `json:"event_date"`
+	PickupDate         string            `json:"pickup_date"`
+	ExpectedReturnDate string            `json:"expected_return_date"`
+	ActualReturnDate   *string           `json:"actual_return_date"`
+	Downpayment        int               `json:"downpayment"`
+	DamageFee          int               `json:"damage_fee"`
+	HasSecurityItem    bool              `json:"has_security_item"`
+	Status             string            `json:"status"`
+	Notes              string            `json:"notes"`
+	Items              []RentOrderItemResponse `json:"items"`
+	CreatedAt          string            `json:"created_at"`
+	UpdatedAt          string            `json:"updated_at"`
 }
 
 type RentOrderItemResponse struct {
@@ -48,6 +61,7 @@ type RentOrderItemResponse struct {
 	CostumeName string `json:"costume_name"`
 	CoverImage string `json:"cover_image"`
 	Quantity   int    `json:"quantity"`
+	RentalFee  int    `json:"rental_fee"`
 }
 
 type RentOrderFilter struct {
@@ -70,8 +84,8 @@ type NotificationResponse struct {
 }
 
 type NotificationItem struct {
-	RentOrderID uint   `json:"rent_order_id"`
-	ClientName  string `json:"client_name"`
-	RentEnd     string `json:"rent_end"`
-	Type        string `json:"type"`
+	RentOrderID        uint   `json:"rent_order_id"`
+	ClientName         string `json:"client_name"`
+	ExpectedReturnDate string `json:"expected_return_date"`
+	Type               string `json:"type"`
 }

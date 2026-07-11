@@ -16,8 +16,9 @@ const RentFormPage = () => {
   const [formData, setFormData] = useState({
     client: null,
     guarantee_type: 'KTP',
-    rent_start: '',
-    rent_end: '',
+    event_date: '',
+    downpayment: 0,
+    has_security_item: false,
     notes: '',
     client_phone: '',
     client_address: '',
@@ -41,8 +42,9 @@ const RentFormPage = () => {
       setFormData({
         client: { type: 'existing', client: { id: rent.client_id, name: rent.client_name } },
         guarantee_type: rent.guarantee_type || 'KTP',
-        rent_start: rent.rent_start?.split('T')[0] || '',
-        rent_end: rent.rent_end?.split('T')[0] || '',
+        event_date: rent.event_date?.split('T')[0] || '',
+        downpayment: rent.downpayment || 0,
+        has_security_item: rent.has_security_item || false,
         notes: rent.notes || '',
         client_phone: '',
         client_address: '',
@@ -80,11 +82,7 @@ const RentFormPage = () => {
   const validate = () => {
     const newErrors = {};
     if (!formData.client) newErrors.client = 'Pilih atau buat klien';
-    if (!formData.rent_start) newErrors.rent_start = 'Tanggal mulai wajib diisi';
-    if (!formData.rent_end) newErrors.rent_end = 'Tanggal selesai wajib diisi';
-    if (formData.rent_start && formData.rent_end && formData.rent_end < formData.rent_start) {
-      newErrors.rent_end = 'Tanggal selesai harus setelah tanggal mulai';
-    }
+    if (!formData.event_date) newErrors.event_date = 'Tanggal acara wajib diisi';
     if (items.length === 0) newErrors.items = 'Pilih minimal 1 kostum';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -98,8 +96,9 @@ const RentFormPage = () => {
     try {
       const payload = {
         guarantee_type: formData.guarantee_type,
-        rent_start: formData.rent_start,
-        rent_end: formData.rent_end,
+        event_date: formData.event_date,
+        downpayment: parseInt(formData.downpayment) || 0,
+        has_security_item: Boolean(formData.has_security_item),
         notes: formData.notes,
         items: items.map((item) => ({
           costume_id: item.costume_id,
@@ -206,15 +205,18 @@ const RentFormPage = () => {
               <h3 className="text-base font-medium mb-3">Data Peminjaman</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <TextField isRequired>
-                  <Label>Tanggal Mulai</Label>
-                  <Input type="date" value={formData.rent_start} onChange={(e) => setFormData((prev) => ({...prev, rent_start: e.target.value}))} />
-                  <FieldError>{errors.rent_start}</FieldError>
+                  <Label>Tanggal Acara</Label>
+                  <Input type="date" value={formData.event_date} onChange={(e) => setFormData((prev) => ({...prev, event_date: e.target.value}))} />
+                  <FieldError>{errors.event_date}</FieldError>
                 </TextField>
-                <TextField isRequired>
-                  <Label>Tanggal Selesai</Label>
-                  <Input type="date" value={formData.rent_end} onChange={(e) => setFormData((prev) => ({...prev, rent_end: e.target.value}))} />
-                  <FieldError>{errors.rent_end}</FieldError>
+                <TextField>
+                  <Label>Uang Muka (DP)</Label>
+                  <Input type="number" min="0" value={formData.downpayment} onChange={(e) => setFormData((prev) => ({...prev, downpayment: e.target.value}))} />
                 </TextField>
+                <div className="flex items-center gap-2 mt-6">
+                  <input type="checkbox" id="has_security_item" checked={formData.has_security_item} onChange={(e) => setFormData((prev) => ({...prev, has_security_item: e.target.checked}))} />
+                  <label htmlFor="has_security_item" className="text-sm font-medium">Tahan Kartu ID Klien</label>
+                </div>
               </div>
             </div>
 

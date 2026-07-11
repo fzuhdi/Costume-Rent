@@ -15,8 +15,9 @@ const CatalogueFormPage = () => {
     description: '',
     region_id: '',
     category_id: '',
-    price: '',
-    quantity: 1,
+    size: '',
+    rental_fee: '',
+    total_quantity: 1,
     acquired_at: '',
   });
   const [regions, setRegions] = useState([]);
@@ -52,8 +53,9 @@ const CatalogueFormPage = () => {
           description: costumeData.description || '',
           region_id: costumeData.region_id?.toString() || '',
           category_id: costumeData.category_id?.toString() || '',
-          price: costumeData.price?.toString() || '',
-          quantity: costumeData.quantity || 1,
+          size: costumeData.size || '',
+          rental_fee: costumeData.rental_fee?.toString() || '',
+          total_quantity: costumeData.total_quantity || 1,
           acquired_at: costumeData.acquired_at || '',
         });
         setImages(costumeData.images || []);
@@ -95,8 +97,9 @@ const CatalogueFormPage = () => {
         description: formData.description,
         region_id: formData.region_id ? parseInt(formData.region_id) : null,
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
-        price: formData.price ? parseInt(formData.price) : 0,
-        quantity: parseInt(formData.quantity),
+        size: formData.size,
+        rental_fee: formData.rental_fee ? parseInt(formData.rental_fee) : 0,
+        total_quantity: parseInt(formData.total_quantity),
         acquired_at: formData.acquired_at || null,
       };
 
@@ -211,14 +214,18 @@ const CatalogueFormPage = () => {
                   </ListBox>
                 </Select.Popover>
               </Select>
+              <TextField>
+                <Label>Ukuran</Label>
+                <Input value={formData.size} onChange={(e) => setFormData((prev) => ({...prev, size: e.target.value}))} />
+              </TextField>
               <TextField isRequired>
                 <Label>Harga Sewa per Set (Rp)</Label>
-                <Input type="number" min="0" value={formData.price} onChange={(e) => setFormData((prev) => ({...prev, price: e.target.value}))} />
+                <Input type="number" min="0" value={formData.rental_fee} onChange={(e) => setFormData((prev) => ({...prev, rental_fee: e.target.value}))} />
                 <FieldError />
               </TextField>
               <TextField isRequired>
-                 <Label>Jumlah Stok *</Label>
-                 <Input type="number" min="1" value={formData.quantity} onChange={(e) => setFormData((prev) => ({...prev, quantity: parseInt(e.target.value, 10) || 0}))} />
+                 <Label>Total Stok *</Label>
+                 <Input type="number" min="1" value={formData.total_quantity} onChange={(e) => setFormData((prev) => ({...prev, total_quantity: parseInt(e.target.value, 10) || 0}))} />
                  {isEdit && costume && costume.available_quantity !== undefined && (
                    <span className="text-xs text-[var(--muted)]">Tersedia: {costume.available_quantity}</span>
                  )}
