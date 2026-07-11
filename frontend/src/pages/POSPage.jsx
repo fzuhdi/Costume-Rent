@@ -65,15 +65,15 @@ const POSPage = () => {
   };
 
   const updateCartQuantity = (id, delta) => {
-    setCart(prev => prev.map(item => {
+    setCart(prev => prev.flatMap(item => {
       if (item.id === id) {
         const newQty = item.quantity + delta;
-        if (newQty <= 0) return null;
-        if (newQty > item.available_quantity) return item;
-        return { ...item, quantity: newQty };
+        if (newQty <= 0) return [];
+        if (newQty > item.available_quantity) return [item];
+        return [{ ...item, quantity: newQty }];
       }
-      return item;
-    }).filter(Boolean));
+      return [item];
+    }));
   };
 
   const removeFromCart = (id) => {

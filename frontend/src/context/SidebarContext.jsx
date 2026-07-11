@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 
 const SidebarContext = createContext();
 
@@ -10,13 +10,13 @@ export const useSidebar = () => {
 
 export const SidebarProvider = ({ children }) => {
   const [isCollapsed, setIsCollapsed] = useState(() => {
-    const saved = localStorage.getItem('sidebar-collapsed');
+    const saved = localStorage.getItem('sidebar-collapsed:v1');
     return saved ? JSON.parse(saved) : false;
   });
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('sidebar-collapsed', JSON.stringify(isCollapsed));
+    localStorage.setItem('sidebar-collapsed:v1', JSON.stringify(isCollapsed));
   }, [isCollapsed]);
 
   useEffect(() => {
@@ -28,12 +28,16 @@ export const SidebarProvider = ({ children }) => {
     return () => { document.body.style.overflow = ''; };
   }, [isMobileOpen]);
 
-  const toggleSidebar = () => setIsCollapsed((prev) => !prev);
-  const openMobile = () => setIsMobileOpen(true);
-  const closeMobile = () => setIsMobileOpen(false);
+  const toggleSidebar = useCallback(() => setIsCollapsed((prev) => !prev), []);
+  const openMobile = useCallback(() => setIsMobileOpen(true), []);
+  const closeMobile = useCallback(() => setIsMobileOpen(false), []);
+
+  const contextValue = useMemo(() => ({
+    isCollapsed, toggleSidebar, isMobileOpen, openMobile, closeMobile
+  }), [isCollapsed, toggleSidebar, isMobileOpen, openMobile, closeMobile]);
 
   return (
-    <SidebarContext.Provider value={{ isCollapsed, toggleSidebar, isMobileOpen, openMobile, closeMobile }}>
+    <SidebarContext.Provider value={contextValue}>
       {children}
     </SidebarContext.Provider>
   );

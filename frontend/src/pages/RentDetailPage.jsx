@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getRentById, markReturned, deleteRent } from '../api/rentApi';
 import { ArrowLeft, Edit, Trash2, CheckCircle, User, Calendar, FileText, Shield } from 'lucide-react';
@@ -43,18 +43,7 @@ const RentDetailPage = () => {
   const [isGoodCondition, setIsGoodCondition] = useState(true);
   const [damageFee, setDamageFee] = useState('');
 
-  useEffect(() => {
-    fetchRent();
-  }, [id]);
-
-  useEffect(() => {
-    const updateViewport = () => setIsMobile(window.innerWidth < 768);
-    updateViewport();
-    window.addEventListener('resize', updateViewport);
-    return () => window.removeEventListener('resize', updateViewport);
-  }, []);
-
-  const fetchRent = async () => {
+  const fetchRent = useCallback(async () => {
     setLoading(true);
     try {
       const response = await getRentById(id);
@@ -64,7 +53,18 @@ const RentDetailPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchRent();
+  }, [fetchRent]);
+
+  useEffect(() => {
+    const updateViewport = () => setIsMobile(window.innerWidth < 768);
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
+  }, []);
 
   const handleMarkReturned = async () => {
     setProcessing(true);
@@ -257,8 +257,9 @@ const RentDetailPage = () => {
 
                   {!isGoodCondition && (
                     <div>
-                      <label className="block text-sm font-medium mb-1">Denda Kerusakan (Rp)</label>
+                      <label htmlFor="damageFeeInput" className="block text-sm font-medium mb-1">Denda Kerusakan (Rp)</label>
                       <input 
+                        id="damageFeeInput"
                         type="number"
                         className="w-full px-3 py-2 border rounded-md"
                         placeholder="Masukkan nominal denda"

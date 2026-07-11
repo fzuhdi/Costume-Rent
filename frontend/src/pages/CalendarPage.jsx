@@ -4,6 +4,20 @@ import { Card, Spinner, Button } from '@heroui/react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
+// Calendar logic
+const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
+
+const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+
+// Helper to format date for comparison
+const formatDateStr = (y, m, d) => {
+  const mm = String(m + 1).padStart(2, '0');
+  const dd = String(d).padStart(2, '0');
+  return `${y}-${mm}-${dd}`;
+};
+
 const CalendarPage = () => {
   const navigate = useNavigate();
   const [rents, setRents] = useState([]);
@@ -25,10 +39,6 @@ const CalendarPage = () => {
     }
   };
 
-  // Calendar logic
-  const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
-  const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
-
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   const today = () => setCurrentDate(new Date());
@@ -37,16 +47,6 @@ const CalendarPage = () => {
   const month = currentDate.getMonth();
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfMonth(year, month);
-  
-  const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-  const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
-
-  // Helper to format date for comparison
-  const formatDateStr = (y, m, d) => {
-    const mm = String(m + 1).padStart(2, '0');
-    const dd = String(d).padStart(2, '0');
-    return `${y}-${mm}-${dd}`;
-  };
 
   const todayDate = new Date();
   const isToday = (d) => todayDate.getDate() === d && todayDate.getMonth() === month && todayDate.getFullYear() === year;

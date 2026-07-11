@@ -50,9 +50,10 @@ const NotificationBell = ({ count }) => {
                 </div>
               ) : (
                 notifications.map((item) => (
-                  <div
+                  <button
+                    type="button"
                     key={item.rent_order_id}
-                    className="flex items-center gap-3 p-4 cursor-pointer hover:bg-[var(--border)]/30 transition-colors border-b border-[var(--border)]/50 last:border-0"
+                    className="w-full flex items-center gap-3 p-4 cursor-pointer hover:bg-[var(--border)]/30 transition-colors border-b border-[var(--border)]/50 last:border-0 text-left"
                     onClick={() => handleNotificationClick(item.rent_order_id)}
                   >
                     <div className={`flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 ${
@@ -69,7 +70,7 @@ const NotificationBell = ({ count }) => {
                     <Chip size="sm" variant="soft" color={item.type === 'overdue' ? 'danger' : 'warning'}>
                       <Chip.Label>{item.type === 'overdue' ? 'Late' : 'Soon'}</Chip.Label>
                     </Chip>
-                  </div>
+                  </button>
                 ))
               )}
             </div>

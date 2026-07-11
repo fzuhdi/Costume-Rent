@@ -2,8 +2,10 @@ import { Button, Table } from '@heroui/react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Pencil } from 'lucide-react';
 
+const idrFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
+
 const formatPrice = (price) => {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
+  return idrFormatter.format(price);
 };
 
 const CostumeTableView = ({ costumes, expandedKeys, onExpandedChange }) => {

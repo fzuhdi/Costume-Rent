@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useCallback, useContext } from 'react';
+import { createContext, useState, useEffect, useCallback, useContext, useMemo } from 'react';
 import { getNotifications } from '../api/notificationApi';
 import { useAuth } from './AuthContext';
 
@@ -38,8 +38,12 @@ export const NotificationProvider = ({ children }) => {
     }
   }, [isAuthenticated, fetchNotifications]);
 
+  const contextValue = useMemo(() => ({
+    notifications, count, loading, fetchNotifications
+  }), [notifications, count, loading, fetchNotifications]);
+
   return (
-    <NotificationContext.Provider value={{ notifications, count, loading, fetchNotifications }}>
+    <NotificationContext.Provider value={contextValue}>
       {children}
     </NotificationContext.Provider>
   );

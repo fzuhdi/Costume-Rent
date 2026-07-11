@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getClientById, updateClient } from '../api/clientApi';
 import { ArrowLeft, Edit, Save, X, User, Phone, MapPin, ClipboardList, AlertTriangle } from 'lucide-react';
 import {
@@ -27,11 +27,7 @@ const ClientDetailPage = () => {
   const [editData, setEditData] = useState({ name: '', phone: '', address: '' });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    fetchClient();
-  }, [id]);
-
-  const fetchClient = async () => {
+  const fetchClient = useCallback(async () => {
     setLoading(true);
     try {
       const response = await getClientById(id);
@@ -41,7 +37,11 @@ const ClientDetailPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchClient();
+  }, [fetchClient]);
 
   const handleEdit = () => {
     setEditData({

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { searchCostumes } from '../api/costumeApi';
 import { X, Search, Minus, Plus } from 'lucide-react';
 import { Input, Button, Chip } from '@heroui/react';
@@ -18,7 +18,7 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, fetchCostumes]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -30,7 +30,7 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchCostumes = async (forceShow = false) => {
+  const fetchCostumes = useCallback(async (forceShow = false) => {
     try {
       const response = await searchCostumes(search, 10);
       const filtered = response.data.filter(c =>
@@ -43,7 +43,7 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
     } catch (error) {
       console.error('Failed to search costumes:', error);
     }
-  };
+  }, [search, value]);
 
   const handleFocus = () => {
     if (search.length >= 2) {
@@ -116,9 +116,10 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
       {showDropdown && results.length > 0 && (
         <div className="border border-[var(--border)] rounded-lg shadow-lg p-1 max-h-48 overflow-y-auto mb-2">
           {results.map((costume) => (
-            <div
+            <button
+              type="button"
               key={costume.id}
-              className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-[var(--border)]"
+              className="w-full text-left flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-[var(--border)]"
               onClick={() => handleSelect(costume)}
             >
               <div className="flex flex-col">
@@ -127,7 +128,7 @@ const CostumeMultiSelect = ({ value = [], onChange, error }) => {
                   Total: {costume.quantity} | Tersedia: {costume.available_quantity ?? costume.quantity}
                 </span>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}

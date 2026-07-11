@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getClients, deleteClient } from '../api/clientApi';
 import { Search, Trash2 } from 'lucide-react';
@@ -16,10 +16,9 @@ const ClientListPage = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [selectedClientId, setSelectedClientId] = useState(null);
+  const selectedClientId = useRef(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
@@ -36,7 +35,6 @@ const ClientListPage = () => {
     try {
       const response = await getClients({ search: debouncedSearch, page, limit });
       setClients(response.data.data || []);
-      setTotalPages(response.data.total_pages || 1);
       setTotal(response.data.total || 0);
     } catch (error) {
       console.error('Failed to fetch clients:', error);
@@ -48,7 +46,7 @@ const ClientListPage = () => {
   const handleDelete = async () => {
     setActionLoading(true);
     try {
-      await deleteClient(selectedClientId);
+      await deleteClient(selectedClientId.current);
       setIsDeleteOpen(false);
       fetchClients();
     } catch (error) {
@@ -131,7 +129,7 @@ const ClientListPage = () => {
                       <Table.Cell>
                         <div className="flex flex-col sm:flex-row gap-2">
                            <Button onPress={() => navigate(`/clients/${client.id}`)} variant="bordered" size="sm" aria-label={`Detail klien ${client.name}`}>Detail</Button>
-                          <Button variant="danger" size="sm" isIconOnly aria-label="Hapus klien" onPress={() => { setSelectedClientId(client.id); setIsDeleteOpen(true); }}>
+                          <Button variant="danger" size="sm" isIconOnly aria-label="Hapus klien" onPress={() => { selectedClientId.current = client.id; setIsDeleteOpen(true); }}>
                             <Trash2 size={14} />
                           </Button>
                         </div>

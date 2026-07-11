@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useCallback, useContext } from 'react';
+import { createContext, useState, useEffect, useCallback, useContext, useMemo } from 'react';
 import { getSettings, updateSettings as updateSettingsApi, uploadLogo as uploadLogoApi } from '../api/settingsApi';
 
 export const SettingsContext = createContext(null);
@@ -49,8 +49,12 @@ export const SettingsProvider = ({ children }) => {
     return response.data.path;
   };
 
+  const contextValue = useMemo(() => ({
+    settings, loading, fetchSettings, updateSettings, uploadLogo
+  }), [settings, loading, fetchSettings]);
+
   return (
-    <SettingsContext.Provider value={{ settings, loading, fetchSettings, updateSettings, uploadLogo }}>
+    <SettingsContext.Provider value={contextValue}>
       {children}
     </SettingsContext.Provider>
   );

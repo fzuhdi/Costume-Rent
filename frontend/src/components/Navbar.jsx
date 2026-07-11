@@ -80,6 +80,7 @@ const NavbarComponent = () => {
         {/* LEFT: Hamburger (Mobile) & Breadcrumbs (Desktop) */}
         <div className="flex items-center gap-4">
           <button
+            type="button"
             className="md:hidden p-2 text-[var(--muted)]"
             onClick={openMobile}
             aria-label="Buka menu navigasi"
@@ -97,6 +98,7 @@ const NavbarComponent = () => {
         <div className="flex items-center gap-1 sm:gap-2 ml-auto">
           {/* THEME TOGGLE - Standardized to w-10 h-10 */}
           <button 
+            type="button"
             onClick={handleThemeToggle}
             className="w-10 h-10 flex items-center justify-center text-[var(--muted)] hover:bg-[var(--border)]/50 rounded-full transition-all"
             aria-label={theme === 'light' ? 'Beralih ke mode gelap' : 'Beralih ke mode terang'}
@@ -111,6 +113,7 @@ const NavbarComponent = () => {
           {/* PROFILE DROPDOWN */}
           <div className="relative" ref={dropdownRef}>
             <button 
+              type="button"
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center gap-3 hover:bg-[var(--border)]/40 p-1.5 rounded-lg transition-all outline-none"
               aria-label={`Profil ${user?.name || 'Admin'}`}
@@ -141,6 +144,7 @@ const NavbarComponent = () => {
                 
                 {/* Actions */}
                 <button 
+                  type="button"
                   onClick={() => { navigate('/profile'); setIsProfileOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--foreground)] hover:bg-[var(--border)]/50 transition-colors text-left"
                 >
@@ -149,6 +153,7 @@ const NavbarComponent = () => {
                 </button>
 
                 <button 
+                  type="button"
                   onClick={() => { navigate('/settings'); setIsProfileOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--foreground)] hover:bg-[var(--border)]/50 transition-colors text-left"
                 >
@@ -159,6 +164,7 @@ const NavbarComponent = () => {
                 <div className="h-[1px] bg-[var(--border)] my-1" />
 
                 <button 
+                  type="button"
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors text-left"
                 >

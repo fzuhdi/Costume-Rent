@@ -1,8 +1,10 @@
 import { ChevronRight, Pencil, Trash2, Eye, MoreVertical } from 'lucide-react';
 import { Button, Dropdown, Chip, Label } from '@heroui/react';
 
+const idrFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
+
 const formatPrice = (price) => {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
+  return idrFormatter.format(price);
 };
 
 const CostumeListView = ({ costumes, expandedKeys, onExpandedChange }) => {

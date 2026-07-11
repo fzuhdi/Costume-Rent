@@ -27,9 +27,8 @@ const CataloguePage = () => {
   const [categories, setCategories] = useState([]);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [expandedKeys, setExpandedKeys] = useState(new Set([]));
+  const [expandedKeys, setExpandedKeys] = useState(() => new Set([]));
   const [isMobile, setIsMobile] = useState(isMobileViewport);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
@@ -109,7 +108,6 @@ const CataloguePage = () => {
         }],
       }));
       setCostumes(data);
-      setTotalPages(debouncedSearch.trim() ? 1 : response.data.total_pages || 1);
       setTotal(debouncedSearch.trim() ? data.length : response.data.total || 0);
     } catch (error) {
       console.error('Failed to fetch costumes:', error);

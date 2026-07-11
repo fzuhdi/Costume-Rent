@@ -4,12 +4,7 @@ import { Pagination, ListBox, Select, Label } from '@heroui/react';
 const LIMIT_OPTIONS = [5, 10, 25, 50];
 
 const CustomPagination = ({ total, page, onPageChange, limit = 10, onLimitChange}) => {
-  const [selectedLimit, setSelectedLimit] = useState(String(limit));
   const totalPages = Math.max(1, Math.ceil(total / limit));
-
-  useEffect(() => {
-    setSelectedLimit(String(limit));
-  }, [limit]);
 
   const startItem = total === 0 ? 0 : (page - 1) * limit + 1;
   const endItem = Math.min(page * limit, total);
@@ -57,9 +52,8 @@ const CustomPagination = ({ total, page, onPageChange, limit = 10, onLimitChange
           <span className="text-sm text-[var(--muted)] whitespace-nowrap">Per halaman</span>
           <Select
             className="w-[80px]"
-            value={selectedLimit}
+            value={String(limit)}
             onChange={(value) => {
-              setSelectedLimit(value);
               onLimitChange?.(parseInt(value, 10));
             }}
           >

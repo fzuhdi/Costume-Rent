@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getCostumeById, createCostume, updateCostume, getRegions, getCategories, uploadCostumeImage } from '../api/costumeApi';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -24,48 +24,52 @@ const CatalogueFormPage = () => {
   const [categories, setCategories] = useState([]);
   const [images, setImages] = useState([]);
   const [stagedFiles, setStagedFiles] = useState([]);
+  const stagedFilesRef = useRef(stagedFiles);
+  
+  useEffect(() => {
+    stagedFilesRef.current = stagedFiles;
+  }, [stagedFiles]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [regionsRes, categoriesRes] = await Promise.all([
+          getRegions(),
+          getCategories(),
+        ]);
+        setRegions(regionsRes.data);
+        setCategories(categoriesRes.data);
+
+        if (isEdit) {
+          const costumeRes = await getCostumeById(id);
+          const costumeData = costumeRes.data;
+          setCostume(costumeData);
+          setFormData({
+            name: costumeData.name || '',
+            description: costumeData.description || '',
+            region_id: costumeData.region_id?.toString() || '',
+            category_id: costumeData.category_id?.toString() || '',
+            size: costumeData.size || '',
+            rental_fee: costumeData.rental_fee?.toString() || '',
+            total_quantity: costumeData.total_quantity || 1,
+            acquired_at: costumeData.acquired_at || '',
+          });
+          setImages(costumeData.images || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchData();
     return () => {
-      stagedFiles.forEach(s => URL.revokeObjectURL(s.previewUrl));
+      stagedFilesRef.current.forEach(s => URL.revokeObjectURL(s.previewUrl));
     };
-  }, [id]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [regionsRes, categoriesRes] = await Promise.all([
-        getRegions(),
-        getCategories(),
-      ]);
-      setRegions(regionsRes.data);
-      setCategories(categoriesRes.data);
-
-      if (isEdit) {
-        const costumeRes = await getCostumeById(id);
-        const costumeData = costumeRes.data;
-        setCostume(costumeData);
-        setFormData({
-          name: costumeData.name || '',
-          description: costumeData.description || '',
-          region_id: costumeData.region_id?.toString() || '',
-          category_id: costumeData.category_id?.toString() || '',
-          size: costumeData.size || '',
-          rental_fee: costumeData.rental_fee?.toString() || '',
-          total_quantity: costumeData.total_quantity || 1,
-          acquired_at: costumeData.acquired_at || '',
-        });
-        setImages(costumeData.images || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [id, isEdit]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -112,7 +116,7 @@ const CatalogueFormPage = () => {
           costumeId = result.data.id;
         }
 
-        for (const staged of stagedFiles) {
+        await Promise.all(stagedFiles.map(async (staged) => {
           const fd = new FormData();
           fd.append('image', staged.file);
           try {
@@ -120,7 +124,7 @@ const CatalogueFormPage = () => {
           } catch (error) {
             console.error('Failed to upload staged image:', error);
           }
-        }
+        }));
 
         // Navigate to detail page after save
         navigate(`/catalogue/${costumeId}`);

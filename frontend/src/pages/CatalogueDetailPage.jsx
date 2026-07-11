@@ -4,6 +4,8 @@ import { getCostumeById, deleteCostume } from '../api/costumeApi';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
 import { Button, Card, Chip, Spinner, Modal } from '@heroui/react';
 
+const idrFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
+
 const CatalogueDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -13,20 +15,19 @@ const CatalogueDetailPage = () => {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   useEffect(() => {
+    const fetchCostume = async () => {
+      setLoading(true);
+      try {
+        const response = await getCostumeById(id);
+        setCostume(response.data);
+      } catch (error) {
+        console.error('Failed to fetch costume:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchCostume();
   }, [id]);
-
-  const fetchCostume = async () => {
-    setLoading(true);
-    try {
-      const response = await getCostumeById(id);
-      setCostume(response.data);
-    } catch (error) {
-      console.error('Failed to fetch costume:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -125,7 +126,7 @@ const CatalogueDetailPage = () => {
               </div>
               <div>
                 <span className="text-[var(--muted)]">Harga Sewa/Set</span>
-                <p>{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(costume.rental_fee)}</p>
+                <p>{idrFormatter.format(costume.rental_fee)}</p>
               </div>
               <div>
                  <span className="text-[var(--muted)]">Total Stok</span>
@@ -153,11 +154,10 @@ const CatalogueDetailPage = () => {
         </Card>
       </div>
 
-      <Modal isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <Modal.Backdrop>
+      <Modal>
+        <Modal.Backdrop isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
           <Modal.Container>
             <Modal.Dialog>
-              <Modal.CloseTrigger />
               <Modal.Header>
                 <Modal.Heading>Konfirmasi</Modal.Heading>
               </Modal.Header>
@@ -165,8 +165,8 @@ const CatalogueDetailPage = () => {
                 Apakah Anda yakin ingin menghapus kostum ini?
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="bordered" onPress={() => setIsDeleteOpen(false)} slot="close">Batal</Button>
-                <Button variant="danger" onPress={handleDelete} isPending={deleting} slot="close">Hapus</Button>
+                <Button variant="bordered" onPress={() => setIsDeleteOpen(false)}>Batal</Button>
+                <Button variant="danger" onPress={handleDelete} isPending={deleting}>Hapus</Button>
               </Modal.Footer>
             </Modal.Dialog>
           </Modal.Container>

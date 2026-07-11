@@ -3,7 +3,7 @@ import { LayoutDashboard, ShoppingCart, BookOpen, ClipboardList, Users, Settings
 import { Tooltip } from '@heroui/react';
 import { useSidebar } from '../context/SidebarContext';
 
-export const navItems = [
+const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/pos', icon: ShoppingCart, label: 'POS Checkout' },
   { path: '/calendar', icon: Calendar, label: 'Kalender' },
@@ -12,7 +12,7 @@ export const navItems = [
   { path: '/clients', icon: Users, label: 'Data Klien' },
 ];
 
-export const bottomItems = [
+const bottomItems = [
   { path: '/settings', icon: Settings, label: 'Pengaturan' },
 ];
 
@@ -79,6 +79,7 @@ const SidebarDesktop = () => {
       {/* --- THE EDGE TOGGLE --- */}
       {/* Placed at top-1/2 with -right-4 to sit perfectly on the border line */}
       <button
+        type="button"
         onClick={toggleSidebar}
         className="absolute -right-4 top-1/2 -translate-y-1/2 z-[100] 
                    flex h-8 w-8 items-center justify-center rounded-full 
@@ -118,7 +119,15 @@ const SidebarMobile = () => {
 
   return (
     <>
-      <div className={`mobile-sidebar-overlay ${isMobileOpen ? 'active' : ''}`} onClick={closeMobile} />
+      <div 
+        role="button"
+        tabIndex={0}
+        className={`mobile-sidebar-overlay ${isMobileOpen ? 'active' : ''}`} 
+        onClick={closeMobile} 
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') closeMobile();
+        }}
+      />
       <div className={`mobile-sidebar bg-[var(--surface)] border-r border-[var(--border)] flex flex-col ${isMobileOpen ? 'active' : ''}`}>
         <div className="flex items-center gap-3 px-5 py-5 border-b border-[var(--border)]">
           <div className="bg-[var(--primary)] p-1.5 rounded-lg">

@@ -1,46 +1,31 @@
 import axios from 'axios';
 
-const getCookie = (name) => {
-  const prefix = `${name}=`;
-  return document.cookie
-    .split(';')
-    .map((cookie) => cookie.trim())
-    .find((cookie) => cookie.startsWith(prefix))
-    ?.slice(prefix.length) || '';
-};
-
-const clearCookie = (name) => {
-  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
-};
-
 const api = axios.create({
   baseURL: '/api',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token') || decodeURIComponent(getCookie('auth_token'));
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token:v1');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       const isLoginRequest = error.config?.url === '/auth/login';
-      if (!isLoginRequest) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        clearCookie('auth_token');
+      const isAuthCheck = error.config?.url === '/auth/me';
+      if (!isLoginRequest && !isAuthCheck && window.location.pathname !== '/login') {
+        localStorage.removeItem('user:v1');
+        localStorage.removeItem('token:v1');
         window.location.href = '/login';
       }
     }

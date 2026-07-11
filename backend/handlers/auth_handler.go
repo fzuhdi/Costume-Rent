@@ -31,6 +31,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	// Set HTTP-only cookie
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("token", response.Token, 3600*24, "/", "", false, true)
+
+	// Keep returning token in JSON for backwards compatibility or mobile clients, but web will use cookie
 	c.JSON(http.StatusOK, response)
 }
 
@@ -64,6 +69,9 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
+	// Clear the HTTP-only cookie
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("token", "", -1, "/", "", false, true)
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 

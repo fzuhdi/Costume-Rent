@@ -64,7 +64,7 @@ const SettingsPage = () => {
           </div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Logo Aplikasi</label>
+              <label htmlFor="logoUpload" className="text-sm font-medium mb-2 block">Logo Aplikasi</label>
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="w-20 h-20 bg-[var(--border)] rounded-lg flex items-center justify-center flex-shrink-0">
                   {preview ? (
@@ -74,10 +74,10 @@ const SettingsPage = () => {
                   )}
                 </div>
                 <div>
-                   <Button variant="bordered" size="sm" isPending={uploading} as="label" className="cursor-pointer" aria-label="Pilih Logo">
+                   <Button variant="bordered" size="sm" isPending={uploading} as="label" htmlFor="logoUpload" className="cursor-pointer" aria-label="Pilih Logo">
                     <Upload size={16} />
                     {uploading ? 'Mengupload...' : 'Pilih Logo'}
-                    <input type="file" accept="image/*" onChange={handleLogoChange} disabled={uploading} className="hidden" />
+                    <input id="logoUpload" type="file" accept="image/*" onChange={handleLogoChange} disabled={uploading} className="hidden" />
                   </Button>
                   <p className="text-xs text-[var(--muted)] mt-1">Format: PNG, JPG. Maksimal 2MB</p>
                 </div>
