@@ -7,15 +7,21 @@ import {
 } from '@heroui/react';
 
 const statusColors = {
-  active: { variant: 'secondary' },
-  returned: { variant: 'secondary' },
+  draft: { variant: 'soft', color: 'warning' },
+  booked: { variant: 'soft', color: 'primary' },
+  rented: { variant: 'secondary' },
+  returned: { variant: 'soft', color: 'success' },
   overdue: { variant: 'soft', color: 'danger' },
+  cancelled: { variant: 'soft', color: 'default' },
 };
 
 const statusLabels = {
-  active: 'Aktif',
+  draft: 'Draft',
+  booked: 'Dipesan',
+  rented: 'Disewa',
   returned: 'Dikembalikan',
   overdue: 'Terlambat',
+  cancelled: 'Dibatalkan',
 };
 
 const ClientDetailPage = () => {
@@ -174,9 +180,9 @@ const ClientDetailPage = () => {
               <p>Belum ada riwayat peminjaman</p>
             </div>
           ) : (
-            <Table aria-label="Client rent history">
+            <Table>
               <Table.ScrollContainer>
-                <Table.Content>
+                <Table.Content aria-label="Client rent history">
                   <Table.Header>
                     <Table.Column isRowHeader>ID</Table.Column>
                     <Table.Column>Tanggal</Table.Column>

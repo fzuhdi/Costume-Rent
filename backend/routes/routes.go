@@ -80,6 +80,10 @@ func SetupRouter() *gin.Engine {
 			auth.POST("/rents", rentHandler.Create)
 			auth.PUT("/rents/:id", rentHandler.Update)
 			auth.PUT("/rents/:id/return", rentHandler.MarkReturned)
+			auth.PUT("/rents/:id/rent", rentHandler.MarkRented)
+			auth.PUT("/rents/:id/cancel", rentHandler.CancelOrder)
+			auth.POST("/rents/upload-proof", rentHandler.UploadPaymentProof)
+			auth.PUT("/rents/:id/book", rentHandler.MarkBooked)
 			auth.DELETE("/rents/:id", rentHandler.Delete)
 
 			auth.GET("/notifications", notificationHandler.GetNotifications)

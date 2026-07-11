@@ -65,6 +65,12 @@ func migrateDB() {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
+	// Data migration: rename legacy "active" status to "rented"
+	result := db.Model(&models.RentOrder{}).Where("status = ?", "active").Update("status", "rented")
+	if result.RowsAffected > 0 {
+		log.Printf("Migrated %d orders from 'active' to 'rented'", result.RowsAffected)
+	}
+
 	log.Println("Database migrations completed successfully")
 }
 
@@ -118,16 +124,17 @@ func seedReferenceData() {
 		}
 	}
 
-	var settingsCount int64
-	db.Model(&models.AppSetting{}).Count(&settingsCount)
-	if settingsCount == 0 {
-		log.Println("Seeding default settings...")
-		settings := []models.AppSetting{
-			{Key: "app_name", Value: "Costume Rental"},
-			{Key: "app_tagline", Value: "Inventory & Rental Management"},
-			{Key: "app_logo", Value: ""},
-		}
-		for _, s := range settings {
+	defaultSettings := []models.AppSetting{
+		{Key: "app_name", Value: "Costume Rental"},
+		{Key: "app_tagline", Value: "Inventory & Rental Management"},
+		{Key: "app_logo", Value: ""},
+		{Key: "pickup_days_before", Value: "2"},
+		{Key: "return_days_after", Value: "1"},
+	}
+	for _, s := range defaultSettings {
+		var count int64
+		db.Model(&models.AppSetting{}).Where("key = ?", s.Key).Count(&count)
+		if count == 0 {
 			db.Create(&s)
 		}
 	}
@@ -305,7 +312,7 @@ func seedSampleRentals(adminID uint) {
 		ExpectedReturnDate: expectedReturnDate,
 		Downpayment:        costume.RentalFee / 2, // 50% dp
 		HasSecurityItem:    true,
-		Status:             "active",
+		Status:             "booked",
 		Notes:              "Penyewaan untuk acara adat",
 		CreatedBy:          adminID,
 	}

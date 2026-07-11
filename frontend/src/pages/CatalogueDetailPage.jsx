@@ -154,8 +154,7 @@ const CatalogueDetailPage = () => {
         </Card>
       </div>
 
-      <Modal>
-        <Modal.Backdrop isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+      <Modal.Backdrop isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
           <Modal.Container>
             <Modal.Dialog>
               <Modal.Header>
@@ -170,8 +169,7 @@ const CatalogueDetailPage = () => {
               </Modal.Footer>
             </Modal.Dialog>
           </Modal.Container>
-        </Modal.Backdrop>
-      </Modal>
+      </Modal.Backdrop>
     </div>
   );
 };

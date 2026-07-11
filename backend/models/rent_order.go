@@ -14,7 +14,8 @@ type RentOrder struct {
 	Downpayment        int             `json:"downpayment" gorm:"default:0"`
 	DamageFee          int             `json:"damage_fee" gorm:"default:0"`
 	HasSecurityItem    bool            `json:"has_security_item" gorm:"default:false"`
-	Status             string          `json:"status" gorm:"default:active"`
+	Status             string          `json:"status" gorm:"default:booked"`
+	PaymentProof       string          `json:"payment_proof"`
 	Notes              string          `json:"notes"`
 	CreatedBy          uint            `json:"created_by"`
 	Creator            User            `json:"creator,omitempty" gorm:"foreignKey:CreatedBy"`

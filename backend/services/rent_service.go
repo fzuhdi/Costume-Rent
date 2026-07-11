@@ -106,17 +106,31 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 		return nil, errors.New("invalid event_date format")
 	}
 
-	pickupDate := eventDate.AddDate(0, 0, -2)
-	expectedReturnDate := eventDate.AddDate(0, 0, 1)
-
 	costumeSvc := NewCostumeService()
-	for _, item := range req.Items {
-		available, err := costumeSvc.GetAvailableQuantity(item.CostumeID)
-		if err != nil {
-			return nil, errors.New("costume not found: " + strconv.Itoa(int(item.CostumeID)))
+	pickupDaysBefore := costumeSvc.getSettingInt("pickup_days_before", 2)
+	returnDaysAfter := costumeSvc.getSettingInt("return_days_after", 1)
+
+	pickupDate := eventDate.AddDate(0, 0, -pickupDaysBefore)
+	expectedReturnDate := eventDate.AddDate(0, 0, returnDaysAfter)
+
+	status := req.Status
+	if status == "" {
+		status = "booked"
+	}
+
+	if status == "booked" {
+		if req.PaymentProof == "" {
+			return nil, errors.New("bukti pembayaran (payment proof) wajib diunggah untuk pemesanan (booked)")
 		}
-		if item.Quantity > available {
-			return nil, errors.New("insufficient quantity for costume " + strconv.Itoa(int(item.CostumeID)) + ": requested " + strconv.Itoa(item.Quantity) + ", available " + strconv.Itoa(available))
+
+		for _, item := range req.Items {
+			available, err := costumeSvc.GetAvailableQuantityOnDate(item.CostumeID, eventDate)
+			if err != nil {
+				return nil, errors.New("costume not found: " + strconv.Itoa(int(item.CostumeID)))
+			}
+			if item.Quantity > available {
+				return nil, errors.New("insufficient quantity for costume " + strconv.Itoa(int(item.CostumeID)) + ": requested " + strconv.Itoa(item.Quantity) + ", available " + strconv.Itoa(available))
+			}
 		}
 	}
 
@@ -127,8 +141,9 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 		PickupDate:         pickupDate,
 		ExpectedReturnDate: expectedReturnDate,
 		Downpayment:        req.Downpayment,
-		HasSecurityItem:    req.HasSecurityItem,
-		Status:             "active",
+		HasSecurityItem:    false, // Security item held at pickup only
+		Status:             status,
+		PaymentProof:       req.PaymentProof,
 		Notes:              req.Notes,
 		CreatedBy:          userID,
 	}
@@ -166,9 +181,13 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest) (*models.R
 	}
 	if req.EventDate != "" {
 		if t, err := time.Parse("2006-01-02", req.EventDate); err == nil {
+			costumeSvc := NewCostumeService()
+			pickupDaysBefore := costumeSvc.getSettingInt("pickup_days_before", 2)
+			returnDaysAfter := costumeSvc.getSettingInt("return_days_after", 1)
+
 			order.EventDate = t
-			order.PickupDate = t.AddDate(0, 0, -2)
-			order.ExpectedReturnDate = t.AddDate(0, 0, 1)
+			order.PickupDate = t.AddDate(0, 0, -pickupDaysBefore)
+			order.ExpectedReturnDate = t.AddDate(0, 0, returnDaysAfter)
 		}
 	}
 	if req.ActualReturnDate != nil {
@@ -184,6 +203,9 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest) (*models.R
 	
 	if req.Status != "" {
 		order.Status = req.Status
+	}
+	if req.PaymentProof != "" {
+		order.PaymentProof = req.PaymentProof
 	}
 	if req.Notes != "" {
 		order.Notes = req.Notes
@@ -212,18 +234,114 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest) (*models.R
 	return s.GetByID(order.ID)
 }
 
-func (s *RentService) MarkReturned(id uint) (*models.RentOrder, error) {
+func (s *RentService) MarkReturned(id uint, req dto.MarkReturnedRequest) (*models.RentOrder, error) {
 	var order models.RentOrder
 	if err := config.DB.First(&order, id).Error; err != nil {
 		return nil, err
 	}
 
+	if order.Status != "rented" && order.Status != "overdue" {
+		return nil, errors.New("only rented or overdue orders can be returned")
+	}
+
 	now := time.Now()
+	if req.ReturnedAt != "" {
+		if t, err := time.Parse("2006-01-02", req.ReturnedAt); err == nil {
+			now = t
+		}
+	}
 	order.Status = "returned"
 	order.ActualReturnDate = &now
+	order.DamageFee = req.DamageFee
 	// Return security item conceptually
 	order.HasSecurityItem = false 
 
+	if err := config.DB.Save(&order).Error; err != nil {
+		return nil, err
+	}
+
+	return s.GetByID(order.ID)
+}
+
+func (s *RentService) MarkRented(id uint, req dto.MarkRentedRequest) (*models.RentOrder, error) {
+	var order models.RentOrder
+	if err := config.DB.Preload("Items").First(&order, id).Error; err != nil {
+		return nil, err
+	}
+
+	if order.Status != "booked" {
+		return nil, errors.New("hanya pesanan berstatus 'booked' yang dapat disewakan")
+	}
+
+	totalFee := 0
+	for _, item := range order.Items {
+		totalFee += item.RentalFee * item.Quantity
+	}
+
+	if order.Downpayment < totalFee && req.PaymentProof == "" {
+		return nil, errors.New("bukti pelunasan pembayaran wajib diunggah untuk mengambil kostum (disewakan)")
+	}
+
+	order.Status = "rented"
+	order.HasSecurityItem = true // Mandatory on pickup
+	if req.PaymentProof != "" {
+		order.PaymentProof = req.PaymentProof
+	}
+
+	if err := config.DB.Save(&order).Error; err != nil {
+		return nil, err
+	}
+
+	return s.GetByID(order.ID)
+}
+
+func (s *RentService) MarkBooked(id uint, req dto.UpgradeToBookedRequest) (*models.RentOrder, error) {
+	var order models.RentOrder
+	if err := config.DB.Preload("Items").First(&order, id).Error; err != nil {
+		return nil, err
+	}
+
+	if order.Status != "draft" {
+		return nil, errors.New("hanya pesanan berstatus 'draft' yang dapat diubah ke 'booked'")
+	}
+
+	if req.PaymentProof == "" {
+		return nil, errors.New("bukti pembayaran downpayment wajib diunggah")
+	}
+
+	costumeSvc := NewCostumeService()
+	for _, item := range order.Items {
+		available, err := costumeSvc.GetAvailableQuantityOnDate(item.CostumeID, order.EventDate)
+		if err != nil {
+			return nil, errors.New("costume not found: " + strconv.Itoa(int(item.CostumeID)))
+		}
+		if item.Quantity > available {
+			return nil, errors.New("insufficient quantity for costume " + strconv.Itoa(int(item.CostumeID)) + ": requested " + strconv.Itoa(item.Quantity) + ", available " + strconv.Itoa(available))
+		}
+	}
+
+	order.Status = "booked"
+	order.Downpayment = req.Downpayment
+	order.PaymentProof = req.PaymentProof
+
+	if err := config.DB.Save(&order).Error; err != nil {
+		return nil, err
+	}
+
+	return s.GetByID(order.ID)
+}
+
+func (s *RentService) CancelOrder(id uint) (*models.RentOrder, error) {
+	var order models.RentOrder
+	if err := config.DB.First(&order, id).Error; err != nil {
+		return nil, err
+	}
+
+	if order.Status != "booked" {
+		return nil, errors.New("only booked orders can be cancelled")
+	}
+
+	order.Status = "cancelled"
 	if err := config.DB.Save(&order).Error; err != nil {
 		return nil, err
 	}
@@ -271,6 +389,7 @@ func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderR
 		DamageFee:          order.DamageFee,
 		HasSecurityItem:    order.HasSecurityItem,
 		Status:             order.Status,
+		PaymentProof:       order.PaymentProof,
 		Notes:              order.Notes,
 		Items:              items,
 		CreatedAt:          order.CreatedAt.Format("2006-01-02 15:04:05"),

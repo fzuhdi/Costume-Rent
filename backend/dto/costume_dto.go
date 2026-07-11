@@ -42,6 +42,7 @@ type CostumeFilter struct {
 	Search    string `form:"search"`
 	RegionID  string `form:"region_id"`
 	CategoryID string `form:"category_id"`
+	EventDate  string `form:"event_date"`
 	Page      int    `form:"page"`
 	Limit     int    `form:"limit"`
 }

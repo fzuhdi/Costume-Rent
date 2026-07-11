@@ -1,6 +1,6 @@
 import { useReducer, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getRents, markReturned, deleteRent } from '../api/rentApi';
+import { getRents, markReturned, markRented, cancelRent } from '../api/rentApi';
 import {
   Input, Button, Select, ListBox, Label,
   Spinner, Modal, Card, Separator
@@ -20,8 +20,10 @@ const initialState = {
   totalPages: 1,
   total: 0,
   isReturnOpen: false,
-  isDeleteOpen: false,
+  isRentOpen: false,
+  isCancelOpen: false,
   selectedRentId: null,
+  selectedRentData: null,
   actionLoading: false,
   idReturned: false,
   isGoodCondition: true,
@@ -48,10 +50,18 @@ function rentReducer(state, action) {
       return { ...state, isReturnOpen: true, selectedRentId: action.payload, idReturned: false, isGoodCondition: true, damageFee: '' };
     case 'CLOSE_RETURN_MODAL':
       return { ...state, isReturnOpen: false, selectedRentId: null };
-    case 'OPEN_DELETE_MODAL':
-      return { ...state, isDeleteOpen: true, selectedRentId: action.payload };
-    case 'CLOSE_DELETE_MODAL':
-      return { ...state, isDeleteOpen: false, selectedRentId: null };
+    case 'OPEN_RENT_MODAL': {
+      const rentData = state.rents.find(r => r.id === action.payload);
+      return { ...state, isRentOpen: true, selectedRentId: action.payload, selectedRentData: rentData || null };
+    }
+    case 'CLOSE_RENT_MODAL':
+      return { ...state, isRentOpen: false, selectedRentId: null, selectedRentData: null };
+    case 'OPEN_CANCEL_MODAL': {
+      const rentData = state.rents.find(r => r.id === action.payload);
+      return { ...state, isCancelOpen: true, selectedRentId: action.payload, selectedRentData: rentData || null };
+    }
+    case 'CLOSE_CANCEL_MODAL':
+      return { ...state, isCancelOpen: false, selectedRentId: null, selectedRentData: null };
     case 'SET_ACTION_LOADING':
       return { ...state, actionLoading: action.payload };
     case 'UPDATE_RETURN_FORM':
@@ -60,6 +70,10 @@ function rentReducer(state, action) {
       return state;
   }
 }
+
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
+};
 
 const RentHistoryPage = () => {
   const navigate = useNavigate();
@@ -120,17 +134,38 @@ const RentHistoryPage = () => {
     }
   };
 
-  const handleDelete = async () => {
+  const handleMarkRented = async () => {
     dispatch({ type: 'SET_ACTION_LOADING', payload: true });
     try {
-      await deleteRent(state.selectedRentId);
-      dispatch({ type: 'CLOSE_DELETE_MODAL' });
+      await markRented(state.selectedRentId);
+      dispatch({ type: 'CLOSE_RENT_MODAL' });
       fetchRents();
     } catch (error) {
-      console.error('Failed to delete rent:', error);
+      console.error('Failed to mark rented:', error);
     } finally {
       dispatch({ type: 'SET_ACTION_LOADING', payload: false });
     }
+  };
+
+  const handleCancel = async () => {
+    dispatch({ type: 'SET_ACTION_LOADING', payload: true });
+    try {
+      await cancelRent(state.selectedRentId);
+      dispatch({ type: 'CLOSE_CANCEL_MODAL' });
+      fetchRents();
+    } catch (error) {
+      console.error('Failed to cancel rent:', error);
+    } finally {
+      dispatch({ type: 'SET_ACTION_LOADING', payload: false });
+    }
+  };
+
+  // Calculate remaining balance for the selected rent
+  const getRemainingBalance = () => {
+    const rent = state.selectedRentData;
+    if (!rent) return 0;
+    const totalFee = rent.items?.reduce((sum, item) => sum + ((item.rental_fee || 0) * item.quantity), 0) || 0;
+    return Math.max(0, totalFee - (rent.downpayment || 0));
   };
 
   return (
@@ -171,9 +206,12 @@ const RentHistoryPage = () => {
             <Select.Popover>
               <ListBox>
                 <ListBox.Item id="" textValue="Semua Status">Semua Status<ListBox.ItemIndicator /></ListBox.Item>
-                <ListBox.Item id="active" textValue="Aktif">Aktif<ListBox.ItemIndicator /></ListBox.Item>
+                <ListBox.Item id="draft" textValue="Draft">Draft<ListBox.ItemIndicator /></ListBox.Item>
+                <ListBox.Item id="booked" textValue="Dipesan">Dipesan<ListBox.ItemIndicator /></ListBox.Item>
+                <ListBox.Item id="rented" textValue="Disewa">Disewa<ListBox.ItemIndicator /></ListBox.Item>
                 <ListBox.Item id="returned" textValue="Dikembalikan">Dikembalikan<ListBox.ItemIndicator /></ListBox.Item>
                 <ListBox.Item id="overdue" textValue="Terlambat">Terlambat<ListBox.ItemIndicator /></ListBox.Item>
+                <ListBox.Item id="cancelled" textValue="Dibatalkan">Dibatalkan<ListBox.ItemIndicator /></ListBox.Item>
               </ListBox>
             </Select.Popover>
           </Select>
@@ -195,7 +233,9 @@ const RentHistoryPage = () => {
         ) : (
           <RentHistoryTable 
             rents={state.rents} 
-            openReturnModal={(id) => dispatch({ type: 'OPEN_RETURN_MODAL', payload: id })} 
+            openReturnModal={(id) => dispatch({ type: 'OPEN_RETURN_MODAL', payload: id })}
+            openRentModal={(id) => dispatch({ type: 'OPEN_RENT_MODAL', payload: id })}
+            openCancelModal={(id) => dispatch({ type: 'OPEN_CANCEL_MODAL', payload: id })}
           />
         )}
       </Card.Content>
@@ -223,16 +263,54 @@ const RentHistoryPage = () => {
         actionLoading={state.actionLoading}
       />
 
-      <Modal.Backdrop isOpen={state.isDeleteOpen} onOpenChange={() => dispatch({ type: 'CLOSE_DELETE_MODAL' })}>
+      {/* Mark Rented Confirmation Modal */}
+      <Modal.Backdrop isOpen={state.isRentOpen} onOpenChange={() => dispatch({ type: 'CLOSE_RENT_MODAL' })}>
         <Modal.Container>
           <Modal.Dialog>
             <Modal.Header>
-              <Modal.Heading>Konfirmasi</Modal.Heading>
+              <Modal.Heading>Konfirmasi Penyewaan</Modal.Heading>
             </Modal.Header>
-            <Modal.Body>Hapus peminjaman ini?</Modal.Body>
+            <Modal.Body>
+              <div className="flex flex-col gap-3">
+                <p>Konfirmasi pembayaran dan serahkan kostum ke klien?</p>
+                {state.selectedRentData && (
+                  <div className="p-3 bg-default-50 rounded-lg border border-default-200">
+                    <p className="text-sm font-semibold mb-1">Sisa Pembayaran:</p>
+                    <p className="text-lg font-bold text-primary">{formatCurrency(getRemainingBalance())}</p>
+                    <p className="text-xs text-[var(--muted)] mt-1">Pastikan sisa pembayaran telah diterima sebelum menyerahkan kostum.</p>
+                  </div>
+                )}
+              </div>
+            </Modal.Body>
             <Modal.Footer>
-              <Button variant="bordered" onPress={() => dispatch({ type: 'CLOSE_DELETE_MODAL' })} aria-label="Batal">Batal</Button>
-              <Button variant="danger" onPress={handleDelete} isPending={state.actionLoading} aria-label="Hapus peminjaman">Hapus</Button>
+              <Button variant="bordered" onPress={() => dispatch({ type: 'CLOSE_RENT_MODAL' })} aria-label="Batal">Batal</Button>
+              <Button variant="primary" onPress={handleMarkRented} isPending={state.actionLoading} aria-label="Konfirmasi penyewaan">Disewakan</Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+
+      {/* Cancel Order Confirmation Modal */}
+      <Modal.Backdrop isOpen={state.isCancelOpen} onOpenChange={() => dispatch({ type: 'CLOSE_CANCEL_MODAL' })}>
+        <Modal.Container>
+          <Modal.Dialog>
+            <Modal.Header>
+              <Modal.Heading>Batalkan Pesanan</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body>
+              <div className="flex flex-col gap-3">
+                <p>Yakin ingin membatalkan pesanan ini?</p>
+                {state.selectedRentData && (
+                  <div className="p-3 bg-danger-50 rounded-lg border border-danger-200">
+                    <p className="text-sm font-semibold text-danger mb-1">⚠️ Uang muka tidak akan dikembalikan</p>
+                    <p className="text-sm">DP yang telah dibayar sebesar <strong>{formatCurrency(state.selectedRentData.downpayment || 0)}</strong> tidak dapat dikembalikan.</p>
+                  </div>
+                )}
+              </div>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="bordered" onPress={() => dispatch({ type: 'CLOSE_CANCEL_MODAL' })} aria-label="Kembali">Kembali</Button>
+              <Button variant="danger" onPress={handleCancel} isPending={state.actionLoading} aria-label="Batalkan pesanan">Batalkan Pesanan</Button>
             </Modal.Footer>
           </Modal.Dialog>
         </Modal.Container>

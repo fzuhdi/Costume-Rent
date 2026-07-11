@@ -8,6 +8,8 @@ const SettingsPage = () => {
   const [formData, setFormData] = useState({
     app_name: settings.app_name || '',
     tagline: settings.app_tagline || '',
+    pickup_days_before: settings.pickup_days_before || '2',
+    return_days_after: settings.return_days_after || '1',
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -42,6 +44,8 @@ const SettingsPage = () => {
       await updateSettings({
         app_name: formData.app_name,
         app_tagline: formData.tagline,
+        pickup_days_before: formData.pickup_days_before,
+        return_days_after: formData.return_days_after,
       });
       setSuccessMsg('Pengaturan berhasil disimpan');
       setTimeout(() => setSuccessMsg(''), 3000);
@@ -92,6 +96,14 @@ const SettingsPage = () => {
             <TextField>
               <Label>Tagline</Label>
               <Input value={formData.tagline} onChange={(e) => setFormData((prev) => ({...prev, tagline: e.target.value}))} placeholder="Inventory & Rental Management" />
+            </TextField>
+            <TextField isRequired>
+              <Label>Hari Persiapan Ambil (Sebelum Hari-H)</Label>
+              <Input type="number" min="0" value={formData.pickup_days_before} onChange={(e) => setFormData((prev) => ({...prev, pickup_days_before: e.target.value}))} placeholder="2" />
+            </TextField>
+            <TextField isRequired>
+              <Label>Hari Batas Kembali (Setelah Hari-H)</Label>
+              <Input type="number" min="0" value={formData.return_days_after} onChange={(e) => setFormData((prev) => ({...prev, return_days_after: e.target.value}))} placeholder="1" />
             </TextField>
 
             {successMsg && <Chip variant="secondary">{successMsg}</Chip>}

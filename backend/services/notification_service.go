@@ -28,16 +28,26 @@ func (s *NotificationService) GetNotifications() (*dto.NotificationResponse, err
 	futureDate := time.Now().AddDate(0, 0, dueDays).Format("2006-01-02")
 
 	items := []dto.NotificationItem{}
-	var total int64
 
+	// Overdue and due-soon notifications for rented/overdue orders
 	config.DB.Table("rent_orders").
-		Select("rent_orders.id as rent_order_id, clients.name as client_name, rent_orders.rent_end, CASE WHEN rent_orders.rent_end < ? THEN 'overdue' ELSE 'due_soon' END as type", today).
+		Select("rent_orders.id as rent_order_id, clients.name as client_name, rent_orders.expected_return_date as expected_return_date, rent_orders.pickup_date as pickup_date, CASE WHEN date(rent_orders.expected_return_date) < ? THEN 'overdue' ELSE 'due_soon' END as type", today).
 		Joins("JOIN clients ON clients.id = rent_orders.client_id").
-		Where("rent_orders.status = ? AND rent_orders.rent_end <= ? AND rent_orders.deleted_at IS NULL", "active", futureDate).
-		Order("rent_orders.rent_end ASC").
+		Where("rent_orders.status IN ? AND date(rent_orders.expected_return_date) <= ? AND rent_orders.deleted_at IS NULL", []string{"rented", "overdue"}, futureDate).
+		Order("date(rent_orders.expected_return_date) ASC").
 		Scan(&items)
 
-	total = int64(len(items))
+	// No-show notifications for booked orders past pickup date
+	var noShowItems []dto.NotificationItem
+	config.DB.Table("rent_orders").
+		Select("rent_orders.id as rent_order_id, clients.name as client_name, rent_orders.expected_return_date as expected_return_date, rent_orders.pickup_date as pickup_date, 'no_show' as type").
+		Joins("JOIN clients ON clients.id = rent_orders.client_id").
+		Where("rent_orders.status = ? AND date(rent_orders.pickup_date) <= ? AND rent_orders.deleted_at IS NULL", "booked", today).
+		Order("date(rent_orders.pickup_date) ASC").
+		Scan(&noShowItems)
+
+	items = append(items, noShowItems...)
+	total := int64(len(items))
 
 	return &dto.NotificationResponse{
 		Count: total,
@@ -48,6 +58,6 @@ func (s *NotificationService) GetNotifications() (*dto.NotificationResponse, err
 func (s *NotificationService) UpdateOverdueStatus() error {
 	today := time.Now().Format("2006-01-02")
 	return config.DB.Model(&models.RentOrder{}).
-		Where("status = ? AND rent_end < ? AND deleted_at IS NULL", "active", today).
+		Where("status = ? AND date(expected_return_date) < ? AND deleted_at IS NULL", "rented", today).
 		Update("status", "overdue").Error
 }

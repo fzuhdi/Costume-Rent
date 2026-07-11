@@ -6,6 +6,7 @@ import (
 	"github.com/busana/backend/config"
 	"github.com/busana/backend/dto"
 	"github.com/busana/backend/models"
+	"gorm.io/gorm"
 )
 
 type ClientService struct{}
@@ -41,7 +42,7 @@ func (s *ClientService) List(filter dto.ClientFilter) (*dto.PaginatedResponse, e
 	for _, c := range clients {
 		var totalRents, activeRents int64
 		config.DB.Model(&models.RentOrder{}).Where("client_id = ? AND deleted_at IS NULL", c.ID).Count(&totalRents)
-		config.DB.Model(&models.RentOrder{}).Where("client_id = ? AND status = ? AND deleted_at IS NULL", c.ID, "active").Count(&activeRents)
+		config.DB.Model(&models.RentOrder{}).Where("client_id = ? AND status IN ? AND deleted_at IS NULL", c.ID, []string{"booked", "rented", "overdue"}).Count(&activeRents)
 
 		var lastRentDate *time.Time
 		var lastRent models.RentOrder
@@ -83,7 +84,9 @@ func (s *ClientService) List(filter dto.ClientFilter) (*dto.PaginatedResponse, e
 
 func (s *ClientService) GetByID(id uint) (*models.Client, error) {
 	var client models.Client
-	if err := config.DB.Preload("RentOrders", "deleted_at IS NULL").Order("created_at DESC").First(&client, id).Error; err != nil {
+	if err := config.DB.Preload("RentOrders", func(db *gorm.DB) *gorm.DB {
+		return db.Order("rent_orders.created_at DESC")
+	}).First(&client, id).Error; err != nil {
 		return nil, err
 	}
 	return &client, nil

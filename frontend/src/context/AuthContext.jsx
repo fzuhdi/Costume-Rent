@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect, useCallback, useContext, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { login as loginApi, getCurrentUser, logout as logoutApi } from '../api/authApi';
 
 export const AuthContext = createContext(null);
@@ -12,6 +13,7 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);

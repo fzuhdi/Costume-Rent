@@ -1,27 +1,79 @@
 import { Table, Chip, Button } from '@heroui/react';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Package, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const statusColors = {
-  active: { variant: 'secondary' },
+  draft: { variant: 'soft', color: 'warning' },
+  booked: { variant: 'soft', color: 'primary' },
+  rented: { variant: 'secondary' },
   returned: { variant: 'soft', color: 'success' },
   overdue: { variant: 'soft', color: 'danger' },
+  cancelled: { variant: 'soft', color: 'default' },
 };
 
 const statusLabels = {
-  active: 'Aktif',
+  draft: 'Draft',
+  booked: 'Dipesan',
+  rented: 'Disewa',
   returned: 'Dikembalikan',
   overdue: 'Terlambat',
+  cancelled: 'Dibatalkan',
 };
 
 const statusA11yLabels = {
-  active: 'status active',
+  draft: 'status draft',
+  booked: 'status booked',
+  rented: 'status rented',
   returned: 'status returned',
   overdue: 'status overdue',
+  cancelled: 'status cancelled',
 };
 
-const RentHistoryTable = ({ rents, openReturnModal }) => {
+const RentHistoryTable = ({ rents, openReturnModal, openRentModal, openCancelModal }) => {
   const navigate = useNavigate();
+
+  const renderActions = (rent) => {
+    switch (rent.status) {
+      case 'booked':
+        return (
+          <>
+            <Button
+              variant="primary"
+              size="sm"
+              onPress={() => openRentModal(rent.id)}
+              aria-label="Sewakan peminjaman"
+            >
+              <Package size={14} aria-hidden="true" />
+              Disewakan
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onPress={() => openCancelModal(rent.id)}
+              aria-label="Batalkan peminjaman"
+            >
+              <XCircle size={14} aria-hidden="true" />
+              Batalkan
+            </Button>
+          </>
+        );
+      case 'rented':
+      case 'overdue':
+        return (
+          <Button
+            variant="secondary"
+            size="sm"
+            onPress={() => openReturnModal(rent.id)}
+            aria-label="Kembalikan peminjaman"
+          >
+            <CheckCircle size={14} aria-hidden="true" />
+            Kembalikan
+          </Button>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <>
@@ -54,7 +106,7 @@ const RentHistoryTable = ({ rents, openReturnModal }) => {
               </div>
             </dl>
             <span className="sr-only">{statusA11yLabels[rent.status] || `status ${rent.status}`}</span>
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="mt-4 flex flex-wrap gap-2">
               <Button
                 onPress={() => navigate(`/rents/${rent.id}`)}
                 variant="bordered"
@@ -63,17 +115,7 @@ const RentHistoryTable = ({ rents, openReturnModal }) => {
               >
                 Detail
               </Button>
-              {rent.status !== 'returned' && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onPress={() => openReturnModal(rent.id)}
-                  aria-label="Kembalikan peminjaman"
-                >
-                  <CheckCircle size={14} aria-hidden="true" />
-                  Kembalikan
-                </Button>
-              )}
+              {renderActions(rent)}
             </div>
           </article>
         ))}
@@ -107,9 +149,7 @@ const RentHistoryTable = ({ rents, openReturnModal }) => {
                     <Table.Cell>
                       <div className="flex flex-col sm:flex-row gap-2">
                           <Button onPress={() => navigate(`/rents/${rent.id}`)} variant="bordered" size="sm" aria-label={`Detail peminjaman #${rent.id}`}>Detail</Button>
-                          {rent.status !== 'returned' && (
-                            <Button variant="secondary" size="sm" onPress={() => openReturnModal(rent.id)} aria-label="Kembalikan peminjaman"><CheckCircle size={14} aria-hidden="true" />Kembalikan</Button>
-                          )}
+                          {renderActions(rent)}
                       </div>
                     </Table.Cell>
                   </Table.Row>

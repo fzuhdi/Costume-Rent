@@ -11,6 +11,8 @@ type CreateRentOrderRequest struct {
 	ExpectedReturnDate string      `json:"expected_return_date"`
 	Downpayment     int            `json:"downpayment"`
 	HasSecurityItem bool           `json:"has_security_item"`
+	Status          string         `json:"status"`
+	PaymentProof    string         `json:"payment_proof"`
 	Items           []RentItemInput `json:"items" binding:"required"`
 	Notes           string         `json:"notes"`
 }
@@ -30,6 +32,7 @@ type UpdateRentOrderRequest struct {
 	DamageFee          int            `json:"damage_fee"`
 	HasSecurityItem    bool           `json:"has_security_item"`
 	Status             string         `json:"status"`
+	PaymentProof       string         `json:"payment_proof"`
 	Notes              string         `json:"notes"`
 	Items              []RentItemInput `json:"items"`
 }
@@ -49,6 +52,7 @@ type RentOrderResponse struct {
 	DamageFee          int               `json:"damage_fee"`
 	HasSecurityItem    bool              `json:"has_security_item"`
 	Status             string            `json:"status"`
+	PaymentProof       string            `json:"payment_proof"`
 	Notes              string            `json:"notes"`
 	Items              []RentOrderItemResponse `json:"items"`
 	CreatedAt          string            `json:"created_at"`
@@ -76,7 +80,19 @@ type RentOrderFilter struct {
 
 type MarkReturnedRequest struct {
 	ReturnedAt string `json:"returned_at"`
+	DamageFee  int    `json:"damage_fee"`
 }
+
+type MarkRentedRequest struct {
+	PaymentProof string `json:"payment_proof"`
+}
+
+type UpgradeToBookedRequest struct {
+	Downpayment  int    `json:"downpayment" binding:"required,min=0"`
+	PaymentProof string `json:"payment_proof" binding:"required"`
+}
+
+type CancelRentRequest struct{}
 
 type NotificationResponse struct {
 	Count int64                  `json:"count"`
@@ -87,5 +103,6 @@ type NotificationItem struct {
 	RentOrderID        uint   `json:"rent_order_id"`
 	ClientName         string `json:"client_name"`
 	ExpectedReturnDate string `json:"expected_return_date"`
+	PickupDate         string `json:"pickup_date"`
 	Type               string `json:"type"`
 }

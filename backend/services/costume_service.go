@@ -79,6 +79,13 @@ func (s *CostumeService) List(filter dto.CostumeFilter) (*dto.PaginatedResponse,
 	}
 
 	// Batch compute available quantity for all costumes in the list
+	var eventDate *time.Time
+	if filter.EventDate != "" {
+		if t, err := time.Parse("2006-01-02", filter.EventDate); err == nil {
+			eventDate = &t
+		}
+	}
+
 	costumeIDs := make([]uint, len(costumes))
 	for i, c := range costumes {
 		costumeIDs[i] = c.ID
@@ -88,12 +95,24 @@ func (s *CostumeService) List(filter dto.CostumeFilter) (*dto.PaginatedResponse,
 		RentedQty int64
 	}
 	var rentedResults []qtyResult
-	config.DB.Model(&models.RentOrderItem{}).
+	
+	dbQuery := config.DB.Model(&models.RentOrderItem{}).
 		Select("rent_order_items.costume_id as costume_id, COALESCE(SUM(rent_order_items.quantity), 0) as rented_qty").
 		Joins("JOIN rent_orders ON rent_orders.id = rent_order_items.rent_order_id").
-		Where("rent_order_items.costume_id IN ? AND rent_orders.status = ? AND rent_orders.deleted_at IS NULL", costumeIDs, "active").
-		Group("rent_order_items.costume_id").
-		Scan(&rentedResults)
+		Where("rent_order_items.costume_id IN ? AND rent_orders.status IN ? AND rent_orders.deleted_at IS NULL", costumeIDs, []string{"booked", "rented", "overdue"})
+
+	if eventDate != nil {
+		pickupDaysBefore := s.getSettingInt("pickup_days_before", 2)
+		returnDaysAfter := s.getSettingInt("return_days_after", 1)
+
+		pickupDate := eventDate.AddDate(0, 0, -pickupDaysBefore)
+		expectedReturnDate := eventDate.AddDate(0, 0, returnDaysAfter)
+
+		dbQuery = dbQuery.Where("rent_orders.pickup_date <= ? AND rent_orders.expected_return_date >= ?", expectedReturnDate, pickupDate)
+	}
+
+	dbQuery.Group("rent_order_items.costume_id").Scan(&rentedResults)
+
 	rentedMap := make(map[uint]int64)
 	for _, r := range rentedResults {
 		rentedMap[r.CostumeID] = r.RentedQty
@@ -281,6 +300,43 @@ func (s *CostumeService) RemoveImage(costumeID, imageID uint) error {
 	return nil
 }
 
+func (s *CostumeService) getSettingInt(key string, defaultValue int) int {
+	var setting models.AppSetting
+	if err := config.DB.Where("key = ?", key).First(&setting).Error; err == nil {
+		if val, err := strconv.Atoi(setting.Value); err == nil {
+			return val
+		}
+	}
+	return defaultValue
+}
+
+func (s *CostumeService) GetAvailableQuantityOnDate(costumeID uint, eventDate time.Time) (int, error) {
+	var costume models.Costume
+	if err := config.DB.First(&costume, costumeID).Error; err != nil {
+		return 0, err
+	}
+
+	pickupDaysBefore := s.getSettingInt("pickup_days_before", 2)
+	returnDaysAfter := s.getSettingInt("return_days_after", 1)
+
+	pickupDate := eventDate.AddDate(0, 0, -pickupDaysBefore)
+	expectedReturnDate := eventDate.AddDate(0, 0, returnDaysAfter)
+
+	var rentedQty int64
+	err := config.DB.Model(&models.RentOrderItem{}).
+		Joins("JOIN rent_orders ON rent_orders.id = rent_order_items.rent_order_id").
+		Where("rent_order_items.costume_id = ? AND rent_orders.status IN ? AND rent_orders.deleted_at IS NULL", costumeID, []string{"booked", "rented", "overdue"}).
+		Where("rent_orders.pickup_date <= ? AND rent_orders.expected_return_date >= ?", expectedReturnDate, pickupDate).
+		Select("COALESCE(SUM(rent_order_items.quantity), 0)").
+		Scan(&rentedQty).Error
+
+	if err != nil {
+		return 0, err
+	}
+
+	return costume.TotalQuantity - int(rentedQty), nil
+}
+
 func (s *CostumeService) GetAvailableQuantity(costumeID uint) (int, error) {
 	var costume models.Costume
 	if err := config.DB.First(&costume, costumeID).Error; err != nil {
@@ -290,7 +346,7 @@ func (s *CostumeService) GetAvailableQuantity(costumeID uint) (int, error) {
 	var rentedQty int64
 	config.DB.Model(&models.RentOrderItem{}).
 		Joins("JOIN rent_orders ON rent_orders.id = rent_order_items.rent_order_id").
-		Where("rent_order_items.costume_id = ? AND rent_orders.status = ? AND rent_orders.deleted_at IS NULL", costumeID, "active").
+		Where("rent_order_items.costume_id = ? AND rent_orders.status IN ? AND rent_orders.deleted_at IS NULL", costumeID, []string{"booked", "rented", "overdue"}).
 		Select("COALESCE(SUM(rent_order_items.quantity), 0)").
 		Scan(&rentedQty)
 

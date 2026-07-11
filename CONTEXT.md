@@ -31,3 +31,19 @@ _Avoid_: Deposit (overloaded term), Collateral
 **Damage Fee**:
 An additional cost billed to the client *after* the return of the costume and Security Item, relying on a trust-based system to resolve post-rental damages.
 _Avoid_: Damage Deposit, Withheld Fee
+
+**Booked (Dipesan)**:
+The initial status of a rent order. Inventory is locked, and a downpayment is typically collected. Can be cancelled before pickup.
+
+**Rented (Disewa)**:
+The status of a rent order once costumes are picked up. The remaining balance must be paid in full to transition to this state.
+
+**Overdue (Terlambat)**:
+The status automatically applied when a rented order is past its expected return date.
+
+**Returned (Dikembalikan)**:
+The status of a rent order once the costumes are back in the shop, the security item is returned, and any damage fees are settled. Releases locked inventory.
+
+**Cancelled (Dibatalkan)**:
+The status of a booked order that was cancelled. Downpayment is forfeited (non-refundable), and inventory is released.
+

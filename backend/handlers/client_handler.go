@@ -63,7 +63,7 @@ func (h *ClientHandler) GetByID(c *gin.Context) {
 		Phone        string            `json:"phone"`
 		Address      string            `json:"address"`
 		CreatedAt    string            `json:"created_at"`
-		RentHistory  []RentOrderSimple `json:"rent_history"`
+		RentOrders   []RentOrderSimple `json:"rent_orders"`
 	}
 
 	rentHistory := make([]RentOrderSimple, 0)
@@ -86,7 +86,7 @@ func (h *ClientHandler) GetByID(c *gin.Context) {
 		Phone:       client.Phone,
 		Address:     client.Address,
 		CreatedAt:   client.CreatedAt.Format("2006-01-02"),
-		RentHistory:  rentHistory,
+		RentOrders:  rentHistory,
 	}
 	c.JSON(http.StatusOK, response)
 }

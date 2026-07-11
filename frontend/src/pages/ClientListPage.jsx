@@ -93,9 +93,9 @@ const ClientListPage = () => {
             <p className="text-sm text-[var(--muted)]">Klien akan muncul setelah membuat peminjaman</p>
           </div>
         ) : (
-          <Table aria-label="Client list">
+          <Table>
             <Table.ScrollContainer>
-              <Table.Content>
+              <Table.Content aria-label="Client list">
                 <Table.Header>
                   <Table.Column isRowHeader>Nama</Table.Column>
                   <Table.Column>Telepon</Table.Column>

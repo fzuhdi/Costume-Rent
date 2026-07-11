@@ -54,7 +54,14 @@ export const test = base.extend({
     await use();
 
     const testAllowedPatterns = allowedConsoleErrorPatterns(testInfo);
-    const unallowedIssues = issues.filter(issue => !testAllowedPatterns.some(pattern => pattern.test(issue.text)));
+    const isLoginPage = page.url().includes('/login');
+    const unallowedIssues = issues.filter(issue => {
+      // Only skip 401/unauthorized errors if the test ends up on the login page
+      if (isLoginPage && (issue.text.includes('401') || issue.text.toLowerCase().includes('unauthorized'))) {
+        return false;
+      }
+      return !testAllowedPatterns.some(pattern => pattern.test(issue.text));
+    });
 
     if (unallowedIssues.length > 0) {
       throw new Error(
