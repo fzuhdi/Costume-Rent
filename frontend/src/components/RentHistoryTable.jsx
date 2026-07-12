@@ -1,14 +1,14 @@
-import { Table, Chip, Button } from '@heroui/react';
-import { CheckCircle, Package, XCircle } from 'lucide-react';
+import { Table, Chip, Button, Tooltip } from '@heroui/react';
+import { CheckCircle, Package, XCircle, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const statusColors = {
-  draft: { variant: 'soft', color: 'warning' },
-  booked: { variant: 'soft', color: 'primary' },
-  rented: { variant: 'secondary' },
-  returned: { variant: 'soft', color: 'success' },
-  overdue: { variant: 'soft', color: 'danger' },
-  cancelled: { variant: 'soft', color: 'default' },
+const statusProps = {
+  draft: { className: 'bg-default-200 text-default-700 font-medium border-none' },
+  booked: { className: 'bg-primary text-white font-medium border-none' },
+  rented: { className: 'bg-warning text-white font-medium border-none' },
+  returned: { className: 'bg-success text-white font-medium border-none' },
+  overdue: { className: 'bg-danger text-white font-medium border-none' },
+  cancelled: { className: 'bg-default-300 text-default-800 font-medium border-none' },
 };
 
 const statusLabels = {
@@ -31,6 +31,13 @@ const statusA11yLabels = {
 
 const RentHistoryTable = ({ rents, openReturnModal, openRentModal, openCancelModal }) => {
   const navigate = useNavigate();
+
+  const formatShortDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date)) return dateString;
+    return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short' }).format(date);
+  };
 
   const renderActions = (rent) => {
     switch (rent.status) {
@@ -91,30 +98,33 @@ const RentHistoryTable = ({ rents, openReturnModal, openRentModal, openCancelMod
                 </p>
                 <p className="text-xs text-[var(--muted)]">Peminjaman #{rent.id}</p>
               </div>
-              <Chip size="sm" {...statusColors[rent.status]}>
+              <Chip size="sm" {...statusProps[rent.status]}>
                 {statusLabels[rent.status] || rent.status}
               </Chip>
             </div>
             <dl className="mt-3 grid grid-cols-1 gap-2 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-[var(--muted)]">Kostum</dt>
-                <dd className="font-medium">{rent.items?.length || 0} kostum</dd>
+                <dd className="font-medium"><b>{rent.items?.length || 0}</b> item</dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-[var(--muted)]">Tanggal</dt>
-                <dd className="text-right font-medium">{rent.pickup_date} - {rent.expected_return_date}</dd>
+                <dd className="text-right font-medium">{formatShortDate(rent.pickup_date)} - {formatShortDate(rent.expected_return_date)}</dd>
               </div>
             </dl>
             <span className="sr-only">{statusA11yLabels[rent.status] || `status ${rent.status}`}</span>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button
-                onPress={() => navigate(`/rents/${rent.id}`)}
-                variant="bordered"
-                size="sm"
-                aria-label={`Detail peminjaman #${rent.id}`}
-              >
-                Detail
-              </Button>
+            <div className="mt-4 flex flex-wrap gap-2 items-center">
+              <Tooltip content="Detail Peminjaman">
+                <Button
+                  onPress={() => navigate(`/rents/${rent.id}`)}
+                  variant="flat"
+                  size="sm"
+                  isIconOnly
+                  aria-label={`Detail peminjaman #${rent.id}`}
+                >
+                  <Eye size={16} aria-hidden="true" />
+                </Button>
+              </Tooltip>
               {renderActions(rent)}
             </div>
           </article>
@@ -122,7 +132,7 @@ const RentHistoryTable = ({ rents, openReturnModal, openRentModal, openCancelMod
       </div>
 
       <div className="hidden md:block">
-        <Table>
+        <Table classNames={{ th: 'outline-none' }}>
           <Table.ScrollContainer>
             <Table.Content aria-label="Rent history">
               <Table.Header>
@@ -136,20 +146,30 @@ const RentHistoryTable = ({ rents, openReturnModal, openRentModal, openCancelMod
               <Table.Body>
                 {rents.map((rent) => (
                   <Table.Row key={rent.id} aria-label={`Peminjaman #${rent.id} oleh ${rent.client_name}`}>
-                    <Table.Cell>#{rent.id}</Table.Cell>
+                    <Table.Cell>{rent.id}</Table.Cell>
                     <Table.Cell>{rent.client_name}</Table.Cell>
-                    <Table.Cell>{rent.items?.length || 0} kostum</Table.Cell>
-                    <Table.Cell>{rent.pickup_date} - {rent.expected_return_date}</Table.Cell>
+                    <Table.Cell><b>{rent.items?.length || 0}</b> item</Table.Cell>
+                    <Table.Cell>{formatShortDate(rent.pickup_date)} - {formatShortDate(rent.expected_return_date)}</Table.Cell>
                     <Table.Cell>
-                       <Chip size="sm" {...statusColors[rent.status]}>
+                      <Chip size="sm" {...statusProps[rent.status]}>
                         {statusLabels[rent.status] || rent.status}
                       </Chip>
                       <span className="sr-only">{statusA11yLabels[rent.status] || `status ${rent.status}`}</span>
                     </Table.Cell>
                     <Table.Cell>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                          <Button onPress={() => navigate(`/rents/${rent.id}`)} variant="bordered" size="sm" aria-label={`Detail peminjaman #${rent.id}`}>Detail</Button>
-                          {renderActions(rent)}
+                      <div className="flex flex-row gap-2 items-center">
+                        <Tooltip content="Detail Peminjaman">
+                          <Button
+                            onPress={() => navigate(`/rents/${rent.id}`)}
+                            variant="flat"
+                            size="sm"
+                            isIconOnly
+                            aria-label={`Detail peminjaman #${rent.id}`}
+                          >
+                            <Eye size={16} />
+                          </Button>
+                        </Tooltip>
+                        {renderActions(rent)}
                       </div>
                     </Table.Cell>
                   </Table.Row>

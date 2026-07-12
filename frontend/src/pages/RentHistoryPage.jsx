@@ -170,54 +170,49 @@ const RentHistoryPage = () => {
 
   return (
     <Card>
-      <Card.Header className="flex flex-col gap-4 px-6 py-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <Card.Header className="flex flex-col gap-4 px-6 pt-6 pb-2">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <h1 className="text-2xl font-bold">Riwayat Peminjaman</h1>
-          <Button
-            onPress={() => navigate('/pos')}
-            variant="primary"
-            aria-label="Peminjaman Baru via POS"
-          >
-            Peminjaman Baru (POS)
-          </Button>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <Input
+              placeholder="Cari klien..."
+              value={state.search}
+              onChange={(e) => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
+              aria-label="Cari klien"
+              className="w-full sm:w-64"
+            />
+            <Select
+              placeholder="Semua Status"
+              value={state.statusFilter || null}
+              onChange={(key) => dispatch({ type: 'SET_STATUS_FILTER', payload: key ? String(key) : '' })}
+              className="w-full sm:w-40"
+            >
+              <Label className="sr-only">Status</Label>
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id="" textValue="Semua Status">Semua Status<ListBox.ItemIndicator /></ListBox.Item>
+                  <ListBox.Item id="draft" textValue="Draft">Draft<ListBox.ItemIndicator /></ListBox.Item>
+                  <ListBox.Item id="booked" textValue="Dipesan">Dipesan<ListBox.ItemIndicator /></ListBox.Item>
+                  <ListBox.Item id="rented" textValue="Disewa">Disewa<ListBox.ItemIndicator /></ListBox.Item>
+                  <ListBox.Item id="returned" textValue="Dikembalikan">Dikembalikan<ListBox.ItemIndicator /></ListBox.Item>
+                  <ListBox.Item id="overdue" textValue="Terlambat">Terlambat<ListBox.ItemIndicator /></ListBox.Item>
+                  <ListBox.Item id="cancelled" textValue="Dibatalkan">Dibatalkan<ListBox.ItemIndicator /></ListBox.Item>
+                </ListBox>
+              </Select.Popover>
+            </Select>
+            <Button
+              onPress={() => navigate('/pos')}
+              variant="primary"
+              aria-label="Peminjaman Baru via POS"
+            >
+              Peminjaman Baru
+            </Button>
+          </div>
         </div>
-
-        <Separator />
-
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
-          <Input
-            placeholder="Cari klien..."
-            value={state.search}
-            onChange={(e) => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
-            aria-label="Cari klien"
-            className="w-full sm:w-64"
-          />
-          <Select
-            placeholder="Semua Status"
-            value={state.statusFilter || null}
-            onChange={(key) => dispatch({ type: 'SET_STATUS_FILTER', payload: key ? String(key) : '' })}
-            className="w-full sm:w-40"
-          >
-            <Label className="sr-only">Status</Label>
-            <Select.Trigger>
-              <Select.Value />
-              <Select.Indicator />
-            </Select.Trigger>
-            <Select.Popover>
-              <ListBox>
-                <ListBox.Item id="" textValue="Semua Status">Semua Status<ListBox.ItemIndicator /></ListBox.Item>
-                <ListBox.Item id="draft" textValue="Draft">Draft<ListBox.ItemIndicator /></ListBox.Item>
-                <ListBox.Item id="booked" textValue="Dipesan">Dipesan<ListBox.ItemIndicator /></ListBox.Item>
-                <ListBox.Item id="rented" textValue="Disewa">Disewa<ListBox.ItemIndicator /></ListBox.Item>
-                <ListBox.Item id="returned" textValue="Dikembalikan">Dikembalikan<ListBox.ItemIndicator /></ListBox.Item>
-                <ListBox.Item id="overdue" textValue="Terlambat">Terlambat<ListBox.ItemIndicator /></ListBox.Item>
-                <ListBox.Item id="cancelled" textValue="Dibatalkan">Dibatalkan<ListBox.ItemIndicator /></ListBox.Item>
-              </ListBox>
-            </Select.Popover>
-          </Select>
-        </div>
-
-        <Separator />
       </Card.Header>
 
       <Card.Content>
