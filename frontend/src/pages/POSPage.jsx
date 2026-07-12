@@ -4,7 +4,7 @@ import { createRent, uploadPaymentProof } from '../api/rentApi';
 import { getCostumes } from '../api/costumeApi';
 import ClientSelect from '../components/ClientSelect';
 import { useSettings } from '../context/SettingsContext';
-import { ShoppingCart, Search, Plus, Minus, Trash2, Calendar } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, Calendar, User, Package, CheckCircle, ImageOff } from 'lucide-react';
 import {
   Input, Button, Card, Separator, Checkbox,
   Select, ListBox, Label, Spinner, TextField, FieldError, InputGroup, Modal
@@ -362,13 +362,8 @@ const POSPage = () => {
 
             <div className="flex justify-between items-center px-1">
               <label className="flex items-center gap-2 cursor-pointer py-1">
-                <input
-                  type="checkbox"
-                  checked={showOnlyAvailable}
-                  onChange={(e) => setShowOnlyAvailable(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 accent-primary cursor-pointer"
-                />
-                <span className="text-xs text-slate-600 font-medium">Hanya Tampilkan Stok Tersedia</span>
+                <input type="checkbox" checked={showOnlyAvailable} onChange={(e) => setShowOnlyAvailable(e.target.checked)} className="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary/20 accent-primary cursor-pointer" />
+                <span className="text-xs text-default-600 font-medium">Hanya Tampilkan Stok Tersedia</span>
               </label>
 
               <span className="text-xs text-default-500 font-medium">
@@ -391,9 +386,12 @@ const POSPage = () => {
                     <Card.Content className="p-0 relative h-full flex flex-col">
                       <div className="aspect-square bg-default-100 relative">
                         {costume.cover_image ? (
-                          <img src={costume.cover_image.startsWith('http') ? costume.cover_image : `${import.meta.env.VITE_API_URL}${costume.cover_image}`} alt={costume.name} className="w-full h-full object-cover" />
+                          <img src={costume.cover_image.startsWith('http') ? costume.cover_image : `${import.meta.env.VITE_API_URL || ''}${costume.cover_image}`} alt={costume.name} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-default-400 text-xs">No Image</div>
+                          <div className="w-full h-full flex flex-col items-center justify-center text-default-400 bg-default-50">
+                            <ImageOff size={24} className="mb-1 opacity-40" />
+                            <span className="text-[10px] font-medium uppercase tracking-wider">No Image</span>
+                          </div>
                         )}
                         <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
                           Sisa: {costume.available_quantity}
@@ -416,8 +414,8 @@ const POSPage = () => {
       </div>
 
       {/* Floating Bottom Cart Pill */}
-      {cart.length > 0 && formData.event_date && (
-        <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-40 bg-white/90 backdrop-blur-md border border-default-200 shadow-xl rounded-full px-5 py-3 flex items-center gap-6 animate-fade-in max-w-[90%] sm:max-w-md">
+      {cart.length > 0 && (
+        <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[var(--surface)]/95 backdrop-blur-md border border-[var(--border)] shadow-xl rounded-full px-5 py-3 flex items-center gap-6 animate-fade-in max-w-[90%] sm:max-w-md">
           <div className="flex items-center gap-2">
             <div className="relative">
               <ShoppingCart className="text-primary" size={20} />
@@ -438,9 +436,9 @@ const POSPage = () => {
       {/* Checkout Modal */}
       <Modal.Backdrop isOpen={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
         <Modal.Container>
-          <Modal.Dialog className="max-w-xl w-full max-h-[90vh] md:max-h-none overflow-y-auto rounded-2xl shadow-2xl border border-default-200 bg-white">
+          <Modal.Dialog className="max-w-xl w-full max-h-[90vh] md:max-h-none overflow-y-auto rounded-2xl shadow-2xl border border-default-200 bg-[var(--surface)]">
             <Modal.Header className="px-6 py-4 border-b border-default-200">
-              <Modal.Heading className="text-lg font-bold text-default-800">Checkout Transaksi</Modal.Heading>
+              <Modal.Heading className="text-lg font-bold text-[var(--foreground)]">Checkout Transaksi</Modal.Heading>
             </Modal.Header>
             <Modal.Body className="flex flex-col gap-4 p-6">
               {/* Cart Review */}
@@ -452,9 +450,11 @@ const POSPage = () => {
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-10 h-10 bg-slate-100 rounded overflow-hidden flex-shrink-0 border border-slate-200">
                           {item.cover_image ? (
-                            <img src={item.cover_image.startsWith('http') ? item.cover_image : `${import.meta.env.VITE_API_URL}${item.cover_image}`} alt="" className="w-full h-full object-cover" />
+                            <img src={item.cover_image.startsWith('http') ? item.cover_image : `${import.meta.env.VITE_API_URL || ''}${item.cover_image}`} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400 font-semibold uppercase bg-slate-100">No img</div>
+                            <div className="w-full h-full flex flex-col items-center justify-center text-default-400 bg-default-50">
+                              <ImageOff size={16} className="opacity-40" />
+                            </div>
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -463,12 +463,12 @@ const POSPage = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-3 flex-shrink-0">
-                        <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-lg">
+                        <div className="flex items-center gap-1 bg-default-200/80 p-0.5 rounded-lg">
                           <Button isIconOnly size="xs" variant="light" className="h-6 w-6 min-w-6 p-0" onPress={() => updateCartQuantity(item.id, -1)}><Minus size={10} /></Button>
-                          <span className="text-xs w-5 text-center font-bold text-slate-700">{item.quantity}</span>
+                          <span className="text-xs w-5 text-center font-bold text-[var(--foreground)]">{item.quantity}</span>
                           <Button isIconOnly size="xs" variant="light" className="h-6 w-6 min-w-6 p-0" onPress={() => updateCartQuantity(item.id, 1)} isDisabled={item.quantity >= item.available_quantity}><Plus size={10} /></Button>
                         </div>
-                        <Button isIconOnly size="xs" color="danger" variant="light" className="h-6 w-6 min-w-6 p-0 text-slate-400 hover:text-red-500" onPress={() => removeFromCart(item.id)}><Trash2 size={13} /></Button>
+                        <Button isIconOnly size="xs" color="danger" variant="light" className="h-6 w-6 min-w-6 p-0 text-default-400 hover:text-red-500" onPress={() => removeFromCart(item.id)}><Trash2 size={13} /></Button>
                       </div>
                     </div>
                   ))}
@@ -497,7 +497,7 @@ const POSPage = () => {
                     value={formData.guarantee_type}
                     onChange={(v) => setFormData((prev) => ({ ...prev, guarantee_type: v }))}
                   >
-                    <Label className="text-xs font-semibold mb-1 text-slate-600 block">Jaminan *</Label>
+                    <Label className="text-xs font-semibold mb-1 text-default-600 block">Jaminan *</Label>
                     <Select.Trigger>
                       <Select.Value />
                       <Select.Indicator />
@@ -511,11 +511,11 @@ const POSPage = () => {
                     </Select.Popover>
                   </Select>
 
-                  <div className="flex flex-col justify-center gap-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                    <label className="flex items-center gap-2 cursor-pointer py-0.5">
-                      <input
-                        type="checkbox"
-                        checked={formData.dp_paid}
+                  <div className="flex flex-col justify-center gap-2 bg-default-50 p-3.5 rounded-xl border border-default-200">
+                    <label className="flex items-center gap-3 cursor-pointer py-1">
+                      <input 
+                        type="checkbox" 
+                        checked={formData.dp_paid} 
                         onChange={(e) => {
                           const checked = e.target.checked;
                           setFormData(p => ({ ...p, dp_paid: checked, payment_proof: checked ? p.payment_proof : '' }));
@@ -523,16 +523,16 @@ const POSPage = () => {
                             setProofFile(null);
                           }
                           setErrors(p => ({ ...p, payment_proof: null }));
-                        }}
-                        className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 accent-primary cursor-pointer"
+                        }} 
+                        className="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary/20 accent-primary cursor-pointer" 
                       />
-                      <span className="text-xs font-semibold text-slate-700">DP Sudah Dibayar</span>
+                      <span className="text-xs font-semibold text-default-700">DP Sudah Dibayar</span>
                     </label>
 
                     {formData.dp_paid && (
-                      <div className="mt-2 flex flex-col gap-1 border-t border-slate-200 pt-2">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Bukti Pembayaran DP *</label>
-                        <div className="relative border border-dashed border-slate-300 rounded-lg p-2.5 bg-white text-center hover:bg-slate-50 transition duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[64px]">
+                      <div className="mt-2 flex flex-col gap-1 border-t border-default-200 pt-2">
+                        <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider block">Bukti Pembayaran DP *</label>
+                        <div className="relative border border-dashed border-default-300 rounded-lg p-2.5 bg-[var(--input-bg)] text-center hover:bg-default-50 transition duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[64px]">
                           <input
                             type="file"
                             accept="image/*"
@@ -540,7 +540,7 @@ const POSPage = () => {
                             className="absolute inset-0 opacity-0 cursor-pointer"
                           />
                           {uploadingProof ? (
-                            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
+                            <div className="flex items-center gap-1.5 text-xs text-default-500 font-semibold">
                               <Spinner size="xs" /> Mengunggah...
                             </div>
                           ) : proofFile ? (
@@ -550,7 +550,7 @@ const POSPage = () => {
                                 size="xs"
                                 variant="light"
                                 isIconOnly
-                                className="h-5 w-5 min-w-5 p-0 text-slate-400 hover:text-red-500"
+                                className="h-5 w-5 min-w-5 p-0 text-default-400 hover:text-red-500"
                                 onPress={(e) => {
                                   e.stopPropagation();
                                   setFormData(p => ({ ...p, payment_proof: '' }));
@@ -561,7 +561,7 @@ const POSPage = () => {
                               </Button>
                             </div>
                           ) : (
-                            <span className="text-[11px] text-slate-400 font-medium">Klik untuk pilih bukti transfer</span>
+                            <span className="text-[11px] text-default-400 font-medium">Klik untuk pilih bukti transfer</span>
                           )}
                         </div>
                         {errors.payment_proof && <p className="text-red-500 text-[10px] mt-0.5 font-medium">{errors.payment_proof}</p>}
@@ -571,7 +571,7 @@ const POSPage = () => {
                 </div>
 
                 <TextField>
-                  <Label className="text-xs font-semibold mb-1 text-slate-600 block">Catatan Peminjaman</Label>
+                  <Label className="text-xs font-semibold mb-1 text-default-600 block">Catatan Peminjaman</Label>
                   <Input
                     placeholder="Masukkan catatan tambahan..."
                     value={formData.notes}
@@ -580,24 +580,24 @@ const POSPage = () => {
                 </TextField>
               </div>
 
-              <Separator className="bg-slate-200" />
+              <Separator className="bg-default-200" />
 
               {/* Totals Summary */}
-              <div className="flex justify-between items-center text-sm bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div className="flex justify-between items-center text-sm bg-default-50 p-4 rounded-xl border border-default-200">
                 <div>
-                  <span className="text-xs text-slate-500 font-medium">Total Biaya Sewa:</span>
+                  <span className="text-xs text-default-500 font-medium">Total Biaya Sewa:</span>
                   <div className="font-bold text-lg text-primary">Rp {totalFee.toLocaleString('id-ID')}</div>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs text-slate-500 font-medium">Minimal Downpayment (50%):</span>
+                  <span className="text-xs text-default-500 font-medium">Minimal Downpayment (50%):</span>
                   <div className="font-semibold text-warning">Rp {reqDp.toLocaleString('id-ID')}</div>
                 </div>
               </div>
 
               {errors.submit && <div className="text-danger text-xs bg-danger-50 p-2.5 rounded border border-danger-200">{errors.submit}</div>}
             </Modal.Body>
-            <Modal.Footer className="px-6 py-4 border-t border-slate-200">
-              <Button variant="light" className="text-slate-600 font-semibold" onPress={() => setIsCheckoutOpen(false)} aria-label="Batal">Batal</Button>
+            <Modal.Footer className="px-6 py-4 border-t border-default-200">
+              <Button variant="light" className="text-default-600 font-semibold" onPress={() => setIsCheckoutOpen(false)} aria-label="Batal">Batal</Button>
               <Button color="primary" onPress={handleSubmit} isPending={saving} className="text-white font-bold px-6" aria-label="Simpan Transaksi">Simpan Transaksi</Button>
             </Modal.Footer>
           </Modal.Dialog>

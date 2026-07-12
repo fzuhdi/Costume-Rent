@@ -1,6 +1,6 @@
 import { Button, Table } from '@heroui/react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Pencil } from 'lucide-react';
+import { ChevronRight, Pencil, ImageOff } from 'lucide-react';
 
 const idrFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
 
@@ -56,9 +56,12 @@ const CostumeTableView = ({ costumes, expandedKeys, onExpandedChange }) => {
                         <div className="flex items-start gap-4 p-2 bg-[var(--muted-fg)] rounded-lg">
                           <div className="w-24 h-24 flex-shrink-0 bg-[var(--border)] rounded-lg overflow-hidden">
                             {detail.cover_image ? (
-                              <img src={detail.cover_image} alt={detail.name} className="w-full h-full object-cover" loading="lazy" decoding="async" fetchPriority="low" />
+                              <img src={detail.cover_image} alt={detail.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" decoding="async" fetchPriority="low" />
                             ) : (
-                              <div className="flex items-center justify-center h-full text-[var(--muted)] text-xs">No Image</div>
+                              <div className="flex flex-col items-center justify-center h-full text-[var(--muted)] text-[10px] uppercase font-medium bg-default-50 border border-default-100">
+                                <ImageOff size={20} className="mb-1 opacity-40" />
+                                No Image
+                              </div>
                             )}
                           </div>
                           <div className="flex-1 grid grid-cols-2 gap-3 text-sm">

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getRentById, markReturned, markRented, markBooked, cancelRent, deleteRent, uploadPaymentProof } from '../api/rentApi';
-import { ArrowLeft, Edit, Trash2, CheckCircle, Package, XCircle, User, Calendar, FileText, Shield, Upload, FileImage } from 'lucide-react';
-import { Button, Card, Chip, Spinner, Table, Modal } from '@heroui/react';
+import { ArrowLeft, Edit, Trash2, CheckCircle, Package, XCircle, User, Calendar, FileText, Shield, Upload, FileImage, ImageOff } from 'lucide-react';
+import { Button, Card, Chip, Spinner, Table, Modal, Checkbox } from '@heroui/react';
+import ImagePreviewModal from '../components/ImagePreviewModal';
 
 const statusColors = {
   draft: { variant: 'soft', color: 'warning' },
@@ -74,6 +75,17 @@ const RentDetailPage = () => {
   const [rentProof, setRentProof] = useState('');
   const [uploadingRentProof, setUploadingRentProof] = useState(false);
   const [transitionError, setTransitionError] = useState('');
+
+  // Image Preview States
+  const [previewImages, setPreviewImages] = useState([]);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  const openPreview = (images, index) => {
+    setPreviewImages(images);
+    setPreviewIndex(index);
+    setIsPreviewOpen(true);
+  };
 
   const fetchRent = useCallback(async () => {
     setLoading(true);
@@ -265,59 +277,80 @@ const RentDetailPage = () => {
   const totalFee = rent.items?.reduce((sum, item) => sum + ((item.rental_fee || 0) * item.quantity), 0) || 0;
   const remainingBalance = Math.max(0, totalFee - (rent.downpayment || 0));
 
+  const calculatedDamageFee = rent.damage_fee || 0;
+  const totalTagihan = totalFee + calculatedDamageFee;
+  const dp = rent.downpayment || 0;
+  const sisaTagihan = Math.max(0, totalTagihan - dp);
+  const isFullyPaid = ['rented', 'returned', 'overdue'].includes(rent.status);
+
   const renderActionButtons = () => {
-    const buttons = [];
+    const primary = [];
+    const secondary = [];
 
     if (rent.status === 'draft') {
-      buttons.push(
-        <Button key="upgrade" color="warning" size="sm" className="font-semibold" onPress={openUpgradeModal} isPending={processing}>
-          <Package size={16} aria-hidden="true" />Upgrade ke Dipesan
-        </Button>,
-        <Button key="cancel" variant="danger" size="sm" onPress={() => setIsCancelOpen(true)} isPending={processing}>
-          <XCircle size={16} aria-hidden="true" />Batalkan
+      primary.push(
+        <Button key="upgrade" color="primary" size="md" className="font-bold text-white shadow-sm" onPress={openUpgradeModal} isPending={processing}>
+          <Package size={18} aria-hidden="true" />Upgrade ke Dipesan
+        </Button>
+      );
+      secondary.push(
+        <Button key="cancel" variant="light" color="danger" size="sm" onPress={() => setIsCancelOpen(true)} isPending={processing}>
+          <XCircle size={16} className="sm:mr-1" aria-hidden="true" /><span className="hidden sm:inline">Batalkan</span>
         </Button>
       );
     }
 
     if (rent.status === 'booked') {
-      buttons.push(
-        <Button key="rent" variant="primary" size="sm" onPress={openRentModal} isPending={processing}>
-          <Package size={16} aria-hidden="true" />Disewakan
-        </Button>,
-        <Button key="cancel" variant="danger" size="sm" onPress={() => setIsCancelOpen(true)} isPending={processing}>
-          <XCircle size={16} aria-hidden="true" />Batalkan
+      primary.push(
+        <Button key="rent" color="success" size="md" className="font-bold text-white shadow-sm" onPress={openRentModal} isPending={processing}>
+          <Package size={18} aria-hidden="true" />Disewakan
+        </Button>
+      );
+      secondary.push(
+        <Button key="cancel" variant="light" color="danger" size="sm" onPress={() => setIsCancelOpen(true)} isPending={processing}>
+          <XCircle size={16} className="sm:mr-1" aria-hidden="true" /><span className="hidden sm:inline">Batalkan</span>
         </Button>
       );
     }
 
     if (rent.status === 'rented' || rent.status === 'overdue') {
-      buttons.push(
-        <Button key="return" variant="secondary" size="sm" onPress={openReturnModal} isPending={processing}>
-          <CheckCircle size={16} aria-hidden="true" />Kembalikan
+      primary.push(
+        <Button key="return" color="secondary" size="md" className="font-bold text-white shadow-sm" onPress={openReturnModal} isPending={processing}>
+          <CheckCircle size={18} aria-hidden="true" />Kembalikan
         </Button>
       );
     }
 
-    buttons.push(
-      <Button key="edit" onPress={() => navigate(`/rents/${id}/edit`)} variant="bordered" size="sm" aria-label="Edit peminjaman">
-        <Edit size={16} aria-hidden="true" />Edit
+    secondary.push(
+      <Button key="edit" onPress={() => navigate(`/rents/${id}/edit`)} variant="light" size="sm" aria-label="Edit peminjaman">
+        <Edit size={16} className="sm:mr-1" aria-hidden="true" /><span className="hidden sm:inline">Edit</span>
       </Button>,
-      <Button key="delete" variant="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={processing} aria-label="Hapus peminjaman">
-        <Trash2 size={16} aria-hidden="true" />Hapus
+      <Button key="delete" variant="light" color="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={processing} aria-label="Hapus peminjaman">
+        <Trash2 size={16} className="sm:mr-1" aria-hidden="true" /><span className="hidden sm:inline">Hapus</span>
       </Button>
     );
 
-    return buttons;
+    return (
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 border-r border-default-200 pr-3 mr-1">
+          {secondary}
+        </div>
+        {primary}
+      </div>
+    );
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 max-w-5xl mx-auto w-full">
       <Link to="/rents" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
         <ArrowLeft size={18} aria-hidden="true" />
         Kembali ke Riwayat
       </Link>
 
-      <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        {/* Left Column (Main Info & Items) */}
+        <div className="lg:col-span-2 flex flex-col gap-4">
+          <Card>
         <Card.Content>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div className="flex flex-col">
@@ -336,7 +369,7 @@ const RentDetailPage = () => {
               <User size={20} className="text-[var(--muted)]" aria-hidden="true" />
               <div>
                 <span className="text-[var(--muted)]">Klien</span>
-                <p className="font-medium">{rent.client_name}</p>
+                <p className="font-medium">{rent.client_name || rent.client?.name || <span className="italic font-normal text-default-400">Walk-in Customer</span>}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -374,106 +407,139 @@ const RentDetailPage = () => {
             <Table.ScrollContainer>
               <Table.Content aria-label="Rent items">
                 <Table.Header>
-                  <Table.Column>Gambar</Table.Column>
-                  <Table.Column>Nama Kostum</Table.Column>
-                  <Table.Column>Jumlah</Table.Column>
+                  <Table.Column className="w-16">Gambar</Table.Column>
+                  <Table.Column isRowHeader>Nama Kostum</Table.Column>
+                  <Table.Column className="w-32">Harga Sewa</Table.Column>
+                  <Table.Column className="w-24">Jumlah</Table.Column>
+                  <Table.Column align="end" className="w-32">Subtotal</Table.Column>
                 </Table.Header>
                 <Table.Body>
-                  {rent.items?.map((item) => (
+                  {rent.items?.length > 0 ? rent.items.map((item) => (
                     <Table.Row key={item.id}>
                       <Table.Cell>
                         {item.costume?.cover_image ? (
-                          <img src={item.costume.cover_image} alt="" className="w-10 h-10 object-cover rounded" />
+                          <img src={item.costume.cover_image} alt="" className="w-12 h-12 object-cover rounded shadow-sm" />
                         ) : (
-                          <span className="text-[var(--muted)]">-</span>
+                          <div className="w-12 h-12 flex flex-col items-center justify-center text-default-400 bg-default-50 border border-default-200 rounded">
+                            <ImageOff size={16} className="opacity-40" />
+                          </div>
                         )}
                       </Table.Cell>
-                      <Table.Cell>{item.costume?.name}</Table.Cell>
+                      <Table.Cell className="font-medium">{item.costume?.name}</Table.Cell>
+                      <Table.Cell>{formatCurrency(item.rental_fee || 0)}</Table.Cell>
                       <Table.Cell>{item.quantity} unit</Table.Cell>
+                      <Table.Cell className="font-semibold text-right">{formatCurrency((item.rental_fee || 0) * item.quantity)}</Table.Cell>
                     </Table.Row>
-                  ))}
+                  )) : (
+                    <Table.Row>
+                      <Table.Cell colSpan={5} className="text-center text-[var(--muted)] py-4">Belum ada kostum dipilih</Table.Cell>
+                    </Table.Row>
+                  )}
                 </Table.Body>
               </Table.Content>
             </Table.ScrollContainer>
           </Table>
         </Card.Content>
       </Card>
+    </div>
 
+    {/* Right Column (Payment) */}
+    <div className="flex flex-col gap-4">
       <Card>
         <Card.Content>
           <h2 className="text-xl font-semibold mb-4">Rincian Pembayaran</h2>
           <div className="flex flex-col gap-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-[var(--muted)]">Total Harga Sewa</span>
+              <span className="text-default-500">Total Harga Sewa</span>
               <span className="font-medium">{formatCurrency(totalFee)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-[var(--muted)]">Uang Muka (DP)</span>
-              <span className="font-medium">- {formatCurrency(rent.downpayment || 0)}</span>
-            </div>
-            {rent.damage_fee > 0 && (
+            
+            {calculatedDamageFee > 0 && (
               <div className="flex justify-between">
-                <span className="text-[var(--muted)] text-danger">Denda Kerusakan</span>
-                <span className="font-medium text-danger">+ {formatCurrency(rent.damage_fee)}</span>
+                <span className="text-danger">Denda Kerusakan</span>
+                <span className="font-medium text-danger">+ {formatCurrency(calculatedDamageFee)}</span>
               </div>
             )}
-            <hr className="my-2 border-default-200" />
-            <div className="flex justify-between text-base font-semibold">
-              <span>{rent.status === 'rented' || rent.status === 'returned' || rent.status === 'overdue' ? 'Total Dibayar' : 'Sisa Pembayaran'}</span>
-              <span>
-                {formatCurrency(
-                  rent.status === 'returned'
-                    ? totalFee + (rent.damage_fee || 0)
-                    : Math.max(0, totalFee + (rent.damage_fee || 0) - (rent.downpayment || 0))
-                )}
-              </span>
-            </div>
-            {rent.status === 'booked' && (rent.downpayment || 0) > 0 && (
-              <p className="text-xs text-[var(--muted)] mt-1">DP telah dibayar. Sisa pembayaran harus dilunasi saat pengambilan kostum.</p>
+            
+            {(calculatedDamageFee > 0 || dp > 0) && (
+              <hr className="my-1 border-default-200" />
             )}
-            {(rent.status === 'rented' || rent.status === 'overdue') && (
+
+            {(calculatedDamageFee > 0 || dp > 0) && (
+              <div className="flex justify-between font-semibold">
+                <span>Total Tagihan</span>
+                <span>{formatCurrency(totalTagihan)}</span>
+              </div>
+            )}
+
+            {dp > 0 && (
+              <div className="flex justify-between text-default-600">
+                <span>Telah Dibayar (DP)</span>
+                <span>{formatCurrency(dp)}</span>
+              </div>
+            )}
+
+            {isFullyPaid && sisaTagihan > 0 && (
+              <div className="flex justify-between text-default-600">
+                <span>Pelunasan</span>
+                <span>{formatCurrency(sisaTagihan)}</span>
+              </div>
+            )}
+
+            <hr className="my-1 border-default-200" />
+
+            {isFullyPaid ? (
+              <div className="flex justify-between text-base font-bold text-success">
+                <span>Total Lunas Dibayar</span>
+                <span>{formatCurrency(totalTagihan)}</span>
+              </div>
+            ) : (
+              <div className="flex justify-between text-base font-bold text-primary">
+                <span>Sisa Pembayaran</span>
+                <span>{formatCurrency(sisaTagihan)}</span>
+              </div>
+            )}
+
+            {rent.status === 'booked' && dp > 0 && (
+              <p className="text-xs text-default-500 mt-1">Sisa pembayaran wajib dilunasi saat pengambilan kostum.</p>
+            )}
+            {isFullyPaid && (
               <p className="text-xs text-success mt-1">✓ Pembayaran sewa telah lunas</p>
             )}
 
             {rent.payment_proof && (
-              <div className="mt-4 border-t border-slate-200 pt-4 flex flex-col gap-2">
-                <span className="font-semibold text-xs text-slate-500 uppercase tracking-wider">Bukti Transaksi (Payment Receipt)</span>
-                <div className="flex items-start gap-4">
-                  <a
-                    href={`${import.meta.env.VITE_API_URL}${rent.payment_proof}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-24 h-24 rounded-lg overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0 hover:opacity-85 transition duration-200"
-                    title="Klik untuk membuka di tab baru"
-                  >
-                    <img
-                      src={`${import.meta.env.VITE_API_URL}${rent.payment_proof}`}
-                      alt="Bukti Transfer"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        if (e.target.nextSibling) {
-                          e.target.nextSibling.style.display = 'flex';
-                        }
-                      }}
-                    />
-                    <div className="hidden w-full h-full flex-col items-center justify-center gap-1 text-[10px] text-slate-400 bg-slate-100">
-                      <FileImage size={24} />
-                      <span>Lihat File</span>
+              <div className="mt-4 border-t border-default-200 pt-4 flex flex-col gap-2">
+                <span className="font-semibold text-xs text-default-500 uppercase tracking-wider">Bukti Transaksi (Payment Receipt)</span>
+                <div className="flex gap-4 overflow-x-auto pb-2 snap-x">
+                  {rent.payment_proof.split(',').map((proof, i) => (
+                    <div key={i} className="flex flex-col gap-2 shrink-0 snap-start">
+                      <button
+                        onClick={() => openPreview(rent.payment_proof.split(','), i)}
+                        className="w-24 h-24 rounded-lg overflow-hidden border border-default-200 bg-default-50 flex items-center justify-center hover:opacity-85 transition duration-200 relative group cursor-pointer"
+                        title="Klik untuk memperbesar"
+                      >
+                        <img
+                          src={`${import.meta.env.VITE_API_URL || ''}${proof}`}
+                          alt={`Bukti Transfer ${i + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            if (e.target.nextSibling) {
+                              e.target.nextSibling.style.display = 'flex';
+                            }
+                          }}
+                        />
+                        <div className="hidden w-full h-full flex-col items-center justify-center gap-1 text-[10px] text-default-400 bg-default-100">
+                          <FileImage size={24} />
+                          <span>Lihat File</span>
+                        </div>
+                      </button>
+                      <div className="text-xs text-default-500 flex flex-col mt-1">
+                        <span className="font-semibold text-default-700">Receipt {i + 1}</span>
+                        <span className="truncate max-w-[96px] text-[10px]">{proof.split('/').pop()}</span>
+                      </div>
                     </div>
-                  </a>
-                  <div className="text-xs text-slate-500 flex flex-col gap-0.5 mt-1">
-                    <span className="font-semibold text-slate-700">File Receipt</span>
-                    <span className="truncate max-w-[180px] text-[11px]">{rent.payment_proof.split('/').pop()}</span>
-                    <a
-                      href={`${import.meta.env.VITE_API_URL}${rent.payment_proof}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline font-bold mt-1.5 inline-block text-[11px]"
-                    >
-                      Buka Gambar Baru ↗
-                    </a>
-                  </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -496,8 +562,12 @@ const RentDetailPage = () => {
           </div>
         </Card.Content>
       </Card>
+    </div>
+    {/* End Right Column */}
+  </div>
+  {/* End Grid Layout */}
 
-      {/* Return Modal */}
+  {/* Return Modal */}
       <Modal.Backdrop isOpen={isReturnOpen} onOpenChange={setIsReturnOpen}>
           <Modal.Container>
             <Modal.Dialog>
@@ -509,12 +579,12 @@ const RentDetailPage = () => {
                   <p>Tandai kostum sudah dikembalikan?</p>
                   <div className="flex flex-col gap-2 p-3 bg-default-50 rounded-lg border border-default-200">
                      <p className="text-sm font-semibold">Ceklist Pemeriksaan:</p>
-                     <label className="flex items-center gap-2 cursor-pointer">
-                       <input type="checkbox" checked={idReturned} onChange={(e) => setIdReturned(e.target.checked)} aria-label="Kartu ID Dikembalikan ke Klien" /> 
+                     <label className="flex items-center gap-3 cursor-pointer py-1">
+                       <input type="checkbox" checked={idReturned} onChange={(e) => setIdReturned(e.target.checked)} className="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary/20 accent-primary cursor-pointer" /> 
                        <span className="text-sm">Kartu ID Dikembalikan ke Klien</span>
                      </label>
-                     <label className="flex items-center gap-2 cursor-pointer">
-                       <input type="checkbox" checked={isGoodCondition} onChange={(e) => setIsGoodCondition(e.target.checked)} aria-label="Kostum Dalam Kondisi Baik (Tidak Ada Denda)" /> 
+                     <label className="flex items-center gap-3 cursor-pointer py-1">
+                       <input type="checkbox" checked={isGoodCondition} onChange={(e) => setIsGoodCondition(e.target.checked)} className="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary/20 accent-primary cursor-pointer" /> 
                        <span className="text-sm">Kostum Dalam Kondisi Baik (Tidak Ada Denda)</span>
                      </label>
                   </div>
@@ -551,58 +621,62 @@ const RentDetailPage = () => {
               <Modal.Heading>Upgrade ke Dipesan (Booked)</Modal.Heading>
             </Modal.Header>
             <Modal.Body className="flex flex-col gap-4">
-              <p className="text-sm text-slate-600">
-                Silakan konfirmasi pembayaran downpayment untuk mengunci stok kostum.
+              <p className="text-sm text-default-600">
+                Penyewaan ini akan diupgrade ke status <strong className="text-warning">Dipesan (Booked)</strong>.
               </p>
+
               <div>
-                <label htmlFor="upgradeDpInput" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Uang Muka (DP) *</label>
-                <input
-                  id="upgradeDpInput"
-                  type="number"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                  placeholder="Masukkan nominal DP"
-                  value={upgradeDp}
-                  onChange={(e) => setUpgradeDp(e.target.value)}
-                  min="0"
-                />
-                <p className="text-[11px] text-slate-500 mt-1 font-medium">Minimal DP 50%: {formatCurrency(Math.ceil(totalFee / 2))}</p>
+                <label htmlFor="upgradeDpInput" className="block text-xs font-bold text-default-500 uppercase tracking-wider mb-1">Uang Muka (DP) *</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-default-400 font-semibold text-sm">Rp</span>
+                  <input
+                    id="upgradeDpInput"
+                    type="number"
+                    value={upgradeDp}
+                    onChange={(e) => setUpgradeDp(e.target.value)}
+                    className="w-full px-3 py-2 pl-9 border border-default-300 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-[var(--input-bg)]"
+                    placeholder="Masukkan jumlah DP"
+                    required
+                  />
+                </div>
+                <p className="text-[11px] text-default-500 mt-1 font-medium">Minimal DP 50%: {formatCurrency(Math.ceil(totalFee / 2))}</p>
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Bukti Pembayaran DP *</label>
-                <div className="relative border border-dashed border-slate-300 rounded-lg p-3 bg-white text-center hover:bg-slate-50 transition duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[80px]">
+              <div className="flex flex-col gap-1 mt-2">
+                <label className="text-xs font-bold text-default-500 uppercase tracking-wider block">Bukti Pembayaran DP *</label>
+                <div className="relative border border-dashed border-default-300 rounded-lg p-3 bg-[var(--input-bg)] text-center hover:bg-default-50 transition duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[80px]">
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handleUploadUpgradeFile}
                     className="absolute inset-0 opacity-0 cursor-pointer"
-                    aria-label="Upload Bukti Pembayaran DP"
                   />
                   {uploadingUpgradeProof ? (
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
+                    <div className="flex items-center gap-1.5 text-xs text-default-500 font-semibold">
                       <Spinner size="xs" /> Mengunggah...
                     </div>
                   ) : upgradeFile ? (
                     <div className="flex items-center justify-between w-full text-xs text-success font-semibold px-2">
                       <span className="truncate max-w-[200px]">✓ {upgradeFile}</span>
                       <Button
-                        size="xs"
+                        size="sm"
                         variant="light"
                         isIconOnly
-                        className="h-5 w-5 min-w-5 p-0 text-slate-400 hover:text-red-500"
+                        className="h-5 w-5 min-w-5 p-0 text-default-400 hover:text-red-500"
                         onPress={(e) => {
                           e.stopPropagation();
                           setUpgradeProof('');
                           setUpgradeFile(null);
                         }}
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={14} />
                       </Button>
                     </div>
                   ) : (
-                    <span className="text-xs text-slate-400 font-medium">Klik atau seret gambar ke sini</span>
+                    <span className="text-xs text-default-400 font-medium">Klik atau seret gambar ke sini</span>
                   )}
                 </div>
+
               </div>
 
               {transitionError && (
@@ -627,65 +701,64 @@ const RentDetailPage = () => {
               <Modal.Heading>Konfirmasi Penyewaan</Modal.Heading>
             </Modal.Header>
             <Modal.Body className="flex flex-col gap-4">
-              <p className="text-sm text-slate-600">
-                Konfirmasi pembayaran pelunasan dan penahanan jaminan identitas klien.
+              <p className="text-sm text-default-600">
+                Ubah status ke <strong className="text-success">Disewakan (Rented)</strong>.
               </p>
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <p className="text-xs text-slate-500 font-medium mb-0.5">Sisa Pembayaran:</p>
-                <p className="text-lg font-bold text-primary">{formatCurrency(remainingBalance)}</p>
-                <p className="text-[11px] text-slate-500 mt-1 font-medium">Pastikan sisa pembayaran telah diterima sebelum menyerahkan kostum.</p>
+              <div className="p-3 bg-default-50 rounded-lg border border-default-200">
+                <p className="text-xs text-default-500 font-medium mb-0.5">Sisa Pembayaran:</p>
+                <p className="font-bold text-lg text-primary">{formatCurrency(totalFee - (rent.downpayment || 0))}</p>
+                <p className="text-[11px] text-default-500 mt-1 font-medium">Pastikan sisa pembayaran telah diterima sebelum menyerahkan kostum.</p>
               </div>
 
-              <div className="flex flex-col gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Ceklist Pengambilan *</p>
-                <label className="flex items-center gap-2 cursor-pointer py-0.5">
+              <div className="flex flex-col gap-2 p-3 bg-default-50 rounded-lg border border-default-200">
+                <p className="text-xs font-bold text-default-500 uppercase tracking-wider block mb-1">Ceklist Pengambilan *</p>
+                <label className="flex items-center gap-3 cursor-pointer py-1">
                   <input
                     type="checkbox"
                     checked={confirmSecurityItem}
                     onChange={(e) => setConfirmSecurityItem(e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 accent-primary cursor-pointer"
-                    aria-label="Kartu Jaminan Identitas Telah Ditahan"
+                    className="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary/20 accent-primary cursor-pointer"
                   />
-                  <span className="text-xs font-semibold text-slate-700">Kartu Jaminan Identitas ({rent.guarantee_type}) Telah Ditahan (Wajib)</span>
+                  <span className="text-xs font-semibold text-default-700">Kartu Jaminan Identitas ({rent.guarantee_type}) Telah Ditahan (Wajib)</span>
                 </label>
               </div>
 
-              {remainingBalance > 0 && (
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Bukti Pelunasan Pembayaran *</label>
-                  <div className="relative border border-dashed border-slate-300 rounded-lg p-3 bg-white text-center hover:bg-slate-50 transition duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[80px]">
+              {((totalFee - (rent.downpayment || 0)) > 0) && (
+                <div className="flex flex-col gap-1 mt-2">
+                  <label className="text-xs font-bold text-default-500 uppercase tracking-wider block">Bukti Pelunasan Pembayaran *</label>
+                  <div className="relative border border-dashed border-default-300 rounded-lg p-3 bg-[var(--input-bg)] text-center hover:bg-default-50 transition duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[80px]">
                     <input
                       type="file"
                       accept="image/*"
                       onChange={handleUploadRentFile}
                       className="absolute inset-0 opacity-0 cursor-pointer"
-                      aria-label="Upload Bukti Pelunasan Pembayaran"
                     />
                     {uploadingRentProof ? (
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
+                      <div className="flex items-center gap-1.5 text-xs text-default-500 font-semibold">
                         <Spinner size="xs" /> Mengunggah...
                       </div>
                     ) : rentFile ? (
                       <div className="flex items-center justify-between w-full text-xs text-success font-semibold px-2">
                         <span className="truncate max-w-[200px]">✓ {rentFile}</span>
                         <Button
-                          size="xs"
+                          size="sm"
                           variant="light"
                           isIconOnly
-                          className="h-5 w-5 min-w-5 p-0 text-slate-400 hover:text-red-500"
+                          className="h-5 w-5 min-w-5 p-0 text-default-400 hover:text-red-500"
                           onPress={(e) => {
                             e.stopPropagation();
                             setRentProof('');
                             setRentFile(null);
                           }}
                         >
-                          <Trash2 size={12} />
+                          <Trash2 size={14} />
                         </Button>
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-400 font-medium">Klik atau seret gambar ke sini</span>
+                      <span className="text-xs text-default-400 font-medium">Klik atau seret gambar ke sini</span>
                     )}
                   </div>
+
                 </div>
               )}
 
@@ -751,6 +824,13 @@ const RentDetailPage = () => {
             </Modal.Dialog>
           </Modal.Container>
       </Modal.Backdrop>
+
+      <ImagePreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        images={previewImages}
+        initialIndex={previewIndex}
+      />
     </div>
   );
 };

@@ -4,10 +4,8 @@ import { LayoutDashboard, ShoppingCart, BookOpen, ClipboardList, Users, Calendar
 const tabs = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dash' },
   { path: '/pos', icon: ShoppingCart, label: 'POS' },
-  { path: '/calendar', icon: Calendar, label: 'Kalender' },
   { path: '/catalogue', icon: BookOpen, label: 'Katalog' },
   { path: '/rents', icon: ClipboardList, label: 'Sewa' },
-  { path: '/clients', icon: Users, label: 'Klien' },
 ];
 
 const BottomTabs = () => {

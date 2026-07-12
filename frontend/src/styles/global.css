@@ -3,6 +3,7 @@
 
 @theme {
   --color-primary: #4f46e5;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
 :root {
@@ -135,17 +136,7 @@ body {
   pointer-events: auto;
 }
 
-.mobile-sidebar {
-  position: fixed;
-  top: var(--navbar-height);
-  left: 0;
-  bottom: 0;
-  width: 280px;
-  max-width: 85vw;
-  z-index: 90;
-  transform: translateX(-100%);
-  transition: transform 0.3s ease;
-}
+
 
 .mobile-sidebar.active {
   transform: translateX(0);
@@ -160,11 +151,6 @@ body {
   }
 }
 
-:root {
-  --sidebar-width: 260px;
-  --sidebar-width-collapsed: 72px; /* Slightly wider for better icon centering */
-  --navbar-height: 64px;
-}
 
 /* Ensure the layout doesn't shift abruptly */
 .main-content {
@@ -181,9 +167,6 @@ nav {
   transition: transform 0.2s ease;
 }
 
-button:hover {
-  box-shadow: 0 0 10px rgba(79, 70, 229, 0.2); /* Subtle primary color glow */
-}
 
 .mobile-sidebar {
   position: fixed;

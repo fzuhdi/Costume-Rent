@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     const response = await loginApi(email, password);
     const { user: userData, token } = response.data;
     localStorage.setItem('user:v1', JSON.stringify(userData));
@@ -44,9 +44,9 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
     setIsAuthenticated(true);
     return userData;
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await logoutApi();
     } catch (error) {
@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       navigate('/login');
     }
-  };
+  }, [navigate]);
 
   const contextValue = useMemo(() => ({
     user, loading, isAuthenticated, login, logout

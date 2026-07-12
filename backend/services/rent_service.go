@@ -205,7 +205,12 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest) (*models.R
 		order.Status = req.Status
 	}
 	if req.PaymentProof != "" {
-		order.PaymentProof = req.PaymentProof
+		// Append instead of overwrite if it's a new file
+		if order.PaymentProof != "" && order.PaymentProof != req.PaymentProof {
+			order.PaymentProof = order.PaymentProof + "," + req.PaymentProof
+		} else {
+			order.PaymentProof = req.PaymentProof
+		}
 	}
 	if req.Notes != "" {
 		order.Notes = req.Notes
@@ -285,7 +290,11 @@ func (s *RentService) MarkRented(id uint, req dto.MarkRentedRequest) (*models.Re
 	order.Status = "rented"
 	order.HasSecurityItem = true // Mandatory on pickup
 	if req.PaymentProof != "" {
-		order.PaymentProof = req.PaymentProof
+		if order.PaymentProof != "" && order.PaymentProof != req.PaymentProof {
+			order.PaymentProof = order.PaymentProof + "," + req.PaymentProof
+		} else {
+			order.PaymentProof = req.PaymentProof
+		}
 	}
 
 	if err := config.DB.Save(&order).Error; err != nil {
@@ -322,7 +331,13 @@ func (s *RentService) MarkBooked(id uint, req dto.UpgradeToBookedRequest) (*mode
 
 	order.Status = "booked"
 	order.Downpayment = req.Downpayment
-	order.PaymentProof = req.PaymentProof
+	if req.PaymentProof != "" {
+		if order.PaymentProof != "" && order.PaymentProof != req.PaymentProof {
+			order.PaymentProof = order.PaymentProof + "," + req.PaymentProof
+		} else {
+			order.PaymentProof = req.PaymentProof
+		}
+	}
 
 	if err := config.DB.Save(&order).Error; err != nil {
 		return nil, err
