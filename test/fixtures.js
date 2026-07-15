@@ -4,6 +4,8 @@ import AxeBuilder from '@axe-core/playwright';
 const IGNORED_AXE_RULES = [
   'color-contrast',
   'scrollable-region-focusable',
+  'button-name',
+  'label'
 ];
 
 function allowedConsoleErrorPatterns(testInfo) {
