@@ -7,25 +7,33 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "vitest run",
     "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "@heroui/react": "^3.0.3",
     "@heroui/styles": "^3.0.3",
+    "@internationalized/date": "^3.12.2",
     "@react-stately/data": "^3.16.0",
     "axios": "^1.6.2",
     "lucide-react": "^0.462.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "react-router-dom": "^6.20.1"
+    "react-router-dom": "^6.20.1",
+    "recharts": "^3.9.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^29.1.1",
     "react-doctor": "^0.7.4",
     "tailwindcss": "^4.2.4",
-    "vite": "^5.4.11"
+    "vite": "^5.4.11",
+    "vitest": "^4.1.10"
   }
 }

@@ -16,4 +16,9 @@ export default defineConfig({
       '/uploads': proxyTarget,
     }
   },
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/tests/setup.js',
+    globals: true,
+  }
 });
