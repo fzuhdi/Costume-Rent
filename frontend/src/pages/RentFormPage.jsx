@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getRentById, createRent, updateRent } from '../api/rentApi';
 import ClientSelect from '../components/ClientSelect';
 import CostumeMultiSelect from '../components/CostumeMultiSelect';
+import HeroDatePicker from '../components/HeroDatePicker';
 import { ArrowLeft, Save } from 'lucide-react';
 import { TextField, TextArea, Label, Select, ListBox, Button, Card, Separator, FieldError, Input } from '@heroui/react';
 
@@ -140,20 +141,20 @@ const RentFormPage = () => {
     <div className="flex flex-col gap-4">
       <Link to="/rents" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
         <ArrowLeft size={18} aria-hidden="true" />
-        Kembali ke Riwayat Peminjaman
+        Kembali ke Data Sewa
       </Link>
 
       <Card>
         <Card.Content>
           <div className="mb-4">
-            <h2 className="text-xl font-semibold">{isEdit ? 'Edit Peminjaman' : 'Form Peminjaman Baru'}</h2>
+            <h2 className="text-xl font-semibold">{isEdit ? 'Edit Pesanan' : 'Form Pesanan Baru'}</h2>
           </div>
           {Object.values(errors).some(Boolean) && (
             <div
               role="alert"
               className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
             >
-              Lengkapi data peminjaman sebelum menyimpan.
+              Lengkapi data pesanan sebelum menyimpan.
             </div>
           )}
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -202,20 +203,23 @@ const RentFormPage = () => {
             <Separator />
 
             <div>
-              <h3 className="text-base font-medium mb-3">Data Peminjaman</h3>
+              <h3 className="text-base font-medium mb-3">Data Pesanan</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <TextField isRequired>
-                  <Label>Tanggal Acara</Label>
-                  <Input type="date" value={formData.event_date} onChange={(e) => setFormData((prev) => ({...prev, event_date: e.target.value}))} />
-                  <FieldError>{errors.event_date}</FieldError>
-                </TextField>
+                <HeroDatePicker
+                  isRequired
+                  label="Tanggal Acara"
+                  value={formData.event_date}
+                  onChange={(e) => setFormData((prev) => ({...prev, event_date: e.target.value}))}
+                  isInvalid={!!errors.event_date}
+                  errorMessage={errors.event_date}
+                />
                 <TextField>
                   <Label>Uang Muka (DP)</Label>
                   <Input type="number" min="0" value={formData.downpayment} onChange={(e) => setFormData((prev) => ({...prev, downpayment: e.target.value}))} />
                 </TextField>
                 <div className="flex items-center gap-2 mt-6">
                   <input type="checkbox" id="has_security_item" checked={formData.has_security_item} onChange={(e) => setFormData((prev) => ({...prev, has_security_item: e.target.checked}))} />
-                  <label htmlFor="has_security_item" className="text-sm font-medium">Tahan Kartu ID Klien</label>
+                  <label htmlFor="has_security_item" className="text-sm font-medium">Tahan Kartu Jaminan</label>
                 </div>
               </div>
             </div>

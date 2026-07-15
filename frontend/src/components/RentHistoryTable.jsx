@@ -132,7 +132,7 @@ const RentHistoryTable = ({ rents, openReturnModal, openRentModal, openCancelMod
       </div>
 
       <div className="hidden md:block">
-        <Table classNames={{ th: 'outline-none' }}>
+        <Table>
           <Table.ScrollContainer>
             <Table.Content aria-label="Rent history">
               <Table.Header>

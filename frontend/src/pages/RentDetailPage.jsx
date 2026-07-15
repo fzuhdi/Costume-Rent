@@ -1,9 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { getRentById, markReturned, markRented, markBooked, cancelRent, deleteRent, uploadPaymentProof } from '../api/rentApi';
-import { ArrowLeft, Edit, Trash2, CheckCircle, Package, XCircle, User, Calendar, FileText, Shield, Upload, FileImage, ImageOff } from 'lucide-react';
-import { Button, Card, Chip, Spinner, Table, Modal, Checkbox } from '@heroui/react';
+import { getRentById, cancelRent, deleteRent, updateRent, rollbackOrder } from '../api/rentApi';
+import { updateClient } from '../api/clientApi';
+import { ArrowLeft, Edit, Trash2, CheckCircle, Package, XCircle, User, Calendar, FileText, Shield, Upload, FileImage, ImageOff, Clock, Search } from 'lucide-react';
+import { Button, Card, Chip, Spinner, Table, Modal, Select, ListBox, Label, Input, TextField, Switch } from '@heroui/react';
 import ImagePreviewModal from '../components/ImagePreviewModal';
+import ClientSelect from '../components/ClientSelect';
+import MarkRentedModal from '../components/MarkRentedModal';
+import MarkReturnedModal from '../components/MarkReturnedModal';
+import MarkBookedModal from '../components/MarkBookedModal';
+import AddPaymentModal from '../components/AddPaymentModal';
+import ExtendRentModal from '../components/ExtendRentModal';
+import ConfirmActionModal from '../components/ConfirmActionModal';
+import HeroDatePicker from '../components/HeroDatePicker';
 
 const statusColors = {
   draft: { variant: 'soft', color: 'warning' },
@@ -23,11 +32,18 @@ const statusLabels = {
   cancelled: 'Dibatalkan',
 };
 
+const itemStatusColors = {
+  booked: { variant: 'flat', color: 'primary' },
+  rented: { variant: 'flat', color: 'secondary' },
+  returned: { variant: 'flat', color: 'success' },
+  lost: { variant: 'flat', color: 'danger' },
+};
+
 const formatDateTime = (isoString) => {
   if (!isoString) return '-';
   const d = new Date(isoString);
   const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
 const formatDate = (isoString) => {
@@ -47,39 +63,31 @@ const RentDetailPage = () => {
   const [rent, setRent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  
+
   // Transition Modals
   const [isReturnOpen, setIsReturnOpen] = useState(false);
   const [isRentOpen, setIsRentOpen] = useState(false);
   const [isCancelOpen, setIsCancelOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isRollbackOpen, setIsRollbackOpen] = useState(false);
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
-  
-  // Viewport
+  const [isExtendOpen, setIsExtendOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
-  
-  // Return States
-  const [idReturned, setIdReturned] = useState(false);
-  const [isGoodCondition, setIsGoodCondition] = useState(true);
-  const [damageFee, setDamageFee] = useState('');
 
-  // Upgrade Draft -> Booked States
-  const [upgradeDp, setUpgradeDp] = useState('');
-  const [upgradeFile, setUpgradeFile] = useState(null);
-  const [upgradeProof, setUpgradeProof] = useState('');
-  const [uploadingUpgradeProof, setUploadingUpgradeProof] = useState(false);
-
-  // Pickup Booked -> Rented States
-  const [confirmSecurityItem, setConfirmSecurityItem] = useState(true);
-  const [rentFile, setRentFile] = useState(null);
-  const [rentProof, setRentProof] = useState('');
-  const [uploadingRentProof, setUploadingRentProof] = useState(false);
-  const [transitionError, setTransitionError] = useState('');
+  // Edit States
+  const [editData, setEditData] = useState({});
+  const [editItems, setEditItems] = useState([]);
 
   // Image Preview States
   const [previewImages, setPreviewImages] = useState([]);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  // Add Payment Modal
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   const openPreview = (images, index) => {
     setPreviewImages(images);
@@ -110,113 +118,115 @@ const RentDetailPage = () => {
     return () => window.removeEventListener('resize', updateViewport);
   }, []);
 
-  const handleMarkReturned = async () => {
+  const totalBaseFee = rent?.items?.reduce((sum, item) => sum + ((item.rental_fee || 0) * item.quantity), 0) || 0;
+  
+  // Ledger-based calculations
+  // If a transaction has no type (unmigrated), default to CREDIT (payment)
+  const totalDebits = rent?.transactions?.filter(t => t.type === 'DEBIT').reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+  const totalCredits = rent?.transactions?.filter(t => t.type === 'CREDIT' || !t.type).reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+
+  const totalTagihan = totalDebits;
+  
+  const totalPaid = totalCredits;
+  const isCancelled = rent?.status === 'cancelled';
+  const sisaTagihan = isCancelled ? 0 : Math.max(0, totalTagihan - totalPaid);
+  const isFullyPaid = rent?.payment_status === 'LUNAS' || sisaTagihan <= 0;
+
+  let recommendedEarlyFee = 0;
+  if (rent?.pickup_date) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const pickupDateObj = new Date(rent.pickup_date);
+    pickupDateObj.setHours(0, 0, 0, 0);
+    if (today < pickupDateObj) {
+      const diffTime = pickupDateObj - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays > 2) {
+        recommendedEarlyFee = (diffDays - 2) * totalBaseFee;
+      }
+    }
+  }
+
+  // Actions / State Management
+  const toggleEditMode = () => {
+    if (isEditing) {
+      setIsEditing(false);
+      return;
+    }
+    setEditData({
+      client: {
+        type: 'existing',
+        client: rent.client,
+        name: rent.client?.name || rent.client_name,
+      },
+      client_phone: rent.client?.phone || rent.client_phone || '',
+      client_address: rent.client?.address || rent.client_address || '',
+      event_date: rent.event_date ? rent.event_date.split('T')[0] : '',
+      guarantee_type: rent.guarantee_type || 'KTP',
+      notes: rent.notes || '',
+    });
+    setEditItems(rent.items.map(i => ({ ...i, custom_rental_fee: i.rental_fee })));
+    setIsEditing(true);
+  };
+
+  const openRentModal = () => setIsRentOpen(true);
+  const openReturnModal = () => setIsReturnOpen(true);
+  const openUpgradeModal = () => setIsUpgradeOpen(true);
+
+  // Actions
+  const handleEditSave = async () => {
     setProcessing(true);
     try {
-      const payload = {
-        damage_fee: isGoodCondition ? 0 : (parseInt(damageFee) || 0)
-      };
-      await markReturned(id, payload);
-      setIsReturnOpen(false);
+      const payload = { ...editData };
+      if (editData.client?.type === 'existing' && editData.client.client.id !== rent.client_id) {
+        payload.client_id = editData.client.client.id;
+        // Optionally update the selected client's info if phone/address changed
+        if (editData.client_phone !== editData.client.client.phone || editData.client_address !== editData.client.client.address) {
+          await updateClient(editData.client.client.id, {
+            name: editData.client.client.name,
+            phone: editData.client_phone,
+            address: editData.client_address
+          });
+        }
+      } else if (editData.client?.type === 'new') {
+        payload.client_name = editData.client.name;
+        payload.client_phone = editData.client_phone;
+        payload.client_address = editData.client_address;
+      } else if (editData.client?.type === 'existing' && editData.client.client.id === rent.client_id) {
+        if (editData.client_phone !== rent.client_phone || editData.client_address !== rent.client_address) {
+          await updateClient(rent.client_id, {
+            name: rent.client?.name || rent.client_name,
+            phone: editData.client_phone,
+            address: editData.client_address
+          });
+        }
+      }
+
+      delete payload.client;
+      delete payload.client_name;
+      delete payload.client_phone;
+      delete payload.client_address;
+
+      payload.early_takeaway_fee = payload.early_takeaway_fee === '' ? 0 : payload.early_takeaway_fee;
+      payload.late_fee = payload.late_fee === '' ? 0 : payload.late_fee;
+      payload.damage_fee = payload.damage_fee === '' ? 0 : payload.damage_fee;
+      payload.extension_fee = payload.extension_fee === '' ? 0 : payload.extension_fee;
+
+
+      payload.items = editItems.map(i => ({
+        costume_id: i.costume_id,
+        quantity: i.quantity,
+        custom_rental_fee: Number(i.custom_rental_fee)
+      }));
+      await updateRent(id, payload);
+      setIsEditing(false);
       fetchRent();
     } catch (error) {
-      console.error('Failed to mark returned:', error);
+      console.error('Failed to update rent:', error);
+      alert(error.response?.data?.error || 'Gagal update pesanan');
     } finally {
       setProcessing(false);
     }
-  };
-
-  const handleMarkRented = async () => {
-    setProcessing(true);
-    setTransitionError('');
-    try {
-      const payload = {
-        payment_proof: rentProof
-      };
-      await markRented(id, payload);
-      setIsRentOpen(false);
-      setRentFile(null);
-      setRentProof('');
-      fetchRent();
-    } catch (error) {
-      console.error('Failed to mark rented:', error);
-      setTransitionError(error.response?.data?.error || error.message);
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleMarkBooked = async () => {
-    setProcessing(true);
-    setTransitionError('');
-    try {
-      const payload = {
-        downpayment: parseInt(upgradeDp) || 0,
-        payment_proof: upgradeProof
-      };
-      await markBooked(id, payload);
-      setIsUpgradeOpen(false);
-      setUpgradeFile(null);
-      setUpgradeProof('');
-      fetchRent();
-    } catch (error) {
-      console.error('Failed to mark booked:', error);
-      setTransitionError(error.response?.data?.error || error.message);
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleUploadUpgradeFile = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setUploadingUpgradeProof(true);
-    setTransitionError('');
-    try {
-      const res = await uploadPaymentProof(file);
-      setUpgradeProof(res.data.payment_proof);
-      setUpgradeFile(file.name);
-    } catch (err) {
-      console.error('Upload failed:', err);
-      setTransitionError('Gagal mengunggah file bukti pembayaran');
-    } finally {
-      setUploadingUpgradeProof(false);
-    }
-  };
-
-  const handleUploadRentFile = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setUploadingRentProof(true);
-    setTransitionError('');
-    try {
-      const res = await uploadPaymentProof(file);
-      setRentProof(res.data.payment_proof);
-      setRentFile(file.name);
-    } catch (err) {
-      console.error('Upload failed:', err);
-      setTransitionError('Gagal mengunggah file bukti pembayaran');
-    } finally {
-      setUploadingRentProof(false);
-    }
-  };
-
-  const openUpgradeModal = () => {
-    setUpgradeDp(Math.ceil(totalFee / 2).toString());
-    setUpgradeFile(null);
-    setUpgradeProof('');
-    setTransitionError('');
-    setIsUpgradeOpen(true);
-  };
-
-  const openRentModal = () => {
-    setConfirmSecurityItem(true);
-    setRentFile(null);
-    setRentProof('');
-    setTransitionError('');
-    setIsRentOpen(true);
   };
 
   const handleCancel = async () => {
@@ -232,11 +242,17 @@ const RentDetailPage = () => {
     }
   };
 
-  const openReturnModal = () => {
-    setIdReturned(false);
-    setIsGoodCondition(true);
-    setDamageFee('');
-    setIsReturnOpen(true);
+  const handleRollback = async () => {
+    setProcessing(true);
+    try {
+      await rollbackOrder(id);
+      setIsRollbackOpen(false);
+      fetchRent();
+    } catch (error) {
+      console.error('Failed to rollback:', error);
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -252,12 +268,57 @@ const RentDetailPage = () => {
     }
   };
 
+  const handleUploadGeneric = async (e, setProof, setFile, setUploading) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    setTransitionError('');
+    try {
+      const res = await uploadPaymentProof(file);
+      setProof(res.data.payment_proof);
+      setFile(file.name);
+    } catch (err) {
+      setTransitionError('Gagal mengunggah file bukti pembayaran');
+    } finally {
+      setUploading(false);
+    }
+  };
+  const groupedLogs = useMemo(() => {
+    if (!rent?.activity_logs) return [];
+    const groups = [];
+    let currentGroup = null;
+
+    rent.activity_logs.forEach(log => {
+      const secondStamp = new Date(log.timestamp).toISOString().slice(0, 19);
+      if (!currentGroup || currentGroup.secondStamp !== secondStamp) {
+        if (currentGroup) groups.push(currentGroup);
+        currentGroup = {
+          id: log.id,
+          secondStamp,
+          timestamp: log.timestamp,
+          logs: [log]
+        };
+      } else {
+        currentGroup.logs.push(log);
+      }
+    });
+    if (currentGroup) groups.push(currentGroup);
+    return groups;
+  }, [rent?.activity_logs]);
+
+  const renderLogContent = useCallback((log) => {
+    if (log.action_type === 'UPDATED' && (log.new_value === 'updated' || !log.old_value)) {
+      return 'Order details were updated';
+    }
+    if (log.old_value && log.new_value) {
+      return `${log.old_value} ➞ ${log.new_value}`;
+    }
+    return log.new_value || log.old_value;
+  }, []);
+
+
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-48">
-        <Spinner />
-      </div>
-    );
+    return <div className="flex justify-center items-center h-48"><Spinner /></div>;
   }
 
   if (!rent) {
@@ -265,572 +326,491 @@ const RentDetailPage = () => {
       <Card>
         <Card.Content className="text-center py-12">
           <h3 className="text-lg font-semibold mb-4">Peminjaman tidak ditemukan</h3>
-           <Button onPress={() => navigate('/rents')} variant="primary" aria-label="Kembali ke Riwayat">Kembali ke Riwayat</Button>
+          <Button onPress={() => navigate('/rents')} variant="primary">Kembali ke Riwayat</Button>
         </Card.Content>
       </Card>
     );
   }
 
-  const notesTextMatchesLabelSelector = /catatan|notes/i.test(rent.notes || '');
-  const notesLabel = !isMobile && notesTextMatchesLabelSelector ? 'Keterangan' : 'Catatan';
-
-  const totalFee = rent.items?.reduce((sum, item) => sum + ((item.rental_fee || 0) * item.quantity), 0) || 0;
-  const remainingBalance = Math.max(0, totalFee - (rent.downpayment || 0));
-
-  const calculatedDamageFee = rent.damage_fee || 0;
-  const totalTagihan = totalFee + calculatedDamageFee;
-  const dp = rent.downpayment || 0;
-  const sisaTagihan = Math.max(0, totalTagihan - dp);
-  const isFullyPaid = ['rented', 'returned', 'overdue'].includes(rent.status);
-
-  const renderActionButtons = () => {
-    const primary = [];
-    const secondary = [];
-
-    if (rent.status === 'draft') {
-      primary.push(
-        <Button key="upgrade" color="primary" size="md" className="font-bold text-white shadow-sm" onPress={openUpgradeModal} isPending={processing}>
-          <Package size={18} aria-hidden="true" />Upgrade ke Dipesan
-        </Button>
-      );
-      secondary.push(
-        <Button key="cancel" variant="light" color="danger" size="sm" onPress={() => setIsCancelOpen(true)} isPending={processing}>
-          <XCircle size={16} className="sm:mr-1" aria-hidden="true" /><span className="hidden sm:inline">Batalkan</span>
-        </Button>
-      );
-    }
-
-    if (rent.status === 'booked') {
-      primary.push(
-        <Button key="rent" color="success" size="md" className="font-bold text-white shadow-sm" onPress={openRentModal} isPending={processing}>
-          <Package size={18} aria-hidden="true" />Disewakan
-        </Button>
-      );
-      secondary.push(
-        <Button key="cancel" variant="light" color="danger" size="sm" onPress={() => setIsCancelOpen(true)} isPending={processing}>
-          <XCircle size={16} className="sm:mr-1" aria-hidden="true" /><span className="hidden sm:inline">Batalkan</span>
-        </Button>
-      );
-    }
-
-    if (rent.status === 'rented' || rent.status === 'overdue') {
-      primary.push(
-        <Button key="return" color="secondary" size="md" className="font-bold text-white shadow-sm" onPress={openReturnModal} isPending={processing}>
-          <CheckCircle size={18} aria-hidden="true" />Kembalikan
-        </Button>
-      );
-    }
-
-    secondary.push(
-      <Button key="edit" onPress={() => navigate(`/rents/${id}/edit`)} variant="light" size="sm" aria-label="Edit peminjaman">
-        <Edit size={16} className="sm:mr-1" aria-hidden="true" /><span className="hidden sm:inline">Edit</span>
-      </Button>,
-      <Button key="delete" variant="light" color="danger" size="sm" onPress={() => setIsDeleteOpen(true)} isPending={processing} aria-label="Hapus peminjaman">
-        <Trash2 size={16} className="sm:mr-1" aria-hidden="true" /><span className="hidden sm:inline">Hapus</span>
-      </Button>
-    );
-
-    return (
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1 border-r border-default-200 pr-3 mr-1">
-          {secondary}
-        </div>
-        {primary}
-      </div>
-    );
-  };
-
   return (
-    <div className="flex flex-col gap-4 max-w-5xl mx-auto w-full">
+    <div className="flex flex-col gap-4 max-w-5xl mx-auto w-full pb-10">
       <Link to="/rents" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
         <ArrowLeft size={18} aria-hidden="true" />
         Kembali ke Riwayat
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-        {/* Left Column (Main Info & Items) */}
+        {/* Left Column */}
         <div className="lg:col-span-2 flex flex-col gap-4">
           <Card>
-        <Card.Content>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <div className="flex flex-col">
-              <h2 className="text-xl font-semibold">Peminjaman #{rent.id}</h2>
-               <Chip className="mt-2" {...(statusColors[rent.status] ?? { variant: 'secondary' })}>
-                {statusLabels[rent.status] || rent.status}
-              </Chip>
-              <span className="sr-only">status {rent.status}</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {renderActionButtons()}
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center gap-3">
-              <User size={20} className="text-[var(--muted)]" aria-hidden="true" />
-              <div>
-                <span className="text-[var(--muted)]">Klien</span>
-                <p className="font-medium">{rent.client_name || rent.client?.name || <span className="italic font-normal text-default-400">Walk-in Customer</span>}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Calendar size={20} className="text-[var(--muted)]" aria-hidden="true" />
-              <div>
-                <span className="text-[var(--muted)]">Tanggal Pinjam</span>
-                 <p className="font-medium">{formatDate(rent.pickup_date)} - {formatDate(rent.expected_return_date)}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Shield size={20} className="text-[var(--muted)]" aria-hidden="true" />
-              <div>
-                <span className="text-[var(--muted)]">Jaminan</span>
-                <p className="font-medium">{rent.guarantee_type} {rent.guarantee_number && `- ${rent.guarantee_number}`}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <FileText size={20} className="text-[var(--muted)]" aria-hidden="true" />
-              <div>
-                <span className="text-[var(--muted)]">{notesLabel}</span>
-                <p className="font-medium">{rent.notes || '-'}</p>
-              </div>
-            </div>
-          </div>
-        </Card.Content>
-      </Card>
-
-      <Card>
-        <Card.Content>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Daftar Kostum</h2>
-            <span className="text-sm text-[var(--muted)]">{rent.items?.length || 0} item</span>
-          </div>
-          <Table>
-            <Table.ScrollContainer>
-              <Table.Content aria-label="Rent items">
-                <Table.Header>
-                  <Table.Column className="w-16">Gambar</Table.Column>
-                  <Table.Column isRowHeader>Nama Kostum</Table.Column>
-                  <Table.Column className="w-32">Harga Sewa</Table.Column>
-                  <Table.Column className="w-24">Jumlah</Table.Column>
-                  <Table.Column align="end" className="w-32">Subtotal</Table.Column>
-                </Table.Header>
-                <Table.Body>
-                  {rent.items?.length > 0 ? rent.items.map((item) => (
-                    <Table.Row key={item.id}>
-                      <Table.Cell>
-                        {item.costume?.cover_image ? (
-                          <img src={item.costume.cover_image} alt="" className="w-12 h-12 object-cover rounded shadow-sm" />
-                        ) : (
-                          <div className="w-12 h-12 flex flex-col items-center justify-center text-default-400 bg-default-50 border border-default-200 rounded">
-                            <ImageOff size={16} className="opacity-40" />
-                          </div>
-                        )}
-                      </Table.Cell>
-                      <Table.Cell className="font-medium">{item.costume?.name}</Table.Cell>
-                      <Table.Cell>{formatCurrency(item.rental_fee || 0)}</Table.Cell>
-                      <Table.Cell>{item.quantity} unit</Table.Cell>
-                      <Table.Cell className="font-semibold text-right">{formatCurrency((item.rental_fee || 0) * item.quantity)}</Table.Cell>
-                    </Table.Row>
-                  )) : (
-                    <Table.Row>
-                      <Table.Cell colSpan={5} className="text-center text-[var(--muted)] py-4">Belum ada kostum dipilih</Table.Cell>
-                    </Table.Row>
-                  )}
-                </Table.Body>
-              </Table.Content>
-            </Table.ScrollContainer>
-          </Table>
-        </Card.Content>
-      </Card>
-    </div>
-
-    {/* Right Column (Payment) */}
-    <div className="flex flex-col gap-4">
-      <Card>
-        <Card.Content>
-          <h2 className="text-xl font-semibold mb-4">Rincian Pembayaran</h2>
-          <div className="flex flex-col gap-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-default-500">Total Harga Sewa</span>
-              <span className="font-medium">{formatCurrency(totalFee)}</span>
-            </div>
-            
-            {calculatedDamageFee > 0 && (
-              <div className="flex justify-between">
-                <span className="text-danger">Denda Kerusakan</span>
-                <span className="font-medium text-danger">+ {formatCurrency(calculatedDamageFee)}</span>
-              </div>
-            )}
-            
-            {(calculatedDamageFee > 0 || dp > 0) && (
-              <hr className="my-1 border-default-200" />
-            )}
-
-            {(calculatedDamageFee > 0 || dp > 0) && (
-              <div className="flex justify-between font-semibold">
-                <span>Total Tagihan</span>
-                <span>{formatCurrency(totalTagihan)}</span>
-              </div>
-            )}
-
-            {dp > 0 && (
-              <div className="flex justify-between text-default-600">
-                <span>Telah Dibayar (DP)</span>
-                <span>{formatCurrency(dp)}</span>
-              </div>
-            )}
-
-            {isFullyPaid && sisaTagihan > 0 && (
-              <div className="flex justify-between text-default-600">
-                <span>Pelunasan</span>
-                <span>{formatCurrency(sisaTagihan)}</span>
-              </div>
-            )}
-
-            <hr className="my-1 border-default-200" />
-
-            {isFullyPaid ? (
-              <div className="flex justify-between text-base font-bold text-success">
-                <span>Total Lunas Dibayar</span>
-                <span>{formatCurrency(totalTagihan)}</span>
-              </div>
-            ) : (
-              <div className="flex justify-between text-base font-bold text-primary">
-                <span>Sisa Pembayaran</span>
-                <span>{formatCurrency(sisaTagihan)}</span>
-              </div>
-            )}
-
-            {rent.status === 'booked' && dp > 0 && (
-              <p className="text-xs text-default-500 mt-1">Sisa pembayaran wajib dilunasi saat pengambilan kostum.</p>
-            )}
-            {isFullyPaid && (
-              <p className="text-xs text-success mt-1">✓ Pembayaran sewa telah lunas</p>
-            )}
-
-            {rent.payment_proof && (
-              <div className="mt-4 border-t border-default-200 pt-4 flex flex-col gap-2">
-                <span className="font-semibold text-xs text-default-500 uppercase tracking-wider">Bukti Transaksi (Payment Receipt)</span>
-                <div className="flex gap-4 overflow-x-auto pb-2 snap-x">
-                  {rent.payment_proof.split(',').map((proof, i) => (
-                    <div key={i} className="flex flex-col gap-2 shrink-0 snap-start">
-                      <button
-                        onClick={() => openPreview(rent.payment_proof.split(','), i)}
-                        className="w-24 h-24 rounded-lg overflow-hidden border border-default-200 bg-default-50 flex items-center justify-center hover:opacity-85 transition duration-200 relative group cursor-pointer"
-                        title="Klik untuk memperbesar"
-                      >
-                        <img
-                          src={`${import.meta.env.VITE_API_URL || ''}${proof}`}
-                          alt={`Bukti Transfer ${i + 1}`}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            if (e.target.nextSibling) {
-                              e.target.nextSibling.style.display = 'flex';
-                            }
-                          }}
-                        />
-                        <div className="hidden w-full h-full flex-col items-center justify-center gap-1 text-[10px] text-default-400 bg-default-100">
-                          <FileImage size={24} />
-                          <span>Lihat File</span>
-                        </div>
-                      </button>
-                      <div className="text-xs text-default-500 flex flex-col mt-1">
-                        <span className="font-semibold text-default-700">Receipt {i + 1}</span>
-                        <span className="truncate max-w-[96px] text-[10px]">{proof.split('/').pop()}</span>
-                      </div>
-                    </div>
-                  ))}
+            <Card.Content>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div className="flex flex-col">
+                  <h2 className="text-xl font-semibold">Order #{rent.id}</h2>
+                  <Chip className="mt-2 w-fit" {...(statusColors[rent.status] ?? { variant: 'secondary' })}>
+                    {statusLabels[rent.status] || rent.status}
+                  </Chip>
                 </div>
-              </div>
-            )}
-          </div>
-        </Card.Content>
-      </Card>
-
-      <Card>
-        <Card.Content>
-          <h3 className="text-sm font-medium mb-2">Informasi</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-             <div className="flex gap-1">
-               <span className="text-[var(--muted)]">Dibuat:</span>
-               <span>{formatDateTime(rent.created_at)}</span>
-             </div>
-             <div className="flex gap-1">
-               <span className="text-[var(--muted)]">Diperbarui:</span>
-               <span>{formatDateTime(rent.updated_at)}</span>
-             </div>
-          </div>
-        </Card.Content>
-      </Card>
-    </div>
-    {/* End Right Column */}
-  </div>
-  {/* End Grid Layout */}
-
-  {/* Return Modal */}
-      <Modal.Backdrop isOpen={isReturnOpen} onOpenChange={setIsReturnOpen}>
-          <Modal.Container>
-            <Modal.Dialog>
-              <Modal.Header>
-                <Modal.Heading>Konfirmasi Pengembalian</Modal.Heading>
-              </Modal.Header>
-              <Modal.Body>
-                <div className="flex flex-col gap-4">
-                  <p>Tandai kostum sudah dikembalikan?</p>
-                  <div className="flex flex-col gap-2 p-3 bg-default-50 rounded-lg border border-default-200">
-                     <p className="text-sm font-semibold">Ceklist Pemeriksaan:</p>
-                     <label className="flex items-center gap-3 cursor-pointer py-1">
-                       <input type="checkbox" checked={idReturned} onChange={(e) => setIdReturned(e.target.checked)} className="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary/20 accent-primary cursor-pointer" /> 
-                       <span className="text-sm">Kartu ID Dikembalikan ke Klien</span>
-                     </label>
-                     <label className="flex items-center gap-3 cursor-pointer py-1">
-                       <input type="checkbox" checked={isGoodCondition} onChange={(e) => setIsGoodCondition(e.target.checked)} className="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary/20 accent-primary cursor-pointer" /> 
-                       <span className="text-sm">Kostum Dalam Kondisi Baik (Tidak Ada Denda)</span>
-                     </label>
-                  </div>
-
-                  {!isGoodCondition && (
-                    <div>
-                      <label htmlFor="damageFeeInput" className="block text-sm font-medium mb-1">Denda Kerusakan (Rp)</label>
-                      <input 
-                        id="damageFeeInput"
-                        type="number"
-                        className="w-full px-3 py-2 border rounded-md"
-                        placeholder="Masukkan nominal denda"
-                        value={damageFee}
-                        onChange={(e) => setDamageFee(e.target.value)}
-                        min="0"
-                      />
-                    </div>
-                  )}
-                </div>
-              </Modal.Body>
-              <Modal.Footer>
-                <Button variant="bordered" onPress={() => setIsReturnOpen(false)}>Batal</Button>
-                <Button variant="secondary" onPress={handleMarkReturned} isDisabled={!idReturned} isPending={processing} aria-label="Kembalikan peminjaman">Kembalikan</Button>
-              </Modal.Footer>
-            </Modal.Dialog>
-          </Modal.Container>
-        </Modal.Backdrop>
-
-      {/* Upgrade Draft to Booked Modal */}
-      <Modal.Backdrop isOpen={isUpgradeOpen} onOpenChange={setIsUpgradeOpen}>
-        <Modal.Container>
-          <Modal.Dialog>
-            <Modal.Header>
-              <Modal.Heading>Upgrade ke Dipesan (Booked)</Modal.Heading>
-            </Modal.Header>
-            <Modal.Body className="flex flex-col gap-4">
-              <p className="text-sm text-default-600">
-                Penyewaan ini akan diupgrade ke status <strong className="text-warning">Dipesan (Booked)</strong>.
-              </p>
-
-              <div>
-                <label htmlFor="upgradeDpInput" className="block text-xs font-bold text-default-500 uppercase tracking-wider mb-1">Uang Muka (DP) *</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-default-400 font-semibold text-sm">Rp</span>
-                  <input
-                    id="upgradeDpInput"
-                    type="number"
-                    value={upgradeDp}
-                    onChange={(e) => setUpgradeDp(e.target.value)}
-                    className="w-full px-3 py-2 pl-9 border border-default-300 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-[var(--input-bg)]"
-                    placeholder="Masukkan jumlah DP"
-                    required
-                  />
-                </div>
-                <p className="text-[11px] text-default-500 mt-1 font-medium">Minimal DP 50%: {formatCurrency(Math.ceil(totalFee / 2))}</p>
-              </div>
-
-              <div className="flex flex-col gap-1 mt-2">
-                <label className="text-xs font-bold text-default-500 uppercase tracking-wider block">Bukti Pembayaran DP *</label>
-                <div className="relative border border-dashed border-default-300 rounded-lg p-3 bg-[var(--input-bg)] text-center hover:bg-default-50 transition duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[80px]">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleUploadUpgradeFile}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                  />
-                  {uploadingUpgradeProof ? (
-                    <div className="flex items-center gap-1.5 text-xs text-default-500 font-semibold">
-                      <Spinner size="xs" /> Mengunggah...
-                    </div>
-                  ) : upgradeFile ? (
-                    <div className="flex items-center justify-between w-full text-xs text-success font-semibold px-2">
-                      <span className="truncate max-w-[200px]">✓ {upgradeFile}</span>
-                      <Button
-                        size="sm"
-                        variant="light"
-                        isIconOnly
-                        className="h-5 w-5 min-w-5 p-0 text-default-400 hover:text-red-500"
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          setUpgradeProof('');
-                          setUpgradeFile(null);
-                        }}
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
+                <div className="flex flex-wrap gap-2">
+                  {isEditing ? (
+                    <>
+                      <Button variant="light" size="sm" onPress={toggleEditMode}><XCircle size={16} className="mr-1" /> Batal</Button>
+                      <Button color="primary" size="sm" onPress={handleEditSave} isPending={processing}><CheckCircle size={16} className="mr-1" /> Simpan Perubahan</Button>
+                    </>
                   ) : (
-                    <span className="text-xs text-default-400 font-medium">Klik atau seret gambar ke sini</span>
+                    <>
+                      <Button variant="light" size="sm" onPress={toggleEditMode}><Edit size={16} className="mr-1" /> Edit Order</Button>
+                      <Button variant="light" color="danger" size="sm" onPress={() => setIsDeleteOpen(true)}><Trash2 size={16} className="mr-1" /> Hapus</Button>
+                    </>
                   )}
                 </div>
-
               </div>
-
-              {transitionError && (
-                <div className="text-danger text-xs bg-danger-50 p-2.5 rounded border border-danger-200 font-semibold">
-                  {transitionError}
-                </div>
-              )}
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="bordered" onPress={() => setIsUpgradeOpen(false)}>Batal</Button>
-              <Button color="primary" className="text-white font-bold" onPress={handleMarkBooked} isDisabled={!upgradeProof} isPending={processing}>Konfirmasi Booked</Button>
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
-
-      {/* Mark Rented Modal */}
-      <Modal.Backdrop isOpen={isRentOpen} onOpenChange={setIsRentOpen}>
-        <Modal.Container>
-          <Modal.Dialog>
-            <Modal.Header>
-              <Modal.Heading>Konfirmasi Penyewaan</Modal.Heading>
-            </Modal.Header>
-            <Modal.Body className="flex flex-col gap-4">
-              <p className="text-sm text-default-600">
-                Ubah status ke <strong className="text-success">Disewakan (Rented)</strong>.
-              </p>
-              <div className="p-3 bg-default-50 rounded-lg border border-default-200">
-                <p className="text-xs text-default-500 font-medium mb-0.5">Sisa Pembayaran:</p>
-                <p className="font-bold text-lg text-primary">{formatCurrency(totalFee - (rent.downpayment || 0))}</p>
-                <p className="text-[11px] text-default-500 mt-1 font-medium">Pastikan sisa pembayaran telah diterima sebelum menyerahkan kostum.</p>
-              </div>
-
-              <div className="flex flex-col gap-2 p-3 bg-default-50 rounded-lg border border-default-200">
-                <p className="text-xs font-bold text-default-500 uppercase tracking-wider block mb-1">Ceklist Pengambilan *</p>
-                <label className="flex items-center gap-3 cursor-pointer py-1">
-                  <input
-                    type="checkbox"
-                    checked={confirmSecurityItem}
-                    onChange={(e) => setConfirmSecurityItem(e.target.checked)}
-                    className="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary/20 accent-primary cursor-pointer"
-                  />
-                  <span className="text-xs font-semibold text-default-700">Kartu Jaminan Identitas ({rent.guarantee_type}) Telah Ditahan (Wajib)</span>
-                </label>
-              </div>
-
-              {((totalFee - (rent.downpayment || 0)) > 0) && (
-                <div className="flex flex-col gap-1 mt-2">
-                  <label className="text-xs font-bold text-default-500 uppercase tracking-wider block">Bukti Pelunasan Pembayaran *</label>
-                  <div className="relative border border-dashed border-default-300 rounded-lg p-3 bg-[var(--input-bg)] text-center hover:bg-default-50 transition duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[80px]">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleUploadRentFile}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                    />
-                    {uploadingRentProof ? (
-                      <div className="flex items-center gap-1.5 text-xs text-default-500 font-semibold">
-                        <Spinner size="xs" /> Mengunggah...
+              {isEditing ? (
+                <div className="flex flex-col gap-4 mt-4">
+                  <div className="flex flex-col gap-2">
+                    <ClientSelect value={editData.client} onChange={(c) => {
+                      setEditData(p => ({ ...p, client: c, client_phone: c?.client?.phone || p.client_phone, client_address: c?.client?.address || p.client_address }));
+                    }} />
+                    {editData.client?.type === 'new' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                        <Input size="sm" placeholder="No HP" value={editData.client_phone} onChange={(e) => setEditData(p => ({ ...p, client_phone: e.target.value }))} />
+                        <Input size="sm" placeholder="Alamat" value={editData.client_address} onChange={(e) => setEditData(p => ({ ...p, client_address: e.target.value }))} />
                       </div>
-                    ) : rentFile ? (
-                      <div className="flex items-center justify-between w-full text-xs text-success font-semibold px-2">
-                        <span className="truncate max-w-[200px]">✓ {rentFile}</span>
-                        <Button
-                          size="sm"
-                          variant="light"
-                          isIconOnly
-                          className="h-5 w-5 min-w-5 p-0 text-default-400 hover:text-red-500"
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            setRentProof('');
-                            setRentFile(null);
-                          }}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-default-400 font-medium">Klik atau seret gambar ke sini</span>
                     )}
                   </div>
 
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                      <HeroDatePicker
+                        label="Tanggal Acara"
+                        value={editData.event_date}
+                        onChange={e => setEditData(p => ({ ...p, event_date: e.target.value }))}
+                      />
+                      <Select
+                        value={editData.guarantee_type}
+                        onChange={(v) => setEditData(p => ({ ...p, guarantee_type: v }))}
+                        aria-label="Jaminan"
+                      >
+                        <Label className="text-xs font-semibold mb-1 text-default-600 block">Jaminan</Label>
+                        <Select.Trigger><Select.Value /></Select.Trigger>
+                        <Select.Popover>
+                          <ListBox>
+                            {['KTP', 'SIM', 'KK', 'Paspor', 'Lainnya'].map(t => <ListBox.Item key={t} id={t} textValue={t}>{t}</ListBox.Item>)}
+                          </ListBox>
+                        </Select.Popover>
+                      </Select>
+                  </div>
+
+                  <TextField><Label className="text-xs font-semibold mb-1 text-default-600 block">Catatan</Label><Input aria-label="Catatan" value={editData.notes} onChange={e => setEditData(p => ({ ...p, notes: e.target.value }))} /></TextField>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mt-4">
+                  <div className="flex items-center gap-3">
+                    <User size={20} className="text-[var(--muted)]" />
+                    <div>
+                      <span className="text-[var(--muted)]">Klien</span>
+                      <p className="font-medium">{rent.client?.name || rent.client_name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Calendar size={20} className="text-[var(--muted)]" />
+                    <div>
+                      <span className="text-[var(--muted)]">Acara</span>
+                      <p className="font-medium">{formatDate(rent.event_date)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Shield size={20} className="text-[var(--muted)]" />
+                    <div>
+                      <span className="text-[var(--muted)]">Jaminan</span>
+                      <p className="font-medium">{rent.guarantee_type}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <FileText size={20} className="text-[var(--muted)]" />
+                    <div>
+                      <span className="text-[var(--muted)]">Catatan</span>
+                      <p className="font-medium">{rent.notes || '-'}</p>
+                    </div>
+                  </div>
                 </div>
               )}
+            </Card.Content>
+          </Card>
 
-              {transitionError && (
-                <div className="text-danger text-xs bg-danger-50 p-2.5 rounded border border-danger-200 font-semibold">
-                  {transitionError}
+          <Card>
+            <Card.Content>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Daftar Item</h2>
+              </div>
+              <Table>
+                <Table.ScrollContainer>
+                  <Table.Content aria-label="Daftar Item">
+                    <Table.Header>
+                      <Table.Column isRowHeader>Item</Table.Column>
+                      <Table.Column>Harga</Table.Column>
+                    </Table.Header>
+                    <Table.Body>
+                      {rent.items?.map((item) => {
+                        const editItem = editItems.find(i => i.costume_id === item.costume_id);
+                        return (
+                          <Table.Row key={item.id}>
+                            <Table.Cell className="font-medium text-xs">
+                              {item.quantity}x{' '}
+                              <Link to={`/catalogue/${item.costume_id}`} className="text-primary hover:underline" aria-label={`Lihat detail ${item.costume?.name}`}>
+                                {item.costume?.name}
+                              </Link>
+                            </Table.Cell>
+                            <Table.Cell className="font-semibold">
+                              {isEditing ? (
+                                <Input
+                                  type="number"
+                                  aria-label={`Harga ${item.costume?.name}`}
+                                  size="sm"
+                                  value={editItem?.custom_rental_fee ?? item.rental_fee}
+                                  onChange={e => {
+                                    const val = e.target.value;
+                                    if (val === '') {
+                                      setEditItems(prev => prev.map(i => i.costume_id === item.costume_id ? { ...i, custom_rental_fee: '' } : i));
+                                      return;
+                                    }
+                                    const parsed = parseInt(val);
+                                    if (isNaN(parsed) || parsed < 0) return;
+                                    setEditItems(prev => prev.map(i => i.costume_id === item.costume_id ? { ...i, custom_rental_fee: parsed } : i));
+                                  }}
+                                />
+                              ) : (
+                                formatCurrency(item.rental_fee * item.quantity)
+                              )}
+                            </Table.Cell>
+                          </Table.Row>
+                        )
+                      })}
+                    </Table.Body>
+                  </Table.Content>
+                </Table.ScrollContainer>
+              </Table>
+            </Card.Content>
+          </Card>
+
+          <Card>
+            <Card.Content>
+              <h2 className="text-xl font-semibold mb-4">Aksi Pesanan</h2>
+              <div className="flex flex-wrap gap-3">
+                {rent.status === 'draft' && (
+                  <>
+                    <Button color="primary" onPress={openUpgradeModal}>Ubah Status ke Booked</Button>
+                    <Button color="danger" variant="flat" onPress={() => setIsCancelOpen(true)}>Batalkan</Button>
+                  </>
+                )}
+                {rent.status === 'booked' && (
+                  <>
+                    <Button color="success" className="text-white font-bold" onPress={openRentModal}>Pickup (Mark Rented)</Button>
+                    <Button color="danger" variant="flat" onPress={() => setIsCancelOpen(true)}>Batalkan</Button>
+                  </>
+                )}
+                {(rent.status === 'rented' || rent.status === 'overdue') && (
+                  <>
+                    <Button color="secondary" onPress={() => setIsExtendOpen(true)}>Perpanjang Sewa (Extend)</Button>
+                    <Button color="success" className="text-white font-bold" onPress={openReturnModal}>Pelunasan & Pengembalian</Button>
+                    {rent.status === 'rented' && (
+                      <Button color="danger" variant="flat" onPress={() => setIsRollbackOpen(true)}>Batalkan Status</Button>
+                    )}
+                  </>
+                )}
+                {rent.status === 'returned' && (
+                  <>
+                    <Button color="danger" variant="flat" onPress={() => setIsRollbackOpen(true)}>Batalkan Status (Rollback)</Button>
+                  </>
+                )}
+              </div>
+            </Card.Content>
+          </Card>
+        </div>
+
+        {/* Right Column */}
+        <div className="flex flex-col gap-4">
+          <Card>
+            <Card.Content>
+              <h2 className="text-xl font-semibold mb-4">Rincian Keuangan</h2>
+
+              {/* Transaction ledger */}
+              <div className="flex flex-col gap-3 text-sm">
+                {rent.transactions && rent.transactions.length > 0 ? (
+                  [...rent.transactions].sort((a, b) => a.id - b.id).map((trx, idx) => {
+                    const isDebit = trx.type === 'DEBIT';
+                    const isCredit = trx.type === 'CREDIT' || !trx.type; // empty means legacy payment
+                    const amount = trx.amount || 0;
+                    
+                    let sign = '';
+                    let colorClass = 'text-default-700';
+                    let borderClass = 'border-default-200';
+                    
+                    if (isDebit) {
+                      sign = '+';
+                      colorClass = 'text-danger';
+                      borderClass = 'border-danger/40';
+                    } else if (isCredit) {
+                      if (amount < 0) {
+                        sign = '+'; // Negative payment is a refund (increases what they owe)
+                        colorClass = 'text-warning-600';
+                        borderClass = 'border-warning/40';
+                      } else {
+                        sign = '-'; // Normal payment
+                        colorClass = 'text-success';
+                        borderClass = 'border-success/40';
+                      }
+                    }
+
+                    return (
+                      <div
+                        key={trx.id || idx}
+                        className={`flex justify-between items-start pl-3 border-l-2 ${borderClass}`}
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-medium text-default-700">
+                            {trx.notes || (isDebit ? 'Biaya Tambahan' : 'Pembayaran')}
+                          </span>
+                          <span className="text-xs text-default-400 flex items-center flex-wrap gap-1">
+                            {formatDate(trx.created_at)} {trx.payment_method ? `· ${trx.payment_method}` : ''}
+                            {trx.payment_proof && (
+                              <>
+                                <span>·</span>
+                                <button
+                                  type="button"
+                                  onClick={() => openPreview([trx.payment_proof], 0)}
+                                  className="text-primary hover:underline bg-transparent border-none p-0 cursor-pointer text-xs flex items-center gap-1"
+                                >
+                                  Lihat Bukti
+                                </button>
+                              </>
+                            )}
+                          </span>
+                        </div>
+                        <span className={`${colorClass} font-semibold whitespace-nowrap ml-4`}>
+                          {sign} {formatCurrency(Math.abs(amount))}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-default-400 text-sm italic">Belum ada pembayaran.</p>
+                )}
+
+                <hr className="border-default-200 mt-1" />
+
+                {/* Totals */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex justify-between text-default-600">
+                    <span>Total Tagihan</span>
+                    <span className="font-medium">{formatCurrency(totalTagihan)}</span>
+                  </div>
+                  {totalPaid > 0 && (
+                    <div className="flex justify-between text-success">
+                      <span>Total Dibayar</span>
+                      <span className="font-medium">{formatCurrency(totalPaid)}</span>
+                    </div>
+                  )}
                 </div>
-              )}
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="bordered" onPress={() => setIsRentOpen(false)}>Batal</Button>
-              <Button
-                color="primary"
-                className="text-white font-bold"
-                onPress={handleMarkRented}
-                isDisabled={!confirmSecurityItem || (remainingBalance > 0 && !rentProof)}
-                isPending={processing}
-                aria-label="Konfirmasi penyewaan"
-              >
-                Disewakan
-              </Button>
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
 
-      {/* Cancel Modal */}
-      <Modal.Backdrop isOpen={isCancelOpen} onOpenChange={setIsCancelOpen}>
+                <hr className="border-default-200" />
+
+                <div className="flex justify-between text-base font-bold text-primary">
+                  <span>Sisa Tagihan</span>
+                  <span>{formatCurrency(sisaTagihan)}</span>
+                </div>
+
+                {!isEditing && rent.status !== 'cancelled' && (
+                  <div className="mt-3 pt-3 border-t border-default-200">
+                    <Button
+                      size="sm"
+                      variant="flat"
+                      color="primary"
+                      className="w-full font-semibold"
+                      onPress={() => setIsPaymentModalOpen(true)}
+                    >
+                      + Tambah Pembayaran
+                    </Button>
+                  </div>
+                )}
+
+
+              </div>
+            </Card.Content>
+          </Card>
+
+          <Card>
+            <Card.Content>
+              <h3 className="text-lg font-semibold mb-3">Activity Log</h3>
+              <div className="flex flex-col gap-3 relative before:absolute before:inset-y-2 before:left-[11px] before:w-px before:bg-slate-200 ml-1">
+                {groupedLogs.slice(0, 5).map((group) => (
+                  <div key={group.id} className="flex gap-3 relative z-10 text-xs">
+                    <div className="w-6 h-6 rounded-full bg-white border border-slate-300 flex items-center justify-center shrink-0">
+                      <Clock size={12} className="text-slate-400" />
+                    </div>
+                    <div className="flex-1 pb-1">
+                      <p className="font-semibold text-slate-700">
+                        {group.logs.length > 1 ? 'Order Updated' : (group.logs[0].action_type === 'UPDATED' && (group.logs[0].new_value === 'updated' || !group.logs[0].old_value) ? 'Order Updated' : group.logs[0].action_type)}
+                      </p>
+                      {group.logs.length > 1 ? (
+                        <ul className="list-disc list-inside text-slate-500 mt-1 space-y-0.5">
+                          {group.logs.map(log => (
+                            <li key={log.id}>
+                              {log.action_type !== 'UPDATED' && log.action_type !== 'FEE_UPDATE' && log.action_type !== 'PRICE_OVERRIDE' && <span className="font-semibold">{log.action_type}: </span>}
+                              {renderLogContent(log)}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-slate-500">{renderLogContent(group.logs[0])}</p>
+                      )}
+                      <p className="text-[10px] text-slate-400 mt-0.5">{formatDateTime(group.timestamp)}</p>
+                    </div>
+                  </div>
+                ))}
+                {rent.activity_logs?.length > 5 && (
+                  <Button size="sm" variant="light" className="text-xs font-semibold" onPress={() => setIsHistoryOpen(true)}>
+                    View Full History
+                  </Button>
+                )}
+              </div>
+            </Card.Content>
+          </Card>
+        </div>
+      </div>
+
+      {/* Return Modal */}
+      <MarkReturnedModal
+        isOpen={isReturnOpen}
+        onClose={() => setIsReturnOpen(false)}
+        onSuccess={fetchRent}
+        rentId={parseInt(id)}
+        sisaTagihan={sisaTagihan}
+      />
+
+      {/* Pickup Modal */}
+      <MarkRentedModal
+        isOpen={isRentOpen}
+        onClose={() => setIsRentOpen(false)}
+        onSuccess={fetchRent}
+        rentId={parseInt(id)}
+        sisaTagihan={sisaTagihan}
+      />
+
+      {/* Extend Modal */}
+      <ExtendRentModal
+        isOpen={isExtendOpen}
+        onClose={() => setIsExtendOpen(false)}
+        onSuccess={fetchRent}
+        rentId={parseInt(id)}
+        dailyFee={totalBaseFee}
+      />
+
+      {/* Activity Log Full History Modal */}
+      <Modal.Backdrop isOpen={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
         <Modal.Container>
-          <Modal.Dialog>
-            <Modal.Header>
-              <Modal.Heading>Batalkan Pesanan</Modal.Heading>
-            </Modal.Header>
+          <Modal.Dialog className="max-w-lg max-h-[80vh] overflow-y-auto">
+            <Modal.Header><Modal.Heading>Activity Log History</Modal.Heading></Modal.Header>
             <Modal.Body>
-              <div className="flex flex-col gap-3">
-                <p>Yakin ingin membatalkan pesanan ini?</p>
-                <div className="p-3 bg-danger-50 rounded-lg border border-danger-200">
-                  <p className="text-sm font-semibold text-danger mb-1">⚠️ Uang muka tidak akan dikembalikan</p>
-                  <p className="text-sm">DP yang telah dibayar sebesar <strong>{formatCurrency(rent.downpayment || 0)}</strong> tidak dapat dikembalikan.</p>
-                </div>
+              <div className="flex flex-col gap-3 relative before:absolute before:inset-y-2 before:left-[11px] before:w-px before:bg-slate-200 ml-1">
+                {groupedLogs.map((group) => (
+                  <div key={group.id} className="flex gap-3 relative z-10 text-xs">
+                    <div className="w-6 h-6 rounded-full bg-white border border-slate-300 flex items-center justify-center shrink-0">
+                      <Clock size={12} className="text-slate-400" />
+                    </div>
+                    <div className="flex-1 pb-1">
+                      <p className="font-semibold text-slate-700">
+                        {group.logs.length > 1 ? 'Order Updated' : (group.logs[0].action_type === 'UPDATED' && (group.logs[0].new_value === 'updated' || !group.logs[0].old_value) ? 'Order Updated' : group.logs[0].action_type)}
+                      </p>
+                      {group.logs.length > 1 ? (
+                        <ul className="list-disc list-inside text-slate-500 mt-1 space-y-0.5">
+                          {group.logs.map(log => (
+                            <li key={log.id}>
+                              {log.action_type !== 'UPDATED' && log.action_type !== 'FEE_UPDATE' && log.action_type !== 'PRICE_OVERRIDE' && <span className="font-semibold">{log.action_type}: </span>}
+                              {renderLogContent(log)}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-slate-500">{renderLogContent(group.logs[0])}</p>
+                      )}
+                      <p className="text-[10px] text-slate-400 mt-0.5">{formatDateTime(group.timestamp)}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </Modal.Body>
             <Modal.Footer>
-              <Button variant="bordered" onPress={() => setIsCancelOpen(false)}>Kembali</Button>
-              <Button variant="danger" onPress={handleCancel} isPending={processing} aria-label="Batalkan pesanan">Batalkan Pesanan</Button>
+              <Button variant="bordered" onPress={() => setIsHistoryOpen(false)}>Tutup</Button>
             </Modal.Footer>
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
 
-      {/* Delete Modal */}
-      <Modal.Backdrop isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-          <Modal.Container>
-            <Modal.Dialog>
-              <Modal.Header>
-                <Modal.Heading>Konfirmasi</Modal.Heading>
-              </Modal.Header>
-              <Modal.Body>Hapus peminjaman ini?</Modal.Body>
-              <Modal.Footer>
-                <Button variant="bordered" onPress={() => setIsDeleteOpen(false)}>Batal</Button>
-                <Button variant="danger" onPress={handleDelete} isPending={processing}>Hapus</Button>
-              </Modal.Footer>
-            </Modal.Dialog>
-          </Modal.Container>
-      </Modal.Backdrop>
-
-      <ImagePreviewModal
-        isOpen={isPreviewOpen}
-        onClose={() => setIsPreviewOpen(false)}
-        images={previewImages}
-        initialIndex={previewIndex}
+      {/* Upgrade Draft → Booked Modal */}
+      <MarkBookedModal
+        isOpen={isUpgradeOpen}
+        onClose={() => setIsUpgradeOpen(false)}
+        onSuccess={fetchRent}
+        rentId={parseInt(id)}
+        minDp={Math.ceil(totalBaseFee / 2)}
       />
+
+      {/* Cancel Modal */}
+      <ConfirmActionModal
+        isOpen={isCancelOpen}
+        onClose={() => setIsCancelOpen(false)}
+        onConfirm={handleCancel}
+        heading="Batalkan Pesanan"
+        body="Yakin batalkan? DP hangus."
+        confirmLabel="Batalkan"
+        confirmColor="danger"
+        loading={processing}
+      />
+
+      {/* Delete Modal */}
+      <ConfirmActionModal
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        onConfirm={handleDelete}
+        heading="Hapus Pesanan"
+        body="Yakin hapus permanen?"
+        confirmLabel="Hapus"
+        confirmColor="danger"
+        loading={processing}
+      />
+
+      {/* Rollback Modal */}
+      <ConfirmActionModal
+        isOpen={isRollbackOpen}
+        onClose={() => setIsRollbackOpen(false)}
+        onConfirm={handleRollback}
+        heading="Batalkan Status (Rollback)"
+        body={
+          <>
+            Apakah Anda yakin ingin mengembalikan status order ini ke status sebelumnya?
+            <br /><br />
+            <b>Perhatian:</b>
+            <ul className="list-disc ml-5 mt-1 text-sm text-default-600">
+              <li>Uang yang sudah dibayarkan tidak akan dihapus otomatis dari sistem.</li>
+              <li>Denda terkait status saat ini akan dihapus.</li>
+            </ul>
+          </>
+        }
+        confirmLabel="Ya, Batalkan Status"
+        confirmColor="danger"
+        loading={processing}
+      />
+
+      {/* Add Payment Modal */}
+      <AddPaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onSuccess={fetchRent}
+        rentId={parseInt(id)}
+      />
+
+      <ImagePreviewModal isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} images={previewImages} initialIndex={previewIndex} />
     </div>
   );
 };

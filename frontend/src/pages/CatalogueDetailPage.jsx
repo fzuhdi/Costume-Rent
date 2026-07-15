@@ -1,32 +1,59 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link} from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getCostumeById, deleteCostume } from '../api/costumeApi';
-import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
-import { Button, Card, Chip, Spinner, Modal } from '@heroui/react';
+import { getRents } from '../api/rentApi';
+import { ArrowLeft, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button, Card, Spinner, Modal } from '@heroui/react';
 
 const idrFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
+
+const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+const dayNamesShort = ["Mg", "Sn", "Sl", "Rb", "Km", "Jm", "Sb"];
+
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return null;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const formatDateStr = (y, m, d) => {
+  const mm = String(m + 1).padStart(2, '0');
+  const dd = String(d).padStart(2, '0');
+  return `${y}-${mm}-${dd}`;
+};
 
 const CatalogueDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [costume, setCostume] = useState(null);
+  const [rents, setRents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
-    const fetchCostume = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await getCostumeById(id);
-        setCostume(response.data);
+        const [costumeRes, rentsRes] = await Promise.all([
+          getCostumeById(id),
+          getRents({ limit: 1000 })
+        ]);
+        setCostume(costumeRes.data);
+        // Filter rents that contain this costume
+        const relevantRents = (rentsRes.data?.data || []).filter(r => 
+          ['Draft', 'Booked', 'Rented'].includes(r.status) &&
+          r.items.some(item => String(item.costume_id) === String(id))
+        );
+        setRents(relevantRents);
       } catch (error) {
-        console.error('Failed to fetch costume:', error);
+        console.error('Failed to fetch data:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchCostume();
+    fetchData();
   }, [id]);
 
   const handleDelete = async () => {
@@ -50,13 +77,47 @@ const CatalogueDetailPage = () => {
     setIsDeleteOpen(true);
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-48">
-        <Spinner />
-      </div>
-    );
-  }
+  // Calendar Logic
+  const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOffset = new Date(year, month, 1).getDay();
+
+  // Create grid cells
+  const grid = Array.from({ length: 42 }, (_, i) => {
+    const day = i - firstDayOffset + 1;
+    if (day > 0 && day <= daysInMonth) {
+      const dateStr = formatDateStr(year, month, day);
+      return { day, dateStr, isCurrentMonth: true };
+    }
+    return { day: null, dateStr: null, isCurrentMonth: false };
+  });
+
+  // Calculate booked days map: { "YYYY-MM-DD": bookedQuantity }
+  const bookedDates = useMemo(() => {
+    const map = {};
+    rents.forEach(rent => {
+      const item = rent.items.find(i => String(i.costume_id) === String(id));
+      if (!item) return;
+      const qty = item.quantity;
+      const start = parseLocalDate(rent.pickup_date);
+      const end = parseLocalDate(rent.expected_return_date);
+      if (start && end) {
+        let current = new Date(start);
+        while (current <= end) {
+          const dStr = formatDateStr(current.getFullYear(), current.getMonth(), current.getDate());
+          map[dStr] = (map[dStr] || 0) + qty;
+          current.setDate(current.getDate() + 1);
+        }
+      }
+    });
+    return map;
+  }, [rents, id]);
+
+  if (loading) return <div className="flex justify-center items-center h-48"><Spinner /></div>;
 
   if (!costume) {
     return (
@@ -70,14 +131,15 @@ const CatalogueDetailPage = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-       <Link to="/catalogue" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]" aria-label="Kembali ke Katalog">
+    <div className="flex flex-col gap-4 max-w-6xl mx-auto">
+       <Link to="/catalogue" className="flex items-center gap-2 text-sm text-default-500 hover:text-default-900" aria-label="Kembali ke Katalog">
          <ArrowLeft size={18} />
          Kembali ke Katalog
        </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        {/* Left Column: Image */}
+        <Card className="shadow-sm">
           <Card.Content className="p-0">
             {costume.images?.length > 0 ? (
               <div className="grid grid-cols-2 gap-2 p-2">
@@ -95,63 +157,116 @@ const CatalogueDetailPage = () => {
             ) : costume.cover_image ? (
               <img src={costume.cover_image} alt={costume.name} className="w-full rounded-lg" loading="lazy" decoding="async" fetchPriority="low" />
             ) : (
-              <div className="aspect-square flex items-center justify-center bg-[var(--border)] rounded-lg text-[var(--muted)]">
+              <div className="aspect-square flex items-center justify-center bg-default-100 rounded-lg text-default-400">
                 Tidak Ada Gambar
               </div>
             )}
           </Card.Content>
         </Card>
 
-        <Card>
-          <Card.Content>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h2 className="text-xl font-semibold">{costume.name}</h2>
-              <div className="flex gap-2 flex-shrink-0">
-               <Button variant="bordered" size="sm" onPress={() => navigate(`/catalogue/${id}/edit`)} aria-label="Edit kostum"><Edit size={16} />Edit</Button>
-                 <Button variant="danger" size="sm" onPress={handleDeleteRequest} isPending={deleting} aria-label="Hapus kostum"><Trash2 size={16} />Hapus</Button>
+        {/* Right Column: Details & Schedule */}
+        <div className="flex flex-col gap-4 w-full">
+          {/* Details Card */}
+          <Card className="shadow-sm w-full">
+            <Card.Content className="p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <h2 className="text-xl font-bold">{costume.name}</h2>
+                <div className="flex gap-2 flex-shrink-0">
+                 <Button variant="bordered" size="sm" onPress={() => navigate(`/catalogue/${id}/edit`)} aria-label="Edit kostum"><Edit size={16} />Edit</Button>
+                   <Button variant="flat" color="danger" size="sm" onPress={handleDeleteRequest} isPending={deleting} aria-label="Hapus kostum"><Trash2 size={16} />Hapus</Button>
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-[var(--muted)]">Wilayah</span>
-                <p>{costume.region?.name || '-'}</p>
-              </div>
-              <div>
-                <span className="text-[var(--muted)]">Kategori</span>
-                <p>{costume.category?.name || '-'}</p>
-              </div>
-              <div>
-                <span className="text-[var(--muted)]">Ukuran</span>
-                <p>{costume.size || '-'}</p>
-              </div>
-              <div>
-                <span className="text-[var(--muted)]">Harga Sewa/Set</span>
-                <p>{idrFormatter.format(costume.rental_fee)}</p>
-              </div>
-              <div>
-                 <span className="text-[var(--muted)]">Total Stok</span>
-                 <p>{costume.total_quantity} unit</p>
-               </div>
-               <div>
-                 <span className="text-[var(--muted)]">Stok Tersedia</span>
-                 <p>{costume.available_quantity ?? costume.total_quantity} unit</p>
-               </div>
-              {costume.acquired_at && (
+              
+              <div className="grid grid-cols-2 gap-4 text-sm mt-6">
                 <div>
-                  <span className="text-[var(--muted)]">Tanggal Perolehan</span>
-                  <p>{costume.acquired_at}</p>
+                  <span className="text-default-500 block mb-1">Wilayah</span>
+                  <p className="font-medium">{costume.region?.name || '-'}</p>
+                </div>
+                <div>
+                  <span className="text-default-500 block mb-1">Kategori</span>
+                  <p className="font-medium">{costume.category?.name || '-'}</p>
+                </div>
+                <div>
+                  <span className="text-default-500 block mb-1">Ukuran</span>
+                  <p className="font-medium">{costume.size || '-'}</p>
+                </div>
+                <div>
+                  <span className="text-default-500 block mb-1">Harga Sewa/Set</span>
+                  <p className="font-medium text-success">{idrFormatter.format(costume.rental_fee)}</p>
+                </div>
+                <div>
+                   <span className="text-default-500 block mb-1">Total Stok</span>
+                   <p className="font-medium">{costume.total_quantity} unit</p>
+                 </div>
+                 <div>
+                   <span className="text-default-500 block mb-1">Stok Tersedia</span>
+                   <p className="font-medium">{costume.available_quantity ?? costume.total_quantity} unit</p>
+                 </div>
+              </div>
+
+              {costume.description && (
+                <div className="mt-6 pt-6 border-t border-default-100">
+                  <h3 className="text-sm font-semibold mb-2">Deskripsi</h3>
+                  <p className="text-sm text-default-600 leading-relaxed">{costume.description}</p>
                 </div>
               )}
-            </div>
+            </Card.Content>
+          </Card>
 
-            {costume.description && (
-              <div className="mt-4">
-                <h3 className="text-sm font-medium mb-1">Deskripsi</h3>
-                <p className="text-sm text-[var(--muted)]">{costume.description}</p>
+          {/* Availability Schedule Card */}
+          <Card className="shadow-sm w-full">
+            <Card.Header className="px-5 py-4 border-b border-default-100">
+              <h3 className="font-bold text-sm">📅 Jadwal Ketersediaan</h3>
+            </Card.Header>
+            <Card.Content className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <Button isIconOnly variant="light" size="sm" onPress={prevMonth}><ChevronLeft size={18} /></Button>
+                <span className="font-semibold text-sm">{monthNames[month]} {year}</span>
+                <Button isIconOnly variant="light" size="sm" onPress={nextMonth}><ChevronRight size={18} /></Button>
               </div>
-            )}
-          </Card.Content>
-        </Card>
+
+              <div className="grid grid-cols-7 gap-1 mb-2 text-center">
+                {dayNamesShort.map(d => (
+                  <div key={d} className="text-xs font-semibold text-default-400 py-1">{d}</div>
+                ))}
+              </div>
+              
+              <div className="grid grid-cols-7 gap-1">
+                {grid.map((cell, idx) => {
+                  if (!cell.isCurrentMonth) {
+                    return <div key={idx} className="aspect-square"></div>;
+                  }
+                  const bookedQty = bookedDates[cell.dateStr] || 0;
+                  const isFullyBooked = bookedQty >= costume.total_quantity;
+                  const isPartiallyBooked = bookedQty > 0 && bookedQty < costume.total_quantity;
+
+                  let bgClass = "bg-default-50 hover:bg-default-100";
+                  let textClass = "text-default-700";
+                  
+                  if (isFullyBooked) {
+                    bgClass = "bg-danger-100";
+                    textClass = "text-danger font-bold line-through";
+                  } else if (isPartiallyBooked) {
+                    bgClass = "bg-warning-100";
+                    textClass = "text-warning-700 font-semibold";
+                  }
+
+                  return (
+                    <div key={idx} className={`aspect-square flex items-center justify-center rounded text-sm transition-colors cursor-default ${bgClass} ${textClass}`} title={bookedQty > 0 ? `${bookedQty} unit disewa` : 'Tersedia'}>
+                      {cell.day}
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <div className="flex flex-wrap gap-4 mt-5 text-xs text-default-500">
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-default-50 border border-default-200"></div> Tersedia</div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-warning-100"></div> Sebagian Disewa</div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-danger-100"></div> Habis (Fully Booked)</div>
+              </div>
+            </Card.Content>
+          </Card>
+        </div>
       </div>
 
       <Modal.Backdrop isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
@@ -165,7 +280,7 @@ const CatalogueDetailPage = () => {
               </Modal.Body>
               <Modal.Footer>
                 <Button variant="bordered" onPress={() => setIsDeleteOpen(false)}>Batal</Button>
-                <Button variant="danger" onPress={handleDelete} isPending={deleting}>Hapus</Button>
+                <Button color="danger" onPress={handleDelete} isPending={deleting}>Hapus</Button>
               </Modal.Footer>
             </Modal.Dialog>
           </Modal.Container>

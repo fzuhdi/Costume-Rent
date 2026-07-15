@@ -308,18 +308,19 @@ const CalendarPage = () => {
             <span className="text-sm text-default-500 font-medium">Memuat kalender...</span>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col overflow-y-auto">
-            {/* Columns Header (Sunday - Saturday) */}
-            <div className="grid grid-cols-7 border-b border-[var(--border)] bg-default-50/50 backdrop-blur-sm shrink-0">
-              {dayNames.map(day => (
-                <div key={day} className="py-2.5 text-center text-xs font-bold text-default-500 uppercase tracking-wider">
-                  {day}
-                </div>
-              ))}
-            </div>
+          <div className="flex-1 flex flex-col overflow-auto">
+            <div className="min-w-[700px] flex-1 flex flex-col">
+              {/* Columns Header (Sunday - Saturday) */}
+              <div className="grid grid-cols-7 border-b border-[var(--border)] bg-default-50/50 backdrop-blur-sm shrink-0">
+                {dayNames.map(day => (
+                  <div key={day} className="py-2.5 text-center text-xs font-bold text-default-500 uppercase tracking-wider">
+                    {day}
+                  </div>
+                ))}
+              </div>
 
-            {/* Weeks Container */}
-            <div className="flex-1 divide-y divide-[var(--border)] flex flex-col min-h-[500px]">
+              {/* Weeks Container */}
+              <div className="flex-1 divide-y divide-[var(--border)] flex flex-col min-h-[500px]">
               {weeks.map((week, weekIdx) => {
                 const weekStart = week[0].date;
                 const weekEnd = week[6].date;
@@ -463,6 +464,7 @@ const CalendarPage = () => {
                   </div>
                 );
               })}
+            </div>
             </div>
           </div>
         )}

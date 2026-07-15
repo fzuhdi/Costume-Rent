@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getCostumeById, createCostume, updateCostume, getRegions, getCategories, uploadCostumeImage } from '../api/costumeApi';
 import { ArrowLeft, Save } from 'lucide-react';
 import { TextField, Input, TextArea, Label, Select, ListBox, Button, Card, Spinner, FieldError } from '@heroui/react';
+import FileUploadZone from '../components/FileUploadZone';
 
 const CatalogueFormPage = () => {
   const { id } = useParams();
@@ -183,8 +184,8 @@ const CatalogueFormPage = () => {
             </TextField>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select
-                value={formData.region_id}
-                onChange={(v) => setFormData((prev) => ({...prev, region_id: v ?? ''}))}
+                selectedKey={formData.region_id}
+                onSelectionChange={(v) => setFormData((prev) => ({...prev, region_id: v ?? ''}))}
               >
                 <Label>Wilayah</Label>
                 <Select.Trigger>
@@ -201,8 +202,8 @@ const CatalogueFormPage = () => {
                 </Select.Popover>
               </Select>
               <Select
-                value={formData.category_id}
-                onChange={(v) => setFormData((prev) => ({...prev, category_id: v ?? ''}))}
+                selectedKey={formData.category_id}
+                onSelectionChange={(v) => setFormData((prev) => ({...prev, category_id: v ?? ''}))}
               >
                 <Label>Kategori</Label>
                 <Select.Trigger>
@@ -244,14 +245,12 @@ const CatalogueFormPage = () => {
               aria-label="Deskripsi kostum"
             />
             <div>
-              <Label>Gambar Kostum</Label>
-              <input
-                type="file"
-                multiple
-                accept="image/*"
+              <FileUploadZone
+                uploading={false} // CatalogueFormPage handles uploading differently or doesn't have an uploading state for files yet
+                fileLabel={stagedFiles.length > 0 ? `${stagedFiles.length} file dipilih` : null}
                 onChange={handleFileSelect}
-                aria-label="Upload costume images"
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                label="Gambar Kostum"
+                multiple={true}
               />
               {(images.length > 0 || stagedFiles.length > 0) && (
                 <div className="mt-2 flex gap-2 flex-wrap">

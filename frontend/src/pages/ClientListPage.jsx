@@ -72,6 +72,7 @@ const ClientListPage = () => {
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             aria-label="Cari klien"
             className="w-full sm:w-64"
+            startContent={<Search size={18} className="text-[var(--muted)]" />}
           />
 
           <Button onPress={() => navigate('/clients/new')} variant="primary" size="sm">

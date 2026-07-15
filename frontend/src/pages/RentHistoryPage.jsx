@@ -1,13 +1,14 @@
 import { useReducer, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getRents, markReturned, markRented, cancelRent } from '../api/rentApi';
+import { getRents, cancelRent } from '../api/rentApi';
 import {
   Input, Button, Select, ListBox, Label,
-  Spinner, Modal, Card, Separator
+  Spinner, Modal, Card
 } from '@heroui/react';
 import CustomPagination from '../components/CustomPagination';
 import RentHistoryTable from '../components/RentHistoryTable';
-import RentReturnModal from '../components/RentReturnModal';
+import MarkReturnedModal from '../components/MarkReturnedModal';
+import MarkRentedModal from '../components/MarkRentedModal';
 
 const initialState = {
   rents: [],
@@ -25,9 +26,6 @@ const initialState = {
   selectedRentId: null,
   selectedRentData: null,
   actionLoading: false,
-  idReturned: false,
-  isGoodCondition: true,
-  damageFee: ''
 };
 
 function rentReducer(state, action) {
@@ -64,8 +62,6 @@ function rentReducer(state, action) {
       return { ...state, isCancelOpen: false, selectedRentId: null, selectedRentData: null };
     case 'SET_ACTION_LOADING':
       return { ...state, actionLoading: action.payload };
-    case 'UPDATE_RETURN_FORM':
-      return { ...state, ...action.payload };
     default:
       return state;
   }
@@ -79,6 +75,8 @@ const RentHistoryPage = () => {
   const navigate = useNavigate();
   const [state, dispatch] = useReducer(rentReducer, initialState);
 
+
+
   useEffect(() => {
     const timer = setTimeout(() => {
       dispatch({ type: 'SET_DEBOUNCED_SEARCH', payload: state.search });
@@ -89,23 +87,19 @@ const RentHistoryPage = () => {
   const fetchRents = useCallback(async () => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const isSearching = Boolean(state.debouncedSearch.trim());
       const response = await getRents({
-        search: '',
+        search: state.debouncedSearch.trim(),
         status: state.statusFilter,
-        page: isSearching ? 1 : state.page,
-        limit: isSearching ? 100 : state.limit,
+        page: state.page,
+        limit: state.limit,
       });
       const data = response.data.data || [];
-      const filteredData = isSearching
-        ? data.filter((rent) => rent.client_name?.toLowerCase().includes(state.debouncedSearch.trim().toLowerCase()))
-        : data;
       dispatch({
         type: 'SET_RENTS',
         payload: {
-          rents: filteredData,
-          totalPages: isSearching ? 1 : response.data.total_pages || 1,
-          total: isSearching ? filteredData.length : response.data.total || 0,
+          rents: data,
+          totalPages: response.data.total_pages || 1,
+          total: response.data.total || 0,
         }
       });
     } catch (error) {
@@ -118,33 +112,12 @@ const RentHistoryPage = () => {
     fetchRents();
   }, [fetchRents]);
 
-  const handleMarkReturned = async () => {
-    dispatch({ type: 'SET_ACTION_LOADING', payload: true });
-    try {
-      const payload = {
-        damage_fee: state.isGoodCondition ? 0 : (parseInt(state.damageFee) || 0)
-      };
-      await markReturned(state.selectedRentId, payload);
-      dispatch({ type: 'CLOSE_RETURN_MODAL' });
-      fetchRents();
-    } catch (error) {
-      console.error('Failed to mark returned:', error);
-    } finally {
-      dispatch({ type: 'SET_ACTION_LOADING', payload: false });
-    }
-  };
 
-  const handleMarkRented = async () => {
-    dispatch({ type: 'SET_ACTION_LOADING', payload: true });
-    try {
-      await markRented(state.selectedRentId);
-      dispatch({ type: 'CLOSE_RENT_MODAL' });
-      fetchRents();
-    } catch (error) {
-      console.error('Failed to mark rented:', error);
-    } finally {
-      dispatch({ type: 'SET_ACTION_LOADING', payload: false });
-    }
+  const getRemainingBalance = () => {
+    const rent = state.selectedRentData;
+    if (!rent) return 0;
+    const totalFee = rent.items?.reduce((sum, item) => sum + ((item.rental_fee || 0) * item.quantity), 0) || 0;
+    return Math.max(0, totalFee - (rent.total_paid || 0));
   };
 
   const handleCancel = async () => {
@@ -160,12 +133,8 @@ const RentHistoryPage = () => {
     }
   };
 
-  // Calculate remaining balance for the selected rent
-  const getRemainingBalance = () => {
-    const rent = state.selectedRentData;
-    if (!rent) return 0;
-    const totalFee = rent.items?.reduce((sum, item) => sum + ((item.rental_fee || 0) * item.quantity), 0) || 0;
-    return Math.max(0, totalFee - (rent.downpayment || 0));
+  const openRentModal = (id) => {
+    dispatch({ type: 'OPEN_RENT_MODAL', payload: id });
   };
 
   return (
@@ -198,6 +167,7 @@ const RentHistoryPage = () => {
                   <ListBox.Item id="draft" textValue="Draft">Draft<ListBox.ItemIndicator /></ListBox.Item>
                   <ListBox.Item id="booked" textValue="Dipesan">Dipesan<ListBox.ItemIndicator /></ListBox.Item>
                   <ListBox.Item id="rented" textValue="Disewa">Disewa<ListBox.ItemIndicator /></ListBox.Item>
+                  <ListBox.Item id="inspecting" textValue="Inspeksi">Inspeksi<ListBox.ItemIndicator /></ListBox.Item>
                   <ListBox.Item id="returned" textValue="Dikembalikan">Dikembalikan<ListBox.ItemIndicator /></ListBox.Item>
                   <ListBox.Item id="overdue" textValue="Terlambat">Terlambat<ListBox.ItemIndicator /></ListBox.Item>
                   <ListBox.Item id="cancelled" textValue="Dibatalkan">Dibatalkan<ListBox.ItemIndicator /></ListBox.Item>
@@ -222,14 +192,14 @@ const RentHistoryPage = () => {
           </div>
         ) : state.rents.length === 0 ? (
           <div className="text-center py-12">
-            <h3 className="text-lg font-semibold">Tidak ada peminjaman</h3>
+            <h3 className="text-lg font-semibold">Belum ada pesanan.</h3>
             <p className="text-sm text-[var(--muted)]">Belum ada data peminjaman</p>
           </div>
         ) : (
           <RentHistoryTable 
             rents={state.rents} 
             openReturnModal={(id) => dispatch({ type: 'OPEN_RETURN_MODAL', payload: id })}
-            openRentModal={(id) => dispatch({ type: 'OPEN_RENT_MODAL', payload: id })}
+            openRentModal={openRentModal}
             openCancelModal={(id) => dispatch({ type: 'OPEN_CANCEL_MODAL', payload: id })}
           />
         )}
@@ -245,45 +215,21 @@ const RentHistoryPage = () => {
         />
       </Card.Footer>
 
-      <RentReturnModal
+      <MarkReturnedModal
         isOpen={state.isReturnOpen}
         onClose={() => dispatch({ type: 'CLOSE_RETURN_MODAL' })}
-        onConfirm={handleMarkReturned}
-        idReturned={state.idReturned}
-        setIdReturned={(val) => dispatch({ type: 'UPDATE_RETURN_FORM', payload: { idReturned: val } })}
-        isGoodCondition={state.isGoodCondition}
-        setIsGoodCondition={(val) => dispatch({ type: 'UPDATE_RETURN_FORM', payload: { isGoodCondition: val } })}
-        damageFee={state.damageFee}
-        setDamageFee={(val) => dispatch({ type: 'UPDATE_RETURN_FORM', payload: { damageFee: val } })}
-        actionLoading={state.actionLoading}
+        onSuccess={fetchRents}
+        rentId={state.selectedRentId}
+        sisaTagihan={getRemainingBalance()}
       />
 
-      {/* Mark Rented Confirmation Modal */}
-      <Modal.Backdrop isOpen={state.isRentOpen} onOpenChange={() => dispatch({ type: 'CLOSE_RENT_MODAL' })}>
-        <Modal.Container>
-          <Modal.Dialog>
-            <Modal.Header>
-              <Modal.Heading>Konfirmasi Penyewaan</Modal.Heading>
-            </Modal.Header>
-            <Modal.Body>
-              <div className="flex flex-col gap-3">
-                <p>Konfirmasi pembayaran dan serahkan kostum ke klien?</p>
-                {state.selectedRentData && (
-                  <div className="p-3 bg-default-50 rounded-lg border border-default-200">
-                    <p className="text-sm font-semibold mb-1">Sisa Pembayaran:</p>
-                    <p className="text-lg font-bold text-primary">{formatCurrency(getRemainingBalance())}</p>
-                    <p className="text-xs text-[var(--muted)] mt-1">Pastikan sisa pembayaran telah diterima sebelum menyerahkan kostum.</p>
-                  </div>
-                )}
-              </div>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="bordered" onPress={() => dispatch({ type: 'CLOSE_RENT_MODAL' })} aria-label="Batal">Batal</Button>
-              <Button variant="primary" onPress={handleMarkRented} isPending={state.actionLoading} aria-label="Konfirmasi penyewaan">Disewakan</Button>
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
+      <MarkRentedModal
+        isOpen={state.isRentOpen}
+        onClose={() => dispatch({ type: 'CLOSE_RENT_MODAL' })}
+        onSuccess={fetchRents}
+        rentId={state.selectedRentId}
+        sisaTagihan={getRemainingBalance()}
+      />
 
       {/* Cancel Order Confirmation Modal */}
       <Modal.Backdrop isOpen={state.isCancelOpen} onOpenChange={() => dispatch({ type: 'CLOSE_CANCEL_MODAL' })}>
@@ -298,7 +244,7 @@ const RentHistoryPage = () => {
                 {state.selectedRentData && (
                   <div className="p-3 bg-danger-50 rounded-lg border border-danger-200">
                     <p className="text-sm font-semibold text-danger mb-1">⚠️ Uang muka tidak akan dikembalikan</p>
-                    <p className="text-sm">DP yang telah dibayar sebesar <strong>{formatCurrency(state.selectedRentData.downpayment || 0)}</strong> tidak dapat dikembalikan.</p>
+                    <p className="text-sm">DP yang telah dibayar sebesar <strong>{formatCurrency(state.selectedRentData.total_paid || 0)}</strong> tidak dapat dikembalikan.</p>
                   </div>
                 )}
               </div>

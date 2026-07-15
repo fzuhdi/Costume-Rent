@@ -277,7 +277,7 @@ const CataloguePage = () => {
         ) : visibleCostumes.length === 0 ? (
           <div className="text-center py-12">
             <Filter size={64} className="mx-auto mb-4 opacity-50" />
-            <h3 className="text-lg font-semibold">Tidak ada kostum</h3>
+            <h3 className="text-lg font-semibold">Kostum tidak ditemukan.</h3>
             <p className="text-sm text-[var(--muted)]">Coba ubah filter atau tambahkan kostum baru</p>
           </div>
         ) : view === 'list' ? (
