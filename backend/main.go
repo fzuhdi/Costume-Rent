@@ -58,7 +58,9 @@ func migrateDB() {
 		&models.Client{},
 		&models.RentOrder{},
 		&models.RentOrderItem{},
+		&models.RentTransaction{},
 		&models.AppSetting{},
+		&models.ActivityLog{},
 	)
 
 	if err != nil {
@@ -310,7 +312,7 @@ func seedSampleRentals(adminID uint) {
 		EventDate:          eventDate,
 		PickupDate:         pickupDate,
 		ExpectedReturnDate: expectedReturnDate,
-		Downpayment:        costume.RentalFee / 2, // 50% dp
+		TotalPaid:        costume.RentalFee / 2, // 50% dp
 		HasSecurityItem:    true,
 		Status:             "booked",
 		Notes:              "Penyewaan untuk acara adat",
@@ -329,6 +331,33 @@ func seedSampleRentals(adminID uint) {
 	}
 	if err := db.Create(&item).Error; err != nil {
 		log.Printf("Failed to seed rental item: %v", err)
+		return
+	}
+
+	baseFeeTx := models.RentTransaction{
+		RentOrderID:   rent.ID,
+		Type:          "DEBIT",
+		Category:      "BASE_FEE",
+		Amount:        costume.RentalFee,
+		Notes:         "Biaya Sewa",
+		CreatedBy:     adminID,
+	}
+	if err := db.Create(&baseFeeTx).Error; err != nil {
+		log.Printf("Failed to seed rental base fee transaction: %v", err)
+		return
+	}
+
+	tx := models.RentTransaction{
+		RentOrderID:   rent.ID,
+		Type:          "CREDIT",
+		Category:      "PAYMENT",
+		Amount:        costume.RentalFee / 2,
+		PaymentMethod: "CASH",
+		Notes:         "DP Tunai (Seed)",
+		CreatedBy:     adminID,
+	}
+	if err := db.Create(&tx).Error; err != nil {
+		log.Printf("Failed to seed rental transaction: %v", err)
 		return
 	}
 

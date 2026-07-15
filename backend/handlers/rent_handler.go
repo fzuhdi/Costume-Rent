@@ -94,7 +94,8 @@ func (h *RentHandler) Update(c *gin.Context) {
 		return
 	}
 
-	order, err := h.rentService.Update(uint(id), req)
+	userID := middleware.GetUserID(c)
+	order, err := h.rentService.Update(uint(id), req, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -116,7 +117,8 @@ func (h *RentHandler) MarkReturned(c *gin.Context) {
 		return
 	}
 
-	order, err := h.rentService.MarkReturned(uint(id), req)
+	userID := middleware.GetUserID(c)
+	order, err := h.rentService.MarkReturned(uint(id), req, userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -138,7 +140,25 @@ func (h *RentHandler) MarkRented(c *gin.Context) {
 		return
 	}
 
-	order, err := h.rentService.MarkRented(uint(id), req)
+	userID := middleware.GetUserID(c)
+	order, err := h.rentService.MarkRented(uint(id), req, userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, order)
+}
+
+func (h *RentHandler) RollbackOrder(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	order, err := h.rentService.RollbackStatus(uint(id), userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -160,7 +180,8 @@ func (h *RentHandler) MarkBooked(c *gin.Context) {
 		return
 	}
 
-	order, err := h.rentService.MarkBooked(uint(id), req)
+	userID := middleware.GetUserID(c)
+	order, err := h.rentService.MarkBooked(uint(id), req, userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -198,6 +219,54 @@ func (h *RentHandler) UploadPaymentProof(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"payment_proof": "/uploads/" + filename})
 }
 
+func (h *RentHandler) ExtendRent(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
+	}
+
+	var req dto.ExtendRentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	order, err := h.rentService.ExtendRent(uint(id), req, userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, order)
+}
+
+func (h *RentHandler) AddPayment(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
+	}
+
+	var req dto.AddPaymentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	order, err := h.rentService.AddPayment(uint(id), req, userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, order)
+}
+
+
+
 func (h *RentHandler) CancelOrder(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -205,7 +274,8 @@ func (h *RentHandler) CancelOrder(c *gin.Context) {
 		return
 	}
 
-	order, err := h.rentService.CancelOrder(uint(id))
+	userID := middleware.GetUserID(c)
+	order, err := h.rentService.CancelOrder(uint(id), userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

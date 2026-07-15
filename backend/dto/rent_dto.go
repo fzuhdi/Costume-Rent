@@ -5,34 +5,34 @@ type CreateRentOrderRequest struct {
 	ClientName      string         `json:"client_name"`
 	ClientPhone     string         `json:"client_phone"`
 	ClientAddress   string         `json:"client_address"`
-	GuaranteeType   string         `json:"guarantee_type" binding:"required"`
+	GuaranteeType   string         `json:"guarantee_type"`
 	EventDate       string         `json:"event_date" binding:"required"`
 	PickupDate      string         `json:"pickup_date"`
 	ExpectedReturnDate string      `json:"expected_return_date"`
-	Downpayment     int            `json:"downpayment"`
+	Payment            *AddPaymentRequest `json:"payment"` // Replaces TotalPaid, PaymentMethod, PaymentProof for "booked" creation
 	HasSecurityItem bool           `json:"has_security_item"`
 	Status          string         `json:"status"`
-	PaymentProof    string         `json:"payment_proof"`
 	Items           []RentItemInput `json:"items" binding:"required"`
 	Notes           string         `json:"notes"`
 }
 
 type RentItemInput struct {
-	CostumeID uint `json:"costume_id" binding:"required"`
-	Quantity  int  `json:"quantity" binding:"required,min=1"`
+	CostumeID       uint `json:"costume_id" binding:"required"`
+	Quantity        int  `json:"quantity" binding:"required,min=1"`
+	CustomRentalFee *int `json:"custom_rental_fee"`
 }
 
 type UpdateRentOrderRequest struct {
+	ClientID           *uint          `json:"client_id"`
 	GuaranteeType      string         `json:"guarantee_type"`
 	EventDate          string         `json:"event_date"`
 	PickupDate         string         `json:"pickup_date"`
 	ExpectedReturnDate string         `json:"expected_return_date"`
 	ActualReturnDate   *string        `json:"actual_return_date"`
-	Downpayment        int            `json:"downpayment"`
-	DamageFee          int            `json:"damage_fee"`
-	HasSecurityItem    bool           `json:"has_security_item"`
+	TotalPaid          *int           `json:"total_paid"`
+	PaymentStatus      string         `json:"payment_status"`
+	HasSecurityItem    *bool          `json:"has_security_item"`
 	Status             string         `json:"status"`
-	PaymentProof       string         `json:"payment_proof"`
 	Notes              string         `json:"notes"`
 	Items              []RentItemInput `json:"items"`
 }
@@ -48,13 +48,13 @@ type RentOrderResponse struct {
 	PickupDate         string            `json:"pickup_date"`
 	ExpectedReturnDate string            `json:"expected_return_date"`
 	ActualReturnDate   *string           `json:"actual_return_date"`
-	Downpayment        int               `json:"downpayment"`
-	DamageFee          int               `json:"damage_fee"`
+	TotalPaid          int               `json:"total_paid"`
+	PaymentStatus      string            `json:"payment_status"`
 	HasSecurityItem    bool              `json:"has_security_item"`
 	Status             string            `json:"status"`
-	PaymentProof       string            `json:"payment_proof"`
 	Notes              string            `json:"notes"`
 	Items              []RentOrderItemResponse `json:"items"`
+	Transactions       []RentTransactionResponse `json:"transactions"`
 	CreatedAt          string            `json:"created_at"`
 	UpdatedAt          string            `json:"updated_at"`
 }
@@ -79,18 +79,24 @@ type RentOrderFilter struct {
 }
 
 type MarkReturnedRequest struct {
-	ReturnedAt string `json:"returned_at"`
-	DamageFee  int    `json:"damage_fee"`
+	ReturnedAt    string             `json:"returned_at"`
+	DamageFee     int                `json:"damage_fee"`
+	LateFee       int                `json:"late_fee"` // Some forms might need this
+	Payment       *AddPaymentRequest `json:"payment"`
 }
 
 type MarkRentedRequest struct {
-	PaymentProof string `json:"payment_proof"`
+	Payment *AddPaymentRequest `json:"payment"`
 }
 
 type UpgradeToBookedRequest struct {
-	Downpayment  int    `json:"downpayment" binding:"required,min=0"`
-	PaymentProof string `json:"payment_proof" binding:"required"`
+	Payment *AddPaymentRequest `json:"payment"`
 }
+
+type ExtendRentRequest struct {
+	ExtraDays int `json:"extra_days" binding:"required,min=1"`
+}
+
 
 type CancelRentRequest struct{}
 
@@ -105,4 +111,23 @@ type NotificationItem struct {
 	ExpectedReturnDate string `json:"expected_return_date"`
 	PickupDate         string `json:"pickup_date"`
 	Type               string `json:"type"`
+}
+
+type RentTransactionResponse struct {
+	ID            uint   `json:"id"`
+	RentOrderID   uint   `json:"rent_order_id"`
+	Type          string `json:"type"`
+	Category      string `json:"category"`
+	Amount        int    `json:"amount"`
+	PaymentMethod string `json:"payment_method"`
+	PaymentProof  string `json:"payment_proof"`
+	Notes         string `json:"notes"`
+	CreatedAt     string `json:"created_at"`
+}
+
+type AddPaymentRequest struct {
+	Amount        int    `json:"amount" binding:"required,min=1"`
+	PaymentMethod string `json:"payment_method" binding:"required"`
+	PaymentProof  string `json:"payment_proof"`
+	Notes         string `json:"notes"`
 }

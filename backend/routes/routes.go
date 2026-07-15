@@ -39,6 +39,7 @@ func SetupRouter() *gin.Engine {
 	notificationHandler := handlers.NewNotificationHandler()
 	userHandler := handlers.NewUserHandler()
 	settingsHandler := handlers.NewSettingsHandler()
+	statsHandler := handlers.NewStatsHandler()
 
 	api := r.Group("/api")
 	{
@@ -81,9 +82,12 @@ func SetupRouter() *gin.Engine {
 			auth.PUT("/rents/:id", rentHandler.Update)
 			auth.PUT("/rents/:id/return", rentHandler.MarkReturned)
 			auth.PUT("/rents/:id/rent", rentHandler.MarkRented)
+			auth.PUT("/rents/:id/rollback", rentHandler.RollbackOrder)
 			auth.PUT("/rents/:id/cancel", rentHandler.CancelOrder)
 			auth.POST("/rents/upload-proof", rentHandler.UploadPaymentProof)
 			auth.PUT("/rents/:id/book", rentHandler.MarkBooked)
+			auth.POST("/rents/:id/extend", rentHandler.ExtendRent)
+			auth.POST("/rents/:id/payments", rentHandler.AddPayment)
 			auth.DELETE("/rents/:id", rentHandler.Delete)
 
 			auth.GET("/notifications", notificationHandler.GetNotifications)
@@ -95,6 +99,8 @@ func SetupRouter() *gin.Engine {
 			auth.DELETE("/users/:id", userHandler.Delete)
 
 			auth.PUT("/settings", settingsHandler.Update)
+
+			auth.GET("/stats/dashboard", statsHandler.GetDashboardStats)
 		}
 	}
 
