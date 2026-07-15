@@ -1,14 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Collection, ComboBox, Input, Label, ListBox, Spinner } from '@heroui/react';
 import { useAsyncList } from '@react-stately/data';
 import { searchClients } from '../api/clientApi';
 
-const ClientSelect = ({ onChange, error }) => {
-  const [isCreating, setIsCreating] = useState(false);
+const ClientSelect = ({ value, onChange, error }) => {
+  const [isCreating, setIsCreating] = useState(value?.type === 'new' || false);
 
   const list = useAsyncList({
     async load({ filterText, signal }) {
       if (!filterText || filterText.length < 1) return { items: [] };
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (signal.aborted) return { items: [] };
+
       try {
         const response = await searchClients(filterText, 10, { signal });
         return { items: response.data || [] };
@@ -19,6 +22,17 @@ const ClientSelect = ({ onChange, error }) => {
       }
     },
   });
+
+  useEffect(() => {
+    if (!value && list.filterText !== '') {
+      list.setFilterText('');
+      setIsCreating(false);
+    } else if (value && value.name && value.name !== list.filterText) {
+      list.setFilterText(value.name);
+      if (value.type === 'new') setIsCreating(true);
+      else setIsCreating(false);
+    }
+  }, [value]);
 
   const handleSelect = (key) => {
     if (!key) return;
@@ -57,15 +71,15 @@ const ClientSelect = ({ onChange, error }) => {
       {isCreating ? (
         <div className="flex flex-col gap-1">
           <Label className="text-sm font-medium">Klien</Label>
-          <div className="flex items-center justify-between px-3 py-2 rounded-md
-                          bg-[var(--primary)]/10 border border-[var(--primary)]/20">
-            <span className="text-sm text-[var(--primary)]">
-              Klien baru: <strong>{list.filterText}</strong>
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg
+                          bg-default-100 border border-default-200">
+            <span className="text-sm text-default-700">
+              Klien baru: <strong className="font-semibold text-default-900">{list.filterText}</strong>
             </span>
             <button
               type="button"
               onClick={handleClear}
-              className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] ml-2"
+              className="text-xs text-default-400 hover:text-default-800 ml-2"
             >
               ✕
             </button>
@@ -141,6 +155,19 @@ const ClientSelect = ({ onChange, error }) => {
             </ComboBox.Popover>
           )}
         </ComboBox>
+      )}
+      {canCreate && !isCreating && (
+        <button
+          type="button"
+          onClick={handleCreateNew}
+          className="flex w-full items-center gap-2 px-3 py-2 mt-1 rounded-lg
+                     text-left bg-primary/10 text-primary hover:bg-primary/20 transition-colors border border-primary/20"
+        >
+          <span className="text-base font-bold">+</span>
+          <span className="text-sm font-semibold">
+            Tambah Klien Baru: "{list.filterText}"
+          </span>
+        </button>
       )}
     </div>
   );

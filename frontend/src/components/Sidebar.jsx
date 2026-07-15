@@ -8,8 +8,8 @@ const navItems = [
   { path: '/pos', icon: ShoppingCart, label: 'POS Checkout' },
   { path: '/calendar', icon: Calendar, label: 'Kalender' },
   { path: '/catalogue', icon: BookOpen, label: 'Katalog' },
-  { path: '/rents', icon: ClipboardList, label: 'Peminjaman' },
-  { path: '/clients', icon: Users, label: 'Data Klien' },
+  { path: '/rents', icon: ClipboardList, label: 'Data Sewa' },
+  { path: '/clients', icon: Users, label: 'Pelanggan' },
 ];
 
 const bottomItems = [

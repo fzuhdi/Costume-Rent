@@ -21,6 +21,9 @@ export const markRented = (id, data = {}) =>
 export const markBooked = (id, data = {}) =>
   api.put(`/rents/${id}/book`, data);
 
+export const rollbackOrder = (id) =>
+  api.put(`/rents/${id}/rollback`);
+
 export const uploadPaymentProof = (file) => {
   const formData = new FormData();
   formData.append('payment_proof', file);
@@ -36,3 +39,9 @@ export const cancelRent = (id) =>
 
 export const deleteRent = (id) =>
   api.delete(`/rents/${id}`);
+
+export const extendRent = (id, data) =>
+  api.post(`/rents/${id}/extend`, data);
+
+export const addPayment = (id, data) =>
+  api.post(`/rents/${id}/payments`, data);
