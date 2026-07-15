@@ -65,7 +65,7 @@ func (h *SettingsHandler) UploadLogo(c *gin.Context) {
 	}
 
 	ext := filepath.Ext(file.Filename)
-	filename := fmt.Sprintf("logo_%s%s", time.Now().UnixNano(), ext)
+	filename := fmt.Sprintf("logo_%d%s", time.Now().UnixNano(), ext)
 	filepath := filepath.Join(uploadDir, filename)
 
 	if err := c.SaveUploadedFile(file, filepath); err != nil {

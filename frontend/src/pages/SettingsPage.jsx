@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { Save, Upload, Image } from 'lucide-react';
 import { TextField, Input, Button, Card, Chip, FieldError, Label } from '@heroui/react';
+import FileUploadZone from '../components/FileUploadZone';
 
 const SettingsPage = () => {
   const { settings, updateSettings, uploadLogo } = useSettings();
@@ -68,7 +69,6 @@ const SettingsPage = () => {
           </div>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label htmlFor="logoUpload" className="text-sm font-medium mb-2 block">Logo Aplikasi</label>
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="w-20 h-20 bg-[var(--border)] rounded-lg flex items-center justify-center flex-shrink-0">
                   {preview ? (
@@ -77,13 +77,13 @@ const SettingsPage = () => {
                     <Image size={32} className="opacity-50" />
                   )}
                 </div>
-                <div>
-                   <Button variant="bordered" size="sm" isPending={uploading} as="label" htmlFor="logoUpload" className="cursor-pointer" aria-label="Pilih Logo">
-                    <Upload size={16} />
-                    {uploading ? 'Mengupload...' : 'Pilih Logo'}
-                    <input id="logoUpload" type="file" accept="image/*" onChange={handleLogoChange} disabled={uploading} className="hidden" />
-                  </Button>
-                  <p className="text-xs text-[var(--muted)] mt-1">Format: PNG, JPG. Maksimal 2MB</p>
+                <div className="flex-grow max-w-sm">
+                  <FileUploadZone
+                    uploading={uploading}
+                    fileLabel={preview ? "Logo baru dipilih" : null}
+                    onChange={handleLogoChange}
+                    label="Logo Aplikasi"
+                  />
                 </div>
               </div>
             </div>
