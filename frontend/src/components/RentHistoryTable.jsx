@@ -1,14 +1,14 @@
-import { Table, Chip, Button, Tooltip } from '@heroui/react';
+import { Table, Chip, Card, Button, Tooltip } from '@heroui/react';
 import { CheckCircle, Package, XCircle, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const statusProps = {
-  draft: { className: 'bg-default-200 text-default-700 font-medium border-none' },
-  booked: { className: 'bg-primary text-white font-medium border-none' },
-  rented: { className: 'bg-warning text-white font-medium border-none' },
-  returned: { className: 'bg-success text-white font-medium border-none' },
-  overdue: { className: 'bg-danger text-white font-medium border-none' },
-  cancelled: { className: 'bg-default-300 text-default-800 font-medium border-none' },
+  draft:     { color: 'default',  variant: 'soft' },
+  booked:    { color: 'accent',   variant: 'primary' },
+  rented:    { color: 'warning',  variant: 'primary' },
+  returned:  { color: 'success',  variant: 'primary' },
+  overdue:   { color: 'danger',   variant: 'primary' },
+  cancelled: { color: 'default',  variant: 'secondary' },
 };
 
 const statusLabels = {
@@ -90,48 +90,46 @@ const RentHistoryTable = ({ rents, openReturnModal, openRentModal, openCancelMod
     <>
       <div className="grid gap-3 md:hidden">
         {rents.map((rent) => (
-          <article
-            key={rent.id}
-            data-testid={`rent-card-${rent.id}`}
-            className="rent-card rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-[var(--foreground)] truncate">
-                  {rent.client_name}
-                </p>
-                <p className="text-xs text-[var(--muted)]">Peminjaman #{rent.id}</p>
+          <Card key={rent.id} aria-label={`Peminjaman #${rent.id}`}>
+            <Card.Content>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[var(--foreground)] truncate">
+                    {rent.client_name}
+                  </p>
+                  <p className="text-xs text-[var(--muted)]">Peminjaman #{rent.id}</p>
+                </div>
+                <Chip size="sm" {...statusProps[rent.status]}>
+                  {statusLabels[rent.status] || rent.status}
+                </Chip>
               </div>
-              <Chip size="sm" {...statusProps[rent.status]}>
-                {statusLabels[rent.status] || rent.status}
-              </Chip>
-            </div>
-            <dl className="mt-3 grid grid-cols-1 gap-2 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-[var(--muted)]">Kostum</dt>
-                <dd className="font-medium"><b>{rent.items?.length || 0}</b> item</dd>
+              <dl className="mt-3 grid grid-cols-1 gap-2 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-[var(--muted)]">Kostum</dt>
+                  <dd className="font-medium"><b>{rent.items?.length || 0}</b> item</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-[var(--muted)]">Tanggal</dt>
+                  <dd className="text-right font-medium">{formatShortDate(rent.pickup_date)} - {formatShortDate(rent.expected_return_date)}</dd>
+                </div>
+              </dl>
+              <span className="sr-only">{statusA11yLabels[rent.status] || `status ${rent.status}`}</span>
+              <div className="mt-4 flex flex-wrap gap-2 items-center">
+                <Tooltip content="Detail Peminjaman">
+                  <Button
+                    onPress={() => navigate(`/rents/${rent.id}`)}
+                    variant="flat"
+                    size="sm"
+                    isIconOnly
+                    aria-label={`Detail peminjaman #${rent.id}`}
+                  >
+                    <Eye size={16} aria-hidden="true" />
+                  </Button>
+                </Tooltip>
+                {renderActions(rent)}
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-[var(--muted)]">Tanggal</dt>
-                <dd className="text-right font-medium">{formatShortDate(rent.pickup_date)} - {formatShortDate(rent.expected_return_date)}</dd>
-              </div>
-            </dl>
-            <span className="sr-only">{statusA11yLabels[rent.status] || `status ${rent.status}`}</span>
-            <div className="mt-4 flex flex-wrap gap-2 items-center">
-              <Tooltip content="Detail Peminjaman">
-                <Button
-                  onPress={() => navigate(`/rents/${rent.id}`)}
-                  variant="flat"
-                  size="sm"
-                  isIconOnly
-                  aria-label={`Detail peminjaman #${rent.id}`}
-                >
-                  <Eye size={16} aria-hidden="true" />
-                </Button>
-              </Tooltip>
-              {renderActions(rent)}
-            </div>
-          </article>
+            </Card.Content>
+          </Card>
         ))}
       </div>
 

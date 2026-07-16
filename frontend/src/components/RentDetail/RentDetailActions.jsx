@@ -29,8 +29,8 @@ export default function RentDetailActions({
           )}
           {(rent.status === 'rented' || rent.status === 'overdue') && (
             <>
-              <Button color="secondary" onPress={() => setIsExtendOpen(true)}>Perpanjang Sewa (Extend)</Button>
-              <Button color="success" className="text-white font-bold" onPress={openReturnModal}>Pelunasan & Pengembalian</Button>
+              <Button color="secondary" onPress={() => setIsExtendOpen(true)}>Perpanjang Sewa</Button>
+              <Button color="success" className="text-white font-bold" onPress={openReturnModal}>Konfirmasi Pengembalian</Button>
               {rent.status === 'rented' && (
                 <Button color="danger" variant="flat" onPress={() => setIsRollbackOpen(true)}>Batalkan Status</Button>
               )}

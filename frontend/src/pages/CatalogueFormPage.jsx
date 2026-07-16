@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getCostumeById, createCostume, updateCostume, getRegions, getCategories, uploadCostumeImage } from '../api/costumeApi';
+import { getCostumeById, createCostume, updateCostume, getRegions, getCategories, uploadCostumeImage, deleteCostumeImage } from '../api/costumeApi';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { TextField, Input, TextArea, Label, Select, ListBox, Button, Card, Spinner, FieldError, Alert } from '@heroui/react';
 import FileUploadZone from '../components/FileUploadZone';
@@ -26,6 +26,7 @@ const CatalogueFormPage = () => {
   const [categories, setCategories] = useState([]);
   const [images, setImages] = useState([]);
   const [stagedFiles, setStagedFiles] = useState([]);
+  const [deletedImageIds, setDeletedImageIds] = useState([]);
   const stagedFilesRef = useRef(stagedFiles);
   
   useEffect(() => {
@@ -124,6 +125,16 @@ const CatalogueFormPage = () => {
           }
         }));
 
+        if (isEdit && deletedImageIds.length > 0) {
+          await Promise.all(deletedImageIds.map(async (imgId) => {
+            try {
+              await deleteCostumeImage(costumeId, imgId);
+            } catch (error) {
+              console.error('Failed to delete image:', error);
+            }
+          }));
+        }
+
         // Navigate to detail page after save
         navigate(`/catalogue/${costumeId}`);
     } catch (error) {
@@ -150,6 +161,11 @@ const CatalogueFormPage = () => {
       if (toRemove) URL.revokeObjectURL(toRemove.previewUrl);
       return prev.filter(s => s.id !== id);
     });
+  };
+
+  const removeExistingImage = (id) => {
+    setImages(prev => prev.filter(img => img.id !== id));
+    setDeletedImageIds(prev => [...prev, id]);
   };
 
   if (loading) {
@@ -252,8 +268,18 @@ const CatalogueFormPage = () => {
               {(images.length > 0 || stagedFiles.length > 0) && (
                 <div className="mt-2 flex gap-2 flex-wrap">
                   {images.map((img) => (
-                    <div key={`existing-${img.id}`} className="relative w-20 h-20">
+                    <div key={`existing-${img.id}`} className="relative w-20 h-20 group">
                       <img src={img.path} alt="Costume" className="w-full h-full object-cover rounded" />
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        radius="full"
+                        onPress={() => removeExistingImage(img.id)}
+                        className="absolute -top-2 -right-2 w-6 h-6 min-w-6 bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label="Remove image"
+                      >
+                        <X size={14} />
+                      </Button>
                     </div>
                   ))}
                   {stagedFiles.map((staged) => (
@@ -262,10 +288,9 @@ const CatalogueFormPage = () => {
                       <Button
                         isIconOnly
                         size="sm"
-                        color="danger"
                         radius="full"
                         onPress={() => removeStaged(staged.id)}
-                        className="absolute -top-2 -right-2 w-6 h-6 min-w-6 opacity-80 hover:opacity-100"
+                        className="absolute -top-2 -right-2 w-6 h-6 min-w-6 bg-red-500 text-white opacity-80 hover:opacity-100"
                         aria-label="Remove image"
                       >
                         <X size={14} />

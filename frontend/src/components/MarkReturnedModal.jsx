@@ -115,11 +115,11 @@ const MarkReturnedModal = ({
       const paymentPayload =
         totalAmount > 0
           ? {
-              amount: totalAmount,
-              payment_method: method,
-              payment_proof: proof,
-              notes: isGoodCondition ? 'Sisa Tagihan' : 'Sisa Tagihan / Denda',
-            }
+            amount: totalAmount,
+            payment_method: method,
+            payment_proof: proof,
+            notes: isGoodCondition ? 'Sisa Tagihan' : 'Sisa Tagihan / Denda',
+          }
           : null;
 
       await markReturned(rentId, { damage_fee: derivedDamageFee, payment: paymentPayload });
@@ -137,7 +137,7 @@ const MarkReturnedModal = ({
       <Modal.Container>
         <Modal.Dialog>
           <Modal.Header>
-            <Modal.Heading>Pelunasan &amp; Pengembalian</Modal.Heading>
+            <Modal.Heading>Konfirmasi Pengembalian</Modal.Heading>
           </Modal.Header>
 
           <Modal.Body className="flex flex-col gap-4">
@@ -197,20 +197,15 @@ const MarkReturnedModal = ({
               <div className="flex flex-col gap-3">
                 <TextField>
                   <Label className="text-xs font-semibold mb-1 text-default-600 block">
-                    {isGoodCondition ? 'Nominal *' : 'Total Tagihan (Sisa + Denda) *'}
+                    Total Denda *
                   </Label>
                   <Input
                     type="number"
                     className="w-full bg-white border border-default-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    placeholder={isGoodCondition ? String(sisaTagihan) : 'Masukkan total yang harus dibayar'}
+                    placeholder='Masukkan total denda yang harus dibayar'
                     value={amount}
                     onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'amount', value: e.target.value })}
                   />
-                  {!isGoodCondition && (
-                    <p className="text-xs text-default-500 mt-1">
-                      Masukkan total tagihan termasuk denda. Denda = Nominal − {formatCurrency(sisaTagihan)}.
-                    </p>
-                  )}
                 </TextField>
 
                 <div className="flex flex-col gap-1 w-full">

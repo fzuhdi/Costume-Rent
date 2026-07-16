@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getClientById, updateClient } from '../api/clientApi';
 import { ArrowLeft, Edit, Save, X, User, Phone, MapPin, ClipboardList, AlertTriangle } from 'lucide-react';
@@ -32,22 +32,22 @@ const ClientDetailPage = () => {
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState({ name: '', phone: '', address: '' });
   const [saving, setSaving] = useState(false);
-
-  const fetchClient = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await getClientById(id);
-      setClient(response.data);
-    } catch (error) {
-      console.error('Failed to fetch client:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  const [refreshCount, setRefreshCount] = useState(0);
 
   useEffect(() => {
-    fetchClient();
-  }, [fetchClient]);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const response = await getClientById(id);
+        setClient(response.data);
+      } catch (error) {
+        console.error('Failed to fetch client:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [id, refreshCount]);
 
   const handleEdit = () => {
     setEditData({
@@ -62,16 +62,13 @@ const ClientDetailPage = () => {
     setEditing(false);
   };
 
-  const handleChange = (e) => {
-    setEditData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
 
   const handleSave = async () => {
     setSaving(true);
     try {
       await updateClient(id, editData);
       setEditing(false);
-      fetchClient();
+      setRefreshCount(c => c + 1);
     } catch (error) {
       console.error('Failed to save:', error);
     } finally {
@@ -102,20 +99,21 @@ const ClientDetailPage = () => {
   const overdueRents = client.rent_orders?.filter((r) => r.status === 'overdue') || [];
 
   return (
-    <div className="flex flex-col gap-4">
-      <Link to="/clients" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
-        <ArrowLeft size={18} />
-        Kembali ke Daftar Klien
-      </Link>
+    <Card className="max-w-6xl mx-auto">
+      <Card.Header className="flex flex-col gap-4 px-6 pt-6 pb-4 border-b border-[var(--border)]">
+        <Link to="/clients" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)] w-fit">
+          <ArrowLeft size={18} />
+          Kembali ke Daftar Klien
+        </Link>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold">Informasi Klien</h2>
+          {!editing && (
+            <Button variant="bordered" size="sm" onPress={handleEdit}><Edit size={16} />Edit</Button>
+          )}
+        </div>
+      </Card.Header>
 
-      <Card>
-        <Card.Content>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Informasi Klien</h2>
-            {!editing && (
-              <Button variant="bordered" size="sm" onPress={handleEdit}><Edit size={16} />Edit</Button>
-            )}
-          </div>
+      <Card.Content className="p-6">
           {editing ? (
             <div className="flex flex-col gap-4">
               <TextField>
@@ -145,34 +143,32 @@ const ClientDetailPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-              <div className="flex items-center gap-3">
+              <div className="info-row">
                 <User size={20} className="text-[var(--muted)]" />
                 <div>
-                  <span className="text-[var(--muted)]">Nama</span>
+                  <span className="info-label">Nama</span>
                   <p className="font-medium">{client.name}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="info-row">
                 <Phone size={20} className="text-[var(--muted)]" />
                 <div>
-                  <span className="text-[var(--muted)]">Telepon</span>
+                  <span className="info-label">Telepon</span>
                   <p className="font-medium">{client.phone || '-'}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="info-row">
                 <MapPin size={20} className="text-[var(--muted)]" />
                 <div>
-                  <span className="text-[var(--muted)]">Alamat</span>
+                  <span className="info-label">Alamat</span>
                   <p className="font-medium">{client.address || '-'}</p>
                 </div>
               </div>
             </div>
           )}
         </Card.Content>
-      </Card>
-
-      <Card>
-        <Card.Content>
+        <div className="border-t border-[var(--border)]" />
+        <Card.Content className="p-6">
           <h2 className="text-xl font-semibold mb-4">Riwayat Peminjaman</h2>
           {client.rent_orders?.length === 0 ? (
             <div className="text-center py-8 text-[var(--muted)]">
@@ -210,10 +206,8 @@ const ClientDetailPage = () => {
             </Table>
           )}
         </Card.Content>
-      </Card>
-
-      <Card>
-        <Card.Content>
+        <div className="border-t border-[var(--border)]" />
+        <Card.Content className="p-6">
           <h3 className="text-sm font-medium mb-2">Statistik</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
             <div>
@@ -232,9 +226,8 @@ const ClientDetailPage = () => {
           {overdueRents.length > 0 && (
              <Chip variant="soft" color="danger" className="mt-4"><AlertTriangle size={14} />{overdueRents.length} peminjaman terlambat</Chip>
           )}
-        </Card.Content>
-      </Card>
-    </div>
+      </Card.Content>
+    </Card>
   );
 };
 

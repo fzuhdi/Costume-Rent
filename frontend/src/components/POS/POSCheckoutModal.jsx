@@ -41,7 +41,7 @@ const POSCheckoutModal = ({
               <h4 className="text-xs font-bold text-default-400 uppercase tracking-wider mb-3">Review Pakaian Pilihan</h4>
               <div className="flex flex-col gap-2.5 max-h-[220px] overflow-y-auto pr-1 w-full scrollbar-thin">
                 {cart.map(item => (
-                  <div key={item.id} className="grid grid-cols-[auto_1fr] sm:flex sm:items-center sm:justify-between gap-y-3 gap-x-3 w-full bg-default-50/50 hover:bg-default-50 p-3 rounded-xl border border-default-200 transition-colors">
+                  <div key={item.id} className="grid grid-cols-[auto_1fr] sm:flex sm:items-center sm:justify-between gap-y-3 gap-x-3 w-full bg-default-50 hover:bg-default-100 p-3 rounded-xl border border-default-200 transition-colors">
                     <div className="w-12 h-12 bg-default-100 rounded-lg overflow-hidden flex-shrink-0 border border-default-200 relative row-span-2 sm:row-span-1">
                       {item.cover_image ? (
                         <img src={item.cover_image.startsWith('http') ? item.cover_image : `${import.meta.env.VITE_API_URL || ''}${item.cover_image}`} alt="" className="w-full h-full object-cover" />
@@ -99,7 +99,10 @@ const POSCheckoutModal = ({
                         <Label className="text-[11px] font-semibold text-default-700 block">No HP *</Label>
                         <Input 
                           size="sm" 
-                          className="shadow-none border border-default-200 bg-white hover:border-default-300 focus-within:!border-primary rounded-lg px-3 py-1.5 text-sm"
+                          variant="bordered"
+                          classNames={{
+                            inputWrapper: "bg-white shadow-none border-default-200 hover:border-default-300 focus-within:!border-primary rounded-lg px-3 py-1.5"
+                          }}
                           placeholder="Contoh: 08123456789" 
                           value={formData.client_phone} 
                           onChange={(e) => setFormData(p => ({ ...p, client_phone: e.target.value }))} 
@@ -109,7 +112,10 @@ const POSCheckoutModal = ({
                         <Label className="text-[11px] font-semibold text-default-700 block">Alamat Klien *</Label>
                         <Input 
                           size="sm" 
-                          className="shadow-none border border-default-200 bg-white hover:border-default-300 focus-within:!border-primary rounded-lg px-3 py-1.5 text-sm"
+                          variant="bordered"
+                          classNames={{
+                            inputWrapper: "bg-white shadow-none border-default-200 hover:border-default-300 focus-within:!border-primary rounded-lg px-3 py-1.5"
+                          }}
                           placeholder="Alamat lengkap..." 
                           value={formData.client_address} 
                           onChange={(e) => setFormData(p => ({ ...p, client_address: e.target.value }))} 
@@ -164,7 +170,7 @@ const POSCheckoutModal = ({
 
               <div className="flex flex-col gap-1.5 w-full">
                 <Label className="text-xs font-semibold text-default-700 block">Catatan Peminjaman</Label>
-                <InputGroup className="flex-1 shadow-none border border-default-200 hover:border-default-300 focus-within:!border-primary rounded-lg px-3 py-2 text-sm">
+                <InputGroup className="flex-1 bg-white shadow-none border border-default-200 hover:border-default-300 focus-within:!border-primary rounded-lg px-3 py-2 text-sm">
                   <InputGroup.Input
                     placeholder="Catatan tambahan (opsional)..."
                     value={formData.notes}
@@ -197,7 +203,7 @@ const POSCheckoutModal = ({
               </div>
             </div>
 
-            {(errors.submit || Object.keys(errors).filter(k => k !== 'submit').length > 0) && (
+            {(errors.submit || Object.entries(errors).some(([k, v]) => k !== 'submit' && !!v)) && (
               <div className="text-danger text-xs bg-danger-50 p-2.5 rounded border border-danger-200 font-medium">
                 {errors.submit || "Terdapat isian yang belum lengkap atau tidak valid. Silakan periksa kembali form di atas."}
               </div>

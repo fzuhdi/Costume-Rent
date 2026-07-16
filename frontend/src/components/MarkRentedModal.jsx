@@ -1,10 +1,18 @@
 import { useEffect, useReducer } from 'react';
-import { Modal, Button, Checkbox } from '@heroui/react';
+import { Modal, Button, Checkbox, Select, ListBox, Label } from '@heroui/react';
 import PaymentFormFields from './PaymentFormFields';
 import { markRented, uploadPaymentProof } from '../api/rentApi';
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
 const formatCurrency = (value) => currencyFormatter.format(value);
+
+const GUARANTEE_OPTIONS = [
+  { id: 'KTP', label: 'KTP' },
+  { id: 'SIM', label: 'SIM' },
+  { id: 'KK', label: 'Kartu Keluarga (KK)' },
+  { id: 'Paspor', label: 'Paspor' },
+  { id: 'Lainnya', label: 'Lainnya' }
+];
 
 /**
  * MarkRentedModal
@@ -37,7 +45,9 @@ const initialState = {
   amount: '',
   method: 'CASH',
   proof: '',
+  proof: '',
   proofFile: null,
+  guaranteeType: 'KTP',
   uploading: false,
   loading: false,
   error: '',
@@ -51,21 +61,22 @@ function reducer(state, action) {
       return {
         ...initialState,
         amount: String(Math.max(0, action.payload?.sisaTagihan || 0)),
+        guaranteeType: action.payload?.guaranteeType || 'KTP',
       };
     default:
       return state;
   }
 }
 
-const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0 }) => {
+const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, guaranteeType }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { confirmSecurityItem, amount, method, proof, proofFile, uploading, loading, error } = state;
+  const { confirmSecurityItem, amount, method, proof, proofFile, guaranteeType: formGuaranteeType, uploading, loading, error } = state;
 
   useEffect(() => {
     if (isOpen) {
-      dispatch({ type: 'RESET', payload: { sisaTagihan } });
+      dispatch({ type: 'RESET', payload: { sisaTagihan, guaranteeType } });
     }
-  }, [isOpen, sisaTagihan]);
+  }, [isOpen, sisaTagihan, guaranteeType]);
 
   const hasBalance = sisaTagihan > 0;
   const needsProof = hasBalance && method !== 'CASH' && !proof;
@@ -78,7 +89,12 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0 }
         ? { amount: parseInt(amount), payment_method: method, payment_proof: proof, notes: 'Pelunasan Sewa' }
         : null;
 
-      await markRented(rentId, { payment: paymentPayload });
+      const payload = {
+        guarantee_type: formGuaranteeType,
+        payment: paymentPayload
+      };
+
+      await markRented(rentId, payload);
       handleClose();
       onSuccess();
     } catch (err) {
@@ -110,12 +126,34 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0 }
             </div>
 
             {/* Security item confirmation */}
-            <Checkbox isSelected={confirmSecurityItem} onChange={(v) => dispatch({ type: 'SET_FIELD', field: 'confirmSecurityItem', value: v })}>
-              <Checkbox.Content>
-                <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
-                Jaminan Ditahan (Wajib)
-              </Checkbox.Content>
-            </Checkbox>
+            <div className="flex flex-col gap-2">
+              <Select
+                selectedKey={formGuaranteeType}
+                onSelectionChange={(val) => dispatch({ type: 'SET_FIELD', field: 'guaranteeType', value: val })}
+                onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'guaranteeType', value: e?.target?.value ?? e })}
+              >
+                <Label className="text-xs font-semibold mb-1 text-default-600 block">Jaminan yang Ditahan <span className="text-danger">*</span></Label>
+                <Select.Trigger className="w-full flex items-center justify-between bg-white border border-default-200 rounded-lg px-3 py-2 text-sm text-left">
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox className="bg-white border border-default-200 rounded-lg shadow-lg max-h-60 overflow-y-auto p-1">
+                    {GUARANTEE_OPTIONS.map((m) => (
+                      <ListBox.Item key={m.id} id={m.id} textValue={m.label} className="px-3 py-2 hover:bg-default-100 cursor-pointer rounded-md text-sm outline-none data-[focused]:bg-default-100">
+                        {m.label}
+                      </ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
+              </Select>
+              <Checkbox className="mt-1" isSelected={confirmSecurityItem} onChange={(v) => dispatch({ type: 'SET_FIELD', field: 'confirmSecurityItem', value: v })}>
+                <Checkbox.Content>
+                  <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
+                  Saya telah menerima jaminan ini (Wajib)
+                </Checkbox.Content>
+              </Checkbox>
+            </div>
 
             {/* Payment form — only shown when there's a remaining balance */}
             {hasBalance && (

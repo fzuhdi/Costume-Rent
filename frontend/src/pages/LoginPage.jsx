@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -29,10 +29,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center bg-gray-50"
-      aria-label="Login page"
-    >
+    <div className="auth-screen" aria-label="Login page">
       <Card className="w-full max-w-md mx-4" aria-label="Login form">
         <Card.Content className="flex flex-col gap-6 py-8 px-6">
 
@@ -41,11 +38,11 @@ const LoginPage = () => {
             {settings.app_logo ? (
               <img src={settings.app_logo} alt={settings.app_name} className="h-16 mx-auto mb-2" />
             ) : (
-              <h1 className="text-2xl font-bold" style={{ color: 'var(--primary)' }}>
+            <h1 className="text-2xl font-bold text-[var(--primary)]">
                 {settings.app_name}
               </h1>
             )}
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>{settings.app_tagline}</p>
+            <p className="text-sm text-[var(--muted)]">{settings.app_tagline}</p>
           </div>
 
           {/* Error */}
@@ -83,7 +80,7 @@ const LoginPage = () => {
             </Button>
           </form>
 
-          <p className="text-center text-xs" style={{ color: 'var(--muted)' }}>
+          <p className="text-center text-xs text-[var(--muted)]">
             Default: admin@busana.com / admin123
           </p>
 

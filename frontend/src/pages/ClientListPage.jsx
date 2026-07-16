@@ -59,13 +59,15 @@ const ClientListPage = () => {
 
   return (
     <Card>
-      <Card.Header className="flex flex-col gap-4 px-6 py-5">
-        {/* Title */}
-        <h1 className="text-2xl font-bold">Daftar Klien</h1>
+      <Card.Header className="flex flex-col gap-4 px-6 pt-6 pb-4 border-b border-[var(--border)]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h1 className="page-title">Daftar Klien</h1>
+          <Button onPress={() => navigate('/clients/new')} variant="primary" size="sm">
+            <span className="whitespace-nowrap">Tambah Klien</span>
+          </Button>
+        </div>
 
-        <Separator />
-
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div className="flex flex-col sm:flex-row gap-3 w-full">
           {/* Search */}
           <InputGroup className="w-full sm:w-64">
             <InputGroup.Prefix><Search size={18} className="text-[var(--muted)]" /></InputGroup.Prefix>
@@ -76,13 +78,7 @@ const ClientListPage = () => {
               aria-label="Cari klien"
             />
           </InputGroup>
-
-          <Button onPress={() => navigate('/clients/new')} variant="primary" size="sm">
-            <span className="whitespace-nowrap">Tambah Klien</span>
-          </Button>
         </div>
-
-        <Separator />
       </Card.Header>
 
       <Card.Content>

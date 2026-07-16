@@ -1,4 +1,3 @@
-import React from 'react';
 import { Spinner } from '@heroui/react';
 import { UploadCloud, CheckCircle } from 'lucide-react';
 

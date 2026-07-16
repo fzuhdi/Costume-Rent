@@ -20,6 +20,9 @@ export const uploadCostumeImage = (id, formData) =>
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 
+export const deleteCostumeImage = (costumeId, imageId) =>
+  api.delete(`/costumes/${costumeId}/images/${imageId}`);
+
 
 
 

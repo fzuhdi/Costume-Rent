@@ -412,16 +412,6 @@ func (s *RentService) MarkReturned(id uint, req dto.MarkReturnedRequest, userID 
 		return nil, errors.New("only rented or overdue orders can be returned")
 	}
 
-	now := time.Now()
-	if req.ReturnedAt != "" {
-		if t, err := time.Parse("2006-01-02", req.ReturnedAt); err == nil {
-			now = t
-		}
-	}
-	order.Status = "returned"
-	order.ActualReturnDate = &now
-	order.HasSecurityItem = false
-
 	if req.DamageFee > 0 {
 		tx := models.RentTransaction{
 			RentOrderID: order.ID,
@@ -455,6 +445,16 @@ func (s *RentService) MarkReturned(id uint, req dto.MarkReturnedRequest, userID 
 			return nil, err
 		}
 	}
+
+	now := time.Now()
+	if req.ReturnedAt != "" {
+		if t, err := time.Parse("2006-01-02", req.ReturnedAt); err == nil {
+			now = t
+		}
+	}
+	order.Status = "returned"
+	order.ActualReturnDate = &now
+	order.HasSecurityItem = false
 
 	if err := config.DB.Save(&order).Error; err != nil {
 		return nil, err
@@ -490,8 +490,10 @@ func (s *RentService) MarkRented(id uint, req dto.MarkRentedRequest, userID uint
 		totalDebits += d.Amount
 	}
 
+	totalBill := totalDebits
+
 	if req.Payment != nil {
-		if order.TotalPaid+req.Payment.Amount < totalFee+totalDebits && req.Payment.PaymentProof == "" && req.Payment.PaymentMethod != "CASH" {
+		if order.TotalPaid+req.Payment.Amount < totalBill && req.Payment.PaymentProof == "" && req.Payment.PaymentMethod != "CASH" {
 			return nil, errors.New("bukti pelunasan pembayaran wajib diunggah untuk mengambil kostum (disewakan)")
 		}
 		_, err := s.AddPayment(order.ID, *req.Payment, userID)
@@ -503,13 +505,14 @@ func (s *RentService) MarkRented(id uint, req dto.MarkRentedRequest, userID uint
 			return nil, err
 		}
 	} else {
-		if order.TotalPaid < totalFee+totalDebits {
+		if order.TotalPaid < totalBill {
 			return nil, errors.New("pelunasan pembayaran diperlukan untuk mengambil kostum (disewakan)")
 		}
 	}
 
 	order.Status = "rented"
 	order.HasSecurityItem = true
+	order.GuaranteeType = req.GuaranteeType
 
 	if err := config.DB.Save(&order).Error; err != nil {
 		return nil, err

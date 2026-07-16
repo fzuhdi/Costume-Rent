@@ -86,7 +86,7 @@ const RentDetailPage = () => {
   
   const totalPaid = totalCredits;
   const isCancelled = rent?.status === 'cancelled';
-  const sisaTagihan = isCancelled ? 0 : Math.max(0, totalTagihan - totalPaid);
+  const sisaTagihan = isCancelled ? 0 : (totalTagihan - totalPaid);
 
 
   if (loading) {
@@ -157,11 +157,10 @@ const RentDetailPage = () => {
           <RentPaymentSection
             rent={rent}
             isEditing={isEditing}
-            totalBaseFee={totalBaseFee}
-            totalCredits={totalCredits}
-            totalDebits={totalDebits}
+            totalTagihan={totalTagihan}
+            totalPaid={totalPaid}
             sisaTagihan={sisaTagihan}
-            openPaymentModal={() => setActiveModal('payment')}
+            setIsPaymentModalOpen={() => setActiveModal('payment')}
             openPreview={openPreview}
             formatCurrency={formatCurrency}
             formatDate={formatDate}

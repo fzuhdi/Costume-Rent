@@ -86,7 +86,8 @@ type MarkReturnedRequest struct {
 }
 
 type MarkRentedRequest struct {
-	Payment *AddPaymentRequest `json:"payment"`
+	GuaranteeType string             `json:"guarantee_type" binding:"required"`
+	Payment       *AddPaymentRequest `json:"payment"`
 }
 
 type UpgradeToBookedRequest struct {

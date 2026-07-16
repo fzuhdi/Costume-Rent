@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Card, Chip, Button, Input, Select, ListBox, TextField, Label } from '@heroui/react';
 import { XCircle, CheckCircle, Edit, Trash2, User, Calendar, Shield, FileText } from 'lucide-react';
 import ClientSelect from '../ClientSelect';
@@ -80,33 +80,37 @@ export default function RentDetailInfo({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mt-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-3">
               <User size={20} className="text-[var(--muted)]" />
               <div>
-                <span className="text-[var(--muted)]">Klien</span>
-                <p className="font-medium">{rent.client?.name || rent.client_name}</p>
+                <span className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Klien</span>
+                <p className="font-medium text-sm text-[var(--foreground)]">{rent.client?.name || rent.client_name}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-3">
               <Calendar size={20} className="text-[var(--muted)]" />
               <div>
-                <span className="text-[var(--muted)]">Acara</span>
-                <p className="font-medium">{formatDate(rent.event_date)}</p>
+                <span className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Acara</span>
+                <p className="font-medium text-sm text-[var(--foreground)]">
+                  {rent.event_date 
+                    ? new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' }).format(new Date(rent.event_date))
+                    : '-'}
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-3">
               <Shield size={20} className="text-[var(--muted)]" />
               <div>
-                <span className="text-[var(--muted)]">Jaminan</span>
-                <p className="font-medium">{rent.guarantee_type}</p>
+                <span className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Jaminan</span>
+                <p className="font-medium text-sm text-[var(--foreground)]">{rent.guarantee_type}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-3">
               <FileText size={20} className="text-[var(--muted)]" />
               <div>
-                <span className="text-[var(--muted)]">Catatan</span>
-                <p className="font-medium">{rent.notes || '-'}</p>
+                <span className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Catatan</span>
+                <p className="font-medium text-sm text-[var(--foreground)]">{rent.notes || '-'}</p>
               </div>
             </div>
           </div>

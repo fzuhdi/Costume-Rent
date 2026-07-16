@@ -25,6 +25,7 @@ const HeroDatePicker = ({ label, value, onChange, isRequired, isInvalid, errorMe
         className={className || "w-full"}
         value={dateValue}
         onChange={handleChange}
+        aria-label={label || "Pilih tanggal"}
       >
         <DateField.Group fullWidth>
           <DateField.Input>{(segment) => <DateField.Segment segment={segment} />}</DateField.Input>

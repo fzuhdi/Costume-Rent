@@ -12,7 +12,8 @@ const dayNamesShort = ["Mg", "Sn", "Sl", "Rb", "Km", "Jm", "Sb"];
 
 const parseLocalDate = (dateStr) => {
   if (!dateStr) return null;
-  const [year, month, day] = dateStr.split('-').map(Number);
+  const datePart = dateStr.split('T')[0];
+  const [year, month, day] = datePart.split('-').map(Number);
   return new Date(year, month - 1, day);
 };
 
@@ -43,7 +44,7 @@ const CatalogueDetailPage = () => {
         setCostume(costumeRes.data);
         // Filter rents that contain this costume
         const relevantRents = (rentsRes.data?.data || []).filter(r => 
-          ['Draft', 'Booked', 'Rented'].includes(r.status) &&
+          ['draft', 'booked', 'rented', 'overdue'].includes(r.status?.toLowerCase()) &&
           r.items.some(item => String(item.costume_id) === String(id))
         );
         setRents(relevantRents);
@@ -131,16 +132,25 @@ const CatalogueDetailPage = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4 max-w-6xl mx-auto">
-       <Link to="/catalogue" className="flex items-center gap-2 text-sm text-default-500 hover:text-default-900" aria-label="Kembali ke Katalog">
-         <ArrowLeft size={18} />
-         Kembali ke Katalog
-       </Link>
+    <Card className="max-w-6xl mx-auto">
+      <Card.Header className="flex flex-col gap-4 px-6 pt-6 pb-4 border-b border-[var(--border)]">
+        <Link to="/catalogue" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)] w-fit" aria-label="Kembali ke Katalog">
+          <ArrowLeft size={18} />
+          Kembali ke Katalog
+        </Link>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h2 className="text-xl font-bold">{costume.name}</h2>
+          <div className="flex gap-2 flex-shrink-0">
+            <Button variant="bordered" size="sm" onPress={() => navigate(`/catalogue/${id}/edit`)} aria-label="Edit kostum"><Edit size={16} />Edit</Button>
+            <Button variant="flat" color="danger" size="sm" onPress={handleDeleteRequest} isPending={deleting} aria-label="Hapus kostum"><Trash2 size={16} />Hapus</Button>
+          </div>
+        </div>
+      </Card.Header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-        {/* Left Column: Image */}
-        <Card className="shadow-sm">
-          <Card.Content className="p-0">
+      <Card.Content className="p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          {/* Left Column: Image */}
+          <div className="rounded-xl border border-[var(--border)] overflow-hidden bg-default-50/30">
             {costume.images?.length > 0 ? (
               <div className="grid grid-cols-2 gap-2 p-2">
                 <img src={costume.images[0].path} alt={costume.name} className="w-full aspect-square object-cover rounded-lg" loading="lazy" decoding="async" fetchPriority="low" />
@@ -161,45 +171,35 @@ const CatalogueDetailPage = () => {
                 Tidak Ada Gambar
               </div>
             )}
-          </Card.Content>
-        </Card>
+          </div>
 
-        {/* Right Column: Details & Schedule */}
-        <div className="flex flex-col gap-4 w-full">
-          {/* Details Card */}
-          <Card className="shadow-sm w-full">
-            <Card.Content className="p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <h2 className="text-xl font-bold">{costume.name}</h2>
-                <div className="flex gap-2 flex-shrink-0">
-                 <Button variant="bordered" size="sm" onPress={() => navigate(`/catalogue/${id}/edit`)} aria-label="Edit kostum"><Edit size={16} />Edit</Button>
-                   <Button variant="flat" color="danger" size="sm" onPress={handleDeleteRequest} isPending={deleting} aria-label="Hapus kostum"><Trash2 size={16} />Hapus</Button>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 text-sm mt-6">
+          {/* Right Column: Details & Schedule */}
+          <div className="flex flex-col gap-8 w-full">
+            {/* Details Section */}
+            <div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-default-500 block mb-1">Wilayah</span>
+                  <span className="info-label block mb-1">Wilayah</span>
                   <p className="font-medium">{costume.region?.name || '-'}</p>
                 </div>
                 <div>
-                  <span className="text-default-500 block mb-1">Kategori</span>
+                  <span className="info-label block mb-1">Kategori</span>
                   <p className="font-medium">{costume.category?.name || '-'}</p>
                 </div>
                 <div>
-                  <span className="text-default-500 block mb-1">Ukuran</span>
+                  <span className="info-label block mb-1">Ukuran</span>
                   <p className="font-medium">{costume.size || '-'}</p>
                 </div>
                 <div>
-                  <span className="text-default-500 block mb-1">Harga Sewa/Set</span>
+                  <span className="info-label block mb-1">Harga Sewa/Set</span>
                   <p className="font-medium text-success">{idrFormatter.format(costume.rental_fee)}</p>
                 </div>
                 <div>
-                   <span className="text-default-500 block mb-1">Total Stok</span>
+                   <span className="info-label block mb-1">Total Stok</span>
                    <p className="font-medium">{costume.total_quantity} unit</p>
                  </div>
                  <div>
-                   <span className="text-default-500 block mb-1">Stok Tersedia</span>
+                   <span className="info-label block mb-1">Stok Tersedia</span>
                    <p className="font-medium">{costume.available_quantity ?? costume.total_quantity} unit</p>
                  </div>
               </div>
@@ -210,16 +210,13 @@ const CatalogueDetailPage = () => {
                   <p className="text-sm text-default-600 leading-relaxed">{costume.description}</p>
                 </div>
               )}
-            </Card.Content>
-          </Card>
+            </div>
 
-          {/* Availability Schedule Card */}
-          <Card className="shadow-sm w-full">
-            <Card.Header className="px-5 py-4 border-b border-default-100">
-              <h3 className="font-bold text-sm">📅 Jadwal Ketersediaan</h3>
-            </Card.Header>
-            <Card.Content className="p-5">
-              <div className="flex items-center justify-between mb-4">
+            {/* Availability Schedule Section */}
+            <div className="pt-6 border-t border-[var(--border)] w-full">
+              <h3 className="font-bold text-sm mb-4">📅 Jadwal Ketersediaan</h3>
+              <div>
+                <div className="flex items-center justify-between mb-4">
                 <Button isIconOnly variant="light" size="sm" onPress={prevMonth}><ChevronLeft size={18} /></Button>
                 <span className="font-semibold text-sm">{monthNames[month]} {year}</span>
                 <Button isIconOnly variant="light" size="sm" onPress={nextMonth}><ChevronRight size={18} /></Button>
@@ -244,11 +241,11 @@ const CatalogueDetailPage = () => {
                   let textClass = "text-default-700";
                   
                   if (isFullyBooked) {
-                    bgClass = "bg-danger-100";
-                    textClass = "text-danger font-bold line-through";
+                    bgClass = "bg-red-100";
+                    textClass = "text-red-700 font-bold line-through";
                   } else if (isPartiallyBooked) {
-                    bgClass = "bg-warning-100";
-                    textClass = "text-warning-700 font-semibold";
+                    bgClass = "bg-yellow-100";
+                    textClass = "text-yellow-800 font-semibold";
                   }
 
                   return (
@@ -261,13 +258,14 @@ const CatalogueDetailPage = () => {
               
               <div className="flex flex-wrap gap-4 mt-5 text-xs text-default-500">
                 <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-default-50 border border-default-200"></div> Tersedia</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-warning-100"></div> Sebagian Disewa</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-danger-100"></div> Habis (Fully Booked)</div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-yellow-100"></div> Sebagian Disewa</div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-red-100"></div> Habis (Fully Booked)</div>
+                </div>
               </div>
-            </Card.Content>
-          </Card>
+            </div>
+          </div>
         </div>
-      </div>
+      </Card.Content>
 
       <Modal.Backdrop isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
           <Modal.Container>
@@ -285,7 +283,7 @@ const CatalogueDetailPage = () => {
             </Modal.Dialog>
           </Modal.Container>
       </Modal.Backdrop>
-    </div>
+    </Card>
   );
 };
 

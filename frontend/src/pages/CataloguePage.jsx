@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getCostumes, getRegions, getCategories } from '../api/costumeApi';
-import { Search, Grid, List, Filter, AlignLeft } from 'lucide-react';
+import { Grid, List, Filter, AlignLeft } from 'lucide-react';
 import {
   Input, Button, ButtonGroup, Separator,
-  Label, ListBox, Select,
+  ListBox, Select,
   Spinner, Card
 } from '@heroui/react';
 import CostumeTableView from '../components/CostumeTableView';
@@ -38,6 +38,18 @@ const CataloguePage = () => {
   }, [search]);
 
   useEffect(() => {
+    const fetchFilters = async () => {
+      try {
+        const [regionsRes, categoriesRes] = await Promise.all([
+          getRegions(),
+          getCategories()
+        ]);
+        setRegions(regionsRes.data?.data || []);
+        setCategories(categoriesRes.data?.data || []);
+      } catch (error) {
+        console.error('Failed to fetch filters:', error);
+      }
+    };
     fetchFilters();
   }, []);
 
@@ -56,65 +68,51 @@ const CataloguePage = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const fetchFilters = async () => {
-    try {
-      const [regionsRes, categoriesRes] = await Promise.all([
-        getRegions(),
-        getCategories(),
-      ]);
-      setRegions(regionsRes.data || []);
-      setCategories(categoriesRes.data || []);
-    } catch (error) {
-      console.error('Failed to fetch filters:', error);
-    }
-  };
-
-  const fetchCostumes = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await getCostumes({
-        search: debouncedSearch,
-        region_id: regionFilter,
-        category_id: categoryFilter,
-        page,
-        limit,
-      });
-      const uniqueCostumes = [];
-      const seenNames = new Set();
-      for (const costume of response.data.data || []) {
-        const key = String(costume.name || '').trim().toLowerCase();
-        if (debouncedSearch.trim() && seenNames.has(key)) {
-          continue;
-        }
-        seenNames.add(key);
-        uniqueCostumes.push(costume);
-      }
-
-      const data = uniqueCostumes.map((c) => ({
-        ...c,
-        children: [{
-          id: `detail-${c.id}`,
-          name: c.name,
-          description: c.description,
-          region: c.region,
-          category: c.category,
-          quantity: c.quantity,
-          cover_image: c.cover_image,
-          acquired_at: c.acquired_at,
-        }],
-      }));
-      setCostumes(data);
-      setTotal(response.data.total || 0);
-    } catch (error) {
-      console.error('Failed to fetch costumes:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedSearch, regionFilter, categoryFilter, page, limit]);
-
   useEffect(() => {
+    const fetchCostumes = async () => {
+      setLoading(true);
+      try {
+        const response = await getCostumes({
+          search: debouncedSearch,
+          region_id: regionFilter,
+          category_id: categoryFilter,
+          page,
+          limit,
+        });
+        const uniqueCostumes = [];
+        const seenNames = new Set();
+        for (const costume of response.data.data || []) {
+          const key = String(costume.name || '').trim().toLowerCase();
+          if (debouncedSearch.trim() && seenNames.has(key)) {
+            continue;
+          }
+          seenNames.add(key);
+          uniqueCostumes.push(costume);
+        }
+
+        const data = uniqueCostumes.map((c) => ({
+          ...c,
+          children: [{
+            id: `detail-${c.id}`,
+            name: c.name,
+            description: c.description,
+            region: c.region,
+            category: c.category,
+            quantity: c.quantity,
+            cover_image: c.cover_image,
+            acquired_at: c.acquired_at,
+          }],
+        }));
+        setCostumes(data);
+        setTotal(response.data.total || 0);
+      } catch (error) {
+        console.error('Failed to fetch costumes:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchCostumes();
-  }, [fetchCostumes]);
+  }, [debouncedSearch, regionFilter, categoryFilter, page, limit]);
 
   const handleExpandedChange = (keys) => {
     setExpandedKeys(keys);
@@ -136,10 +134,10 @@ const CataloguePage = () => {
 
   return (
     <Card>
-      <Card.Header className="flex flex-col gap-4 px-6 py-5">
+      <Card.Header className="flex flex-col gap-4 px-6 pt-6 pb-4 border-b border-[var(--border)]">
         {/* Title + Add button */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <h1 className="text-2xl font-bold">Katalog Kostum</h1>
+          <h1 className="page-title">Katalog Kostum</h1>
           <Button
             onPress={() => navigate('/catalogue/new')}
              variant="primary"
@@ -148,8 +146,6 @@ const CataloguePage = () => {
             Tambah Kostum
           </Button>
         </div>
-
-        <Separator />
 
         {/* Filters + View toggle */}
         <div className="flex flex-col gap-3 w-full">

@@ -23,11 +23,11 @@ export default function RentPaymentSection({
               const isDebit = trx.type === 'DEBIT';
               const isCredit = trx.type === 'CREDIT' || !trx.type; // empty means legacy payment
               const amount = trx.amount || 0;
-              
+
               let sign = '';
               let colorClass = 'text-default-700';
               let borderClass = 'border-default-200';
-              
+
               if (isDebit) {
                 sign = '+';
                 colorClass = 'text-danger';
@@ -98,9 +98,9 @@ export default function RentPaymentSection({
 
           <hr className="border-default-200" />
 
-          <div className="flex justify-between text-base font-bold text-primary">
-            <span>Sisa Tagihan</span>
-            <span>{formatCurrency(sisaTagihan)}</span>
+          <div className={`flex justify-between text-base font-bold ${sisaTagihan < 0 ? 'text-warning-600' : 'text-primary'}`}>
+            <span>{sisaTagihan < 0 ? 'Kembalian' : 'Sisa Tagihan'}</span>
+            <span>{formatCurrency(Math.abs(sisaTagihan))}</span>
           </div>
 
           {!isEditing && rent.status !== 'cancelled' && (

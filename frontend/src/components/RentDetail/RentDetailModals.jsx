@@ -38,6 +38,7 @@ export default function RentDetailModals({
         onSuccess={fetchRent}
         rentId={parseInt(id)}
         sisaTagihan={sisaTagihan}
+        guaranteeType={rent?.guarantee_type}
       />
 
       <ExtendRentModal
