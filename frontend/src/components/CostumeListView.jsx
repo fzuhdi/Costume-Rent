@@ -33,7 +33,7 @@ const CostumeListView = ({ costumes, expandedKeys, onExpandedChange }) => {
               <Button
                 isIconOnly
                 variant="light"
-                onPress={(e) => { e.stopPropagation(); toggleExpand(costume.id); }}
+                onClick={(e) => { e.stopPropagation(); toggleExpand(costume.id); }}
                 className="flex-shrink-0 min-w-6 w-6 h-6 rounded"
                 aria-label={isExpanded ? 'Tutup detail' : 'Lihat detail'}
               >

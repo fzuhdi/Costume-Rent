@@ -105,3 +105,35 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		"role":  user.Role,
 	})
 }
+
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	userId, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+
+	var id uint
+	switch v := userId.(type) {
+	case float64:
+		id = uint(v)
+	case uint:
+		id = v
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+
+	var req dto.ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.authService.ChangePassword(id, req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password berhasil diubah"})
+}

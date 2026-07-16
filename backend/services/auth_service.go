@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"os"
 	"time"
 
@@ -123,6 +124,25 @@ func (s *AuthService) UpdateUser(id uint, req dto.UpdateUserRequest) (*models.Us
 	}
 
 	return &user, nil
+}
+
+func (s *AuthService) ChangePassword(userID uint, req dto.ChangePasswordRequest) error {
+	var user models.User
+	if err := config.DB.First(&user, userID).Error; err != nil {
+		return errors.New("User not found")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.OldPassword)); err != nil {
+		return errors.New("Password lama tidak sesuai")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	user.Password = string(hashedPassword)
+	return config.DB.Save(&user).Error
 }
 
 func (s *AuthService) DeleteUser(id uint) error {

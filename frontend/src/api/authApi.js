@@ -8,4 +8,7 @@ export const getCurrentUser = () =>
 
 export const logout = () =>
   api.post('/auth/logout');
+
+export const changePassword = (data) =>
+  api.put('/auth/change-password', data);
 

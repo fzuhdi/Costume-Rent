@@ -183,22 +183,18 @@ func seedSampleCostumes() {
 	if costumeCount == 0 {
 		log.Println("Seeding sample costumes...")
 		var bali, jawa, sumatera models.Region
-		var category1, category2, category3 models.Category
+		var category1 models.Category
 
 		db.Where("name = ?", "Bali").First(&bali)
 		db.Where("name = ?", "Jawa").First(&jawa)
 		db.Where("name = ?", "Sumatera").First(&sumatera)
 		db.Where("name = ?", "Baju Adat").First(&category1)
-		db.Where("name = ?", "Topeng").First(&category2)
-		db.Where("name = ?", "Aksesoris").First(&category3)
 
 		acquired := time.Now().AddDate(-1, 0, 0)
 		baliID := bali.ID
 		jawaID := jawa.ID
 		sumateraID := sumatera.ID
 		cat1ID := category1.ID
-		cat2ID := category2.ID
-		cat3ID := category3.ID
 
 		type costumeSeed struct {
 			name          string
@@ -213,34 +209,19 @@ func seedSampleCostumes() {
 
 		costumes := []costumeSeed{
 			{
-				name: "Kebaya Bali", description: "Kebaya Bali dengan motif songket tradisional", size: "M",
-				regionID: &baliID, categoryID: &cat1ID, rentalFee: 75000, totalQuantity: 5,
-				imageFile: "kebaya_bali.jpg",
+				name: "Tari Pendet", description: "Busana tari Pendet asli Bali lengkap dengan prada dan hiasan kepala", size: "M",
+				regionID: &baliID, categoryID: &cat1ID, rentalFee: 150000, totalQuantity: 3,
+				imageFile: "tari_pendet.jpg",
 			},
 			{
-				name: "Baju Joged", description: "Baju tari joged banteng untuk pertunjukan", size: "L",
-				regionID: &baliID, categoryID: &cat1ID, rentalFee: 60000, totalQuantity: 3,
-				imageFile: "baju_joged.jpg",
+				name: "Tari Jaipong", description: "Baju tari Jaipong khas Sunda, Jawa Barat", size: "L",
+				regionID: &jawaID, categoryID: &cat1ID, rentalFee: 125000, totalQuantity: 5,
+				imageFile: "tari_jaipong.jpg",
 			},
 			{
-				name: "Topeng Keras", description: "Topeng keras untuk tari topeng khas Bali", size: "All Size",
-				regionID: &baliID, categoryID: &cat2ID, rentalFee: 35000, totalQuantity: 10,
-				imageFile: "topeng_bali.jpg",
-			},
-			{
-				name: "Baju Batik", description: "Baju batik Jawa untuk acara formal", size: "XL",
-				regionID: &jawaID, categoryID: &cat1ID, rentalFee: 50000, totalQuantity: 8,
-				imageFile: "baju_batik.jpg",
-			},
-			{
-				name: "Baju Melayu", description: "Pakaian adat Melayu Sumatera", size: "S",
-				regionID: &sumateraID, categoryID: &cat1ID, rentalFee: 65000, totalQuantity: 4,
-				imageFile: "baju_melayu.jpg",
-			},
-			{
-				name: "Selendang Songket", description: "Selendang songket dengan benang emas", size: "All Size",
-				regionID: &baliID, categoryID: &cat3ID, rentalFee: 40000, totalQuantity: 15,
-				imageFile: "selendang_songket.jpg",
+				name: "Tari Piring", description: "Pakaian adat tari Piring khas Minangkabau Sumatera", size: "All Size",
+				regionID: &sumateraID, categoryID: &cat1ID, rentalFee: 135000, totalQuantity: 4,
+				imageFile: "tari_piring.jpg",
 			},
 		}
 

@@ -21,6 +21,7 @@ import ClientListPage from './pages/ClientListPage';
 import ClientDetailPage from './pages/ClientDetailPage';
 import ClientFormPage from './pages/ClientFormPage';
 import SettingsPage from './pages/SettingsPage';
+import ProfilePage from './pages/ProfilePage';
 import NotFoundPage from './pages/NotFoundPage';
 import { useSettings } from './context/SettingsContext';
 import FullScreenSpinner from './components/FullScreenSpinner';
@@ -140,6 +141,7 @@ const AppRoutes = () => {
         <Route path="/clients/new" element={<ClientFormPage />} />
         <Route path="/clients/:id" element={<ClientDetailPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Route>
 
       <Route path="*" element={isAuthenticated ? <NotFoundPage /> : <Navigate to="/login" replace />} />

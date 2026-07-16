@@ -68,6 +68,9 @@ func SetupRouter() *gin.Engine {
 		auth := api.Group("")
 		auth.Use(middleware.AuthMiddleware())
 		{
+			auth.PUT("/auth/change-password", authHandler.ChangePassword)
+
+			// Client routes
 			auth.GET("/clients", clientHandler.List)
 			auth.GET("/clients/search", clientHandler.Search)
 			auth.GET("/clients/:id", clientHandler.GetByID)
