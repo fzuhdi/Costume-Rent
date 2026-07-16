@@ -37,7 +37,7 @@ const getStatusConfig = (status) => {
   switch (status) {
     case 'booked':
       return {
-        badgeClass: 'bg-warning-100 text-warning-800 dark:bg-warning-950/40 dark:text-warning-300',
+        badgeClass: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/40 dark:text-yellow-300',
         gradientClass: 'from-amber-500 to-orange-600 text-white shadow-sm shadow-orange-500/20',
         label: 'Dipesan'
       };
@@ -49,7 +49,7 @@ const getStatusConfig = (status) => {
       };
     case 'overdue':
       return {
-        badgeClass: 'bg-danger-100 text-danger-800 dark:bg-danger-950/40 dark:text-danger-300 animate-pulse',
+        badgeClass: 'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300 animate-pulse',
         gradientClass: 'from-rose-500 to-red-600 text-white shadow-sm shadow-red-500/20 animate-pulse',
         label: 'Terlambat'
       };
@@ -190,7 +190,7 @@ const CalendarGrid = ({ loading, rents, currentDate, search, navigate }) => {
     <div className="flex-1 flex flex-col overflow-auto">
       <div className="min-w-[700px] flex-1 flex flex-col">
         {/* Columns Header (Sunday - Saturday) */}
-        <div className="grid grid-cols-7 border-b border-[var(--border)] bg-default-50/50 backdrop-blur-sm shrink-0">
+        <div className="grid grid-cols-7 border-b border-[var(--border)] bg-default-50 backdrop-blur-sm shrink-0">
           {dayNames.map(day => (
             <div key={day} className="py-2.5 text-center text-xs font-bold text-default-500 uppercase tracking-wider">
               {day}
@@ -237,7 +237,7 @@ const CalendarGrid = ({ loading, rents, currentDate, search, navigate }) => {
                     >
                       <span className={`text-[11px] font-extrabold w-6 h-6 flex items-center justify-center rounded-full transition-transform group-hover:scale-105 ${
                         isToday 
-                          ? 'bg-primary text-white font-bold shadow-sm' 
+                          ? 'cal-today-badge' 
                           : cell.isCurrentMonth ? 'text-default-700' : 'text-default-300'
                       }`}>
                         {cell.day}

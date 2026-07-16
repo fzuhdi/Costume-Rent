@@ -12,19 +12,18 @@ const CalendarPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [search, setSearch] = useState('');
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const res = await getRents({ limit: 1000 });
-      setRents(res.data?.data || []);
-    } catch (error) {
-      console.error('Failed to fetch calendar rents:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const res = await getRents({ limit: 1000 });
+        setRents(res.data?.data || []);
+      } catch (error) {
+        console.error('Failed to fetch calendar rents:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchData();
   }, []);
 
@@ -36,20 +35,21 @@ const CalendarPage = () => {
   const month = currentDate.getMonth();
 
   return (
-    <div className="flex flex-col gap-6 h-[calc(100vh-100px)] lg:h-[calc(100vh-100px)] min-h-[600px] overflow-hidden">
-      <CalendarHeader
-        search={search}
-        setSearch={setSearch}
-        month={month}
-        year={year}
-        prevMonth={prevMonth}
-        nextMonth={nextMonth}
-        today={today}
-        navigate={navigate}
-      />
+    <Card className="flex flex-col h-[calc(100vh-100px)] lg:h-[calc(100vh-100px)] min-h-[600px] overflow-hidden">
+      <Card.Header className="flex flex-col gap-4 px-6 pt-6 pb-4 border-b border-[var(--border)]">
+        <CalendarHeader
+          search={search}
+          setSearch={setSearch}
+          month={month}
+          year={year}
+          prevMonth={prevMonth}
+          nextMonth={nextMonth}
+          today={today}
+          navigate={navigate}
+        />
+      </Card.Header>
 
-      {/* Monthly Grid Calendar Card */}
-      <Card className="flex-1 flex flex-col border border-[var(--border)] shadow-sm overflow-hidden bg-[var(--surface)]">
+      <div className="flex-1 flex flex-col overflow-hidden bg-[var(--surface)] relative">
         <CalendarGrid
           loading={loading}
           rents={rents}
@@ -57,8 +57,8 @@ const CalendarPage = () => {
           search={search}
           navigate={navigate}
         />
-      </Card>
-    </div>
+      </div>
+    </Card>
   );
 };
 

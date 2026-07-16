@@ -17,7 +17,7 @@ const CalendarHeader = ({
   navigate
 }) => {
   return (
-    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 shrink-0 bg-[var(--surface)] p-4 rounded-xl border border-[var(--border)] shadow-sm">
+    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 w-full">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <CalendarIcon className="text-primary" size={24} />
