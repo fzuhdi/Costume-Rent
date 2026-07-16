@@ -67,8 +67,10 @@ function rentReducer(state, action) {
   }
 }
 
+const idrFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
+
 const formatCurrency = (value) => {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
+  return idrFormatter.format(value);
 };
 
 const RentHistoryPage = () => {

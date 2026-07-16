@@ -3,7 +3,9 @@ import { getDashboardStats } from '../api/statsApi';
 import { Card, Spinner, Button } from '@heroui/react';
 import { AlertTriangle, TrendingUp, Package, Users, DollarSign, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import React, { Suspense, lazy } from 'react';
+
+const DashboardRevenueChart = lazy(() => import('../components/DashboardRevenueChart'));
 
 const idrFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
 
@@ -48,15 +50,9 @@ const DashboardPage = () => {
               <h3 className="font-semibold text-sm text-default-700">Estimasi Pendapatan (7 Hari)</h3>
             </div>
             <div className="flex-1 min-h-[120px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={stats.revenue_chart}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                  <XAxis dataKey="date" tick={{fontSize: 10}} tickMargin={10} axisLine={false} tickLine={false} />
-                  <YAxis hide domain={['dataMin', 'dataMax']} />
-                  <Tooltip formatter={(value) => idrFormatter.format(value)} labelStyle={{color: 'black'}} />
-                  <Line type="monotone" dataKey="amount" stroke="#17c964" strokeWidth={3} dot={{r: 4}} activeDot={{r: 6}} />
-                </LineChart>
-              </ResponsiveContainer>
+              <Suspense fallback={<div className="h-full w-full flex items-center justify-center text-sm text-default-400">Memuat grafik...</div>}>
+                <DashboardRevenueChart data={stats.revenue_chart} />
+              </Suspense>
             </div>
           </Card.Content>
         </Card>
@@ -178,7 +174,7 @@ const DashboardPage = () => {
           <Card.Content className="p-0">
             <div className="flex flex-col divide-y divide-default-100">
               {stats.top_costumes.map((c, i) => (
-                <div key={i} className="flex justify-between items-center p-4 hover:bg-default-50">
+                <div key={c.costume_id} className="flex justify-between items-center p-4 hover:bg-default-50">
                   <div className="flex items-center gap-3">
                     <span className="text-lg font-bold text-default-300 w-6 text-center">{i + 1}</span>
                     <Link to={`/catalogue/${c.costume_id}`} className="text-sm font-medium hover:text-primary">{c.costume_name}</Link>

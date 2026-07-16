@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getClients, deleteClient } from '../api/clientApi';
 import { Search, Trash2 } from 'lucide-react';
 import {
-  Input, Button, Chip,
-  Table, Spinner, Modal, Card, Separator
+  Button, Chip,
+  Table, Spinner, Modal, Card, Separator, InputGroup
 } from '@heroui/react';
 import CustomPagination from '../components/CustomPagination';
 
@@ -26,11 +26,7 @@ const ClientListPage = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
-  useEffect(() => {
-    fetchClients();
-  }, [debouncedSearch, page, limit]);
-
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     setLoading(true);
     try {
       const response = await getClients({ search: debouncedSearch, page, limit });
@@ -41,7 +37,12 @@ const ClientListPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [debouncedSearch, page, limit]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => fetchClients(), 0);
+    return () => clearTimeout(timer);
+  }, [fetchClients]);
 
   const handleDelete = async () => {
     setActionLoading(true);
@@ -66,14 +67,15 @@ const ClientListPage = () => {
 
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
           {/* Search */}
-          <Input
-            placeholder="Cari nama klien..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            aria-label="Cari klien"
-            className="w-full sm:w-64"
-            startContent={<Search size={18} className="text-[var(--muted)]" />}
-          />
+          <InputGroup className="w-full sm:w-64">
+            <InputGroup.Prefix><Search size={18} className="text-[var(--muted)]" /></InputGroup.Prefix>
+            <InputGroup.Input
+              placeholder="Cari nama klien..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              aria-label="Cari klien"
+            />
+          </InputGroup>
 
           <Button onPress={() => navigate('/clients/new')} variant="primary" size="sm">
             <span className="whitespace-nowrap">Tambah Klien</span>

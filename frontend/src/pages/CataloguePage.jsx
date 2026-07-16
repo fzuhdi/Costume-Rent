@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getCostumes, getRegions, getCategories } from '../api/costumeApi';
 import { Search, Grid, List, Filter, AlignLeft } from 'lucide-react';
@@ -56,10 +56,6 @@ const CataloguePage = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    fetchCostumes();
-  }, [debouncedSearch, regionFilter, categoryFilter, page, limit]);
-
   const fetchFilters = async () => {
     try {
       const [regionsRes, categoriesRes] = await Promise.all([
@@ -73,7 +69,7 @@ const CataloguePage = () => {
     }
   };
 
-  const fetchCostumes = async () => {
+  const fetchCostumes = useCallback(async () => {
     setLoading(true);
     try {
       const response = await getCostumes({
@@ -108,13 +104,17 @@ const CataloguePage = () => {
         }],
       }));
       setCostumes(data);
-      setTotal(debouncedSearch.trim() ? data.length : response.data.total || 0);
+      setTotal(response.data.total || 0);
     } catch (error) {
       console.error('Failed to fetch costumes:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [debouncedSearch, regionFilter, categoryFilter, page, limit]);
+
+  useEffect(() => {
+    fetchCostumes();
+  }, [fetchCostumes]);
 
   const handleExpandedChange = (keys) => {
     setExpandedKeys(keys);
