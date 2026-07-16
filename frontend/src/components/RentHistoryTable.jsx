@@ -29,15 +29,19 @@ const statusA11yLabels = {
   cancelled: 'status cancelled',
 };
 
+const shortDateFormatter = new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short' });
+
+const formatShortDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (isNaN(date)) return dateString;
+  return shortDateFormatter.format(date);
+};
+
 const RentHistoryTable = ({ rents, openReturnModal, openRentModal, openCancelModal }) => {
   const navigate = useNavigate();
 
-  const formatShortDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    if (isNaN(date)) return dateString;
-    return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short' }).format(date);
-  };
+
 
   const renderActions = (rent) => {
     switch (rent.status) {

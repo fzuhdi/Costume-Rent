@@ -119,9 +119,9 @@ const SidebarMobile = () => {
 
   return (
     <>
-      <div 
-        role="button"
-        tabIndex={0}
+      <button 
+        type="button"
+        aria-label="Tutup sidebar"
         className={`mobile-sidebar-overlay ${isMobileOpen ? 'active' : ''}`} 
         onClick={closeMobile} 
         onKeyDown={(e) => {

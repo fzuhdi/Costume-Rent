@@ -2,7 +2,7 @@ import { createContext, useState, useEffect, useCallback, useContext, useMemo } 
 import { useNavigate } from 'react-router-dom';
 import { login as loginApi, getCurrentUser, logout as logoutApi } from '../api/authApi';
 
-export const AuthContext = createContext(null);
+const AuthContext = createContext(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -38,9 +38,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = useCallback(async (email, password) => {
     const response = await loginApi(email, password);
-    const { user: userData, token } = response.data;
+    const { user: userData } = response.data;
     localStorage.setItem('user:v1', JSON.stringify(userData));
-    if (token) localStorage.setItem('token:v1', token);
     setUser(userData);
     setIsAuthenticated(true);
     return userData;

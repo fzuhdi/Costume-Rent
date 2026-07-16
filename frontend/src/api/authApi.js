@@ -8,6 +8,4 @@ export const getCurrentUser = () =>
 
 export const logout = () =>
   api.post('/auth/logout');
-
-export const register = (data) =>
-  api.post('/auth/register', data);
+

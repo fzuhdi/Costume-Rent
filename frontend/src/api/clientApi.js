@@ -16,7 +16,4 @@ export const updateClient = (id, data) =>
   api.put(`/clients/${id}`, data);
 
 export const deleteClient = (id) =>
-  api.delete(`/clients/${id}`);
-
-export const getClientRents = (id) =>
-  api.get(`/clients/${id}/rents`);
+  api.delete(`/clients/${id}`);

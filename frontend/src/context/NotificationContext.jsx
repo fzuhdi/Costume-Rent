@@ -2,7 +2,7 @@ import { createContext, useState, useEffect, useCallback, useContext, useMemo } 
 import { getNotifications } from '../api/notificationApi';
 import { useAuth } from './AuthContext';
 
-export const NotificationContext = createContext(null);
+const NotificationContext = createContext(null);
 
 export const useNotification = () => {
   const context = useContext(NotificationContext);

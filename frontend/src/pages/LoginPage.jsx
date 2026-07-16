@@ -1,7 +1,7 @@
 import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
-import { SettingsContext } from '../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { LogIn } from 'lucide-react';
 import { TextField, Label, Input, Button, Card, Alert } from '@heroui/react';
 
@@ -10,8 +10,8 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useContext(AuthContext);
-  const { settings } = useContext(SettingsContext);
+  const { login } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {

@@ -1,7 +1,7 @@
 import { createContext, useState, useEffect, useCallback, useContext, useMemo } from 'react';
 import { getSettings, updateSettings as updateSettingsApi, uploadLogo as uploadLogoApi } from '../api/settingsApi';
 
-export const SettingsContext = createContext(null);
+const SettingsContext = createContext(null);
 
 export const useSettings = () => {
   const context = useContext(SettingsContext);

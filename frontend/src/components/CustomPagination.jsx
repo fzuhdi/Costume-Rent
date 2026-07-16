@@ -20,7 +20,7 @@ const CustomPagination = ({ total, page, onPageChange, limit = 10, onLimitChange
       pages.push(1);
 
       if (page > 3) {
-        pages.push('ellipsis');
+        pages.push('ellipsis-start');
       }
 
       const start = Math.max(2, page - 1);
@@ -31,7 +31,7 @@ const CustomPagination = ({ total, page, onPageChange, limit = 10, onLimitChange
       }
 
       if (page < totalPages - 2) {
-        pages.push('ellipsis');
+        pages.push('ellipsis-end');
       }
 
       pages.push(totalPages);
@@ -81,9 +81,9 @@ const CustomPagination = ({ total, page, onPageChange, limit = 10, onLimitChange
                   <Pagination.PreviousIcon />
                 </Pagination.Previous>
               </Pagination.Item>
-              {getPageNumbers().map((p, i) =>
-                p === 'ellipsis' ? (
-                  <Pagination.Item key={`ellipsis-${i}`}>
+              {getPageNumbers().map((p) =>
+                typeof p === 'string' && p.startsWith('ellipsis') ? (
+                  <Pagination.Item key={p}>
                     <Pagination.Ellipsis />
                   </Pagination.Item>
                 ) : (

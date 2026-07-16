@@ -1,12 +1,19 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import circleDependency from 'vite-plugin-circular-dependency';
 
 const devPort = Number(process.env.VITE_DEV_PORT || process.env.PORT || 5173);
 const proxyTarget = process.env.VITE_PROXY_TARGET || 'http://backend:8080';
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    circleDependency({
+      exclude: /node_modules/, // Focuses the tool strictly on your frontend source files
+    })
+  ],
   server: {
     host: '0.0.0.0',
     port: devPort,
