@@ -40,11 +40,11 @@ const NavLinkItem = ({ item, isCollapsed }) => {
         <>
           {isCollapsed ? (
             <Tooltip content={label} placement="right" closeDelay={0}>
-              <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+              <Icon size={22} strokeWidth={isActive ? 2.5 : 2} className="transition-transform duration-200 group-hover:scale-110" />
             </Tooltip>
           ) : (
             <>
-              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} className="transition-transform duration-200 group-hover:scale-110" />
               <span className="text-sm truncate">{label}</span>
             </>
           )}
@@ -58,12 +58,9 @@ const SidebarDesktop = () => {
   const { isCollapsed, toggleSidebar } = useSidebar();
 
   return (
-    <aside
-      className="hidden md:flex fixed top-0 left-0 h-screen bg-[var(--surface)] border-r border-[var(--border)] flex-col z-50 transition-all duration-300 ease-in-out"
-      style={{ width: isCollapsed ? 'var(--sidebar-width-collapsed)' : 'var(--sidebar-width)' }}
-    >
+    <aside className={`sidebar-desktop bg-[var(--surface)] border-r border-[var(--border)] ${isCollapsed ? 'collapsed' : 'expanded'}`}>
       {/* Sidebar Header - Center aligned for collapsed state */}
-      <div className={`flex items-center h-[var(--navbar-height)] px-4 transition-all duration-300 ${isCollapsed ? 'justify-center' : 'px-6'}`}>
+      <div className={`sidebar-header ${isCollapsed ? 'justify-center' : 'px-6'}`}>
         <div className="flex items-center gap-3 overflow-hidden">
           <div className="bg-[var(--primary)] p-2 rounded-lg flex-shrink-0 shadow-sm shadow-[var(--primary)]/20">
             <Layers size={isCollapsed ? 24 : 20} className="text-white" />
@@ -84,10 +81,7 @@ const SidebarDesktop = () => {
         size="sm"
         variant="bordered"
         onPress={toggleSidebar}
-        className="absolute -right-4 top-1/2 -translate-y-1/2 z-[100] 
-                   bg-[var(--surface)] text-[var(--muted)] shadow-md transition-all 
-                   hover:text-[var(--primary)] hover:scale-110 hover:bg-[var(--background)]
-                   group cursor-pointer min-w-8 w-8 h-8 px-0"
+        className="absolute -right-4 top-1/2 -translate-y-1/2 z-[100] bg-[var(--surface)] text-[var(--muted)] shadow-md transition-all hover:text-[var(--primary)] hover:scale-110 hover:bg-[var(--background)] group cursor-pointer min-w-8 w-8 h-8 px-0"
         aria-label="Toggle Sidebar"
       >
         {isCollapsed ? (
@@ -124,13 +118,13 @@ const SidebarMobile = () => {
         role="button"
         tabIndex={0}
         aria-label="Tutup sidebar"
-        className={`mobile-sidebar-overlay ${isMobileOpen ? 'active' : ''}`} 
+        className={`mobile-overlay ${isMobileOpen ? 'open' : ''}`} 
         onClick={closeMobile} 
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') closeMobile();
         }}
       />
-      <div className={`mobile-sidebar bg-[var(--surface)] border-r border-[var(--border)] flex flex-col ${isMobileOpen ? 'active' : ''}`}>
+      <div className={`mobile-sidebar bg-[var(--surface)] border-r border-[var(--border)] ${isMobileOpen ? 'open' : ''}`}>
         <div className="flex items-center gap-3 px-5 py-5 border-b border-[var(--border)]">
           <div className="bg-[var(--primary)] p-1.5 rounded-lg">
             <Layers size={20} className="text-white" />

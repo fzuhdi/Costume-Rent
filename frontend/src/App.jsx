@@ -24,7 +24,7 @@ import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { useSettings } from './context/SettingsContext';
 import FullScreenSpinner from './components/FullScreenSpinner';
-import { Spinner } from '@heroui/react';
+
 
 const AppRoutes = () => {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -151,11 +151,11 @@ const AuthenticatedLayout = () => {
   const { isCollapsed } = useSidebar();
 
   return (
-    <div className="app-layout">
+    <div className="layout-root">
       <Navbar />
-      <div className="app-content">
+      <div className="layout-content">
         <Sidebar />
-        <main className={`main-content ${isCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <main className={`main-content ${isCollapsed ? 'collapsed' : 'expanded'}`}>
           <Outlet />
         </main>
       </div>
