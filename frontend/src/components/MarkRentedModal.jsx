@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useReducer } from 'react';
 import { Modal, Button, Checkbox } from '@heroui/react';
 import PaymentFormFields from './PaymentFormFields';
 import { markRented, uploadPaymentProof } from '../api/rentApi';
 
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
+const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
+const formatCurrency = (value) => currencyFormatter.format(value);
 
 /**
  * MarkRentedModal
@@ -17,49 +17,62 @@ const formatCurrency = (value) =>
  *   sisaTagihan   – number       remaining balance (totalFee - totalPaid)
  *   earlyFee      – number       optional early takeaway fee already applied (default 0)
  */
-const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0 }) => {
-  const [confirmSecurityItem, setConfirmSecurityItem] = useState(true);
-  const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState('CASH');
-  const [proof, setProof] = useState('');
-  const [proofFile, setProofFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+const handleUploadGeneric = async (e, setProofFn, setFileFn, setUploadingFn) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  setFileFn(file.name);
+  setUploadingFn(true);
+  try {
+    const res = await uploadPaymentProof(file);
+    setProofFn(res.data.payment_proof);
+  } catch {
+    setFileFn(null);
+  } finally {
+    setUploadingFn(false);
+  }
+};
 
-  // Sync amount to sisaTagihan every time the modal opens
+const initialState = {
+  confirmSecurityItem: true,
+  amount: '',
+  method: 'CASH',
+  proof: '',
+  proofFile: null,
+  uploading: false,
+  loading: false,
+  error: '',
+};
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'SET_FIELD':
+      return { ...state, [action.field]: action.value };
+    case 'RESET':
+      return {
+        ...initialState,
+        amount: String(Math.max(0, action.payload?.sisaTagihan || 0)),
+      };
+    default:
+      return state;
+  }
+}
+
+const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0 }) => {
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const { confirmSecurityItem, amount, method, proof, proofFile, uploading, loading, error } = state;
+
   useEffect(() => {
     if (isOpen) {
-      setConfirmSecurityItem(true);
-      setAmount(String(Math.max(0, sisaTagihan)));
-      setMethod('CASH');
-      setProof('');
-      setProofFile(null);
-      setError('');
+      dispatch({ type: 'RESET', payload: { sisaTagihan } });
     }
   }, [isOpen, sisaTagihan]);
 
   const hasBalance = sisaTagihan > 0;
   const needsProof = hasBalance && method !== 'CASH' && !proof;
 
-  const handleUploadGeneric = async (e, setProofFn, setFileFn, setUploadingFn) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setFileFn(file.name);
-    setUploadingFn(true);
-    try {
-      const res = await uploadPaymentProof(file);
-      setProofFn(res.data.payment_proof);
-    } catch {
-      setFileFn(null);
-    } finally {
-      setUploadingFn(false);
-    }
-  };
-
   const handleSubmit = async () => {
-    setLoading(true);
-    setError('');
+    dispatch({ type: 'SET_FIELD', field: 'loading', value: true });
+    dispatch({ type: 'SET_FIELD', field: 'error', value: '' });
     try {
       const paymentPayload = hasBalance && parseInt(amount) > 0
         ? { amount: parseInt(amount), payment_method: method, payment_proof: proof, notes: 'Pelunasan Sewa' }
@@ -69,9 +82,9 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0 }
       handleClose();
       onSuccess();
     } catch (err) {
-      setError(err.response?.data?.error || err.message);
+      dispatch({ type: 'SET_FIELD', field: 'error', value: err.response?.data?.error || err.message });
     } finally {
-      setLoading(false);
+      dispatch({ type: 'SET_FIELD', field: 'loading', value: false });
     }
   };
 
@@ -97,7 +110,7 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0 }
             </div>
 
             {/* Security item confirmation */}
-            <Checkbox isSelected={confirmSecurityItem} onChange={setConfirmSecurityItem}>
+            <Checkbox isSelected={confirmSecurityItem} onChange={(v) => dispatch({ type: 'SET_FIELD', field: 'confirmSecurityItem', value: v })}>
               <Checkbox.Content>
                 <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
                 Jaminan Ditahan (Wajib)
@@ -108,15 +121,15 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0 }
             {hasBalance && (
               <PaymentFormFields
                 amount={amount}
-                setAmount={setAmount}
+                setAmount={(v) => dispatch({ type: 'SET_FIELD', field: 'amount', value: v })}
                 method={method}
-                setMethod={setMethod}
+                setMethod={(v) => dispatch({ type: 'SET_FIELD', field: 'method', value: v })}
                 proof={proof}
-                setProof={setProof}
+                setProof={(v) => dispatch({ type: 'SET_FIELD', field: 'proof', value: v })}
                 proofFile={proofFile}
-                setProofFile={setProofFile}
+                setProofFile={(v) => dispatch({ type: 'SET_FIELD', field: 'proofFile', value: v })}
                 uploadingProof={uploading}
-                setUploadingProof={setUploading}
+                setUploadingProof={(v) => dispatch({ type: 'SET_FIELD', field: 'uploading', value: v })}
                 errors={{}}
                 handleUploadGeneric={handleUploadGeneric}
               />

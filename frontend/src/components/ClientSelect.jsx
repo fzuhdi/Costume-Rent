@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Collection, ComboBox, Input, Label, ListBox, Spinner } from '@heroui/react';
 import { useAsyncList } from '@react-stately/data';
 import { searchClients } from '../api/clientApi';
@@ -23,7 +23,11 @@ const ClientSelect = ({ value, onChange, error }) => {
     },
   });
 
+  const prevValueRef = React.useRef(value);
   useEffect(() => {
+    if (value === prevValueRef.current) return;
+    prevValueRef.current = value;
+
     if (!value && list.filterText !== '') {
       list.setFilterText('');
       setIsCreating(false);
@@ -32,7 +36,7 @@ const ClientSelect = ({ value, onChange, error }) => {
       if (value.type === 'new') setIsCreating(true);
       else setIsCreating(false);
     }
-  }, [value]);
+  }, [value, list.filterText, list.setFilterText]);
 
   const handleSelect = (key) => {
     if (!key) return;

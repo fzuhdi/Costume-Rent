@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal, Button } from '@heroui/react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import React, { useCallback } from 'react';
 
 const ImagePreviewModal = ({ isOpen, onClose, images = [], initialIndex = 0 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -15,24 +16,16 @@ const ImagePreviewModal = ({ isOpen, onClose, images = [], initialIndex = 0 }) =
     const handleKeyDown = (e) => {
       if (!isOpen) return;
       if (e.key === 'ArrowRight') {
-        handleNext();
+        setCurrentIndex((prev) => (prev + 1) % images.length);
       } else if (e.key === 'ArrowLeft') {
-        handlePrev();
+        setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, currentIndex, images.length]);
+  }, [isOpen, images.length]);
 
   if (!images || images.length === 0) return null;
-
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % images.length);
-  };
-
-  const handlePrev = () => {
-    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-  };
 
   return (
     <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -58,26 +51,27 @@ const ImagePreviewModal = ({ isOpen, onClose, images = [], initialIndex = 0 }) =
                 <Button
                   isIconOnly
                   variant="flat"
-                  onPress={handlePrev}
-                  className="absolute left-2 sm:left-4 z-10 rounded-full bg-black/40 text-white hover:bg-black/70 backdrop-blur-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                  onPress={() => setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
+                  className="absolute left-2 sm:-left-12 z-20 rounded-full bg-black/40 hover:bg-black/60 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
                   aria-label="Gambar sebelumnya"
                 >
                   <ChevronLeft size={24} />
                 </Button>
               )}
 
+              {/* Current Image */}
               <img
-                src={`${import.meta.env.VITE_API_URL || ''}${images[currentIndex]}`}
+                src={images[currentIndex].startsWith('http') ? images[currentIndex] : `${import.meta.env.VITE_API_URL || ''}${images[currentIndex]}`}
                 alt={`Preview ${currentIndex + 1}`}
-                className="max-w-full max-h-full object-contain drop-shadow-2xl rounded-lg"
+                className="max-h-full max-w-full object-contain rounded-lg shadow-2xl transition-transform duration-300"
               />
 
               {images.length > 1 && (
                 <Button
                   isIconOnly
                   variant="flat"
-                  onPress={handleNext}
-                  className="absolute right-2 sm:right-4 z-10 rounded-full bg-black/40 text-white hover:bg-black/70 backdrop-blur-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                  onPress={() => setCurrentIndex((prev) => (prev + 1) % images.length)}
+                  className="absolute right-2 sm:-right-12 z-20 rounded-full bg-black/40 hover:bg-black/60 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
                   aria-label="Gambar selanjutnya"
                 >
                   <ChevronRight size={24} />
@@ -94,7 +88,8 @@ const ImagePreviewModal = ({ isOpen, onClose, images = [], initialIndex = 0 }) =
                 <div className="flex gap-2 overflow-x-auto pb-1 max-w-full px-2 snap-x">
                   {images.map((img, i) => (
                     <button
-                      key={i}
+                      key={img}
+                      type="button"
                       onClick={() => setCurrentIndex(i)}
                       className={`relative shrink-0 snap-center w-16 h-16 rounded-md overflow-hidden border-2 transition-all ${
                         i === currentIndex ? 'border-primary scale-110 shadow-lg z-10' : 'border-transparent opacity-50 hover:opacity-100'

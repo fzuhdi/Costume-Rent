@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useReducer } from 'react';
 import { Modal, Button, Checkbox, Select, ListBox, Label, Input, TextField } from '@heroui/react';
 import { markReturned, uploadPaymentProof } from '../api/rentApi';
 import FileUploadZone from './FileUploadZone';
 
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
+const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
+const formatCurrency = (value) => currencyFormatter.format(value);
 
 /**
  * MarkReturnedModal
@@ -17,6 +17,56 @@ const formatCurrency = (value) =>
  *   sisaTagihan          – number       remaining balance before damage
  *   calculatedDamageFee  – number       pre-filled damage fee suggestion (from prior inspection)
  */
+
+const PAYMENT_METHODS = [
+  { id: 'CASH', label: 'CASH' },
+  { id: 'TRANSFER BCA', label: 'Transfer BCA' },
+  { id: 'TRANSFER BRI', label: 'Transfer BRI' },
+  { id: 'TRANSFER MANDIRI', label: 'Transfer Mandiri' },
+  { id: 'QRIS', label: 'QRIS' },
+];
+
+const initialState = {
+  idReturned: false,
+  isGoodCondition: true,
+  amount: '',
+  method: 'CASH',
+  proof: '',
+  proofFile: null,
+  uploading: false,
+  loading: false,
+  error: '',
+};
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'SET_FIELD':
+      return { ...state, [action.field]: action.value };
+    case 'RESET':
+      return {
+        ...initialState,
+        amount: action.payload?.sisaTagihan > 0 ? String(action.payload.sisaTagihan) : '',
+      };
+    case 'TOGGLE_CONDITION': {
+      const good = action.value;
+      return {
+        ...state,
+        isGoodCondition: good,
+        amount: action.payload?.sisaTagihan > 0 ? String(action.payload.sisaTagihan) : '',
+      };
+    }
+    case 'SET_METHOD':
+      return {
+        ...state,
+        method: action.value,
+        proof: '',
+        proofFile: null,
+      };
+    default:
+      return state;
+  }
+}
+
 const MarkReturnedModal = ({
   isOpen,
   onClose,
@@ -24,41 +74,17 @@ const MarkReturnedModal = ({
   rentId,
   sisaTagihan = 0,
 }) => {
-  const [idReturned, setIdReturned] = useState(false);
-  const [isGoodCondition, setIsGoodCondition] = useState(true);
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const { idReturned, isGoodCondition, amount, method, proof, proofFile, uploading, loading, error } = state;
 
-  // Payment fields — amount doubles as the total-to-collect including any damage
-  const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState('CASH');
-  const [proof, setProof] = useState('');
-  const [proofFile, setProofFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  // Sync state every time the modal opens (props resolve asynchronously)
   useEffect(() => {
     if (isOpen) {
-      setIdReturned(false);
-      setIsGoodCondition(true);
-      setAmount(sisaTagihan > 0 ? String(sisaTagihan) : '');
-      setMethod('CASH');
-      setProof('');
-      setProofFile(null);
-      setError('');
+      dispatch({ type: 'RESET', payload: { sisaTagihan } });
     }
   }, [isOpen, sisaTagihan]);
 
-  // When condition toggles, reset the amount appropriately
   const handleConditionChange = (good) => {
-    setIsGoodCondition(good);
-    if (good) {
-      // Going back to good condition — reset to plain sisaTagihan
-      setAmount(sisaTagihan > 0 ? String(sisaTagihan) : '');
-    } else {
-      // Damage mode — pre-fill with sisaTagihan so they can add to it
-      setAmount(sisaTagihan > 0 ? String(sisaTagihan) : '');
-    }
+    dispatch({ type: 'TOGGLE_CONDITION', value: good, payload: { sisaTagihan } });
   };
 
   const totalAmount = parseInt(amount) || 0;
@@ -70,21 +96,21 @@ const MarkReturnedModal = ({
   const handleUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    setProofFile(file.name);
-    setUploading(true);
+    dispatch({ type: 'SET_FIELD', field: 'proofFile', value: file.name });
+    dispatch({ type: 'SET_FIELD', field: 'uploading', value: true });
     try {
       const res = await uploadPaymentProof(file);
-      setProof(res.data.payment_proof);
+      dispatch({ type: 'SET_FIELD', field: 'proof', value: res.data.payment_proof });
     } catch {
-      setProofFile(null);
+      dispatch({ type: 'SET_FIELD', field: 'proofFile', value: null });
     } finally {
-      setUploading(false);
+      dispatch({ type: 'SET_FIELD', field: 'uploading', value: false });
     }
   };
 
   const handleSubmit = async () => {
-    setLoading(true);
-    setError('');
+    dispatch({ type: 'SET_FIELD', field: 'loading', value: true });
+    dispatch({ type: 'SET_FIELD', field: 'error', value: '' });
     try {
       const paymentPayload =
         totalAmount > 0
@@ -100,19 +126,11 @@ const MarkReturnedModal = ({
       onClose();
       onSuccess();
     } catch (err) {
-      setError(err.response?.data?.error || err.message);
+      dispatch({ type: 'SET_FIELD', field: 'error', value: err.response?.data?.error || err.message });
     } finally {
-      setLoading(false);
+      dispatch({ type: 'SET_FIELD', field: 'loading', value: false });
     }
   };
-
-  const PAYMENT_METHODS = [
-    { id: 'CASH', label: 'CASH' },
-    { id: 'TRANSFER BCA', label: 'Transfer BCA' },
-    { id: 'TRANSFER BRI', label: 'Transfer BRI' },
-    { id: 'TRANSFER MANDIRI', label: 'Transfer Mandiri' },
-    { id: 'QRIS', label: 'QRIS' },
-  ];
 
   return (
     <Modal.Backdrop isOpen={isOpen} onOpenChange={onClose}>
@@ -142,7 +160,7 @@ const MarkReturnedModal = ({
             </div>
 
             {/* ID returned */}
-            <Checkbox isSelected={idReturned} onChange={setIdReturned} aria-label="Kartu Identitas Dikembalikan">
+            <Checkbox isSelected={idReturned} onChange={(v) => dispatch({ type: 'SET_FIELD', field: 'idReturned', value: v })} aria-label="Kartu Identitas Dikembalikan">
               <Checkbox.Content>
                 <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
                 Kartu Identitas Dikembalikan (Wajib)
@@ -186,7 +204,7 @@ const MarkReturnedModal = ({
                     className="w-full bg-white border border-default-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                     placeholder={isGoodCondition ? String(sisaTagihan) : 'Masukkan total yang harus dibayar'}
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'amount', value: e.target.value })}
                   />
                   {!isGoodCondition && (
                     <p className="text-xs text-default-500 mt-1">
@@ -200,7 +218,9 @@ const MarkReturnedModal = ({
                   <Select
                     aria-label="Metode Pembayaran"
                     value={method}
-                    onChange={(key) => { setMethod(String(key)); setProof(''); setProofFile(null); }}
+                    onChange={(key) => {
+                      dispatch({ type: 'SET_METHOD', value: String(key) });
+                    }}
                     className="w-full"
                   >
                     <Select.Trigger className="w-full bg-white border border-default-200 rounded-lg px-3 py-2 text-sm">

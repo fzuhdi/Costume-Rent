@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Modal, Button, TextField, Label, Input } from '@heroui/react';
+import { useReducer } from 'react';
+import { Modal, Button, Label, Input } from '@heroui/react';
 import PaymentFormFields from './PaymentFormFields';
 import { addPayment, uploadPaymentProof } from '../api/rentApi';
 
@@ -12,30 +12,48 @@ import { addPayment, uploadPaymentProof } from '../api/rentApi';
  *   onSuccess – () => void   called after successful API response
  *   rentId    – number       the order ID to add a payment against
  */
-const AddPaymentModal = ({ isOpen, onClose, onSuccess, rentId }) => {
-  const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState('CASH');
-  const [proof, setProof] = useState('');
-  const [proofFile, setProofFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [errors, setErrors] = useState({ amount: '', proof: '', submit: '' });
-  const [loading, setLoading] = useState(false);
+const handleUploadGeneric = async (e, setProofFn, setFileFn, setUploadingFn) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  setFileFn(file.name);
+  setUploadingFn(true);
+  try {
+    const res = await uploadPaymentProof(file);
+    setProofFn(res.data.payment_proof);
+  } catch {
+    setFileFn(null);
+  } finally {
+    setUploadingFn(false);
+  }
+};
 
-  const handleUploadGeneric = async (e, setProofFn, setFileFn, setUploadingFn) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setFileFn(file.name);
-    setUploadingFn(true);
-    try {
-      const res = await uploadPaymentProof(file);
-      setProofFn(res.data.payment_proof);
-    } catch {
-      setFileFn(null);
-    } finally {
-      setUploadingFn(false);
-    }
-  };
+const initialState = {
+  amount: '',
+  method: 'CASH',
+  proof: '',
+  proofFile: null,
+  uploading: false,
+  notes: '',
+  errors: { amount: '', proof: '', submit: '' },
+  loading: false,
+};
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'SET_FIELD':
+      return { ...state, [action.field]: action.value };
+    case 'SET_ERRORS':
+      return { ...state, errors: { ...state.errors, ...action.payload } };
+    case 'RESET':
+      return initialState;
+    default:
+      return state;
+  }
+}
+
+const AddPaymentModal = ({ isOpen, onClose, onSuccess, rentId }) => {
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const { amount, method, proof, proofFile, uploading, notes, errors, loading } = state;
 
   const validate = () => {
     const newErrors = { amount: '', proof: '', submit: '' };
@@ -52,15 +70,15 @@ const AddPaymentModal = ({ isOpen, onClose, onSuccess, rentId }) => {
       valid = false;
     }
 
-    setErrors(newErrors);
+    dispatch({ type: 'SET_ERRORS', payload: newErrors });
     return valid;
   };
 
   const handleSubmit = async () => {
     if (!validate()) return;
 
-    setLoading(true);
-    setErrors((prev) => ({ ...prev, submit: '' }));
+    dispatch({ type: 'SET_FIELD', field: 'loading', value: true });
+    dispatch({ type: 'SET_ERRORS', payload: { submit: '' } });
     try {
       await addPayment(rentId, {
         amount: Number(amount),
@@ -71,23 +89,17 @@ const AddPaymentModal = ({ isOpen, onClose, onSuccess, rentId }) => {
       handleClose();
       onSuccess();
     } catch (err) {
-      setErrors((prev) => ({
-        ...prev,
-        submit: err.response?.data?.error || err.message,
-      }));
+      dispatch({
+        type: 'SET_ERRORS',
+        payload: { submit: err.response?.data?.error || err.message },
+      });
     } finally {
-      setLoading(false);
+      dispatch({ type: 'SET_FIELD', field: 'loading', value: false });
     }
   };
 
   const handleClose = () => {
-    setAmount('');
-    setMethod('CASH');
-    setProof('');
-    setProofFile(null);
-    setUploading(false);
-    setNotes('');
-    setErrors({ amount: '', proof: '', submit: '' });
+    dispatch({ type: 'RESET' });
     onClose();
   };
 
@@ -102,15 +114,15 @@ const AddPaymentModal = ({ isOpen, onClose, onSuccess, rentId }) => {
           <Modal.Body className="flex flex-col gap-4">
             <PaymentFormFields
               amount={amount}
-              setAmount={setAmount}
+              setAmount={(v) => dispatch({ type: 'SET_FIELD', field: 'amount', value: v })}
               method={method}
-              setMethod={setMethod}
+              setMethod={(v) => dispatch({ type: 'SET_FIELD', field: 'method', value: v })}
               proof={proof}
-              setProof={setProof}
+              setProof={(v) => dispatch({ type: 'SET_FIELD', field: 'proof', value: v })}
               proofFile={proofFile}
-              setProofFile={setProofFile}
+              setProofFile={(v) => dispatch({ type: 'SET_FIELD', field: 'proofFile', value: v })}
               uploadingProof={uploading}
-              setUploadingProof={setUploading}
+              setUploadingProof={(v) => dispatch({ type: 'SET_FIELD', field: 'uploading', value: v })}
               errors={{ amount: errors.amount, proof: errors.proof }}
               handleUploadGeneric={handleUploadGeneric}
             />
@@ -124,7 +136,7 @@ const AddPaymentModal = ({ isOpen, onClose, onSuccess, rentId }) => {
                 className="w-full bg-white border border-default-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Contoh: Pelunasan Denda Keterlambatan"
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'notes', value: e.target.value })}
               />
             </div>
 

@@ -3,8 +3,26 @@ import { Modal, Button } from '@heroui/react';
 import PaymentFormFields from './PaymentFormFields';
 import { markBooked, uploadPaymentProof } from '../api/rentApi';
 
+const idrFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
+
+const handleUploadGeneric = async (e, setProofFn, setFileFn, setUploadingFn) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  setFileFn(file.name);
+  setUploadingFn(true);
+  try {
+    const res = await uploadPaymentProof(file);
+    setProofFn(res.data.payment_proof);
+  } catch {
+    setFileFn(null);
+  } finally {
+    setUploadingFn(false);
+  }
+};
+
 /**
  * MarkBookedModal
+
  *
  * Props:
  *   isOpen    – boolean
@@ -31,20 +49,7 @@ const MarkBookedModal = ({ isOpen, onClose, onSuccess, rentId, minDp = 0 }) => {
 
   const needsProof = method !== 'CASH' && !proof;
 
-  const handleUploadGeneric = async (e, setProofFn, setFileFn, setUploadingFn) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setFileFn(file.name);
-    setUploadingFn(true);
-    try {
-      const res = await uploadPaymentProof(file);
-      setProofFn(res.data.payment_proof);
-    } catch {
-      setFileFn(null);
-    } finally {
-      setUploadingFn(false);
-    }
-  };
+
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -91,7 +96,7 @@ const MarkBookedModal = ({ isOpen, onClose, onSuccess, rentId, minDp = 0 }) => {
               <p className="text-default-700">
                 Minimal DP yang harus dibayar adalah{' '}
                 <span className="font-bold text-primary">
-                  {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(minDp)}
+                  {idrFormatter.format(minDp)}
                 </span>{' '}
                 (50% dari total biaya sewa).
               </p>

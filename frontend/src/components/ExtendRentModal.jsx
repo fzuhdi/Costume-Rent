@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Modal, Button, TextField, Label, Input } from '@heroui/react';
 import { extendRent } from '../api/rentApi';
 
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
+const idrFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
+const formatCurrency = (value) => idrFormatter.format(value);
 
 /**
  * ExtendRentModal
