@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, Button } from '@heroui/react';
 
 export default function RentPaymentSection({
@@ -59,13 +58,14 @@ export default function RentPaymentSection({
                       {trx.payment_proof && (
                         <>
                           <span>·</span>
-                          <button
-                            type="button"
-                            onClick={() => openPreview([trx.payment_proof], 0)}
-                            className="text-primary hover:underline bg-transparent border-none p-0 cursor-pointer text-xs flex items-center gap-1"
+                          <Button
+                            variant="light"
+                            size="sm"
+                            onPress={() => openPreview([trx.payment_proof], 0)}
+                            className="text-primary hover:underline bg-transparent border-none p-0 h-auto min-w-0 cursor-pointer text-xs flex items-center gap-1"
                           >
                             Lihat Bukti
-                          </button>
+                          </Button>
                         </>
                       )}
                     </span>

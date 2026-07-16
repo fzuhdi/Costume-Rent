@@ -1,10 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Collection, ComboBox, Input, Label, ListBox, Spinner } from '@heroui/react';
+import React, { useState, useEffect } from 'react';
+import { Collection, ComboBox, Input, Label, ListBox, Spinner, Button, Chip } from '@heroui/react';
 import { useAsyncList } from '@react-stately/data';
 import { searchClients } from '../api/clientApi';
 
 const ClientSelect = ({ value, onChange, error }) => {
+  const [prevValue, setPrevValue] = useState(value);
   const [isCreating, setIsCreating] = useState(value?.type === 'new' || false);
+
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setIsCreating(value?.type === 'new' || false);
+  }
 
   const list = useAsyncList({
     async load({ filterText, signal }) {
@@ -30,11 +36,8 @@ const ClientSelect = ({ value, onChange, error }) => {
 
     if (!value && list.filterText !== '') {
       list.setFilterText('');
-      setIsCreating(false);
     } else if (value && value.name && value.name !== list.filterText) {
       list.setFilterText(value.name);
-      if (value.type === 'new') setIsCreating(true);
-      else setIsCreating(false);
     }
   }, [value, list.filterText, list.setFilterText]);
 
@@ -75,19 +78,16 @@ const ClientSelect = ({ value, onChange, error }) => {
       {isCreating ? (
         <div className="flex flex-col gap-1">
           <Label className="text-sm font-medium">Klien</Label>
-          <div className="flex items-center justify-between px-3 py-2 rounded-lg
-                          bg-default-100 border border-default-200">
-            <span className="text-sm text-default-700">
-              Klien baru: <strong className="font-semibold text-default-900">{list.filterText}</strong>
-            </span>
-            <button
-              type="button"
-              onClick={handleClear}
-              className="text-xs text-default-400 hover:text-default-800 ml-2"
-            >
-              ✕
-            </button>
-          </div>
+          <Chip 
+            onClose={handleClear} 
+            radius="sm" 
+            classNames={{
+              base: "w-full justify-between px-3 py-4 bg-default-100 border border-default-200 h-auto",
+              content: "text-sm text-default-700 font-normal w-full"
+            }}
+          >
+            Klien baru: <strong className="font-semibold text-default-900">{list.filterText}</strong>
+          </Chip>
         </div>
       ) : (
         <ComboBox
@@ -124,17 +124,16 @@ const ClientSelect = ({ value, onChange, error }) => {
                   }
                   if (canCreate) {
                     return (
-                      <button
-                        type="button"
-                        onClick={handleCreateNew}
-                        className="flex w-full items-center gap-2 px-3 py-3
-                                   text-left hover:bg-[var(--border)] transition-colors"
+                      <Button
+                        variant="light"
+                        onPress={handleCreateNew}
+                        className="w-full justify-start h-auto py-3 px-3 rounded-none bg-transparent hover:bg-[var(--border)]"
                       >
                         <span className="text-base font-bold text-[var(--primary)]">+</span>
                         <span className="text-sm">
-                          Buat klien baru: <strong>"{list.filterText}"</strong>
+                          Buat klien baru: <strong>&quot;{list.filterText}&quot;</strong>
                         </span>
-                      </button>
+                      </Button>
                     );
                   }
                   return null;
@@ -161,17 +160,17 @@ const ClientSelect = ({ value, onChange, error }) => {
         </ComboBox>
       )}
       {canCreate && !isCreating && (
-        <button
-          type="button"
-          onClick={handleCreateNew}
-          className="flex w-full items-center gap-2 px-3 py-2 mt-1 rounded-lg
-                     text-left bg-primary/10 text-primary hover:bg-primary/20 transition-colors border border-primary/20"
+        <Button
+          variant="flat"
+          color="primary"
+          onPress={handleCreateNew}
+          className="w-full justify-start mt-1 bg-primary/10 hover:bg-primary/20 border border-primary/20"
         >
           <span className="text-base font-bold">+</span>
           <span className="text-sm font-semibold">
-            Tambah Klien Baru: "{list.filterText}"
+            Tambah Klien Baru: &quot;{list.filterText}&quot;
           </span>
-        </button>
+        </Button>
       )}
     </div>
   );

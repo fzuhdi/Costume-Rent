@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, ShoppingCart, BookOpen, ClipboardList, Users, Settings, Layers, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
-import { Tooltip } from '@heroui/react';
+import { Tooltip, Button } from '@heroui/react';
 import { useSidebar } from '../context/SidebarContext';
 
 const navItems = [
@@ -78,15 +78,16 @@ const SidebarDesktop = () => {
 
       {/* --- THE EDGE TOGGLE --- */}
       {/* Placed at top-1/2 with -right-4 to sit perfectly on the border line */}
-      <button
-        type="button"
-        onClick={toggleSidebar}
+      <Button
+        isIconOnly
+        radius="full"
+        size="sm"
+        variant="bordered"
+        onPress={toggleSidebar}
         className="absolute -right-4 top-1/2 -translate-y-1/2 z-[100] 
-                   flex h-8 w-8 items-center justify-center rounded-full 
-                   border border-[var(--border)] bg-[var(--surface)] 
-                   text-[var(--muted)] shadow-md transition-all 
+                   bg-[var(--surface)] text-[var(--muted)] shadow-md transition-all 
                    hover:text-[var(--primary)] hover:scale-110 hover:bg-[var(--background)]
-                   active:scale-95 group cursor-pointer"
+                   group cursor-pointer min-w-8 w-8 h-8 px-0"
         aria-label="Toggle Sidebar"
       >
         {isCollapsed ? (
@@ -94,7 +95,7 @@ const SidebarDesktop = () => {
         ) : (
           <ChevronLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
         )}
-      </button>
+      </Button>
 
       {/* Navigation Items */}
       <nav className="flex-1 flex flex-col justify-between py-4">
@@ -119,8 +120,9 @@ const SidebarMobile = () => {
 
   return (
     <>
-      <button 
-        type="button"
+      <div 
+        role="button"
+        tabIndex={0}
         aria-label="Tutup sidebar"
         className={`mobile-sidebar-overlay ${isMobileOpen ? 'active' : ''}`} 
         onClick={closeMobile} 

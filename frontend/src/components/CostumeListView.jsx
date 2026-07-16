@@ -30,14 +30,15 @@ const CostumeListView = ({ costumes, expandedKeys, onExpandedChange }) => {
             {/* Card header row */}
             <div className="flex items-center gap-3 p-3 sm:p-4">
               {/* Expand chevron */}
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); toggleExpand(costume.id); }}
-                className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--border)] transition-colors"
+              <Button
+                isIconOnly
+                variant="light"
+                onPress={(e) => { e.stopPropagation(); toggleExpand(costume.id); }}
+                className="flex-shrink-0 min-w-6 w-6 h-6 rounded"
                 aria-label={isExpanded ? 'Tutup detail' : 'Lihat detail'}
               >
                 <ChevronRight className={`w-4 h-4 text-[var(--muted)] transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`} />
-              </button>
+              </Button>
 
               {/* Clickable area that navigates to detail page */}
               <a href={`/catalogue/${costume.id}`} className="flex flex-1 items-center gap-3 min-w-0" onClick={(e) => e.stopPropagation()} aria-label={`Lihat detail ${costume.name}`}>

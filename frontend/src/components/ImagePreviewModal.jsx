@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Modal, Button } from '@heroui/react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import React, { useCallback } from 'react';
-
 const ImagePreviewModal = ({ isOpen, onClose, images = [], initialIndex = 0 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
-  useEffect(() => {
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (isOpen) {
       setCurrentIndex(initialIndex);
     }
-  }, [isOpen, initialIndex]);
+  }
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -87,11 +88,12 @@ const ImagePreviewModal = ({ isOpen, onClose, images = [], initialIndex = 0 }) =
                 </span>
                 <div className="flex gap-2 overflow-x-auto pb-1 max-w-full px-2 snap-x">
                   {images.map((img, i) => (
-                    <button
+                    <Button
+                      isIconOnly
                       key={img}
-                      type="button"
-                      onClick={() => setCurrentIndex(i)}
-                      className={`relative shrink-0 snap-center w-16 h-16 rounded-md overflow-hidden border-2 transition-all ${
+                      onPress={() => setCurrentIndex(i)}
+                      radius="none"
+                      className={`relative shrink-0 snap-center min-w-0 w-16 h-16 p-0 rounded-md overflow-hidden border-2 transition-all bg-transparent ${
                         i === currentIndex ? 'border-primary scale-110 shadow-lg z-10' : 'border-transparent opacity-50 hover:opacity-100'
                       }`}
                     >
@@ -100,7 +102,7 @@ const ImagePreviewModal = ({ isOpen, onClose, images = [], initialIndex = 0 }) =
                         alt={`Thumbnail ${i + 1}`}
                         className="w-full h-full object-cover"
                       />
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>

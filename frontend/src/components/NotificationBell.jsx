@@ -57,11 +57,12 @@ const NotificationBell = ({ count }) => {
                 </div>
               ) : (
                 notifications.map((item) => (
-                  <button
-                    type="button"
+                  <Button
                     key={item.rent_order_id}
-                    className="w-full flex items-center gap-3 p-4 cursor-pointer hover:bg-[var(--border)]/30 transition-colors border-b border-[var(--border)]/50 last:border-0 text-left"
-                    onClick={() => handleNotificationClick(item.rent_order_id)}
+                    variant="light"
+                    radius="none"
+                    onPress={() => handleNotificationClick(item.rent_order_id)}
+                    className="w-full flex items-center justify-start gap-3 p-4 h-auto cursor-pointer hover:bg-[var(--border)]/30 transition-colors border-b border-[var(--border)]/50 last:border-0 text-left"
                   >
                     <div className={`flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 ${
                       item.type === 'overdue' ? 'bg-danger/10 text-danger' : 
@@ -71,7 +72,7 @@ const NotificationBell = ({ count }) => {
                        item.type === 'no_show' ? <AlertCircle size={16} /> : <Calendar size={16} />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-bold truncate">{item.client_name}</div>
+                      <div className="text-xs font-bold truncate text-[var(--foreground)]">{item.client_name}</div>
                       <div className="text-[10px] text-[var(--muted)] uppercase">
                         {item.type === 'overdue' ? 'Terlambat' : 
                          item.type === 'no_show' ? 'Belum Diambil' : 'Segera'} • {item.type === 'no_show' ? item.pickup_date : item.expected_return_date}
@@ -83,7 +84,7 @@ const NotificationBell = ({ count }) => {
                          item.type === 'no_show' ? 'No Show' : 'Soon'}
                       </Chip.Label>
                     </Chip>
-                  </button>
+                  </Button>
                 ))
               )}
             </div>

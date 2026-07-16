@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getCostumeById, createCostume, updateCostume, getRegions, getCategories, uploadCostumeImage } from '../api/costumeApi';
-import { ArrowLeft, Save } from 'lucide-react';
-import { TextField, Input, TextArea, Label, Select, ListBox, Button, Card, Spinner, FieldError } from '@heroui/react';
+import { ArrowLeft, Save, X } from 'lucide-react';
+import { TextField, Input, TextArea, Label, Select, ListBox, Button, Card, Spinner, FieldError, Alert } from '@heroui/react';
 import FileUploadZone from '../components/FileUploadZone';
 
 const CatalogueFormPage = () => {
@@ -21,6 +21,7 @@ const CatalogueFormPage = () => {
     total_quantity: 1,
     acquired_at: '',
   });
+  const [formError, setFormError] = useState('');
   const [regions, setRegions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [images, setImages] = useState([]);
@@ -72,26 +73,22 @@ const CatalogueFormPage = () => {
     };
   }, [id, isEdit]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError('');
     // Validate required fields
     if (!formData.name.trim()) {
-      alert('Nama kostum harus diisi');
+      setFormError('Nama kostum harus diisi');
       setSaving(false);
       return;
     }
     if (!formData.region_id) {
-      alert('Wilayah harus dipilih');
+      setFormError('Wilayah harus dipilih');
       setSaving(false);
       return;
     }
     if (!formData.category_id) {
-      alert('Kategori harus dipilih');
+      setFormError('Kategori harus dipilih');
       setSaving(false);
       return;
     }
@@ -262,20 +259,31 @@ const CatalogueFormPage = () => {
                   {stagedFiles.map((staged) => (
                     <div key={`staged-${staged.id}`} className="relative w-20 h-20 group">
                       <img src={staged.previewUrl} alt="Staged" className="w-full h-full object-cover rounded" />
-                      <button
-                        type="button"
-                        onClick={() => removeStaged(staged.id)}
-                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-80 hover:opacity-100"
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        color="danger"
+                        radius="full"
+                        onPress={() => removeStaged(staged.id)}
+                        className="absolute -top-2 -right-2 w-6 h-6 min-w-6 opacity-80 hover:opacity-100"
                         aria-label="Remove image"
                       >
-                        ×
-                      </button>
+                        <X size={14} />
+                      </Button>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-            <div className="flex gap-3 justify-end">
+            {formError && (
+              <Alert status="danger" className="my-2">
+                <Alert.Indicator />
+                <Alert.Content>
+                  <Alert.Description>{formError}</Alert.Description>
+                </Alert.Content>
+              </Alert>
+            )}
+            <div className="flex gap-3 justify-end mt-4">
               <Button variant="bordered" onPress={() => navigate('/catalogue')} aria-label="Batal">Batal</Button>
                <Button type="submit" variant="primary" isPending={saving} aria-label="Simpan">
                 {({isPending}) => (
