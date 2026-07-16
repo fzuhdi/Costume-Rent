@@ -26,3 +26,18 @@ func (h *StatsHandler) GetDashboardStats(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"data": stats})
 }
+
+func (h *StatsHandler) GetRevenueChart(c *gin.Context) {
+	filter := c.Query("filter")
+	if filter == "" {
+		filter = "daily"
+	}
+
+	chart, err := h.statsService.GetRevenueChart(filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch revenue chart", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": chart})
+}

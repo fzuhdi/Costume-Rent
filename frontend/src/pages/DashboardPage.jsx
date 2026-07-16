@@ -1,33 +1,56 @@
 import { useState, useEffect } from 'react';
-import { getDashboardStats } from '../api/statsApi';
+import { getDashboardStats, getRevenueChart } from '../api/statsApi';
 import { Card, Spinner, Button } from '@heroui/react';
 import { AlertTriangle, TrendingUp, Package, Users, DollarSign, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import React, { Suspense, lazy } from 'react';
+import { Suspense, lazy } from 'react';
 
 const DashboardRevenueChart = lazy(() => import('../components/DashboardRevenueChart'));
-
-const idrFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
 
 const DashboardPage = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  const [revenueFilter, setRevenueFilter] = useState('daily');
+  const [revenueData, setRevenueData] = useState([]);
+  const [revenueLoading, setRevenueLoading] = useState(true);
+
   const navigate = useNavigate();
 
+  const formatIndoDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+  };
+
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await getDashboardStats();
+        setStats(res.data.data);
+      } catch (error) {
+        console.error('Failed to fetch dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchData();
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const res = await getDashboardStats();
-      setStats(res.data.data);
-    } catch (error) {
-      console.error('Failed to fetch dashboard stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const fetchRevenue = async () => {
+      setRevenueLoading(true);
+      try {
+        const res = await getRevenueChart(revenueFilter);
+        setRevenueData(res.data.data);
+      } catch (error) {
+        console.error('Failed to fetch revenue chart:', error);
+      } finally {
+        setRevenueLoading(false);
+      }
+    };
+    fetchRevenue();
+  }, [revenueFilter]);
 
   if (loading || !stats) return <div className="flex justify-center items-center h-48"><Spinner /></div>;
 
@@ -35,7 +58,7 @@ const DashboardPage = () => {
     <div className="flex flex-col gap-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Ringkasan Operasional</h1>
+          <h1 className="page-title">Ringkasan Operasional</h1>
           <p className="text-default-500">Overview performa bisnis Anda.</p>
         </div>
       </div>
@@ -43,22 +66,49 @@ const DashboardPage = () => {
       {/* TOP ROW: High-Level Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Revenue Graph Card */}
-        <Card className="col-span-1 md:col-span-2 shadow-sm border border-default-200">
+        <Card className="col-span-1 md:col-span-4 shadow-sm border border-default-200">
           <Card.Content className="p-4 h-full flex flex-col">
-            <div className="flex items-center gap-2 mb-4">
-              <DollarSign size={20} className="text-success" />
-              <h3 className="font-semibold text-sm text-default-700">Estimasi Pendapatan (7 Hari)</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <DollarSign size={20} className="text-success" />
+                <h3 className="font-semibold text-sm text-default-700">Estimasi Pendapatan</h3>
+              </div>
+              <div className="flex bg-default-100 p-1 rounded-lg">
+                {[
+                  { key: 'daily', label: 'Harian' },
+                  { key: 'weekly', label: 'Mingguan' },
+                  { key: 'monthly', label: 'Bulanan' },
+                  { key: 'yearly', label: 'Tahunan' }
+                ].map(tab => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setRevenueFilter(tab.key)}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                      revenueFilter === tab.key 
+                        ? 'bg-white shadow-sm text-default-900 dark:bg-default-300 dark:text-white' 
+                        : 'text-default-500 hover:text-default-700 dark:hover:text-default-300'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex-1 min-h-[120px]">
+            <div className="flex-1 min-h-[250px] relative">
+              {revenueLoading && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm rounded-lg">
+                  <Spinner size="sm" />
+                </div>
+              )}
               <Suspense fallback={<div className="h-full w-full flex items-center justify-center text-sm text-default-400">Memuat grafik...</div>}>
-                <DashboardRevenueChart data={stats.revenue_chart} />
+                <DashboardRevenueChart data={revenueData} filter={revenueFilter} />
               </Suspense>
             </div>
           </Card.Content>
         </Card>
 
         {/* Total Active Rents */}
-        <Card className="shadow-sm border border-default-200 bg-primary-50/50">
+        <Card className="col-span-1 md:col-span-2 shadow-sm border border-default-200 bg-primary-50/50">
           <Card.Content className="p-4 flex flex-col justify-center h-full">
             <div className="flex items-center gap-2 mb-2">
               <Package size={20} className="text-primary" />
@@ -70,7 +120,7 @@ const DashboardPage = () => {
         </Card>
 
         {/* Total Clients / Utilization */}
-        <div className="flex flex-col gap-4">
+        <div className="col-span-1 md:col-span-2 flex flex-col gap-4">
           <Card className="shadow-sm border border-default-200 flex-1">
             <Card.Content className="p-4 flex items-center justify-between">
                <div>
@@ -140,8 +190,8 @@ const DashboardPage = () => {
                   ) : (
                     stats.upcoming_pickups.map(r => (
                        <Link key={r.id} to={`/rents/${r.id}`} className="block hover:bg-default-50 -mx-2 p-2 rounded">
-                          <p className="text-sm font-medium">{r.client_name}</p>
-                          <p className="text-xs text-primary font-medium">{r.pickup_date}</p>
+                          <p className="text-sm font-medium">{r.client?.name || 'Unknown'} #{r.id}</p>
+                          <p className="text-xs text-primary font-medium">{formatIndoDate(r.pickup_date)}</p>
                        </Link>
                     ))
                   )}
@@ -155,8 +205,8 @@ const DashboardPage = () => {
                   ) : (
                     stats.upcoming_returns.map(r => (
                        <Link key={r.id} to={`/rents/${r.id}`} className="block hover:bg-default-50 -mx-2 p-2 rounded">
-                          <p className="text-sm font-medium">{r.client_name}</p>
-                          <p className="text-xs text-success font-medium">{r.expected_return_date}</p>
+                          <p className="text-sm font-medium">{r.client?.name || 'Unknown'} #{r.id}</p>
+                          <p className="text-xs text-success font-medium">{formatIndoDate(r.expected_return_date)}</p>
                        </Link>
                     ))
                   )}

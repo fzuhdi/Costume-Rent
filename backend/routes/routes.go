@@ -101,6 +101,7 @@ func SetupRouter() *gin.Engine {
 			auth.PUT("/settings", settingsHandler.Update)
 
 			auth.GET("/stats/dashboard", statsHandler.GetDashboardStats)
+			auth.GET("/stats/revenue", statsHandler.GetRevenueChart)
 		}
 	}
 

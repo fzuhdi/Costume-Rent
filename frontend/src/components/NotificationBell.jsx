@@ -9,6 +9,12 @@ const NotificationBell = ({ count }) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
+  const formatIndoDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+  };
+
   const handleNotificationClick = (rentOrderId) => {
     navigate(`/rents/${rentOrderId}`);
     setIsOpen(false);
@@ -75,7 +81,7 @@ const NotificationBell = ({ count }) => {
                       <div className="text-xs font-bold truncate text-[var(--foreground)]">{item.client_name}</div>
                       <div className="text-[10px] text-[var(--muted)] uppercase">
                         {item.type === 'overdue' ? 'Terlambat' : 
-                         item.type === 'no_show' ? 'Belum Diambil' : 'Segera'} • {item.type === 'no_show' ? item.pickup_date : item.expected_return_date}
+                         item.type === 'no_show' ? 'Belum Diambil' : 'Segera'} • {formatIndoDate(item.type === 'no_show' ? item.pickup_date : item.expected_return_date)}
                       </div>
                     </div>
                     <Chip size="sm" variant="soft" color={item.type === 'overdue' ? 'danger' : item.type === 'no_show' ? 'warning' : 'warning'}>
