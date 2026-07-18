@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { AlertTriangle } from 'lucide-react';
 import { Button, Card } from '@heroui/react';
 
 const NotFoundPage = () => {

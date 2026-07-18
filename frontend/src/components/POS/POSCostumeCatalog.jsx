@@ -1,4 +1,3 @@
-import React from 'react';
 import { Search, Calendar } from 'lucide-react';
 import { Select, ListBox, InputGroup, Spinner } from '@heroui/react';
 import CostumeCard from '../CostumeCard';

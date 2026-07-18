@@ -1,6 +1,5 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Spinner } from '@heroui/react';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuth();

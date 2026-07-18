@@ -34,9 +34,9 @@ export const NotificationProvider = ({ children }) => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetchNotifications();
+      const t = setTimeout(() => fetchNotifications(), 0);
       const interval = setInterval(fetchNotifications, 15000);
-      return () => clearInterval(interval);
+      return () => { clearTimeout(t); clearInterval(interval); };
     }
   }, [isAuthenticated, fetchNotifications]);
 

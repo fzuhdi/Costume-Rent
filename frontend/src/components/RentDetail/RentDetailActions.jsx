@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, Button } from '@heroui/react';
 
 export default function RentDetailActions({

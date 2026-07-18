@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
-import { Save, Upload, Image } from 'lucide-react';
+import { Save, Image } from 'lucide-react';
 import { TextField, Input, Button, Card, Chip, FieldError, Label } from '@heroui/react';
 import FileUploadZone from '../components/FileUploadZone';
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getCostumeById, createCostume, updateCostume, getRegions, getCategories, uploadCostumeImage, deleteCostumeImage } from '../api/costumeApi';
-import { ArrowLeft, Save, X } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 import { TextField, Input, TextArea, Label, Select, ListBox, Button, Card, Spinner, FieldError, Alert } from '@heroui/react';
 import CostumeImageManager from '../components/CostumeImageManager';
 const CatalogueFormPage = () => {

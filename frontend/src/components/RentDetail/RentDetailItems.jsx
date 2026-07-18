@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, Table, Input } from '@heroui/react';
 import { Link } from 'react-router-dom';
 

@@ -45,7 +45,6 @@ const initialState = {
   amount: '',
   method: 'CASH',
   proof: '',
-  proof: '',
   proofFile: null,
   guaranteeType: 'KTP',
   uploading: false,

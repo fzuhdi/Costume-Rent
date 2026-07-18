@@ -1,10 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { getRentById, cancelRent, deleteRent, updateRent, rollbackOrder } from '../api/rentApi';
-import { updateClient } from '../api/clientApi';
 import { useRentDetail } from '../hooks/useRentDetail';
-import { ArrowLeft, Edit, Trash2, CheckCircle, Package, XCircle, User, Calendar, FileText, Shield, Upload, FileImage, ImageOff, Clock, Search } from 'lucide-react';
-import { Button, Card, Chip, Spinner, Table, Modal, Select, ListBox, Label, Input, TextField, Switch } from '@heroui/react';
+import { ArrowLeft } from 'lucide-react';
+import { Button, Card, Spinner } from '@heroui/react';
 import RentDetailInfo from '../components/RentDetail/RentDetailInfo';
 import RentDetailItems from '../components/RentDetail/RentDetailItems';
 import RentDetailModals from '../components/RentDetail/RentDetailModals';

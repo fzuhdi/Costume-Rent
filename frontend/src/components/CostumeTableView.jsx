@@ -1,6 +1,6 @@
 import { Button, Table } from '@heroui/react';
-import { Link } from 'react-router-dom';
 import { ChevronRight, Pencil, ImageOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const idrFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
 
@@ -9,6 +9,7 @@ const formatPrice = (price) => {
 };
 
 const CostumeTableView = ({ costumes, expandedKeys, onExpandedChange }) => {
+  const navigate = useNavigate();
   return (
     <Table aria-label="Table of costumes">
       <Table.ScrollContainer>

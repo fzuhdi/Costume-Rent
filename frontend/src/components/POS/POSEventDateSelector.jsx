@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, Button, Separator } from '@heroui/react';
 import HeroDatePicker from '../HeroDatePicker';
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import MarkReturnedModal from '../MarkReturnedModal';
 import MarkRentedModal from '../MarkRentedModal';
 import ExtendRentModal from '../ExtendRentModal';

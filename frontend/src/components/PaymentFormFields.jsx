@@ -1,4 +1,3 @@
-import React from 'react';
 import { Select, ListBox, TextField, Label, Input } from '@heroui/react';
 import FileUploadZone from './FileUploadZone';
 

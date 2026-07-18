@@ -39,7 +39,7 @@ const ClientSelect = ({ value, onChange, error }) => {
     } else if (value && value.name && value.name !== list.filterText) {
       list.setFilterText(value.name);
     }
-  }, [value, list.filterText, list.setFilterText]);
+  }, [value, list.filterText, list.setFilterText, list]);
 
   const handleSelect = (key) => {
     if (!key) return;

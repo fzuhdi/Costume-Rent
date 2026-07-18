@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Pagination, ListBox, Select, Label } from '@heroui/react';
 
 const LIMIT_OPTIONS = [5, 10, 25, 50];

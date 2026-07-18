@@ -16,8 +16,8 @@ export default function RentDetailActivityLog({
         <Card.Content>
           <h3 className="text-lg font-semibold mb-3">Activity Log</h3>
           <div className="flex flex-col gap-3 relative before:absolute before:inset-y-2 before:left-[11px] before:w-px before:bg-slate-200 ml-1">
-            {groupedLogs.slice(0, 5).map((group, index) => (
-              <div key={group.timestamp || index} className="flex gap-3 relative z-10 text-xs">
+            {groupedLogs.slice(0, 5).map((group) => (
+              <div key={group.timestamp || group.logs[0]?.id} className="flex gap-3 relative z-10 text-xs">
                 <div className="w-6 h-6 rounded-full bg-white border border-slate-300 flex items-center justify-center shrink-0">
                   <Clock size={12} className="text-slate-400" />
                 </div>
@@ -56,8 +56,8 @@ export default function RentDetailActivityLog({
             <Modal.Header><Modal.Heading>Activity Log History</Modal.Heading></Modal.Header>
             <Modal.Body>
               <div className="flex flex-col gap-3 relative before:absolute before:inset-y-2 before:left-[11px] before:w-px before:bg-slate-200 ml-1">
-                {groupedLogs.map((group, index) => (
-                  <div key={group.timestamp || index} className="flex gap-3 relative z-10 text-xs">
+                {groupedLogs.map((group) => (
+                  <div key={group.timestamp || group.logs[0]?.id} className="flex gap-3 relative z-10 text-xs">
                     <div className="w-6 h-6 rounded-full bg-white border border-slate-300 flex items-center justify-center shrink-0">
                       <Clock size={12} className="text-slate-400" />
                     </div>

@@ -43,7 +43,8 @@ const MarkBookedModal = ({ isOpen, onClose, onSuccess, rentId, minDp = 0 }) => {
   // Sync pre-filled amount when minDp prop changes (e.g. modal re-opened for a different rent)
   useEffect(() => {
     if (isOpen) {
-      setAmount(String(Math.max(0, minDp)));
+      const t = setTimeout(() => setAmount(String(Math.max(0, minDp))), 0);
+      return () => clearTimeout(t);
     }
   }, [isOpen, minDp]);
 

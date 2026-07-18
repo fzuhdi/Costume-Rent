@@ -19,7 +19,7 @@ export default function RentPaymentSection({
         {/* Transaction ledger */}
         <div className="flex flex-col gap-3 text-sm">
           {rent.transactions && rent.transactions.length > 0 ? (
-            rent.transactions.toSorted((a, b) => a.id - b.id).map((trx, idx) => {
+            rent.transactions.toSorted((a, b) => a.id - b.id).map((trx) => {
               const isDebit = trx.type === 'DEBIT';
               const isCredit = trx.type === 'CREDIT' || !trx.type; // empty means legacy payment
               const amount = trx.amount || 0;
@@ -46,7 +46,7 @@ export default function RentPaymentSection({
 
               return (
                 <div
-                  key={trx.id || idx}
+                  key={trx.id || (Math.random() + trx.amount)}
                   className={`flex justify-between items-start pl-3 border-l-2 ${borderClass}`}
                 >
                   <div className="flex flex-col gap-0.5">
