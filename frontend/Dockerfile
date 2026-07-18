@@ -2,8 +2,9 @@
 FROM node:20-alpine AS builder
 
 WORKDIR /app
-COPY package.json ./
-RUN npm install
+COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm install
 
 COPY . .
 RUN VITE_API_BASE_URL=/api VITE_UPLOADS_URL=/uploads npm run build

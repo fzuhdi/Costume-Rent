@@ -17,6 +17,12 @@ func SetupRouter() *gin.Engine {
 		uploadDir = "./uploads"
 	}
 	r.Use(middleware.CORSMiddleware())
+	r.NoRoute(middleware.CORSMiddleware(), func(c *gin.Context) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Not Found"})
+	})
+	r.NoMethod(middleware.CORSMiddleware(), func(c *gin.Context) {
+		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "Method Not Allowed"})
+	})
 	r.Use(serveStaticFiles(uploadDir))
 
 	r.GET("/uploads/*path", func(c *gin.Context) {
