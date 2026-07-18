@@ -1,16 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCostumes, getRegions, getCategories } from '../api/costumeApi';
-import { Grid, List, Filter, AlignLeft, Plus } from 'lucide-react';
+import { Grid, List, Filter, AlignLeft, Plus, Download, UploadCloud } from 'lucide-react';
 import {
   Input, Button, ButtonGroup, Separator,
   ListBox, Select,
-  Spinner, Card
+  Spinner, Card, Tooltip
 } from '@heroui/react';
 import CostumeTableView from '../components/CostumeTableView';
 import CostumeListView from '../components/CostumeListView';
 import CostumeCardView from '../components/CostumeCardView';
 import CustomPagination from '../components/CustomPagination';
+import ExcelImportModal from '../components/ExcelImportModal';
 
 const isMobileViewport = () => typeof window !== 'undefined' && window.innerWidth < 640;
 
@@ -31,6 +32,31 @@ const CataloguePage = () => {
   const [expandedKeys, setExpandedKeys] = useState(() => new Set([]));
   const [isMobile, setIsMobile] = useState(isMobileViewport);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const handleExport = async () => {
+    try {
+      // For catalogue, the endpoint is public but we still send token if available
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/costumes/excel/export`, {
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (!response.ok) throw new Error('Export failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `catalogue_export.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export error:', error);
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -112,7 +138,7 @@ const CataloguePage = () => {
       }
     };
     fetchCostumes();
-  }, [debouncedSearch, regionFilter, categoryFilter, page, limit]);
+  }, [debouncedSearch, regionFilter, categoryFilter, page, limit, refreshTrigger]);
 
   const handleExpandedChange = (keys) => {
     setExpandedKeys(keys);
@@ -138,14 +164,26 @@ const CataloguePage = () => {
         {/* Title + Add button */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h1 className="page-title">Katalog Kostum</h1>
-          <Button
-            onPress={() => navigate('/catalogue/new')}
-             variant="primary"
-             startContent={<Plus size={16} />}
-             aria-label="Tambah Kostum"
-           >
-            Tambah Kostum
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Tooltip content="Eksport Excel">
+              <Button isIconOnly onPress={handleExport} variant="outline" aria-label="Eksport">
+                <Download size={18} />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Import Excel">
+              <Button isIconOnly onPress={() => setIsImportOpen(true)} variant="outline" aria-label="Import">
+                <UploadCloud size={18} />
+              </Button>
+            </Tooltip>
+            <Button
+              onPress={() => navigate('/catalogue/new')}
+              variant="primary"
+              startContent={<Plus size={16} />}
+              aria-label="Tambah Kostum"
+            >
+              Tambah Kostum
+            </Button>
+          </div>
         </div>
 
         {/* Filters + View toggle */}
@@ -303,6 +341,19 @@ const CataloguePage = () => {
           onLimitChange={(l) => { setLimit(l); setPage(1); }}
         />
       </Card.Footer>
+
+      <ExcelImportModal
+        isOpen={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        title="Import Katalog"
+        templateUrl={`/api/costumes/excel/template`}
+        uploadUrl={`/api/costumes/excel/import`}
+        onSuccess={() => {
+          setRefreshTrigger(prev => prev + 1);
+          setPage(1);
+          setSearch('');
+        }}
+      />
     </Card>
   );
 };

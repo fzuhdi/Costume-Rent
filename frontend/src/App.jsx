@@ -25,6 +25,7 @@ import ProfilePage from './pages/ProfilePage';
 import NotFoundPage from './pages/NotFoundPage';
 import { useSettings } from './context/SettingsContext';
 import FullScreenSpinner from './components/FullScreenSpinner';
+import { Toast } from '@heroui/react';
 
 
 const AppRoutes = () => {
@@ -114,6 +115,7 @@ const App = () => {
         <SettingsProvider>
           <NotificationProvider>
             <SidebarProvider>
+              <Toast.Provider placement="top-center" />
               <AppRoutes />
             </SidebarProvider>
           </NotificationProvider>

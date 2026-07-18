@@ -46,6 +46,7 @@ func SetupRouter() *gin.Engine {
 	userHandler := handlers.NewUserHandler()
 	settingsHandler := handlers.NewSettingsHandler()
 	statsHandler := handlers.NewStatsHandler()
+	excelHandler := handlers.NewExcelHandler()
 
 	api := r.Group("/api")
 	{
@@ -66,6 +67,10 @@ func SetupRouter() *gin.Engine {
 		api.POST("/costumes/:id/images", middleware.AuthMiddleware(), costumeHandler.UploadImage)
 		api.DELETE("/costumes/:id/images/:imgId", middleware.AuthMiddleware(), costumeHandler.RemoveImage)
 
+		api.GET("/costumes/excel/export", excelHandler.ExportCostumes)
+		api.GET("/costumes/excel/template", excelHandler.DownloadCostumeTemplate)
+		api.POST("/costumes/excel/import", middleware.AuthMiddleware(), excelHandler.ImportCostumes)
+
 		api.POST("/auth/login", middleware.LoginRateLimiter(), authHandler.Login)
 		api.POST("/auth/logout", middleware.AuthMiddleware(), authHandler.Logout)
 		api.GET("/auth/me", middleware.AuthMiddleware(), authHandler.GetCurrentUser)
@@ -85,6 +90,10 @@ func SetupRouter() *gin.Engine {
 			auth.DELETE("/clients/:id", clientHandler.Delete)
 			auth.GET("/clients/:id/rents", clientHandler.GetRentHistory)
 
+			auth.GET("/clients-excel/export", excelHandler.ExportClients)
+			auth.GET("/clients-excel/template", excelHandler.DownloadClientTemplate)
+			auth.POST("/clients-excel/import", excelHandler.ImportClients)
+
 			auth.GET("/rents", rentHandler.List)
 			auth.GET("/rents/:id", rentHandler.GetByID)
 			auth.POST("/rents", rentHandler.Create)
@@ -98,6 +107,10 @@ func SetupRouter() *gin.Engine {
 			auth.POST("/rents/:id/extend", rentHandler.ExtendRent)
 			auth.POST("/rents/:id/payments", rentHandler.AddPayment)
 			auth.DELETE("/rents/:id", rentHandler.Delete)
+
+			auth.GET("/rents-excel/export", excelHandler.ExportRents)
+			auth.GET("/rents-excel/template", excelHandler.DownloadRentTemplate)
+			auth.POST("/rents-excel/import", excelHandler.ImportRents)
 
 			auth.GET("/notifications", notificationHandler.GetNotifications)
 

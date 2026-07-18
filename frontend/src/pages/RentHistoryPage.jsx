@@ -2,13 +2,15 @@ import { useReducer, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getRents, cancelRent } from '../api/rentApi';
 import {
-  Input, Button, Select, ListBox, Label,
-  Spinner, Modal, Card
+  Input, Button, Select, ListBox,
+  Spinner, Modal, Card, Tooltip
 } from '@heroui/react';
+import { Download, UploadCloud } from 'lucide-react';
 import CustomPagination from '../components/CustomPagination';
 import RentHistoryTable from '../components/RentHistoryTable';
 import MarkReturnedModal from '../components/MarkReturnedModal';
 import MarkRentedModal from '../components/MarkRentedModal';
+import ExcelImportModal from '../components/ExcelImportModal';
 
 const initialState = {
   rents: [],
@@ -26,6 +28,7 @@ const initialState = {
   selectedRentId: null,
   selectedRentData: null,
   actionLoading: false,
+  isImportOpen: false,
 };
 
 function rentReducer(state, action) {
@@ -45,9 +48,9 @@ function rentReducer(state, action) {
     case 'SET_LIMIT':
       return { ...state, limit: action.payload, page: 1 };
     case 'OPEN_RETURN_MODAL':
-      return { ...state, isReturnOpen: true, selectedRentId: action.payload, idReturned: false, isGoodCondition: true, damageFee: '' };
+      return { ...state, isReturnOpen: true, selectedRentId: action.payload.id, selectedRentData: action.payload.data };
     case 'CLOSE_RETURN_MODAL':
-      return { ...state, isReturnOpen: false, selectedRentId: null };
+      return { ...state, isReturnOpen: false, selectedRentId: null, selectedRentData: null };
     case 'OPEN_RENT_MODAL': {
       const rentData = state.rents.find(r => r.id === action.payload);
       return { ...state, isRentOpen: true, selectedRentId: action.payload, selectedRentData: rentData || null };
@@ -55,11 +58,15 @@ function rentReducer(state, action) {
     case 'CLOSE_RENT_MODAL':
       return { ...state, isRentOpen: false, selectedRentId: null, selectedRentData: null };
     case 'OPEN_CANCEL_MODAL': {
-      const rentData = state.rents.find(r => r.id === action.payload);
-      return { ...state, isCancelOpen: true, selectedRentId: action.payload, selectedRentData: rentData || null };
+      const rentData = state.rents.find(r => r.id === action.payload.id);
+      return { ...state, isCancelOpen: true, selectedRentId: action.payload.id, selectedRentData: action.payload.data || rentData || null };
     }
     case 'CLOSE_CANCEL_MODAL':
       return { ...state, isCancelOpen: false, selectedRentId: null, selectedRentData: null };
+    case 'OPEN_IMPORT_MODAL':
+      return { ...state, isImportOpen: true };
+    case 'CLOSE_IMPORT_MODAL':
+      return { ...state, isImportOpen: false };
     case 'SET_ACTION_LOADING':
       return { ...state, actionLoading: action.payload };
     default:
@@ -139,34 +146,68 @@ const RentHistoryPage = () => {
     dispatch({ type: 'OPEN_RENT_MODAL', payload: id });
   };
 
+  const handleExport = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/rents-excel/export`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) throw new Error('Export failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `rents_export.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export error:', error);
+    }
+  };
+
   return (
     <Card>
       <Card.Header className="flex flex-col gap-4 px-6 pt-6 pb-4 border-b border-[var(--border)]">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h1 className="page-title">Riwayat Peminjaman</h1>
-          <Button
-            onPress={() => navigate('/pos')}
-            variant="primary"
-            aria-label="Peminjaman Baru via POS"
-          >
-            Peminjaman Baru
-          </Button>
+          <div className="flex items-center gap-2">
+            <Tooltip content="Eksport Excel">
+              <Button isIconOnly onPress={handleExport} variant="outline" aria-label="Eksport">
+                <Download size={18} />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Import Excel">
+              <Button isIconOnly onPress={() => dispatch({ type: 'OPEN_IMPORT_MODAL' })} variant="outline" aria-label="Import">
+                <UploadCloud size={18} />
+              </Button>
+            </Tooltip>
+            <Button
+              onPress={() => navigate('/pos')}
+              variant="primary"
+              aria-label="Peminjaman Baru via POS"
+            >
+              Peminjaman Baru
+            </Button>
+          </div>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
           <Input
-            placeholder="Cari klien..."
+            placeholder="Cari ID transaksi, nama klien, atau telepon..."
             value={state.search}
             onChange={(e) => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
-            aria-label="Cari klien"
-            className="w-full sm:w-64"
+            aria-label="Cari peminjaman"
+            className="w-full sm:w-[300px]"
           />
           <Select
             placeholder="Semua Status"
             value={state.statusFilter || null}
             onChange={(key) => dispatch({ type: 'SET_STATUS_FILTER', payload: key ? String(key) : '' })}
-            className="w-full sm:w-40"
+            className="w-full sm:w-[160px]"
+            aria-label="Filter status peminjaman"
           >
-            <Label className="sr-only">Status</Label>
             <Select.Trigger>
               <Select.Value />
               <Select.Indicator />
@@ -174,12 +215,9 @@ const RentHistoryPage = () => {
             <Select.Popover>
               <ListBox>
                 <ListBox.Item id="" textValue="Semua Status">Semua Status<ListBox.ItemIndicator /></ListBox.Item>
-                <ListBox.Item id="draft" textValue="Draft">Draft<ListBox.ItemIndicator /></ListBox.Item>
-                <ListBox.Item id="booked" textValue="Dipesan">Dipesan<ListBox.ItemIndicator /></ListBox.Item>
-                <ListBox.Item id="rented" textValue="Disewa">Disewa<ListBox.ItemIndicator /></ListBox.Item>
-                <ListBox.Item id="inspecting" textValue="Inspeksi">Inspeksi<ListBox.ItemIndicator /></ListBox.Item>
-                <ListBox.Item id="returned" textValue="Dikembalikan">Dikembalikan<ListBox.ItemIndicator /></ListBox.Item>
-                <ListBox.Item id="overdue" textValue="Terlambat">Terlambat<ListBox.ItemIndicator /></ListBox.Item>
+                <ListBox.Item id="booked" textValue="Booked">Booked<ListBox.ItemIndicator /></ListBox.Item>
+                <ListBox.Item id="rented" textValue="Dipinjam">Dipinjam<ListBox.ItemIndicator /></ListBox.Item>
+                <ListBox.Item id="returned" textValue="Selesai">Selesai<ListBox.ItemIndicator /></ListBox.Item>
                 <ListBox.Item id="cancelled" textValue="Dibatalkan">Dibatalkan<ListBox.ItemIndicator /></ListBox.Item>
               </ListBox>
             </Select.Popover>
@@ -187,22 +225,17 @@ const RentHistoryPage = () => {
         </div>
       </Card.Header>
 
-      <Card.Content>
+      <Card.Content className="p-0">
         {state.loading ? (
           <div className="flex justify-center items-center h-48">
-            <Spinner />
-          </div>
-        ) : state.rents.length === 0 ? (
-          <div className="text-center py-12">
-            <h3 className="text-lg font-semibold">Belum ada pesanan.</h3>
-            <p className="text-sm text-[var(--muted)]">Belum ada data peminjaman</p>
+            <Spinner aria-label="Memuat data peminjaman" />
           </div>
         ) : (
           <RentHistoryTable 
             rents={state.rents} 
-            openReturnModal={(id) => dispatch({ type: 'OPEN_RETURN_MODAL', payload: id })}
-            openRentModal={openRentModal}
-            openCancelModal={(id) => dispatch({ type: 'OPEN_CANCEL_MODAL', payload: id })}
+            onOpenReturnModal={(id, data) => dispatch({ type: 'OPEN_RETURN_MODAL', payload: { id, data } })}
+            onOpenRentModal={openRentModal}
+            onOpenCancelModal={(id, data) => dispatch({ type: 'OPEN_CANCEL_MODAL', payload: { id, data } })}
           />
         )}
       </Card.Content>
@@ -222,7 +255,7 @@ const RentHistoryPage = () => {
         onClose={() => dispatch({ type: 'CLOSE_RETURN_MODAL' })}
         onSuccess={fetchRents}
         rentId={state.selectedRentId}
-        sisaTagihan={getRemainingBalance()}
+        rentData={state.selectedRentData}
       />
 
       <MarkRentedModal
@@ -233,7 +266,6 @@ const RentHistoryPage = () => {
         sisaTagihan={getRemainingBalance()}
       />
 
-      {/* Cancel Order Confirmation Modal */}
       <Modal.Backdrop isOpen={state.isCancelOpen} onOpenChange={() => dispatch({ type: 'CLOSE_CANCEL_MODAL' })}>
         <Modal.Container>
           <Modal.Dialog>
@@ -258,6 +290,18 @@ const RentHistoryPage = () => {
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
+
+      <ExcelImportModal
+        isOpen={state.isImportOpen}
+        onOpenChange={(open) => {
+          if (!open) dispatch({ type: 'CLOSE_IMPORT_MODAL' });
+          else dispatch({ type: 'OPEN_IMPORT_MODAL' });
+        }}
+        title="Import Riwayat Peminjaman"
+        templateUrl={`/api/rents-excel/template`}
+        uploadUrl={`/api/rents-excel/import`}
+        onSuccess={fetchRents}
+      />
     </Card>
   );
 };
