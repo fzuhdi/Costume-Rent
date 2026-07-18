@@ -49,6 +49,13 @@ func migrateDB() {
 
 	log.Println("Running database migrations...")
 
+	// Workaround for SQLite limitation: Cannot add a UNIQUE column to an existing table
+	// We drop the improperly parsed column (if it exists) and recreate it with backticks so GORM's DDL parser can read it.
+	db.Exec("ALTER TABLE users DROP COLUMN username")
+	db.Exec("ALTER TABLE users ADD COLUMN `username` text")
+	// Set default for existing admin so unique index doesn't complain about null/empty duplicates
+	db.Exec("UPDATE users SET `username` = 'admin' WHERE email = 'admin@busana.com'")
+
 	err := db.AutoMigrate(
 		&models.User{},
 		&models.Region{},

@@ -16,8 +16,7 @@ export default function RentDetailInfo({
   handleEditSave,
   setIsDeleteOpen,
   statusColors,
-  statusLabels,
-  formatDate
+  statusLabels
 }) {
   return (
     <Card>

@@ -18,9 +18,6 @@ const SettingsPage = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
 
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
@@ -50,7 +47,7 @@ const SettingsPage = () => {
       });
       setSuccessMsg('Pengaturan berhasil disimpan');
       setTimeout(() => setSuccessMsg(''), 3000);
-    } catch (error) {
+    } catch {
       setErrorMsg('Gagal menyimpan pengaturan');
       setTimeout(() => setErrorMsg(''), 3000);
     } finally {

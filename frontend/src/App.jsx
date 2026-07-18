@@ -32,80 +32,12 @@ const AppRoutes = () => {
   const { settings, loading: settingsLoading } = useSettings();
 
   useEffect(() => {
-    const getCookie = (name) => {
-      const prefix = `${name}=`;
-      return document.cookie
-        .split(';')
-        .map((cookie) => cookie.trim())
-        .find((cookie) => cookie.startsWith(prefix))
-        ?.slice(prefix.length) || '';
-    };
-
-    const enforceStoredTheme = () => {
-      const storedTheme = localStorage.getItem('heroui-theme') || decodeURIComponent(getCookie('heroui-theme'));
-      if (storedTheme !== 'dark' && storedTheme !== 'light') {
-        return;
-      }
-      if (document.documentElement.classList.contains('dark') !== (storedTheme === 'dark')) {
-        document.documentElement.classList.toggle('dark', storedTheme === 'dark');
-      }
-      if (document.documentElement.classList.contains('light') !== (storedTheme !== 'dark')) {
-        document.documentElement.classList.toggle('light', storedTheme !== 'dark');
-      }
-      if (document.documentElement.getAttribute('data-theme') !== storedTheme) {
-        document.documentElement.setAttribute('data-theme', storedTheme);
-      }
-    };
-
-    enforceStoredTheme();
-    const observer = new MutationObserver(enforceStoredTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const hasReferencedLabel = (element) => {
-      const ids = element.getAttribute('aria-labelledby')?.split(/\s+/).filter(Boolean) || [];
-      return ids.some((id) => document.getElementById(id)?.textContent?.trim());
-    };
-
-    const markDecorativeImages = () => {
-      document
-        .querySelectorAll('span[aria-label]:not([role]), span[aria-labelledby]:not([role])')
-        .forEach((span) => {
-          span.removeAttribute('aria-label');
-          span.removeAttribute('aria-labelledby');
-        });
-
-      document
-        .querySelectorAll('svg:not([aria-label]):not([aria-labelledby])')
-        .forEach((svg) => {
-          if (!svg.querySelector('title')) {
-            svg.setAttribute('aria-hidden', 'true');
-          }
-        });
-
-      document.querySelectorAll('[role="img"]').forEach((image) => {
-        const hasLabel = image.getAttribute('aria-label')?.trim()
-          || image.getAttribute('title')?.trim()
-          || hasReferencedLabel(image);
-
-        if (!hasLabel && !image.textContent?.trim()) {
-          image.removeAttribute('aria-labelledby');
-          image.setAttribute('aria-hidden', 'true');
-        }
-      });
-    };
-
-    markDecorativeImages();
-    const observer = new MutationObserver(markDecorativeImages);
-    observer.observe(document.body, {
-      attributes: true,
-      attributeFilter: ['aria-label', 'aria-labelledby', 'role'],
-      childList: true,
-      subtree: true,
-    });
-    return () => observer.disconnect();
+    const theme = localStorage.getItem('heroui-theme') || (document.cookie.match(/(?:^|;)\s*heroui-theme=([^;]*)/)?.[1] || '');
+    if (theme === 'dark' || theme === 'light') {
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+      document.documentElement.classList.toggle('light', theme !== 'dark');
+      document.documentElement.setAttribute('data-theme', theme);
+    }
   }, []);
 
   useEffect(() => {

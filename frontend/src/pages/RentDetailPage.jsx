@@ -27,12 +27,7 @@ const statusLabels = {
   cancelled: 'Dibatalkan',
 };
 
-const itemStatusColors = {
-  booked: { variant: 'flat', color: 'primary' },
-  rented: { variant: 'flat', color: 'secondary' },
-  returned: { variant: 'flat', color: 'success' },
-  lost: { variant: 'flat', color: 'danger' },
-};
+
 
 const formatDateTime = (isoString) => {
   if (!isoString) return '-';
@@ -60,8 +55,7 @@ const RentDetailPage = () => {
   const {
     rent, loading, processing,
     activeModal, setActiveModal,
-    isEditing, setIsEditing,
-    isHistoryOpen, setIsHistoryOpen,
+    isEditing,
     editData, setEditData,
     editItems, setEditItems,
     previewImages, previewIndex,

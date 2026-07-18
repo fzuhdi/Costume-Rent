@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Collection, ComboBox, Input, Label, ListBox, Spinner, Button, Chip } from '@heroui/react';
-import { useAsyncList } from '@react-stately/data';
+
 import { searchClients } from '../api/clientApi';
 
 const ClientSelect = ({ value, onChange, error }) => {
@@ -12,22 +12,40 @@ const ClientSelect = ({ value, onChange, error }) => {
     setIsCreating(value?.type === 'new' || false);
   }
 
-  const list = useAsyncList({
-    async load({ filterText, signal }) {
-      if (!filterText || filterText.length < 1) return { items: [] };
-      await new Promise(resolve => setTimeout(resolve, 500));
-      if (signal.aborted) return { items: [] };
+  const [filterText, setFilterText] = useState('');
+  const [items, setItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-      try {
-        const response = await searchClients(filterText, 10, { signal });
-        return { items: response.data || [] };
-      } catch (err) {
-        if (err?.name === 'AbortError') return { items: [] };
-        console.error('Failed to search clients:', err);
-        return { items: [] };
+  useEffect(() => {
+    const controller = new AbortController();
+    const fetchData = async () => {
+      if (!filterText || filterText.length < 1) {
+        setItems([]);
+        return;
       }
-    },
-  });
+      setIsLoading(true);
+      try {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        if (controller.signal.aborted) return;
+        const response = await searchClients(filterText, 10, { signal: controller.signal });
+        setItems(response.data || []);
+      } catch (err) {
+        if (err?.name === 'AbortError') return;
+        setItems([]);
+      } finally {
+        if (!controller.signal.aborted) setIsLoading(false);
+      }
+    };
+    fetchData();
+    return () => controller.abort();
+  }, [filterText]);
+
+  const list = React.useMemo(() => ({
+    filterText,
+    setFilterText,
+    items,
+    isLoading
+  }), [filterText, items, isLoading]);
 
   const prevValueRef = React.useRef(value);
   useEffect(() => {
