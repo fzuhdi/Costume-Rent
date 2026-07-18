@@ -42,6 +42,15 @@ const AppRoutes = () => {
 
   useEffect(() => {
     document.title = settings.app_name || 'Costume Rental';
+    if (settings.app_logo) {
+      let link = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = settings.app_logo;
+    }
   }, [settings]);
 
   if (authLoading || settingsLoading) {

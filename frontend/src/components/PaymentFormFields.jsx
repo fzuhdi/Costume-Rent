@@ -33,7 +33,7 @@ const PaymentFormFields = ({
           <Label className="text-xs font-semibold mb-1 text-default-600 block">Nominal *</Label>
           <Input
             type="number"
-            className="w-full bg-white border border-default-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full bg-content1 border border-default-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             placeholder="0"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
@@ -47,12 +47,12 @@ const PaymentFormFields = ({
         onChange={setMethod}
       >
         <Label className="text-xs font-semibold mb-1 text-default-600 block">Metode Pembayaran *</Label>
-        <Select.Trigger className="w-full flex items-center justify-between bg-white border border-default-200 rounded-lg px-3 py-2 text-sm text-left">
+        <Select.Trigger className="w-full flex items-center justify-between bg-content1 border border-default-200 rounded-lg px-3 py-2 text-sm text-left">
           <Select.Value />
           <Select.Indicator />
         </Select.Trigger>
         <Select.Popover>
-          <ListBox className="bg-white border border-default-200 rounded-lg shadow-lg max-h-60 overflow-y-auto p-1">
+          <ListBox className="bg-content1 border border-default-200 rounded-lg shadow-lg max-h-60 overflow-y-auto p-1">
             {PAYMENT_METHODS.map((m) => (
               <ListBox.Item key={m} id={m} textValue={m} className="px-3 py-2 hover:bg-default-100 cursor-pointer rounded-md text-sm outline-none data-[focused]:bg-default-100">
                 {m}

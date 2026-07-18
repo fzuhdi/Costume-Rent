@@ -1,4 +1,5 @@
 import { Card, Button } from '@heroui/react';
+import { Plus } from 'lucide-react';
 
 export default function RentPaymentSection({
   rent,
@@ -110,9 +111,10 @@ export default function RentPaymentSection({
                 variant="flat"
                 color="primary"
                 className="w-full font-semibold"
+                startContent={<Plus size={16} />}
                 onPress={() => setIsPaymentModalOpen(true)}
               >
-                + Tambah Pembayaran
+                Tambah Pembayaran
               </Button>
             </div>
           )}

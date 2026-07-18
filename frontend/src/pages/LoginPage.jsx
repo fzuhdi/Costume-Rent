@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import { LogIn } from 'lucide-react';
+import { LogIn, Layers } from 'lucide-react';
 import { TextField, Label, Input, Button, Card, Alert } from '@heroui/react';
 
 const LoginPage = () => {
@@ -38,9 +38,14 @@ const LoginPage = () => {
             {settings.app_logo ? (
               <img src={settings.app_logo} alt={settings.app_name} className="h-16 mx-auto mb-2" />
             ) : (
-              <h1 className="text-2xl font-bold text-[var(--primary)]">
-                {settings.app_name}
-              </h1>
+              <div className="flex flex-col items-center gap-3 mb-2">
+                <div className="bg-[var(--primary)] p-3 rounded-2xl shadow-sm shadow-[var(--primary)]/20">
+                  <Layers size={40} className="text-white" />
+                </div>
+                <h1 className="text-2xl font-bold text-[var(--foreground)] tracking-tight">
+                  {settings.app_name}
+                </h1>
+              </div>
             )}
             <p className="text-sm text-[var(--muted)]">{settings.app_tagline}</p>
           </div>

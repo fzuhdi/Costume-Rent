@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCostumes, getRegions, getCategories } from '../api/costumeApi';
-import { Grid, List, Filter, AlignLeft } from 'lucide-react';
+import { Grid, List, Filter, AlignLeft, Plus } from 'lucide-react';
 import {
   Input, Button, ButtonGroup, Separator,
   ListBox, Select,
@@ -141,6 +141,7 @@ const CataloguePage = () => {
           <Button
             onPress={() => navigate('/catalogue/new')}
              variant="primary"
+             startContent={<Plus size={16} />}
              aria-label="Tambah Kostum"
            >
             Tambah Kostum

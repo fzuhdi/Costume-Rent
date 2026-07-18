@@ -87,8 +87,8 @@ const DashboardPage = () => {
                     onClick={() => setRevenueFilter(tab.key)}
                     className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
                       revenueFilter === tab.key 
-                        ? 'bg-white shadow-sm text-default-900 dark:bg-default-300 dark:text-white' 
-                        : 'text-default-500 hover:text-default-700 dark:hover:text-default-300'
+                        ? 'bg-content1 shadow-sm text-default-900' 
+                        : 'text-default-500 hover:text-default-700'
                     }`}
                   >
                     {tab.label}

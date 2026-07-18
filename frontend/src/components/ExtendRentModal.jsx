@@ -56,7 +56,7 @@ const ExtendRentModal = ({ isOpen, onClose, onSuccess, rentId, dailyFee = 0 }) =
               <Input
                 aria-label="Tambah Hari"
                 type="number"
-                className="w-full bg-white border border-default-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
+                className="w-full bg-content1 border border-default-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
                 placeholder="1"
                 min="1"
                 value={extraDays}

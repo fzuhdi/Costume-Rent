@@ -232,7 +232,7 @@ const CalendarGrid = ({ loading, rents, currentDate, search, navigate }) => {
                       }}
                       onClick={() => handleCellClick(cell.dateStr)}
                       className={`border-r border-[var(--border)]/70 last:border-0 p-2 cursor-pointer hover:bg-primary-50/5 active:bg-primary-50/10 transition-colors flex flex-col items-end group relative ${
-                        cell.isCurrentMonth ? 'bg-white' : 'bg-default-50/40'
+                        cell.isCurrentMonth ? 'bg-[var(--surface)]' : 'bg-default-50/40'
                       }`}
                     >
                       <span className={`text-[11px] font-extrabold w-6 h-6 flex items-center justify-center rounded-full transition-transform group-hover:scale-105 ${

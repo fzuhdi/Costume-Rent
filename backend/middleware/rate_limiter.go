@@ -56,7 +56,7 @@ func LoginRateLimiter() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ip := c.ClientIP() // Uses CF-Connecting-IP if trusted proxies are set
 		limiter := getVisitor(ip)
-		
+
 		if !limiter.Allow() {
 			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Terlalu banyak percobaan. Silakan coba lagi nanti."})
 			c.Abort()

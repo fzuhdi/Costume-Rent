@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getRentById, cancelRent, deleteRent, updateRent, rollbackOrder } from '../api/rentApi';
 import { updateClient } from '../api/clientApi';
 
-export function useRentDetail(id, navigate, formatDate) {
+export function useRentDetail(id, navigate) {
   const [rent, setRent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -164,11 +164,14 @@ export function useRentDetail(id, navigate, formatDate) {
     let currentGroup = null;
 
     rent.activity_logs.forEach(log => {
-      const exactTime = log.created_at;
-      if (!currentGroup || currentGroup.timestamp !== exactTime) {
+      const d = new Date(log.created_at);
+      const pad = (n) => String(n).padStart(2, '0');
+      const minuteTime = `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+      if (!currentGroup || currentGroup.timestamp !== minuteTime) {
         if (currentGroup) groups.push(currentGroup);
         currentGroup = {
-          timestamp: exactTime,
+          timestamp: minuteTime,
           logs: []
         };
       }
@@ -176,8 +179,7 @@ export function useRentDetail(id, navigate, formatDate) {
     });
     if (currentGroup) groups.push(currentGroup);
     return groups;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rent, formatDate]);
+  }, [rent]);
 
   const renderLogContent = useCallback((log) => {
     if (log.action_type === 'UPDATED' && (log.new_value === 'updated' || !log.old_value)) {
