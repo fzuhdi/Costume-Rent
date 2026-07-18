@@ -46,7 +46,7 @@ export default function RentPaymentSection({
 
               return (
                 <div
-                  key={trx.id || (Math.random() + trx.amount)}
+                  key={trx.id || trx.created_at || 'trx-' + String(trx.amount)}
                   className={`flex justify-between items-start pl-3 border-l-2 ${borderClass}`}
                 >
                   <div className="flex flex-col gap-0.5">
