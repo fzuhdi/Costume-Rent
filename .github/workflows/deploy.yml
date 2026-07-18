@@ -4,13 +4,13 @@ on:
     branches: [main]
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - name: SSH into VPS and deploy
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            bash /opt/apps/costume-rent/deploy.sh
+      - uses: actions/checkout@v3
+      
+      - name: Inject Production Secrets
+        run: echo "${{ secrets.PRODUCTION_ENV }}" > .env.production
+        
+      - name: Build and Deploy
+        run: |
+          docker-compose up -d --build
