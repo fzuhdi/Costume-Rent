@@ -99,7 +99,7 @@ const CatalogueDetailPage = () => {
 
   // Calculate booked days map: { "YYYY-MM-DD": bookedQuantity }
   const bookedDates = useMemo(() => {
-    const map = {};
+    const map = new Map();
     rents.forEach(rent => {
       const item = rent.items.find(i => String(i.costume_id) === String(id));
       if (!item) return;
@@ -110,7 +110,7 @@ const CatalogueDetailPage = () => {
         let current = new Date(start);
         while (current <= end) {
           const dStr = formatDateStr(current.getFullYear(), current.getMonth(), current.getDate());
-          map[dStr] = (map[dStr] || 0) + qty;
+          map.set(dStr, (map.get(dStr) || 0) + qty);
           current.setDate(current.getDate() + 1);
         }
       }
@@ -218,7 +218,7 @@ const CatalogueDetailPage = () => {
               <div>
                 <div className="flex items-center justify-between mb-4">
                 <Button isIconOnly variant="light" size="sm" onPress={prevMonth}><ChevronLeft size={18} /></Button>
-                <span className="font-semibold text-sm">{monthNames[month]} {year}</span>
+                <span className="font-semibold text-sm">{monthNames.at(month)} {year}</span>
                 <Button isIconOnly variant="light" size="sm" onPress={nextMonth}><ChevronRight size={18} /></Button>
               </div>
 
@@ -233,7 +233,7 @@ const CatalogueDetailPage = () => {
                   if (!cell.isCurrentMonth) {
                     return <div key={idx} className="aspect-square"></div>;
                   }
-                  const bookedQty = bookedDates[cell.dateStr] || 0;
+                  const bookedQty = bookedDates.get(cell.dateStr) || 0;
                   const isFullyBooked = bookedQty >= costume.total_quantity;
                   const isPartiallyBooked = bookedQty > 0 && bookedQty < costume.total_quantity;
 

@@ -4,7 +4,7 @@ import { getClients, deleteClient } from '../api/clientApi';
 import { Search, Trash2 } from 'lucide-react';
 import {
   Button, Chip,
-  Table, Spinner, Modal, Card, Separator, InputGroup
+  Table, Spinner, Modal, Card, InputGroup
 } from '@heroui/react';
 import CustomPagination from '../components/CustomPagination';
 

@@ -55,9 +55,9 @@ func (s *CostumeService) List(filter dto.CostumeFilter) (*dto.PaginatedResponse,
 	response := []dto.CostumeListResponse{}
 	for _, c := range costumes {
 		item := dto.CostumeListResponse{
-			ID:          c.ID,
-			Name:        c.Name,
-			Description: c.Description,
+			ID:            c.ID,
+			Name:          c.Name,
+			Description:   c.Description,
 			RegionID:      c.RegionID,
 			CategoryID:    c.CategoryID,
 			Size:          c.Size,
@@ -95,7 +95,7 @@ func (s *CostumeService) List(filter dto.CostumeFilter) (*dto.PaginatedResponse,
 		RentedQty int64
 	}
 	var rentedResults []qtyResult
-	
+
 	dbQuery := config.DB.Model(&models.RentOrderItem{}).
 		Select("rent_order_items.costume_id as costume_id, COALESCE(SUM(rent_order_items.quantity), 0) as rented_qty").
 		Joins("JOIN rent_orders ON rent_orders.id = rent_order_items.rent_order_id").
@@ -181,8 +181,8 @@ func (s *CostumeService) GetByID(id uint) (*dto.CostumeDetailResponse, error) {
 
 func (s *CostumeService) Create(req dto.CreateCostumeRequest) (*dto.CostumeDetailResponse, error) {
 	costume := models.Costume{
-		Name:        req.Name,
-		Description: req.Description,
+		Name:          req.Name,
+		Description:   req.Description,
 		RegionID:      req.RegionID,
 		CategoryID:    req.CategoryID,
 		Size:          req.Size,
@@ -401,8 +401,8 @@ func (s *CostumeService) GetRegions() ([]dto.RegionResponse, error) {
 	response := []dto.RegionResponse{}
 	for _, r := range regions {
 		item := dto.RegionResponse{
-			ID:        r.ID,
-			Name:      r.Name,
+			ID:   r.ID,
+			Name: r.Name,
 		}
 		if !r.CreatedAt.IsZero() {
 			item.CreatedAt = r.CreatedAt.Format("2006-01-02 15:04:05")
@@ -441,8 +441,8 @@ func (s *CostumeService) GetCategories() ([]dto.CategoryResponse, error) {
 	response := []dto.CategoryResponse{}
 	for _, c := range categories {
 		item := dto.CategoryResponse{
-			ID:        c.ID,
-			Name:      c.Name,
+			ID:   c.ID,
+			Name: c.Name,
 		}
 		if !c.CreatedAt.IsZero() {
 			item.CreatedAt = c.CreatedAt.Format("2006-01-02 15:04:05")

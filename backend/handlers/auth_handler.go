@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/busana/backend/dto"
 	"github.com/busana/backend/services"
@@ -31,9 +32,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	isProduction := os.Getenv("ENV") == "production" || os.Getenv("GIN_MODE") == "release"
+
 	// Set HTTP-only cookie
 	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("token", response.Token, 3600*24, "/", "", false, true)
+	c.SetCookie("token", response.Token, 3600*24, "/", "", isProduction, true)
 
 	// Keep returning token in JSON for backwards compatibility or mobile clients, but web will use cookie
 	c.JSON(http.StatusOK, response)
@@ -86,12 +89,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		req.Role = "admin"
 	}
 
-	user, err := h.authService.CreateUser(dto.CreateUserRequest{
-		Name:     req.Name,
-		Email:    req.Email,
-		Password: req.Password,
-		Role:     req.Role,
-	})
+	user, err := h.authService.CreateUser(dto.CreateUserRequest(req))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Email already exists"})

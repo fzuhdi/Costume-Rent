@@ -114,15 +114,11 @@ const SidebarMobile = () => {
 
   return (
     <>
-      <div 
-        role="button"
-        tabIndex={0}
+      <button 
+        type="button"
         aria-label="Tutup sidebar"
         className={`mobile-overlay ${isMobileOpen ? 'open' : ''}`} 
         onClick={closeMobile} 
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') closeMobile();
-        }}
       />
       <div className={`mobile-sidebar bg-[var(--surface)] border-r border-[var(--border)] ${isMobileOpen ? 'open' : ''}`}>
         <div className="flex items-center gap-3 px-5 py-5 border-b border-[var(--border)]">

@@ -132,7 +132,7 @@ func (h *CostumeHandler) UploadImage(c *gin.Context) {
 		uploadDir = "./uploads"
 	}
 
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+	if err := os.MkdirAll(uploadDir, 0750); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
 		return
 	}

@@ -33,7 +33,9 @@ func main() {
 	}
 
 	// Make sure the schema for RentTransaction is up to date before trying to update it
-	db.AutoMigrate(&models.RentTransaction{})
+	if err := db.AutoMigrate(&models.RentTransaction{}); err != nil {
+		log.Printf("AutoMigrate failed: %v", err)
+	}
 
 	// Update existing transactions to be CREDIT PAYMENT
 	if err := db.Model(&models.RentTransaction{}).Where("type = ? OR type IS NULL OR type = ''", "").Updates(map[string]interface{}{

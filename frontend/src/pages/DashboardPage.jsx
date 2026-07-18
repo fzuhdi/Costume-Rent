@@ -7,6 +7,12 @@ import { Suspense, lazy } from 'react';
 
 const DashboardRevenueChart = lazy(() => import('../components/DashboardRevenueChart'));
 
+const formatIndoDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+};
+
 const DashboardPage = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -17,11 +23,6 @@ const DashboardPage = () => {
 
   const navigate = useNavigate();
 
-  const formatIndoDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
-  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -82,6 +83,7 @@ const DashboardPage = () => {
                 ].map(tab => (
                   <button
                     key={tab.key}
+                    type="button"
                     onClick={() => setRevenueFilter(tab.key)}
                     className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
                       revenueFilter === tab.key 

@@ -1,6 +1,6 @@
 module github.com/busana/backend
 
-go 1.22
+go 1.25.0
 
 require (
 	github.com/gin-gonic/gin v1.9.1
@@ -9,6 +9,7 @@ require (
 	github.com/google/uuid v1.5.0
 	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.18.0
+	golang.org/x/time v0.15.0
 	gorm.io/gorm v1.25.5
 )
 

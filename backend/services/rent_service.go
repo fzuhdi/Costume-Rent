@@ -100,7 +100,7 @@ func (s *RentService) List(filter dto.RentOrderFilter) (*dto.PaginatedResponse, 
 
 func (s *RentService) GetByID(id uint) (*models.RentOrder, error) {
 	s.lazyExpireDrafts()
-	
+
 	var order models.RentOrder
 	if err := config.DB.Preload("Client").
 		Preload("Items").
@@ -154,7 +154,7 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 	for _, item := range req.Items {
 		costumeResp, err := costumeSvc.GetByID(item.CostumeID)
 		if err != nil {
-			return nil, errors.New("costume not found: " + strconv.Itoa(int(item.CostumeID)))
+			return nil, errors.New("costume not found: " + strconv.FormatUint(uint64(item.CostumeID), 10))
 		}
 		itemFee := costumeResp.RentalFee
 		if item.CustomRentalFee != nil {
@@ -178,10 +178,10 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 		for _, item := range req.Items {
 			available, err := costumeSvc.GetAvailableQuantityOnDate(item.CostumeID, eventDate)
 			if err != nil {
-				return nil, errors.New("costume not found: " + strconv.Itoa(int(item.CostumeID)))
+				return nil, errors.New("costume not found: " + strconv.FormatUint(uint64(item.CostumeID), 10))
 			}
 			if item.Quantity > available {
-				return nil, errors.New("insufficient quantity for costume " + strconv.Itoa(int(item.CostumeID)) + ": requested " + strconv.Itoa(item.Quantity) + ", available " + strconv.Itoa(available))
+				return nil, errors.New("insufficient quantity for costume " + strconv.FormatUint(uint64(item.CostumeID), 10) + ": requested " + strconv.Itoa(item.Quantity) + ", available " + strconv.Itoa(available))
 			}
 		}
 	}
@@ -192,8 +192,8 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 		EventDate:          eventDate,
 		PickupDate:         pickupDate,
 		ExpectedReturnDate: expectedReturnDate,
-		TotalPaid:        0, // Will be updated by AddPayment
-		PaymentStatus:    "",
+		TotalPaid:          0, // Will be updated by AddPayment
+		PaymentStatus:      "",
 		HasSecurityItem:    false, // Security item held at pickup only
 		Status:             status,
 		Notes:              req.Notes,
@@ -207,7 +207,7 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 	totalBaseFee := 0
 	for _, item := range req.Items {
 		costumeResp, _ := costumeSvc.GetByID(item.CostumeID)
-		
+
 		itemFee := costumeResp.RentalFee
 		if item.CustomRentalFee != nil {
 			itemFee = *item.CustomRentalFee
@@ -265,14 +265,14 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest, userID uin
 	if req.EventDate != "" {
 		if t, err := time.Parse("2006-01-02", req.EventDate); err == nil {
 			costumeSvc := NewCostumeService()
-			
+
 			// Verify availability if not draft
 			if order.Status == "booked" || order.Status == "rented" {
 				config.DB.Preload("Items").First(&order, id)
 				for _, item := range order.Items {
 					available, err := costumeSvc.GetAvailableQuantityOnDate(item.CostumeID, t)
 					if err != nil || int(item.Quantity) > available {
-						return nil, errors.New("cannot change date: costume " + strconv.Itoa(int(item.CostumeID)) + " not available on new date")
+						return nil, errors.New("cannot change date: costume " + strconv.FormatUint(uint64(item.CostumeID), 10) + " not available on new date")
 					}
 				}
 			}
@@ -290,15 +290,14 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest, userID uin
 			order.ActualReturnDate = &t
 		}
 	}
-	
+
 	if req.TotalPaid != nil {
 		order.TotalPaid = *req.TotalPaid
 	}
-	
+
 	if req.HasSecurityItem != nil {
 		order.HasSecurityItem = *req.HasSecurityItem
 	}
-	
 
 	if req.PaymentStatus != "" {
 		if order.PaymentStatus != req.PaymentStatus {
@@ -306,7 +305,7 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest, userID uin
 		}
 		order.PaymentStatus = req.PaymentStatus
 	}
-	
+
 	if req.Status != "" {
 		if order.Status != req.Status {
 			s.logActivity(order.ID, userID, "UPDATED", "Status: "+order.Status, req.Status)
@@ -339,7 +338,7 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest, userID uin
 		for _, item := range req.Items {
 			reqCostumeMap[item.CostumeID] = true
 			costumeResp, _ := costumeSvc.GetByID(item.CostumeID)
-			
+
 			fee := costumeResp.RentalFee
 			if item.CustomRentalFee != nil {
 				fee = *item.CustomRentalFee
@@ -579,10 +578,10 @@ func (s *RentService) MarkBooked(id uint, req dto.UpgradeToBookedRequest, userID
 
 		available, err := costumeSvc.GetAvailableQuantityOnDate(item.CostumeID, order.EventDate)
 		if err != nil {
-			return nil, errors.New("costume not found: " + strconv.Itoa(int(item.CostumeID)))
+			return nil, errors.New("costume not found: " + strconv.FormatUint(uint64(item.CostumeID), 10))
 		}
 		if item.Quantity > available {
-			return nil, errors.New("insufficient quantity for costume " + strconv.Itoa(int(item.CostumeID)) + ": requested " + strconv.Itoa(item.Quantity) + ", available " + strconv.Itoa(available))
+			return nil, errors.New("insufficient quantity for costume " + strconv.FormatUint(uint64(item.CostumeID), 10) + ": requested " + strconv.Itoa(item.Quantity) + ", available " + strconv.Itoa(available))
 		}
 	}
 
@@ -591,8 +590,6 @@ func (s *RentService) MarkBooked(id uint, req dto.UpgradeToBookedRequest, userID
 	}
 
 	order.Status = "booked"
-	
-
 
 	_, err := s.AddPayment(order.ID, *req.Payment, userID)
 	if err != nil {
@@ -620,7 +617,7 @@ func (s *RentService) CancelOrder(id uint, userID uint) (*models.RentOrder, erro
 
 	now := time.Now()
 	within24h := now.Sub(order.CreatedAt).Hours() <= 24
-	
+
 	eventDate := time.Date(order.EventDate.Year(), order.EventDate.Month(), order.EventDate.Day(), 0, 0, 0, 0, time.Local)
 	outsideD2 := eventDate.Sub(now).Hours() > 48
 
@@ -667,7 +664,7 @@ func (s *RentService) ExtendRent(id uint, req dto.ExtendRentRequest, userID uint
 		for _, item := range order.Items {
 			available, err := costumeSvc.GetAvailableQuantityOnDate(item.CostumeID, checkDate)
 			if err != nil || item.Quantity > available {
-				return nil, errors.New("costume not available for extension: " + strconv.Itoa(int(item.CostumeID)))
+				return nil, errors.New("costume not available for extension: " + strconv.FormatUint(uint64(item.CostumeID), 10))
 			}
 		}
 	}
@@ -696,7 +693,6 @@ func (s *RentService) ExtendRent(id uint, req dto.ExtendRentRequest, userID uint
 	return s.GetByID(order.ID)
 }
 
-
 func (s *RentService) Delete(id uint) error {
 	return config.DB.Delete(&models.RentOrder{}, id).Error
 }
@@ -705,17 +701,17 @@ func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderR
 	items := make([]dto.RentOrderItemResponse, len(order.Items))
 	for i, item := range order.Items {
 		items[i] = dto.RentOrderItemResponse{
-			ID:          item.ID,
-			CostumeID:   item.CostumeID,
-			Quantity:    item.Quantity,
-			RentalFee:   item.RentalFee,
+			ID:        item.ID,
+			CostumeID: item.CostumeID,
+			Quantity:  item.Quantity,
+			RentalFee: item.RentalFee,
 		}
 		if item.Costume.Name != "" {
 			items[i].CostumeName = item.Costume.Name
 			items[i].CoverImage = item.Costume.CoverImage
 		}
 	}
-	
+
 	var actualReturn *string
 	if order.ActualReturnDate != nil {
 		str := order.ActualReturnDate.Format("2006-01-02")
@@ -788,7 +784,7 @@ func (s *RentService) AddPayment(orderID uint, req dto.AddPaymentRequest, userID
 	for _, item := range orderWithItems.Items {
 		totalFee += item.RentalFee * item.Quantity
 	}
-	
+
 	totalDebits := 0
 	for _, t := range orderWithItems.Transactions {
 		if t.Type == "DEBIT" {

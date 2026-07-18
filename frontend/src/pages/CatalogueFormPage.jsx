@@ -3,8 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getCostumeById, createCostume, updateCostume, getRegions, getCategories, uploadCostumeImage, deleteCostumeImage } from '../api/costumeApi';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { TextField, Input, TextArea, Label, Select, ListBox, Button, Card, Spinner, FieldError, Alert } from '@heroui/react';
-import FileUploadZone from '../components/FileUploadZone';
-
+import CostumeImageManager from '../components/CostumeImageManager';
 const CatalogueFormPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -26,7 +25,7 @@ const CatalogueFormPage = () => {
   const [categories, setCategories] = useState([]);
   const [images, setImages] = useState([]);
   const [stagedFiles, setStagedFiles] = useState([]);
-  const [deletedImageIds, setDeletedImageIds] = useState([]);
+  const deletedImageIds = useRef([]);
   const stagedFilesRef = useRef(stagedFiles);
   
   useEffect(() => {
@@ -125,8 +124,8 @@ const CatalogueFormPage = () => {
           }
         }));
 
-        if (isEdit && deletedImageIds.length > 0) {
-          await Promise.all(deletedImageIds.map(async (imgId) => {
+        if (isEdit && deletedImageIds.current.length > 0) {
+          await Promise.all(deletedImageIds.current.map(async (imgId) => {
             try {
               await deleteCostumeImage(costumeId, imgId);
             } catch (error) {
@@ -165,7 +164,7 @@ const CatalogueFormPage = () => {
 
   const removeExistingImage = (id) => {
     setImages(prev => prev.filter(img => img.id !== id));
-    setDeletedImageIds(prev => [...prev, id]);
+    deletedImageIds.current.push(id);
   };
 
   if (loading) {
@@ -257,49 +256,13 @@ const CatalogueFormPage = () => {
               minrows={4}
               aria-label="Deskripsi kostum"
             />
-            <div>
-              <FileUploadZone
-                uploading={false} // CatalogueFormPage handles uploading differently or doesn't have an uploading state for files yet
-                fileLabel={stagedFiles.length > 0 ? `${stagedFiles.length} file dipilih` : null}
-                onChange={handleFileSelect}
-                label="Gambar Kostum"
-                multiple={true}
-              />
-              {(images.length > 0 || stagedFiles.length > 0) && (
-                <div className="mt-2 flex gap-2 flex-wrap">
-                  {images.map((img) => (
-                    <div key={`existing-${img.id}`} className="relative w-20 h-20 group">
-                      <img src={img.path} alt="Costume" className="w-full h-full object-cover rounded" />
-                      <Button
-                        isIconOnly
-                        size="sm"
-                        radius="full"
-                        onPress={() => removeExistingImage(img.id)}
-                        className="absolute -top-2 -right-2 w-6 h-6 min-w-6 bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                        aria-label="Remove image"
-                      >
-                        <X size={14} />
-                      </Button>
-                    </div>
-                  ))}
-                  {stagedFiles.map((staged) => (
-                    <div key={`staged-${staged.id}`} className="relative w-20 h-20 group">
-                      <img src={staged.previewUrl} alt="Staged" className="w-full h-full object-cover rounded" />
-                      <Button
-                        isIconOnly
-                        size="sm"
-                        radius="full"
-                        onPress={() => removeStaged(staged.id)}
-                        className="absolute -top-2 -right-2 w-6 h-6 min-w-6 bg-red-500 text-white opacity-80 hover:opacity-100"
-                        aria-label="Remove image"
-                      >
-                        <X size={14} />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <CostumeImageManager 
+              images={images} 
+              stagedFiles={stagedFiles} 
+              onFileSelect={handleFileSelect} 
+              onRemoveExisting={removeExistingImage} 
+              onRemoveStaged={removeStaged} 
+            />
             {formError && (
               <Alert status="danger" className="my-2">
                 <Alert.Indicator />

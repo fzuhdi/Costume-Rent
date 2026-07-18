@@ -64,7 +64,6 @@ func (h *RentHandler) Create(c *gin.Context) {
 		return
 	}
 
-
 	if len(req.Items) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "items are required"})
 		return
@@ -202,7 +201,7 @@ func (h *RentHandler) UploadPaymentProof(c *gin.Context) {
 		uploadDir = "./uploads"
 	}
 
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+	if err := os.MkdirAll(uploadDir, 0750); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
 		return
 	}
@@ -264,8 +263,6 @@ func (h *RentHandler) AddPayment(c *gin.Context) {
 
 	c.JSON(http.StatusOK, order)
 }
-
-
 
 func (h *RentHandler) CancelOrder(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)

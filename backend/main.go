@@ -293,7 +293,7 @@ func seedSampleRentals(adminID uint) {
 		EventDate:          eventDate,
 		PickupDate:         pickupDate,
 		ExpectedReturnDate: expectedReturnDate,
-		TotalPaid:        costume.RentalFee / 2, // 50% dp
+		TotalPaid:          costume.RentalFee / 2, // 50% dp
 		HasSecurityItem:    true,
 		Status:             "booked",
 		Notes:              "Penyewaan untuk acara adat",
@@ -316,12 +316,12 @@ func seedSampleRentals(adminID uint) {
 	}
 
 	baseFeeTx := models.RentTransaction{
-		RentOrderID:   rent.ID,
-		Type:          "DEBIT",
-		Category:      "BASE_FEE",
-		Amount:        costume.RentalFee,
-		Notes:         "Biaya Sewa",
-		CreatedBy:     adminID,
+		RentOrderID: rent.ID,
+		Type:        "DEBIT",
+		Category:    "BASE_FEE",
+		Amount:      costume.RentalFee,
+		Notes:       "Biaya Sewa",
+		CreatedBy:   adminID,
 	}
 	if err := db.Create(&baseFeeTx).Error; err != nil {
 		log.Printf("Failed to seed rental base fee transaction: %v", err)

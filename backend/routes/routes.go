@@ -60,7 +60,7 @@ func SetupRouter() *gin.Engine {
 		api.POST("/costumes/:id/images", middleware.AuthMiddleware(), costumeHandler.UploadImage)
 		api.DELETE("/costumes/:id/images/:imgId", middleware.AuthMiddleware(), costumeHandler.RemoveImage)
 
-		api.POST("/auth/login", authHandler.Login)
+		api.POST("/auth/login", middleware.LoginRateLimiter(), authHandler.Login)
 		api.POST("/auth/logout", middleware.AuthMiddleware(), authHandler.Logout)
 		api.GET("/auth/me", middleware.AuthMiddleware(), authHandler.GetCurrentUser)
 		api.POST("/auth/register", authHandler.Register)

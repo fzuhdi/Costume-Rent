@@ -19,7 +19,7 @@ import (
 func setupTestDB() {
 	os.Setenv("DB_PATH", ":memory:")
 	config.InitDB()
-	
+
 	// Migrate schema
 	config.DB.AutoMigrate(
 		&models.User{},
@@ -51,25 +51,25 @@ func TestAddPayment(t *testing.T) {
 
 	// Seed Rent Order (TotalTagihan = 200000, TotalPaid = 50000)
 	order := models.RentOrder{
-		ClientID: client.ID,
-		EventDate: time.Now(),
-		TotalPaid: 50000,
+		ClientID:      client.ID,
+		EventDate:     time.Now(),
+		TotalPaid:     50000,
 		PaymentStatus: "DP",
-		CreatedBy: user.ID,
+		CreatedBy:     user.ID,
 	}
 	config.DB.Create(&order)
 
 	orderItem := models.RentOrderItem{
 		RentOrderID: order.ID,
-		CostumeID: costume.ID,
-		Quantity: 2,
-		RentalFee: 100000,
+		CostumeID:   costume.ID,
+		Quantity:    2,
+		RentalFee:   100000,
 	}
 	config.DB.Create(&orderItem)
 
 	// Setup Router
 	r := gin.Default()
-	
+
 	// Mock middleware to set user ID
 	r.Use(func(c *gin.Context) {
 		c.Set("user_id", user.ID)
@@ -159,22 +159,22 @@ func TestMarkBooked(t *testing.T) {
 	client := models.Client{Name: "Jane Doe", Phone: "123"}
 	config.DB.Create(&client)
 
-	costume := models.Costume{Name: "Baju Jawa", RentalFee: 100000, Quantity: 5}
+	costume := models.Costume{Name: "Baju Jawa", RentalFee: 100000, TotalQuantity: 5}
 	config.DB.Create(&costume)
 
 	order := models.RentOrder{
-		ClientID: client.ID,
+		ClientID:  client.ID,
 		EventDate: time.Now().AddDate(0, 0, 3),
-		Status: "draft",
+		Status:    "draft",
 		CreatedBy: user.ID,
 	}
 	config.DB.Create(&order)
 
 	orderItem := models.RentOrderItem{
 		RentOrderID: order.ID,
-		CostumeID: costume.ID,
-		Quantity: 1,
-		RentalFee: 100000,
+		CostumeID:   costume.ID,
+		Quantity:    1,
+		RentalFee:   100000,
 	}
 	config.DB.Create(&orderItem)
 
@@ -188,9 +188,9 @@ func TestMarkBooked(t *testing.T) {
 	r.PUT("/api/rents/:id/booked", rentHandler.MarkBooked)
 
 	paymentPayload := dto.AddPaymentRequest{
-		Amount: 50000,
+		Amount:        50000,
 		PaymentMethod: "CASH",
-		Notes: "DP Booking",
+		Notes:         "DP Booking",
 	}
 
 	reqPayload := dto.UpgradeToBookedRequest{

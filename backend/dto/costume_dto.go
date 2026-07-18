@@ -1,8 +1,8 @@
 package dto
 
 type CreateCostumeRequest struct {
-	Name        string  `json:"name" binding:"required"`
-	Description string  `json:"description"`
+	Name          string  `json:"name" binding:"required"`
+	Description   string  `json:"description"`
 	Size          string  `json:"size"`
 	RegionID      *uint   `json:"region_id"`
 	CategoryID    *uint   `json:"category_id"`
@@ -12,8 +12,8 @@ type CreateCostumeRequest struct {
 }
 
 type UpdateCostumeRequest struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
+	Name          string  `json:"name"`
+	Description   string  `json:"description"`
 	Size          string  `json:"size"`
 	RegionID      *uint   `json:"region_id"`
 	CategoryID    *uint   `json:"category_id"`
@@ -23,28 +23,28 @@ type UpdateCostumeRequest struct {
 }
 
 type CostumeListResponse struct {
-	ID               uint    `json:"id"`
-	Name             string  `json:"name"`
-	Description      string  `json:"description"`
-	RegionID         *uint   `json:"region_id"`
-	Region           string  `json:"region"`
-	CategoryID       *uint   `json:"category_id"`
-	Category         string  `json:"category"`
-	Size             string  `json:"size"`
-	RentalFee        int     `json:"rental_fee"`
-	TotalQuantity    int     `json:"total_quantity"`
+	ID                uint    `json:"id"`
+	Name              string  `json:"name"`
+	Description       string  `json:"description"`
+	RegionID          *uint   `json:"region_id"`
+	Region            string  `json:"region"`
+	CategoryID        *uint   `json:"category_id"`
+	Category          string  `json:"category"`
+	Size              string  `json:"size"`
+	RentalFee         int     `json:"rental_fee"`
+	TotalQuantity     int     `json:"total_quantity"`
 	AvailableQuantity int     `json:"available_quantity"`
-	CoverImage       string  `json:"cover_image"`
-	AcquiredAt       *string `json:"acquired_at"`
+	CoverImage        string  `json:"cover_image"`
+	AcquiredAt        *string `json:"acquired_at"`
 }
 
 type CostumeFilter struct {
-	Search    string `form:"search"`
-	RegionID  string `form:"region_id"`
+	Search     string `form:"search"`
+	RegionID   string `form:"region_id"`
 	CategoryID string `form:"category_id"`
 	EventDate  string `form:"event_date"`
-	Page      int    `form:"page"`
-	Limit     int    `form:"limit"`
+	Page       int    `form:"page"`
+	Limit      int    `form:"limit"`
 }
 
 type PaginatedResponse struct {
@@ -56,20 +56,20 @@ type PaginatedResponse struct {
 }
 
 type CostumeDetailResponse struct {
-	ID               uint                    `json:"id"`
-	Name             string                  `json:"name"`
-	Description      string                  `json:"description"`
-	RegionID         *uint                   `json:"region_id"`
-	Region           string                  `json:"region"`
-	CategoryID       *uint                   `json:"category_id"`
-	Category         string                  `json:"category"`
-	Size             string                  `json:"size"`
-	RentalFee        int                     `json:"rental_fee"`
-	TotalQuantity    int                     `json:"total_quantity"`
-	AvailableQuantity int                     `json:"available_quantity"`
-	CoverImage       string                  `json:"cover_image"`
-	AcquiredAt       *string                 `json:"acquired_at"`
-	Images           []CostumeImageResponse `json:"images"`
+	ID                uint                   `json:"id"`
+	Name              string                 `json:"name"`
+	Description       string                 `json:"description"`
+	RegionID          *uint                  `json:"region_id"`
+	Region            string                 `json:"region"`
+	CategoryID        *uint                  `json:"category_id"`
+	Category          string                 `json:"category"`
+	Size              string                 `json:"size"`
+	RentalFee         int                    `json:"rental_fee"`
+	TotalQuantity     int                    `json:"total_quantity"`
+	AvailableQuantity int                    `json:"available_quantity"`
+	CoverImage        string                 `json:"cover_image"`
+	AcquiredAt        *string                `json:"acquired_at"`
+	Images            []CostumeImageResponse `json:"images"`
 }
 
 type CostumeImageResponse struct {

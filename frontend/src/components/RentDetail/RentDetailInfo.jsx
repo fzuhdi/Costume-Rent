@@ -4,6 +4,8 @@ import { XCircle, CheckCircle, Edit, Trash2, User, Calendar, Shield, FileText } 
 import ClientSelect from '../ClientSelect';
 import HeroDatePicker from '../HeroDatePicker';
 
+const dateFormatter = new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
+
 export default function RentDetailInfo({
   rent,
   isEditing,
@@ -93,7 +95,7 @@ export default function RentDetailInfo({
                 <span className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Acara</span>
                 <p className="font-medium text-sm text-[var(--foreground)]">
                   {rent.event_date 
-                    ? new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' }).format(new Date(rent.event_date))
+                    ? dateFormatter.format(new Date(rent.event_date))
                     : '-'}
                 </p>
               </div>

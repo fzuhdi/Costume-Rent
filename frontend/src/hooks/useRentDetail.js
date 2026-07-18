@@ -37,6 +37,7 @@ export function useRentDetail(id, navigate, formatDate) {
   }, [id]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchRent();
   }, [fetchRent]);
 
@@ -175,6 +176,7 @@ export function useRentDetail(id, navigate, formatDate) {
     });
     if (currentGroup) groups.push(currentGroup);
     return groups;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rent, formatDate]);
 
   const renderLogContent = useCallback((log) => {

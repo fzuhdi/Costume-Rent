@@ -56,11 +56,11 @@ func (s *AuthService) generateToken(user models.User) (string, error) {
 	expiresAt := time.Now().Add(time.Duration(expiresHours) * time.Hour)
 
 	claims := jwt.MapClaims{
-		"sub":   user.ID,
-		"name":  user.Name,
-		"role":  user.Role,
-		"exp":   expiresAt.Unix(),
-		"iat":   time.Now().Unix(),
+		"sub":  user.ID,
+		"name": user.Name,
+		"role": user.Role,
+		"exp":  expiresAt.Unix(),
+		"iat":  time.Now().Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

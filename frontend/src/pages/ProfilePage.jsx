@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Card, Input, Button, Alert, TextField, Label } from '@heroui/react';
-import { User, Lock, Mail, Shield } from 'lucide-react';
+import { User, Phone, MapPin, Key, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { changePassword } from '../api/authApi';
 

@@ -4,16 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, AlertTriangle, Calendar, X, AlertCircle } from 'lucide-react';
 import { Popover, Button, Badge, Chip } from '@heroui/react';
 
+const formatIndoDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+};
+
 const NotificationBell = ({ count }) => {
   const { notifications, fetchNotifications } = useNotification();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
-  const formatIndoDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
-  };
+
 
   const handleNotificationClick = (rentOrderId) => {
     navigate(`/rents/${rentOrderId}`);

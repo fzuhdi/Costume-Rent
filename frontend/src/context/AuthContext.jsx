@@ -19,6 +19,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
+
     const initAuth = async () => {
       // With HTTP-only cookies, we can just try to fetch the current user
       // If the cookie is present and valid, it will succeed.

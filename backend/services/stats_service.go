@@ -1,9 +1,10 @@
 package services
 
 import (
+	"time"
+
 	"github.com/busana/backend/config"
 	"github.com/busana/backend/models"
-	"time"
 )
 
 type StatsService struct{}
@@ -13,13 +14,13 @@ func NewStatsService() *StatsService {
 }
 
 type DashboardStats struct {
-	TotalActiveRents int64 `json:"total_active_rents"`
-	TotalClients     int64 `json:"total_clients"`
-	StockUtilization float64 `json:"stock_utilization"`
+	TotalActiveRents int64              `json:"total_active_rents"`
+	TotalClients     int64              `json:"total_clients"`
+	StockUtilization float64            `json:"stock_utilization"`
 	OverdueReturns   []models.RentOrder `json:"overdue_returns"`
 	UpcomingPickups  []models.RentOrder `json:"upcoming_pickups"`
 	UpcomingReturns  []models.RentOrder `json:"upcoming_returns"`
-	TopCostumes      []TopCostume `json:"top_costumes"`
+	TopCostumes      []TopCostume       `json:"top_costumes"`
 }
 
 type RevenuePoint struct {
@@ -36,13 +37,13 @@ type TopCostume struct {
 func (s *StatsService) GetDashboardStats() (*DashboardStats, error) {
 	db := config.DB
 	stats := &DashboardStats{}
-	
+
 	// 1. Total Active Rents (Draft, Booked, Rented, Overdue)
 	db.Model(&models.RentOrder{}).Where("status IN ?", []string{"draft", "booked", "rented", "overdue"}).Count(&stats.TotalActiveRents)
-	
+
 	// 2. Total Clients
 	db.Model(&models.Client{}).Count(&stats.TotalClients)
-	
+
 	// 3. Stock Utilization
 
 	// We need to calculate from costumes table
@@ -52,7 +53,7 @@ func (s *StatsService) GetDashboardStats() (*DashboardStats, error) {
 	}
 	var qs QtySum
 	db.Model(&models.Costume{}).Select("COALESCE(SUM(total_quantity), 0) as total_sum, COALESCE(SUM(available_quantity), SUM(total_quantity)) as available_sum").Scan(&qs)
-	
+
 	if qs.TotalSum > 0 {
 		// Available sum means what's NOT rented. So rented = Total - Available
 		rentedQty := qs.TotalSum - qs.AvailableSum
@@ -108,13 +109,13 @@ func (s *StatsService) GetRevenueChart(filter string) ([]RevenuePoint, error) {
 			weekEnd := weekStart.AddDate(0, 0, 6)
 			startStr := weekStart.Format("2006-01-02")
 			endStr := weekEnd.Format("2006-01-02")
-			
+
 			var revenue float64
 			db.Table("rent_order_items").
 				Joins("JOIN rent_orders ON rent_orders.id = rent_order_items.rent_order_id").
 				Where("rent_orders.status != 'canceled' AND DATE(rent_orders.created_at) >= ? AND DATE(rent_orders.created_at) <= ?", startStr, endStr).
 				Select("COALESCE(SUM(rent_order_items.rental_fee * rent_order_items.quantity), 0)").Scan(&revenue)
-			
+
 			chart = append(chart, RevenuePoint{
 				Date:   startStr, // Week starting on
 				Amount: revenue,
@@ -125,13 +126,13 @@ func (s *StatsService) GetRevenueChart(filter string) ([]RevenuePoint, error) {
 		for i := 11; i >= 0; i-- {
 			month := now.AddDate(0, -i, 0)
 			prefix := month.Format("2006-01")
-			
+
 			var revenue float64
 			db.Table("rent_order_items").
 				Joins("JOIN rent_orders ON rent_orders.id = rent_order_items.rent_order_id").
 				Where("rent_orders.status != 'canceled' AND rent_orders.created_at LIKE ?", prefix+"%").
 				Select("COALESCE(SUM(rent_order_items.rental_fee * rent_order_items.quantity), 0)").Scan(&revenue)
-			
+
 			chart = append(chart, RevenuePoint{
 				Date:   month.Format("Jan 2006"),
 				Amount: revenue,
@@ -142,13 +143,13 @@ func (s *StatsService) GetRevenueChart(filter string) ([]RevenuePoint, error) {
 		for i := 4; i >= 0; i-- {
 			year := now.AddDate(-i, 0, 0)
 			prefix := year.Format("2006")
-			
+
 			var revenue float64
 			db.Table("rent_order_items").
 				Joins("JOIN rent_orders ON rent_orders.id = rent_order_items.rent_order_id").
 				Where("rent_orders.status != 'canceled' AND rent_orders.created_at LIKE ?", prefix+"%").
 				Select("COALESCE(SUM(rent_order_items.rental_fee * rent_order_items.quantity), 0)").Scan(&revenue)
-			
+
 			chart = append(chart, RevenuePoint{
 				Date:   prefix,
 				Amount: revenue,
@@ -163,7 +164,7 @@ func (s *StatsService) GetRevenueChart(filter string) ([]RevenuePoint, error) {
 				Joins("JOIN rent_orders ON rent_orders.id = rent_order_items.rent_order_id").
 				Where("rent_orders.status != 'canceled' AND DATE(rent_orders.created_at) = ?", dateStr).
 				Select("COALESCE(SUM(rent_order_items.rental_fee * rent_order_items.quantity), 0)").Scan(&dailyRevenue)
-			
+
 			chart = append(chart, RevenuePoint{
 				Date:   dateStr,
 				Amount: dailyRevenue,
@@ -173,4 +174,3 @@ func (s *StatsService) GetRevenueChart(filter string) ([]RevenuePoint, error) {
 
 	return chart, nil
 }
-

@@ -58,12 +58,12 @@ func (h *ClientHandler) GetByID(c *gin.Context) {
 	}
 
 	type ClientDetailResponse struct {
-		ID           uint              `json:"id"`
-		Name         string            `json:"name"`
-		Phone        string            `json:"phone"`
-		Address      string            `json:"address"`
-		CreatedAt    string            `json:"created_at"`
-		RentOrders   []RentOrderSimple `json:"rent_orders"`
+		ID         uint              `json:"id"`
+		Name       string            `json:"name"`
+		Phone      string            `json:"phone"`
+		Address    string            `json:"address"`
+		CreatedAt  string            `json:"created_at"`
+		RentOrders []RentOrderSimple `json:"rent_orders"`
 	}
 
 	rentHistory := make([]RentOrderSimple, 0)
@@ -81,12 +81,12 @@ func (h *ClientHandler) GetByID(c *gin.Context) {
 	}
 
 	response := ClientDetailResponse{
-		ID:          client.ID,
-		Name:        client.Name,
-		Phone:       client.Phone,
-		Address:     client.Address,
-		CreatedAt:   client.CreatedAt.Format("2006-01-02"),
-		RentOrders:  rentHistory,
+		ID:         client.ID,
+		Name:       client.Name,
+		Phone:      client.Phone,
+		Address:    client.Address,
+		CreatedAt:  client.CreatedAt.Format("2006-01-02"),
+		RentOrders: rentHistory,
 	}
 	c.JSON(http.StatusOK, response)
 }
@@ -123,11 +123,11 @@ func (h *ClientHandler) Create(c *gin.Context) {
 	}
 
 	response := dto.ClientResponse{
-		ID:         client.ID,
-		Name:       client.Name,
-		Phone:      client.Phone,
-		Address:    client.Address,
-		CreatedAt:  client.CreatedAt.Format("2006-01-02"),
+		ID:        client.ID,
+		Name:      client.Name,
+		Phone:     client.Phone,
+		Address:   client.Address,
+		CreatedAt: client.CreatedAt.Format("2006-01-02"),
 	}
 	c.JSON(http.StatusCreated, response)
 }
