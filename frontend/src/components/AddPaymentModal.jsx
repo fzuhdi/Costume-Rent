@@ -133,7 +133,7 @@ const AddPaymentModal = ({ isOpen, onClose, onSuccess, rentId }) => {
                 Catatan (Opsional)
               </Label>
               <Input
-                className="w-full bg-white border border-default-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full bg-content1 border border-default-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Contoh: Pelunasan Denda Keterlambatan"
                 value={notes}
                 onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'notes', value: e.target.value })}

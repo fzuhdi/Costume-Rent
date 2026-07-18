@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getClients, deleteClient } from '../api/clientApi';
-import { Search, Trash2 } from 'lucide-react';
+import { Search, Trash2, Plus } from 'lucide-react';
 import {
   Button, Chip,
   Table, Spinner, Modal, Card, InputGroup
@@ -62,7 +62,7 @@ const ClientListPage = () => {
       <Card.Header className="flex flex-col gap-4 px-6 pt-6 pb-4 border-b border-[var(--border)]">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h1 className="page-title">Daftar Klien</h1>
-          <Button onPress={() => navigate('/clients/new')} variant="primary" size="sm">
+          <Button onPress={() => navigate('/clients/new')} variant="primary" size="sm" startContent={<Plus size={16} />}>
             <span className="whitespace-nowrap">Tambah Klien</span>
           </Button>
         </div>

@@ -77,7 +77,7 @@ const SettingsPage = () => {
                 <div className="flex-grow max-w-sm">
                   <FileUploadZone
                     uploading={uploading}
-                    fileLabel={preview ? "Logo baru dipilih" : null}
+                    fileLabel={(preview && preview !== settings.app_logo) ? "Logo baru dipilih" : null}
                     onChange={handleLogoChange}
                     label="Logo Aplikasi"
                   />

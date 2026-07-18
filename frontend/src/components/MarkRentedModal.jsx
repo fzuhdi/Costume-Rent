@@ -132,12 +132,12 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, 
                 onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'guaranteeType', value: e?.target?.value ?? e })}
               >
                 <Label className="text-xs font-semibold mb-1 text-default-600 block">Jaminan yang Ditahan <span className="text-danger">*</span></Label>
-                <Select.Trigger className="w-full flex items-center justify-between bg-white border border-default-200 rounded-lg px-3 py-2 text-sm text-left">
+                <Select.Trigger className="w-full flex items-center justify-between bg-content1 border border-default-200 rounded-lg px-3 py-2 text-sm text-left">
                   <Select.Value />
                   <Select.Indicator />
                 </Select.Trigger>
                 <Select.Popover>
-                  <ListBox className="bg-white border border-default-200 rounded-lg shadow-lg max-h-60 overflow-y-auto p-1">
+                  <ListBox className="bg-content1 border border-default-200 rounded-lg shadow-lg max-h-60 overflow-y-auto p-1">
                     {GUARANTEE_OPTIONS.map((m) => (
                       <ListBox.Item key={m.id} id={m.id} textValue={m.label} className="px-3 py-2 hover:bg-default-100 cursor-pointer rounded-md text-sm outline-none data-[focused]:bg-default-100">
                         {m.label}

@@ -3,12 +3,12 @@ import { CheckCircle, Package, XCircle, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const statusProps = {
-  draft:     { color: 'default',  variant: 'soft' },
-  booked:    { color: 'accent',   variant: 'primary' },
-  rented:    { color: 'warning',  variant: 'primary' },
-  returned:  { color: 'success',  variant: 'primary' },
-  overdue:   { color: 'danger',   variant: 'primary' },
-  cancelled: { color: 'default',  variant: 'secondary' },
+  draft: { color: 'default', variant: 'soft' },
+  booked: { color: 'accent', variant: 'primary' },
+  rented: { color: 'warning', variant: 'primary' },
+  returned: { color: 'success', variant: 'primary' },
+  overdue: { color: 'danger', variant: 'primary' },
+  cancelled: { color: 'default', variant: 'secondary' },
 };
 
 const statusLabels = {
@@ -99,7 +99,7 @@ const RentHistoryTable = ({ rents, openReturnModal, openRentModal, openCancelMod
                   </p>
                   <p className="text-xs text-[var(--muted)]">Peminjaman #{rent.id}</p>
                 </div>
-                <Chip size="sm" {...statusProps[rent.status]}>
+                <Chip className="h-8 px-3 text-xs font-semibold min-w-[90px] flex items-center justify-center" {...statusProps[rent.status]}>
                   {statusLabels[rent.status] || rent.status}
                 </Chip>
               </div>
@@ -153,7 +153,7 @@ const RentHistoryTable = ({ rents, openReturnModal, openRentModal, openCancelMod
                     <Table.Cell><b>{rent.items?.length || 0}</b> item</Table.Cell>
                     <Table.Cell>{formatShortDate(rent.pickup_date)} - {formatShortDate(rent.expected_return_date)}</Table.Cell>
                     <Table.Cell>
-                      <Chip size="sm" {...statusProps[rent.status]}>
+                      <Chip className="h-8 px-3 text-xs font-semibold min-w-[90px] flex items-center justify-center" {...statusProps[rent.status]}>
                         {statusLabels[rent.status] || rent.status}
                       </Chip>
                       <span className="sr-only">{statusA11yLabels[rent.status] || `status ${rent.status}`}</span>

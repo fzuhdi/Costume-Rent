@@ -87,6 +87,9 @@ func GetUserID(c *gin.Context) uint {
 	case uint:
 		return v
 	case int:
+		if v < 0 {
+			return 0
+		}
 		return uint(v)
 	}
 	return 0

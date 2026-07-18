@@ -191,7 +191,7 @@ const ClientDetailPage = () => {
                         <Table.Cell>#{rent.id}</Table.Cell>
                         <Table.Cell>{rent.pickup_date} - {rent.expected_return_date}</Table.Cell>
                         <Table.Cell>
-                          <Chip size="sm" {...statusColors[rent.status]}>
+                          <Chip className="h-8 px-3 text-xs font-semibold min-w-[90px] flex items-center justify-center" {...statusColors[rent.status]}>
                             {statusLabels[rent.status] || rent.status}
                           </Chip>
                         </Table.Cell>

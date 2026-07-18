@@ -11,7 +11,7 @@ export default function POSEventDateSelector({
   settings
 }) {
   return formData.event_date && isDatePanelCollapsed ? (
-    <div className="bg-white border border-default-200 rounded-xl p-4 flex items-center justify-between shadow-sm sticky top-0 z-30">
+    <div className="bg-content1 border border-default-200 rounded-xl p-4 flex items-center justify-between shadow-sm sticky top-0 z-30">
       <div className="flex items-center gap-3">
         <span className="flex items-center justify-center w-6 h-6 rounded-full bg-success/15 text-success text-xs font-bold">✓</span>
         <div className="text-sm font-semibold">
