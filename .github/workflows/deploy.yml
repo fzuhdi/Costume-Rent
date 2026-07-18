@@ -16,3 +16,8 @@ jobs:
           docker compose build backend
           docker compose build frontend
           docker compose up -d
+
+      - name: Clean up Docker Space
+        run: |
+          docker builder prune -f
+          docker image prune -f
