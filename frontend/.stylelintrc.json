@@ -1,0 +1,15 @@
+{
+  "extends": [
+    "stylelint-config-standard",
+    "stylelint-config-tailwindcss"
+  ],
+  "overrides": [
+    {
+      "files": ["**/*.jsx"],
+      "customSyntax": "postcss-styled-syntax"
+    }
+  ],
+  "rules": {
+    "no-descending-specificity": null
+  }
+}
