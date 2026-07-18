@@ -5,13 +5,10 @@ RUN apk add --no-cache git
 
 WORKDIR /app
 COPY go.mod go.sum ./
-RUN --mount=type=cache,target=/go/pkg/mod \
-    go mod download
+RUN go mod download
 
 COPY . .
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    mkdir -p /app/build_tmp && TMPDIR=/app/build_tmp CGO_ENABLED=0 GOOS=linux go build -o server ./main.go
+RUN mkdir -p /app/build_tmp && TMPDIR=/app/build_tmp CGO_ENABLED=0 GOOS=linux go build -o server ./main.go
 
 # Stage 2: Run
 FROM alpine:3.19
