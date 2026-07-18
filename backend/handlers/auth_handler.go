@@ -28,7 +28,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	response, err := h.authService.Login(req)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
 		return
 	}
 
@@ -64,10 +64,11 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"id":    user.ID,
-		"name":  user.Name,
-		"email": user.Email,
-		"role":  user.Role,
+		"id":       user.ID,
+		"name":     user.Name,
+		"username": user.Username,
+		"email":    user.Email,
+		"role":     user.Role,
 	})
 }
 
@@ -92,15 +93,16 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	user, err := h.authService.CreateUser(dto.CreateUserRequest(req))
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Email already exists"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Username or Email already exists"})
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"id":    user.ID,
-		"name":  user.Name,
-		"email": user.Email,
-		"role":  user.Role,
+		"id":       user.ID,
+		"name":     user.Name,
+		"username": user.Username,
+		"email":    user.Email,
+		"role":     user.Role,
 	})
 }
 

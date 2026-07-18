@@ -91,11 +91,15 @@ function ProfilePage() {
               <Label>Nama Lengkap</Label>
               <Input value={user?.name || ''} readOnly />
             </TextField>
+            <TextField aria-label="Username" isReadOnly>
+              <Label>Username</Label>
+              <Input value={user?.username || ''} readOnly />
+            </TextField>
             <TextField aria-label="Email" isReadOnly>
               <Label>Email</Label>
               <Input value={user?.email || ''} readOnly />
             </TextField>
-            <TextField aria-label="Role" isReadOnly className="md:col-span-2">
+            <TextField aria-label="Role" isReadOnly>
               <Label>Role</Label>
               <Input value={user?.role || ''} readOnly />
             </TextField>

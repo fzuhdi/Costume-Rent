@@ -38,7 +38,7 @@ func TestAddPayment(t *testing.T) {
 	setupTestDB()
 
 	// Seed user
-	user := models.User{Name: "testuser", Email: "test@test.com", Password: "abc", Role: "admin"}
+	user := models.User{Name: "testuser", Username: "testuser", Email: "test@test.com", Password: "abc", Role: "admin"}
 	config.DB.Create(&user)
 
 	// Seed client
@@ -153,7 +153,7 @@ func TestMarkBooked(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	setupTestDB()
 
-	user := models.User{Name: "testuser", Email: "test2@test.com", Password: "abc", Role: "admin"}
+	user := models.User{Name: "testuser", Username: "test2user", Email: "test2@test.com", Password: "abc", Role: "admin"}
 	config.DB.Create(&user)
 
 	client := models.Client{Name: "Jane Doe", Phone: "123"}

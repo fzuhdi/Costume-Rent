@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
         const response = await getCurrentUser();
         setUser(response.data);
         setIsAuthenticated(true);
-      } catch (error) {
+      } catch {
         localStorage.removeItem('user:v1');
         setUser(null);
         setIsAuthenticated(false);
@@ -37,8 +37,8 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  const login = useCallback(async (email, password) => {
-    const response = await loginApi(email, password);
+  const login = useCallback(async (username, password) => {
+    const response = await loginApi(username, password);
     const { user: userData } = response.data;
     localStorage.setItem('user:v1', JSON.stringify(userData));
     setUser(userData);

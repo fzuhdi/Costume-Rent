@@ -6,7 +6,7 @@ import { LogIn } from 'lucide-react';
 import { TextField, Label, Input, Button, Card, Alert } from '@heroui/react';
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,7 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
+      await login(username, password);
       navigate('/catalogue');
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
@@ -38,7 +38,7 @@ const LoginPage = () => {
             {settings.app_logo ? (
               <img src={settings.app_logo} alt={settings.app_name} className="h-16 mx-auto mb-2" />
             ) : (
-            <h1 className="text-2xl font-bold text-[var(--primary)]">
+              <h1 className="text-2xl font-bold text-[var(--primary)]">
                 {settings.app_name}
               </h1>
             )}
@@ -57,9 +57,9 @@ const LoginPage = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-            <TextField name="email" type="email" isRequired aria-label="Email address">
-              <Label>Email</Label>
-              <Input type="email" placeholder="admin@busana.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <TextField name="username" type="text" isRequired aria-label="Username">
+              <Label>Username</Label>
+              <Input type="text" placeholder="admin" value={username} onChange={(e) => setUsername(e.target.value)} />
             </TextField>
 
             <TextField name="password" type="password" isRequired aria-label="Password">
@@ -67,23 +67,18 @@ const LoginPage = () => {
               <Input type="password" placeholder="Enter password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </TextField>
 
-             <Button
-               type="submit"
-               variant="primary"
-               size="lg"
-               isLoading={loading}
-               className="w-full mt-2"
-               aria-label="Login"
-             >
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              isLoading={loading}
+              className="w-full mt-2"
+              aria-label="Login"
+            >
               {!loading && <LogIn size={18} />}
               Login
             </Button>
           </form>
-
-          <p className="text-center text-xs text-[var(--muted)]">
-            Default: admin@busana.com / admin123
-          </p>
-
         </Card.Content>
       </Card>
     </div>

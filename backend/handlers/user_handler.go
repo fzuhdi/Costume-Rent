@@ -29,10 +29,11 @@ func (h *UserHandler) List(c *gin.Context) {
 	var response []dto.UserResponse
 	for _, u := range users {
 		response = append(response, dto.UserResponse{
-			ID:    u.ID,
-			Name:  u.Name,
-			Email: u.Email,
-			Role:  u.Role,
+			ID:       u.ID,
+			Name:     u.Name,
+			Username: u.Username,
+			Email:    u.Email,
+			Role:     u.Role,
 		})
 	}
 
@@ -53,10 +54,11 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.UserResponse{
-		ID:    user.ID,
-		Name:  user.Name,
-		Email: user.Email,
-		Role:  user.Role,
+		ID:       user.ID,
+		Name:     user.Name,
+		Username: user.Username,
+		Email:    user.Email,
+		Role:     user.Role,
 	})
 }
 
@@ -69,15 +71,16 @@ func (h *UserHandler) Create(c *gin.Context) {
 
 	user, err := h.authService.CreateUser(req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Email already exists"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Username or Email already exists"})
 		return
 	}
 
 	c.JSON(http.StatusCreated, dto.UserResponse{
-		ID:    user.ID,
-		Name:  user.Name,
-		Email: user.Email,
-		Role:  user.Role,
+		ID:       user.ID,
+		Name:     user.Name,
+		Username: user.Username,
+		Email:    user.Email,
+		Role:     user.Role,
 	})
 }
 
@@ -101,10 +104,11 @@ func (h *UserHandler) Update(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.UserResponse{
-		ID:    user.ID,
-		Name:  user.Name,
-		Email: user.Email,
-		Role:  user.Role,
+		ID:       user.ID,
+		Name:     user.Name,
+		Username: user.Username,
+		Email:    user.Email,
+		Role:     user.Role,
 	})
 }
 

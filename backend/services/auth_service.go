@@ -21,7 +21,7 @@ func NewAuthService() *AuthService {
 
 func (s *AuthService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 	var user models.User
-	if err := config.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
+	if err := config.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
 		return nil, err
 	}
 
@@ -37,10 +37,11 @@ func (s *AuthService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 	return &dto.LoginResponse{
 		Token: token,
 		User: dto.UserResponse{
-			ID:    user.ID,
-			Name:  user.Name,
-			Email: user.Email,
-			Role:  user.Role,
+			ID:       user.ID,
+			Name:     user.Name,
+			Username: user.Username,
+			Email:    user.Email,
+			Role:     user.Role,
 		},
 	}, nil
 }
@@ -83,6 +84,7 @@ func (s *AuthService) CreateUser(req dto.CreateUserRequest) (*models.User, error
 
 	user := models.User{
 		Name:     req.Name,
+		Username: req.Username,
 		Email:    req.Email,
 		Password: string(hashedPassword),
 		Role:     req.Role,
@@ -111,6 +113,9 @@ func (s *AuthService) UpdateUser(id uint, req dto.UpdateUserRequest) (*models.Us
 
 	if req.Name != "" {
 		user.Name = req.Name
+	}
+	if req.Username != "" {
+		user.Username = req.Username
 	}
 	if req.Email != "" {
 		user.Email = req.Email

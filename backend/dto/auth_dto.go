@@ -1,7 +1,7 @@
 package dto
 
 type LoginRequest struct {
-	Email    string `json:"email" validate:"required,email"`
+	Username string `json:"username" validate:"required"`
 	Password string `json:"password" validate:"required"`
 }
 
@@ -11,14 +11,16 @@ type LoginResponse struct {
 }
 
 type UserResponse struct {
-	ID    uint   `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
-	Role  string `json:"role"`
+	ID       uint   `json:"id"`
+	Name     string `json:"name"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Role     string `json:"role"`
 }
 
 type RegisterRequest struct {
 	Name     string `json:"name" validate:"required"`
+	Username string `json:"username" validate:"required"`
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=6"`
 	Role     string `json:"role"`
@@ -26,15 +28,17 @@ type RegisterRequest struct {
 
 type CreateUserRequest struct {
 	Name     string `json:"name" validate:"required"`
+	Username string `json:"username" validate:"required"`
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=6"`
 	Role     string `json:"role" validate:"required"`
 }
 
 type UpdateUserRequest struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
-	Role  string `json:"role"`
+	Name     string `json:"name"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Role     string `json:"role"`
 }
 
 type ChangePasswordRequest struct {

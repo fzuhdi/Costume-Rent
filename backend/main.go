@@ -73,6 +73,9 @@ func migrateDB() {
 		log.Printf("Migrated %d orders from 'active' to 'rented'", result.RowsAffected)
 	}
 
+	// Data migration: ensure default admin has a username
+	db.Model(&models.User{}).Where("email = ? AND username = ?", "admin@busana.com", "").Update("username", "admin")
+
 	log.Println("Database migrations completed successfully")
 }
 
@@ -148,7 +151,7 @@ func seedAdminUser() uint {
 	db := config.GetDB()
 
 	var existingAdmin models.User
-	if err := db.Where("email = ?", "admin@busana.com").First(&existingAdmin).Error; err == nil {
+	if err := db.Where("username = ?", "admin").First(&existingAdmin).Error; err == nil {
 		log.Println("Default admin user already exists")
 		return existingAdmin.ID
 	}
@@ -162,6 +165,7 @@ func seedAdminUser() uint {
 
 	admin := models.User{
 		Name:     "Admin Tari",
+		Username: "admin",
 		Email:    "admin@busana.com",
 		Password: string(hashedPassword),
 		Role:     "admin",
@@ -171,7 +175,7 @@ func seedAdminUser() uint {
 		log.Fatalf("Failed to create admin user: %v", err)
 	}
 
-	log.Println("Default admin user created: admin@busana.com / admin123")
+	log.Println("Default admin user created: admin / admin123")
 	return admin.ID
 }
 

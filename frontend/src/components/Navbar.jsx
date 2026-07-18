@@ -122,7 +122,7 @@ const NavbarComponent = () => {
                 <div className="flex flex-col gap-1 p-4 border-b border-[var(--border)] bg-[var(--border)]/10">
                   <p className="text-[10px] text-[var(--muted)] uppercase font-bold tracking-widest">Logged in as</p>
                   <p className="text-sm font-semibold truncate text-[var(--foreground)]">
-                    {user?.email || 'admin@costume.rent'}
+                    {user?.username || 'admin'}
                   </p>
                 </div>
                 <div className="flex flex-col p-1">
