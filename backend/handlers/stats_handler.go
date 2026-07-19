@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/busana/backend/services"
+	"github.com/busana/backend/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,7 +25,7 @@ func (h *StatsHandler) GetDashboardStats(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": stats})
+	utils.RespondSuccess(c, gin.H{"data": stats})
 }
 
 func (h *StatsHandler) GetRevenueChart(c *gin.Context) {
@@ -39,5 +40,5 @@ func (h *StatsHandler) GetRevenueChart(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": chart})
+	utils.RespondSuccess(c, gin.H{"data": chart})
 }

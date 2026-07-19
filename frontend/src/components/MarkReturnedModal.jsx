@@ -1,7 +1,7 @@
 import { useEffect, useReducer } from 'react';
-import { Modal, Button, Checkbox, Select, ListBox, Label, Input, TextField } from '@heroui/react';
+import { Modal, Button, Checkbox, Input } from '@heroui/react';
 import { markReturned, uploadPaymentProof } from '../api/rentApi';
-import FileUploadZone from './FileUploadZone';
+import PaymentFormFields from './PaymentFormFields';
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
 const formatCurrency = (value) => currencyFormatter.format(value);
@@ -18,17 +18,11 @@ const formatCurrency = (value) => currencyFormatter.format(value);
  *   calculatedDamageFee  – number       pre-filled damage fee suggestion (from prior inspection)
  */
 
-const PAYMENT_METHODS = [
-  { id: 'CASH', label: 'CASH' },
-  { id: 'TRANSFER BCA', label: 'Transfer BCA' },
-  { id: 'TRANSFER BRI', label: 'Transfer BRI' },
-  { id: 'TRANSFER MANDIRI', label: 'Transfer Mandiri' },
-  { id: 'QRIS', label: 'QRIS' },
-];
 
 const initialState = {
   idReturned: false,
   isGoodCondition: true,
+  damagedItems: {},
   amount: '',
   method: 'CASH',
   proof: '',
@@ -62,6 +56,14 @@ function reducer(state, action) {
         proof: '',
         proofFile: null,
       };
+    case 'UPDATE_DAMAGED_ITEM':
+      return {
+        ...state,
+        damagedItems: {
+          ...state.damagedItems,
+          [action.costumeId]: action.quantity,
+        },
+      };
     default:
       return state;
   }
@@ -73,9 +75,10 @@ const MarkReturnedModal = ({
   onSuccess,
   rentId,
   sisaTagihan = 0,
+  rent,
 }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { idReturned, isGoodCondition, amount, method, proof, proofFile, uploading, loading, error } = state;
+  const { idReturned, isGoodCondition, damagedItems, amount, method, proof, proofFile, uploading, loading, error } = state;
 
   useEffect(() => {
     if (isOpen) {
@@ -83,8 +86,29 @@ const MarkReturnedModal = ({
     }
   }, [isOpen, sisaTagihan]);
 
+  // Recalculate total amount when damaged items change
+  useEffect(() => {
+    if (isOpen && !isGoodCondition && rent?.items) {
+      let suggestedDenda = 0;
+      rent.items.forEach(item => {
+        const qty = damagedItems[item.costume_id] || 0;
+        if (qty > 0) {
+          const bp = item.costume?.buy_price || item.buy_price || 0;
+          suggestedDenda += bp * qty;
+        }
+      });
+      dispatch({ type: 'SET_FIELD', field: 'amount', value: String(sisaTagihan + suggestedDenda) });
+    } else if (isOpen && isGoodCondition) {
+      dispatch({ type: 'SET_FIELD', field: 'amount', value: sisaTagihan > 0 ? String(sisaTagihan) : '' });
+    }
+  }, [damagedItems, isGoodCondition, rent, sisaTagihan, isOpen]);
+
   const handleConditionChange = (good) => {
     dispatch({ type: 'TOGGLE_CONDITION', value: good, payload: { sisaTagihan } });
+    // Also reset damaged items if condition is good
+    if (good) {
+      dispatch({ type: 'SET_FIELD', field: 'damagedItems', value: {} });
+    }
   };
 
   const totalAmount = parseInt(amount) || 0;
@@ -122,7 +146,15 @@ const MarkReturnedModal = ({
           }
           : null;
 
-      await markReturned(rentId, { damage_fee: derivedDamageFee, payment: paymentPayload });
+      const payloadDamagedItems = Object.entries(damagedItems)
+        .map(([costumeId, qty]) => ({ costume_id: parseInt(costumeId), quantity: qty }))
+        .filter(item => item.quantity > 0);
+
+      await markReturned(rentId, {
+        damage_fee: derivedDamageFee,
+        damaged_items: payloadDamagedItems,
+        payment: paymentPayload
+      });
       onClose();
       onSuccess();
     } catch (err) {
@@ -135,7 +167,7 @@ const MarkReturnedModal = ({
   return (
     <Modal.Backdrop isOpen={isOpen} onOpenChange={onClose}>
       <Modal.Container>
-        <Modal.Dialog>
+        <Modal.Dialog className="bg-[var(--surface)] border border-default-200">
           <Modal.Header>
             <Modal.Heading>Konfirmasi Pengembalian</Modal.Heading>
           </Modal.Header>
@@ -160,7 +192,7 @@ const MarkReturnedModal = ({
             </div>
 
             {/* ID returned */}
-            <Checkbox isSelected={idReturned} onChange={(v) => dispatch({ type: 'SET_FIELD', field: 'idReturned', value: v })} aria-label="Kartu Identitas Dikembalikan">
+            <Checkbox isSelected={idReturned} onChange={(v) => dispatch({ type: 'SET_FIELD', field: 'idReturned', value: v })} aria-label="Kartu Identitas Dikembalikan" variant="secondary">
               <Checkbox.Content>
                 <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
                 Kartu Identitas Dikembalikan (Wajib)
@@ -174,6 +206,7 @@ const MarkReturnedModal = ({
                 isSelected={isGoodCondition}
                 onChange={() => handleConditionChange(true)}
                 aria-label="Kondisi Baik"
+                variant="secondary"
               >
                 <Checkbox.Content>
                   <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
@@ -184,64 +217,80 @@ const MarkReturnedModal = ({
                 isSelected={!isGoodCondition}
                 onChange={() => handleConditionChange(false)}
                 aria-label="Ada Kerusakan"
+                variant="secondary"
               >
                 <Checkbox.Content>
                   <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
                   Ada Kerusakan / Denda
                 </Checkbox.Content>
               </Checkbox>
+              {!isGoodCondition && rent?.items && (
+                <div className="flex flex-col gap-2 pl-7 mt-2 border-l-2 border-default-200">
+                  <span className="text-xs font-semibold text-default-600 mb-1">Pilih Item yang Rusak</span>
+                  {rent.items.map((item) => {
+                    const isDamaged = (damagedItems[item.costume_id] || 0) > 0;
+                    return (
+                      <div key={item.id} className="flex flex-col gap-2 p-2 bg-default-50 rounded">
+                        <Checkbox
+                          isSelected={isDamaged}
+                          onChange={(checked) => {
+                            dispatch({
+                              type: 'UPDATE_DAMAGED_ITEM',
+                              costumeId: item.costume_id,
+                              quantity: checked ? 1 : 0
+                            });
+                          }}
+                          aria-label={item.costume_name || item.costume?.name}
+                          variant="secondary"
+                        >
+                          <Checkbox.Content>
+                            <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
+                            {item.costume_name || item.costume?.name} x{item.quantity}
+                          </Checkbox.Content>
+                        </Checkbox>
+                        {isDamaged && (
+                          <div className="pl-7">
+                            <Input
+                              type="number"
+                              size="sm"
+                              label="Jumlah Rusak"
+                              min={1}
+                              max={item.quantity}
+                              value={String(damagedItems[item.costume_id] || 1)}
+                              onChange={(e) => {
+                                let val = parseInt(e.target.value) || 1;
+                                if (val > item.quantity) val = item.quantity;
+                                if (val < 1) val = 1;
+                                dispatch({
+                                  type: 'UPDATE_DAMAGED_ITEM',
+                                  costumeId: item.costume_id,
+                                  quantity: val
+                                });
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Payment fields — appear when balance exists OR damage is flagged */}
             {showPaymentFields && (
               <div className="flex flex-col gap-3">
-                <TextField>
-                  <Label className="text-xs font-semibold mb-1 text-default-600 block">
-                    Total Denda *
-                  </Label>
-                  <Input
-                    type="number"
-                    className="w-full bg-content1 border border-default-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    placeholder='Masukkan total denda yang harus dibayar'
-                    value={amount}
-                    onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'amount', value: e.target.value })}
-                  />
-                </TextField>
-
-                <div className="flex flex-col gap-1 w-full">
-                  <Label className="text-xs font-semibold mb-1 text-default-600 block">Metode Pembayaran *</Label>
-                  <Select
-                    aria-label="Metode Pembayaran"
-                    value={method}
-                    onChange={(key) => {
-                      dispatch({ type: 'SET_METHOD', value: String(key) });
-                    }}
-                    className="w-full"
-                  >
-                    <Select.Trigger className="w-full bg-content1 border border-default-200 rounded-lg px-3 py-2 text-sm">
-                      <Select.Value />
-                      <Select.Indicator />
-                    </Select.Trigger>
-                    <Select.Popover>
-                      <ListBox aria-label="Metode Pembayaran">
-                        {PAYMENT_METHODS.map((m) => (
-                          <ListBox.Item key={m.id} id={m.id} textValue={m.label}>
-                            {m.label}<ListBox.ItemIndicator />
-                          </ListBox.Item>
-                        ))}
-                      </ListBox>
-                    </Select.Popover>
-                  </Select>
-                </div>
-
-                {method !== 'CASH' && (
-                  <FileUploadZone
-                    uploading={uploading}
-                    fileLabel={proofFile}
-                    onChange={handleUpload}
-                    label="Bukti Pembayaran *"
-                  />
-                )}
+                <PaymentFormFields
+                  amount={amount}
+                  setAmount={(val) => dispatch({ type: 'SET_FIELD', field: 'amount', value: val })}
+                  method={method}
+                  setMethod={(val) => dispatch({ type: 'SET_METHOD', value: String(val) })}
+                  proofFile={proofFile}
+                  setProofFile={(val) => dispatch({ type: 'SET_FIELD', field: 'proofFile', value: val })}
+                  uploadingProof={uploading}
+                  handleUploadGeneric={handleUpload}
+                  amountLabel="Total Denda *"
+                />
               </div>
             )}
 

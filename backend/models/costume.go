@@ -22,6 +22,7 @@ type Costume struct {
 	CategoryID    *uint          `json:"category_id"`
 	Category      Category       `json:"category,omitempty" gorm:"foreignKey:CategoryID"`
 	RentalFee     int            `json:"rental_fee" gorm:"default:0"`
+	BuyPrice      int            `json:"buy_price" gorm:"default:0"`
 	TotalQuantity int            `json:"total_quantity" gorm:"default:1"`
 	AcquiredAt    *time.Time     `json:"acquired_at"`
 	CoverImage    string         `json:"cover_image"`

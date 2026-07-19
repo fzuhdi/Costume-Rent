@@ -86,7 +86,7 @@ const MarkBookedModal = ({ isOpen, onClose, onSuccess, rentId, minDp = 0 }) => {
   return (
     <Modal.Backdrop isOpen={isOpen} onOpenChange={handleClose}>
       <Modal.Container>
-        <Modal.Dialog>
+        <Modal.Dialog className="bg-[var(--surface)] border border-default-200">
           <Modal.Header>
             <Modal.Heading>Ubah Status ke Booked</Modal.Heading>
           </Modal.Header>

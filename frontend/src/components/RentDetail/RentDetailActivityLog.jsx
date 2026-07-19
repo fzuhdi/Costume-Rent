@@ -52,7 +52,7 @@ export default function RentDetailActivityLog({
 
       <Modal.Backdrop isOpen={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
         <Modal.Container>
-          <Modal.Dialog className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <Modal.Dialog className="max-w-lg max-h-[80vh] overflow-y-auto bg-[var(--surface)] border border-default-200">
             <Modal.Header><Modal.Heading>Activity Log History</Modal.Heading></Modal.Header>
             <Modal.Body>
               <div className="flex flex-col gap-3 relative before:absolute before:inset-y-2 before:left-[11px] before:w-px before:bg-slate-200 ml-1">

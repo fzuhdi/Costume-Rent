@@ -6,6 +6,7 @@ import (
 
 	"github.com/busana/backend/dto"
 	"github.com/busana/backend/services"
+	"github.com/busana/backend/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,13 +23,13 @@ func NewAuthHandler() *AuthHandler {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
 	response, err := h.authService.Login(req)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
+		utils.RespondFailed(c, http.StatusUnauthorized, utils.NewAppError("ERR_INVALID_CREDENTIALS"))
 		return
 	}
 
@@ -39,13 +40,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	c.SetCookie("token", response.Token, 3600*24, "/", "", isProduction, true)
 
 	// Keep returning token in JSON for backwards compatibility or mobile clients, but web will use cookie
-	c.JSON(http.StatusOK, response)
+	utils.RespondSuccess(c, response)
 }
 
 func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 	userId, exists := c.Get("userId")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		utils.RespondFailed(c, http.StatusUnauthorized, utils.NewAppError("ERR_USER_NOT_FOUND"))
 		return
 	}
 
@@ -59,11 +60,11 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 
 	user, err := h.authService.GetUserByID(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		utils.RespondFailed(c, http.StatusNotFound, utils.NewAppError("ERR_USER_NOT_FOUND"))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	utils.RespondSuccess(c, gin.H{
 		"id":       user.ID,
 		"name":     user.Name,
 		"username": user.Username,
@@ -76,13 +77,13 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	// Clear the HTTP-only cookie
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie("token", "", -1, "/", "", false, true)
-	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+	utils.RespondSuccess(c, gin.H{"message": "Logged out successfully"})
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req dto.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
@@ -93,7 +94,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	user, err := h.authService.CreateUser(dto.CreateUserRequest(req))
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Username or Email already exists"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_USER_EXISTS"))
 		return
 	}
 
@@ -109,7 +110,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	userId, exists := c.Get("userId")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		utils.RespondFailed(c, http.StatusUnauthorized, utils.NewAppError("ERR_USER_NOT_FOUND"))
 		return
 	}
 
@@ -120,20 +121,20 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	case uint:
 		id = v
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
+		utils.RespondFailed(c, http.StatusInternalServerError, utils.NewAppError("ERR_BAD_REQUEST"))
 		return
 	}
 
 	var req dto.ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
 	if err := h.authService.ChangePassword(id, req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Password berhasil diubah"})
+	utils.RespondSuccess(c, gin.H{"message": "Password berhasil diubah"})
 }

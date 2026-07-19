@@ -7,37 +7,39 @@ export default function RentDetailActions({
   openRentModal,
   setIsExtendOpen,
   openReturnModal,
-  setIsRollbackOpen
+  setIsRollbackOpen,
+  handleReceive
 }) {
   return (
     <Card>
       <Card.Content>
-        <h2 className="text-xl font-semibold mb-4">Aksi Pesanan</h2>
+        <h2 className="text-xl font-semibold mb-4">Actions</h2>
         <div className="flex flex-wrap gap-3">
-          {rent.status === 'draft' && (
+          {rent.status === 'pending' && (
             <>
-              <Button color="primary" onPress={openUpgradeModal}>Ubah Status ke Booked</Button>
-              <Button color="danger" variant="flat" onPress={() => setIsCancelOpen(true)}>Batalkan</Button>
+              <Button color="primary" onPress={openUpgradeModal}>Book</Button>
+              <Button color="danger" variant="flat" onPress={() => setIsCancelOpen(true)}>Cancel</Button>
             </>
           )}
           {rent.status === 'booked' && (
             <>
-              <Button color="success" className="text-white font-bold" onPress={openRentModal}>Pickup (Mark Rented)</Button>
-              <Button color="danger" variant="flat" onPress={() => setIsCancelOpen(true)}>Batalkan</Button>
+              <Button color="success" className="text-white font-bold" onPress={openRentModal}>Pickup</Button>
+              <Button color="danger" variant="flat" onPress={() => setIsCancelOpen(true)}>Cancel</Button>
             </>
           )}
           {(rent.status === 'rented' || rent.status === 'overdue') && (
             <>
-              <Button color="secondary" onPress={() => setIsExtendOpen(true)}>Perpanjang Sewa</Button>
-              <Button color="success" className="text-white font-bold" onPress={openReturnModal}>Konfirmasi Pengembalian</Button>
+              <Button color="secondary" onPress={() => setIsExtendOpen(true)}>Extend</Button>
+              <Button color="primary" className="text-white font-bold" onPress={handleReceive}>Receive</Button>
               {rent.status === 'rented' && (
-                <Button color="danger" variant="flat" onPress={() => setIsRollbackOpen(true)}>Batalkan Status</Button>
+                <Button color="danger" variant="flat" onPress={() => setIsRollbackOpen(true)}>Rollback</Button>
               )}
             </>
           )}
           {rent.status === 'returned' && (
             <>
-              <Button color="danger" variant="flat" onPress={() => setIsRollbackOpen(true)}>Batalkan Status (Rollback)</Button>
+              <Button color="success" className="text-white font-bold" onPress={openReturnModal}>Inspect & Complete</Button>
+              <Button color="danger" variant="flat" onPress={() => setIsRollbackOpen(true)}>Rollback Status</Button>
             </>
           )}
         </div>

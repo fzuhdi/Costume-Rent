@@ -29,6 +29,7 @@ export default function RentDetailModals({
         onSuccess={fetchRent}
         rentId={parseInt(id)}
         sisaTagihan={sisaTagihan}
+        rent={rent}
       />
 
       <MarkRentedModal

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getRentById, cancelRent, deleteRent, updateRent, rollbackOrder } from '../api/rentApi';
+import { getRentById, cancelRent, deleteRent, updateRent, rollbackOrder, receiveOrder } from '../api/rentApi';
 import { updateClient } from '../api/clientApi';
 
 export function useRentDetail(id, navigate) {
@@ -145,6 +145,22 @@ export function useRentDetail(id, navigate) {
     }
   };
 
+  const handleReceive = async () => {
+    const confirmReceive = window.confirm('Apakah Anda yakin ingin menerima paket ini? Waktu denda akan dihentikan.');
+    if (!confirmReceive) return;
+    
+    setProcessing(true);
+    try {
+      await receiveOrder(id);
+      await fetchRent();
+    } catch (error) {
+      console.error('Failed to receive order:', error);
+      alert(error.response?.data?.error || 'Gagal menerima kostum');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handleDelete = async () => {
     setProcessing(true);
     try {
@@ -201,7 +217,7 @@ export function useRentDetail(id, navigate) {
     isPreviewOpen, setIsPreviewOpen,
     openPreview, fetchRent, toggleEditMode,
     openRentModal, openReturnModal, openUpgradeModal,
-    handleEditSave, handleCancel, handleRollback, handleDelete,
+    handleEditSave, handleCancel, handleRollback, handleReceive, handleDelete,
     groupedLogs, renderLogContent
   };
 }

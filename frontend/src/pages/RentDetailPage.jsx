@@ -10,19 +10,21 @@ import RentDetailActivityLog from '../components/RentDetail/RentDetailActivityLo
 import RentDetailActions from '../components/RentDetail/RentDetailActions';
 
 const statusColors = {
-  draft: { variant: 'soft', color: 'warning' },
+  pending: { variant: 'soft', color: 'default' },
   booked: { variant: 'soft', color: 'primary' },
   rented: { variant: 'secondary' },
   returned: { variant: 'soft', color: 'success' },
+  completed: { variant: 'flat', color: 'success' },
   overdue: { variant: 'soft', color: 'danger' },
   cancelled: { variant: 'soft', color: 'default' },
 };
 
 const statusLabels = {
-  draft: 'Draft',
+  pending: 'Pending',
   booked: 'Dipesan',
   rented: 'Disewa',
-  returned: 'Dikembalikan',
+  returned: 'Diterima',
+  completed: 'Selesai',
   overdue: 'Terlambat',
   cancelled: 'Dibatalkan',
 };
@@ -62,7 +64,7 @@ const RentDetailPage = () => {
     isPreviewOpen, setIsPreviewOpen,
     openPreview, fetchRent, toggleEditMode,
     openRentModal, openReturnModal, openUpgradeModal,
-    handleEditSave, handleCancel, handleRollback, handleDelete,
+    handleEditSave, handleCancel, handleRollback, handleReceive, handleDelete,
     groupedLogs, renderLogContent
   } = useRentDetail(id, navigate, formatDate);
 
@@ -138,6 +140,7 @@ const RentDetailPage = () => {
             setIsExtendOpen={() => setActiveModal('extend')}
             setIsDeleteOpen={() => setActiveModal('delete')}
             setIsRollbackOpen={() => setActiveModal('rollback')}
+            handleReceive={handleReceive}
             toggleEditMode={toggleEditMode}
             isEditing={isEditing}
           />

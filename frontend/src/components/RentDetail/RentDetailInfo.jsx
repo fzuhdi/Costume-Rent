@@ -1,6 +1,6 @@
 
 import { Card, Chip, Button, Input, Select, ListBox, TextField, Label } from '@heroui/react';
-import { XCircle, CheckCircle, Edit, Trash2, User, Calendar, Shield, FileText } from 'lucide-react';
+import { XCircle, CheckCircle, Edit, Trash2, User, Calendar, Shield, FileText, Globe, MapPin } from 'lucide-react';
 import ClientSelect from '../ClientSelect';
 import HeroDatePicker from '../HeroDatePicker';
 
@@ -114,6 +114,24 @@ export default function RentDetailInfo({
                 <p className="font-medium text-sm text-[var(--foreground)]">{rent.notes || '-'}</p>
               </div>
             </div>
+
+            <div className="flex items-start gap-3">
+              <Globe size={20} className="text-[var(--muted)]" />
+              <div>
+                <span className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Sumber Order</span>
+                <p className="font-medium text-sm text-[var(--foreground)]">{rent.order_source || 'Offline'}</p>
+              </div>
+            </div>
+
+            {rent.shipping_address && (
+              <div className="flex items-start gap-3">
+                <MapPin size={20} className="text-[var(--muted)]" />
+                <div>
+                  <span className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Alamat Pengiriman</span>
+                  <p className="font-medium text-sm text-[var(--foreground)]">{rent.shipping_address}</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Card.Content>

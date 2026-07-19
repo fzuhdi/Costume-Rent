@@ -3,13 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { getRents, cancelRent } from '../api/rentApi';
 import {
   Input, Button, Select, ListBox,
-  Spinner, Modal, Card, Tooltip
+  Spinner, Card, Tooltip
 } from '@heroui/react';
 import { Download, UploadCloud } from 'lucide-react';
 import CustomPagination from '../components/CustomPagination';
 import RentHistoryTable from '../components/RentHistoryTable';
-import MarkReturnedModal from '../components/MarkReturnedModal';
-import MarkRentedModal from '../components/MarkRentedModal';
 import ExcelImportModal from '../components/ExcelImportModal';
 
 const initialState = {
@@ -231,12 +229,7 @@ const RentHistoryPage = () => {
             <Spinner aria-label="Memuat data peminjaman" />
           </div>
         ) : (
-          <RentHistoryTable 
-            rents={state.rents} 
-            onOpenReturnModal={(id, data) => dispatch({ type: 'OPEN_RETURN_MODAL', payload: { id, data } })}
-            onOpenRentModal={openRentModal}
-            onOpenCancelModal={(id, data) => dispatch({ type: 'OPEN_CANCEL_MODAL', payload: { id, data } })}
-          />
+          <RentHistoryTable rents={state.rents} />
         )}
       </Card.Content>
 
@@ -250,46 +243,6 @@ const RentHistoryPage = () => {
         />
       </Card.Footer>
 
-      <MarkReturnedModal
-        isOpen={state.isReturnOpen}
-        onClose={() => dispatch({ type: 'CLOSE_RETURN_MODAL' })}
-        onSuccess={fetchRents}
-        rentId={state.selectedRentId}
-        rentData={state.selectedRentData}
-      />
-
-      <MarkRentedModal
-        isOpen={state.isRentOpen}
-        onClose={() => dispatch({ type: 'CLOSE_RENT_MODAL' })}
-        onSuccess={fetchRents}
-        rentId={state.selectedRentId}
-        sisaTagihan={getRemainingBalance()}
-      />
-
-      <Modal.Backdrop isOpen={state.isCancelOpen} onOpenChange={() => dispatch({ type: 'CLOSE_CANCEL_MODAL' })}>
-        <Modal.Container>
-          <Modal.Dialog>
-            <Modal.Header>
-              <Modal.Heading>Batalkan Pesanan</Modal.Heading>
-            </Modal.Header>
-            <Modal.Body>
-              <div className="flex flex-col gap-3">
-                <p>Yakin ingin membatalkan pesanan ini?</p>
-                {state.selectedRentData && (
-                  <div className="p-3 bg-danger-50 rounded-lg border border-danger-200">
-                    <p className="text-sm font-semibold text-danger mb-1">⚠️ Uang muka tidak akan dikembalikan</p>
-                    <p className="text-sm">DP yang telah dibayar sebesar <strong>{formatCurrency(state.selectedRentData.total_paid || 0)}</strong> tidak dapat dikembalikan.</p>
-                  </div>
-                )}
-              </div>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="bordered" onPress={() => dispatch({ type: 'CLOSE_CANCEL_MODAL' })} aria-label="Kembali">Kembali</Button>
-              <Button variant="danger" onPress={handleCancel} isPending={state.actionLoading} aria-label="Batalkan pesanan">Batalkan Pesanan</Button>
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
 
       <ExcelImportModal
         isOpen={state.isImportOpen}

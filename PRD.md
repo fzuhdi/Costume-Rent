@@ -1,90 +1,222 @@
 # Costume Rental System - Product Requirements Document (PRD)
 
-## 1. Introduction & Objectives
-The purpose of this document is to define the full functional and business requirements for the Costume Rental System (POS). It serves as the primary guidance for ongoing and future development. The objective is to transition from a manual, spreadsheet-based tracking system to a robust, automated digital system that prevents double-booking, accurately tracks partial returns, automates penalty calculations, and maintains a strict audit trail of all staff actions.
+## 1. Overview
+*   **Purpose:** A digital point-of-sale (POS) and inventory management system designed specifically for costume rental businesses.
+*   **Problem Solved:** Replaces error-prone manual spreadsheet tracking and unrecorded transactions. It prevents double-bookings through draft locking and ensures accurate, verifiable fee collection.
+*   **Primary Goal:** To streamline walk-in rentals for staff, securely lock inventory for future dates, and accurately monitor the entire rental lifecycle from initial booking to final return.
 
-## 2. User Roles
-*   **Staff:** Can create orders, process payments, transition states, and perform daily POS operations.
-*   **Manager/Admin:** Can override system rules (e.g., waive late fees, alter prices after booking) and view comprehensive activity logs.
+## 2. Requirements
+*   **Accessibility/Platform:** Web Browser (Desktop optimized for POS, but responsive for general management).
+*   **Users:** Internal Staff and Managers.
+*   **Data Input:** Staff manual entry via the POS interface for walk-in clients, catalogue management, and processing rental returns.
+*   **Data Specificity:** Precise tracking of transaction ledgers (payments, damages, late fees), client details, event/pickup dates, and overall order statuses.
+*   **Notifications/Alerts:** In-app visual indicators on the Dashboard and Calendar for overdue rentals and impending pickups.
 
-## 3. System States & Order Lifecycle
-To manage inventory accurately, the system relies on strict state transitions. Orders exist in one of the following states:
+## 3. Core Features
+*   **Point-of-Sale (POS):** Cart creation, real-time availability checking, draft order locking, and checkout processing.
+*   **Catalogue Management:** Creating and updating costumes, pricing, categories, and inventory quantities.
+*   **Calendar Monitoring:** Visual, date-based overview of upcoming pickups and expected returns.
+*   **Rent Tracking:** Monitoring and advancing the lifecycle of an order (`draft` -> `booked` -> `rented` -> `returned`/`cancelled`).
+*   **Accounting Ledger:** Robust transaction-based financial tracking (using the `RentTransaction` system) for precise debit/credit handling of downpayments, final payments, late fees, and damage fees.
+*   **Client Management:** Storing contact information, ID details, and tracking historical client behavior.
 
-| Status | Stock Reserved? | Payment Requirement | Description |
-| :--- | :---: | :--- | :--- |
-| **Draft** | No | None | Initial cart creation. Lazily deleted/ignored if past expiry time during query. |
-| **Booked** | Yes | $\ge$ 50% Down Payment | Order secured. Inventory locked for the requested dates. |
-| **Rented** | Yes | 100% Paid | Costumes picked up by the client. Continues to accrue late fees if past due. |
-| **Inspecting** | Yes | 100% Paid | Costumes physically returned to the store but pending staff quality/damage check. |
-| **Returned** | No | 100% Paid (+ Penalties) | QC passed (or penalties paid), order fully closed, and inventory released. |
-| **Cancelled**| No | Varies | Order aborted before pickup. |
+## 4. Out of Scope
+*   Client-facing self-service portal (Planned for post-v1).
+*   Online Payment Gateways (e.g., Stripe, Midtrans integration).
+*   Automated SMS/WhatsApp/Email reminders for customers.
+*   Delivery/Courier integrations and tracking.
+*   Complex item-by-item status tracking (e.g., handling partial returns where some items in an order are returned while others are kept late).
 
-> **Note on "Overdue":** There is no explicit "Overdue" status. Orders remain in the `Rented` state when they pass their expected return date, and the system dynamically accrues a `LateFee`.
+## 5. User Flow (Rent System)
+1. **Date & Costume Selection:** Staff inputs the requested rental dates, then browses and selects available costumes to add to the cart.
+2. **Cart Customization (Checkout Form):** Inside the checkout form, staff can manually override and modify the rental fee and quantity for each specific costume.
+3. **Client Assignment:** Staff selects an existing client from the database, or creates/adds a new client directly from the checkout form if they do not exist.
+4. **Payment & Status Generation:** 
+    *   Staff can choose to process a Down Payment (DP - 50% of total) or a Full Payment (100%).
+    *   If **no payment** is processed at checkout, the system generates the order with a `draft` status.
+    *   If **a payment** is processed, the system logs the transaction and sets the order to a `booked` status.
+5. **Return & Conclusion:** After the event, the client returns the costumes. Staff inspects them, logs any damage or late fees as new transactions, collects the final balance, and marks the order as `returned` to release the inventory.
 
-## 4. End-to-End Operational Workflow
+## 6. Non-Functional Requirements
+*   **Performance:** Availability queries must be highly optimized. Lazy expiration of old drafts must occur silently during read operations to prevent blocking the checkout flow.
+*   **Scalability:** The SQLite database is highly performant and sufficient for a single-store MVP. The GORM abstraction layer allows for seamless migration to PostgreSQL if multi-store scaling is required later.
+*   **Security:** Role-based access via JWT (JSON Web Tokens) to differentiate Staff vs. Admin privileges. All critical actions must generate an immutable `ActivityLog`.
+*   **Accessibility:** The UI must be designed with high contrast and clear, distinct typography suitable for fast-paced, potentially low-light retail environments.
 
-### Phase 1: Inquiry & Cart Generation
-*   **Availability Check:** Staff queries the inventory database for requested dates.
-*   **Cart Initialization:** Staff adds available items to the POS cart. 
-*   **Price Negotiation:** Staff can manually override standard catalogue prices **before** the status transitions out of `Draft`.
-*   **Collateral Logging:** Staff records the physical guarantee provided by the client (Options: `KTP`, `SIM`, `DEPOSIT`, `KARTU PELAJAR`).
+## 7. Architecture
 
-### Phase 2: Booking & Payment
-*   **Draft Expiry & Lazy Deletion:** Draft orders that are older than a configurable threshold (e.g., 1 hour) are considered expired. Instead of a background cron job, the system will lazily filter out or delete these expired drafts when the database is queried.
-*   **Race Condition Check:** When staff clicks "Checkout", a final inventory validation runs. If another user has secured the same item for overlapping dates, checkout is blocked.
-*   **Payment Collection:** The client must pay a minimum of 50% of the total order value. Staff logs the `PaymentMethod` (`CASH`, `TRANSFER BCA`, `TRANSFER GOPAY`, `QRIS`) and `PaymentStatus` (`LUNAS`, `BELUM LUNAS`).
-*   **Status Update:** Upon successful payment logging, the order becomes `Booked`.
+```mermaid
+sequenceDiagram
+    participant S as Staff (Browser)
+    participant F as React Frontend
+    participant B as Gin Backend (Go)
+    participant D as SQLite DB
 
-### Phase 3: Pickup (Takeaway)
-*   **Standard Pickup:** Client picks up the costume within the configurable `D-2` window. Balance must be settled (`PaymentStatus = LUNAS`). Order becomes `Rented`.
-*   **Early Pickup:** Client requests pickup *before* the `D-2` window. The system automatically adds the **Early Takeaway Fee** to the invoice. Once settled, the status becomes `Rented`.
+    S->>F: Access POS, select dates & costumes
+    F->>B: POST /api/rents (Create Draft)
+    B->>D: Verify availability & expire old drafts
+    D-->>B: Confirmed Available
+    B->>D: Save Draft Order & Items
+    B-->>F: Return Draft ID (Inventory Locked)
+    
+    S->>F: Input Payment (DP/Full)
+    F->>B: POST /api/rents/{id}/transactions
+    B->>D: Save RentTransaction (CREDIT)
+    B->>D: Update Order Status -> Booked/Rented
+    B-->>F: Success Response
+    F-->>S: Show Order Confirmation
+```
 
-### Phase 4: Active Rental & Extensions
-*   **Mid-Rent Extension:** A client requests to extend their rental. The system verifies inventory for the extra days.
-    *   *Conflict:* Blocked if the item is already `Booked` by someone else.
-    *   *Success:* Expected return date is updated, and a supplemental invoice is generated.
+## 8. Database Schema
 
-### Phase 5: Return & Quality Control (Item-Specific Tracking)
-Because clients may return parts of an order at different times, tracking is done at the **item level**.
-*   **Item Statuses:** `rented`, `inspecting`, `returned`, `lost` (hilang).
-*   **Physical Drop-off:** When items are returned, staff updates those specific items to `Inspecting`. The order remains `Rented` if other items are still outstanding.
-*   **Damage/Penalty (Fail QC):** If damage is found, a manual `DamageFee` is added. The item cannot be marked `Returned` until the fee is settled.
-*   **Lost Items:** Items marked as `lost` trigger an immediate replacement fee (added to `DamageFee`).
-*   **Partial Late Returns:** If a user returns 2 out of 3 items on time, and 1 item is late, the automated **Late Fee** is calculated and charged *only* on the 1 unreturned item.
+```mermaid
+erDiagram
+    Client ||--o{ RentOrder : "places"
+    User ||--o{ RentOrder : "creates"
+    RentOrder ||--|{ RentOrderItem : "contains"
+    Costume ||--o{ RentOrderItem : "included_in"
+    RentOrder ||--o{ RentTransaction : "has_ledger"
+    User ||--o{ RentTransaction : "logs"
+    RentOrder ||--o{ ActivityLog : "audited_by"
+    Region ||--o{ Costume : "has"
+    Category ||--o{ Costume : "categorizes"
+    Costume ||--o{ CostumeImage : "has_images"
 
-## 5. Financial Calculations & Formulas
+    Client {
+        uint ID PK
+        string Name
+        string Phone
+        string Address
+    }
+    Costume {
+        uint ID PK
+        string Name
+        string Description
+        string Size
+        uint RegionID FK
+        uint CategoryID FK
+        int RentalFee
+        int TotalQuantity
+        datetime AcquiredAt
+        string CoverImage
+    }
+    Region {
+        uint ID PK
+        string Name
+    }
+    Category {
+        uint ID PK
+        string Name
+    }
+    CostumeImage {
+        uint ID PK
+        uint CostumeID FK
+        string Path
+    }
+    RentOrder {
+        uint ID PK
+        uint ClientID FK
+        string GuaranteeType
+        datetime EventDate
+        datetime PickupDate
+        datetime ExpectedReturnDate
+        datetime ActualReturnDate
+        int TotalPaid
+        string PaymentStatus
+        bool HasSecurityItem
+        string Status
+        string Notes
+        uint CreatedBy FK
+    }
+    RentOrderItem {
+        uint ID PK
+        uint RentOrderID FK
+        uint CostumeID FK
+        int Quantity
+        int RentalFee
+    }
+    RentTransaction {
+        uint ID PK
+        uint RentOrderID FK
+        string Type
+        string Category
+        int Amount
+        string PaymentMethod
+        string PaymentProof
+        string Notes
+        uint CreatedBy FK
+    }
+    User {
+        uint ID PK
+        string Name
+        string Username
+        string Email
+        string Password
+        string Role
+    }
+    ActivityLog {
+        uint ID PK
+        uint RentOrderID FK
+        uint UserID FK
+        string ActionType
+        string OldValue
+        string NewValue
+        datetime Timestamp
+    }
+```
 
-### Base Order Calculation
-*   `Total Base Price = SUM(Negotiated Item Price * Quantity * Total Rent Days)`
-*   `Minimum DP Required = Total Base Price * 0.5`
+| Table | Purpose |
+| :--- | :--- |
+| `User` | Internal staff/admin accounts with authentication credentials and roles. |
+| `Client` | Customer profiles (Name, Phone, Address). |
+| `Costume` | Master inventory list detailing rental fee, size, quantity, region, category, and images. |
+| `Region` / `Category` | Lookups for categorizing costumes by style or region. |
+| `CostumeImage` | Stores multiple image paths for a single costume. |
+| `RentOrder` | The core rental event tracking specific dates, statuses, guarantee types, and the creator/client. |
+| `RentOrderItem` | The specific costumes and their quantities attached to a parent `RentOrder`. |
+| `RentTransaction` | The accounting ledger tracking all financial exchanges (payments, fees) and methods/proofs. |
+| `ActivityLog` | Immutable audit trail of status changes or modifications (old/new values) performed by users. |
 
-### Early Takeaway Penalty
-Triggered when pickup occurs earlier than the `D-2` window.
-*   `Early Days = ABS(Current Date - (Booking Start Date - 2))`
-*   `Early Fee = SUM(Early Days * Daily Item Rate for all items)`
+## 9. API Endpoints
 
-### Item-Specific Late Return Penalty
-Calculated individually for items still in `rented` status when `Current Day > D+0.5`. Calculation begins from `D+1`.
-*   `Late Days = ABS(Return Date - (Booking End Date + 1))`
-*   `Late Fee per Item = Late Days * Daily Item Rate`
-*   *Note: If an item is dropped off to `Inspecting`, the Late Days counter stops for that specific item.*
+| Method | Endpoint | Purpose |
+| :--- | :--- | :--- |
+| `GET` | `/api/costumes` | Fetch catalogue, with optional date parameters to filter for availability. |
+| `POST` | `/api/rents` | Create a new `draft` order (temporarily locking inventory). |
+| `PUT` | `/api/rents/:id/status` | Advance the order state (`draft` -> `booked` -> `rented` -> `returned`). |
+| `POST` | `/api/rents/:id/transactions` | Log a payment, late fee, or damage fee to the order's ledger. |
+| `GET` | `/api/rents` | Fetch all orders for the Dashboard, POS, or Rent History views. |
+| `GET` | `/api/stats/dashboard` | Fetch high-level KPIs and upcoming events for the calendar. |
 
-## 6. Business Rules & Exceptions
-*   **Cancellation Policy:** A booking is **100% refundable** if cancelled within 24 hours of creation **AND** outside the `D-2` pickup window. Otherwise, the DP is non-refundable.
-*   **Managerial Overrides:** Authorized admin staff can manually waive early fees, late fees, or modify statuses directly.
-*   **Audit Logging:** Every state change, price modification, fee waiver, and manual override must be immutably recorded in an `ActivityLog` table (Timestamp, User ID, Action, Old Value, New Value).
+## 10. Design & Technical Constraints
+*   **High-Level Technology:** 
+    *   **Frontend:** React, Vite, Tailwind CSS, HeroUI v3.
+    *   **Backend:** Go (1.25), Gin Web Framework, GORM, SQLite.
+    *   **Why:** This stack provides extreme speed, compile-time safety, and minimal operational overhead on the backend via Go and SQLite. The frontend leverages modern component libraries (HeroUI) for rapid, beautiful UI development without re-inventing basic accessible components.
+*   **Typography Rules:** 
+    *   Sans: `Geist Mono, ui-monospace, monospace`
+    *   Serif: `serif`
+    *   Mono: `JetBrains Mono, monospace`
 
-## 7. Required Database Schema Changes
-To support this PRD, the following database entities will be updated/created:
+## 11. Deployment Strategy
+*   **Hosting Infrastructure:** Self-hosted on a local STB (AML S905X box).
+*   **CI/CD Pipeline:** A self-hosted GitHub Actions runner on the STB triggers automatically on every push to the `main` branch.
+*   **Containerization:** Docker with BuildKit caching is used to containerize both the frontend and backend efficiently.
+*   **Networking & Exposure:** The application is securely exposed to the public internet using a Cloudflare Tunnel (`cloudflared`) mapped to port 80.
 
-**1. RentOrder (Modifications)**
-*   Add `EarlyTakeawayFee`, `LateFee`, `ExtensionFee`, `RefundAmount`.
-*   Add `PaymentMethod` (string) and `PaymentStatus` (string).
+## 12. Testing Strategy & QA
+*   **Methodology:** Strict Test-Driven Development (TDD) is enforced going forward. 
+*   **Coverage:** All new features, core backend business logic (like ledger calculations), and critical frontend components must be built test-first.
 
-**2. RentOrderItem (Modifications)**
-*   Add `ReturnedQuantity` (int).
-*   Add `ItemStatus` (string: `rented`, `inspecting`, `returned`, `lost`).
-*   Add `CustomRentalFee` (int) to support price negotiation.
+## 13. Localization & Internationalization (i18n)
+*   **Currency:** Strictly Indonesian Rupiah (IDR). No multi-currency abstractions are needed.
+*   **Timezones:** The system must handle dates relative to local Indonesian time (WIB/GMT+7), ensuring calendar days map correctly for walk-in rentals.
 
-**3. ActivityLog (New Entity)**
-*   `ID`, `RentOrderID`, `UserID`, `ActionType`, `OldValue`, `NewValue`, `Timestamp`.
+## 14. Third-Party Integrations
+*   **External Services:** None. Online payment gateways (Stripe/Midtrans) and external notifications (SMS/Email) are explicitly out of scope for V1.
+
+## 15. Data Privacy, Security & Compliance
+*   **Security Posture:** Standard Role-based access control via JWT is sufficient for internal staff operations. No advanced PII encryption (beyond standard password hashing) or strict regional compliance (like GDPR) is required for this MVP phase.
+
+## 16. Success Metrics (KPIs)
+*   **Performance:** Standard metrics for an administrative dashboard. The system must maintain fast, sub-second load times for the POS cart, responsive catalog queries, and ensure background tasks (like draft expirations) do not block the user interface.

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal, Input, Button, Label, InputGroup, TextArea, Tabs } from '@heroui/react';
+import { Modal, Input, Button, InputGroup, TextArea, Tabs, RadioGroup, Radio } from '@heroui/react';
 import { ShoppingCart, ImageOff, Minus, Plus, Trash2, ArrowRight } from 'lucide-react';
 import ClientSelect from '../ClientSelect';
 import PaymentFormFields from '../PaymentFormFields';
@@ -57,9 +57,9 @@ const POSCheckoutModal = ({
           </Modal.Header>
 
           <Modal.Body className="flex flex-col gap-0 p-0 overflow-hidden flex-1 bg-default-50/50">
-            <Tabs 
+            <Tabs
               variant="underlined"
-              selectedKey={step} 
+              selectedKey={step}
               onSelectionChange={(key) => setStep(key.toString())}
               className="flex-1 flex flex-col overflow-hidden w-full"
               classNames={{
@@ -83,9 +83,9 @@ const POSCheckoutModal = ({
                     <h4 className="text-xs font-bold text-default-400 uppercase tracking-wider mb-4 hidden sm:block">Daftar Item Pilihan</h4>
                     <div className="flex flex-col gap-3">
                       {cart.length === 0 ? (
-                        <div className="text-center py-8 text-default-400 bg-white border border-default-200 rounded-xl">Keranjang kosong</div>
+                        <div className="text-center py-8 text-default-400 bg-content1 border border-default-200 rounded-xl">Keranjang kosong</div>
                       ) : cart.map(item => (
-                        <div key={item.id} className="grid grid-cols-1 sm:grid-cols-[auto_1fr_auto] gap-y-4 gap-x-4 w-full bg-white p-4 rounded-xl border border-default-200 transition-colors shadow-sm">
+                        <div key={item.id} className="grid grid-cols-1 sm:grid-cols-[auto_1fr_auto] gap-y-4 gap-x-4 w-full bg-content1 p-4 rounded-xl border border-default-200 transition-colors shadow-sm">
                           <div className="flex items-center gap-4 col-span-1 sm:col-span-2">
                             <div className="w-16 h-16 bg-default-100 rounded-xl overflow-hidden flex-shrink-0 border border-default-200 relative">
                               {item.cover_image ? (
@@ -96,7 +96,7 @@ const POSCheckoutModal = ({
                                 </div>
                               )}
                             </div>
-                            
+
                             <div className="min-w-0 flex-1">
                               <h5 className="font-bold text-base text-default-800 line-clamp-2">{item.name}</h5>
                               <span className="text-xs text-default-500 font-medium">Stok: {item.available_quantity}</span>
@@ -115,12 +115,12 @@ const POSCheckoutModal = ({
                                 min="0"
                               />
                             </InputGroup>
-                            
+
                             <div className="flex items-center gap-2 w-full justify-between sm:w-auto">
                               <div className="flex items-center gap-1.5 bg-default-100 p-1 rounded-xl border border-default-200 flex-1 sm:flex-none justify-center">
-                                <Button isIconOnly size="sm" variant="light" className="h-8 w-8 min-w-8 p-0 hover:bg-white rounded-lg shadow-sm" onPress={() => updateCartQuantity(item.id, -1)}><Minus size={14} /></Button>
+                                <Button isIconOnly size="sm" variant="light" className="h-8 w-8 min-w-8 p-0 hover:bg-default-200 rounded-lg shadow-sm" onPress={() => updateCartQuantity(item.id, -1)}><Minus size={14} /></Button>
                                 <span className="text-sm w-8 text-center font-bold text-default-800">{item.quantity}</span>
-                                <Button isIconOnly size="sm" variant="light" className="h-8 w-8 min-w-8 p-0 hover:bg-white rounded-lg shadow-sm" onPress={() => updateCartQuantity(item.id, 1)} isDisabled={item.quantity >= item.available_quantity}><Plus size={14} /></Button>
+                                <Button isIconOnly size="sm" variant="light" className="h-8 w-8 min-w-8 p-0 hover:bg-default-200 rounded-lg shadow-sm" onPress={() => updateCartQuantity(item.id, 1)} isDisabled={item.quantity >= item.available_quantity}><Plus size={14} /></Button>
                               </div>
                               <Button isIconOnly size="sm" color="danger" variant="light" className="h-10 w-10 min-w-10 p-0 text-default-400 hover:text-danger-500 hover:bg-danger-50 rounded-xl" onPress={() => removeFromCart(item.id)}><Trash2 size={18} /></Button>
                             </div>
@@ -135,7 +135,7 @@ const POSCheckoutModal = ({
                   {/* Client Form */}
                   <div>
                     <h4 className="text-xs font-bold text-default-400 uppercase tracking-wider mb-4">Identitas Penyewa</h4>
-                    <div className="bg-white p-4 sm:p-5 rounded-xl border border-default-200 shadow-sm">
+                    <div className="bg-content1 p-4 sm:p-5 rounded-xl border border-default-200 shadow-sm">
                       <ClientSelect value={formData.client} onChange={(c) => {
                         setFormData(p => ({ ...p, client: c, client_phone: c?.client?.phone || p.client_phone, client_address: c?.client?.address || p.client_address }));
                         setErrors(p => ({ ...p, client: null }));
@@ -144,27 +144,27 @@ const POSCheckoutModal = ({
                         <div className="flex flex-col gap-4 mt-4 pt-4 border-t border-default-100">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex flex-col gap-2">
-                              <Label className="text-xs font-semibold text-default-700 block">No HP *</Label>
-                              <Input 
+                              <label className="text-xs font-semibold text-default-700 block">No HP *</label>
+                              <Input
                                 variant="bordered"
                                 classNames={{
                                   inputWrapper: "bg-default-50 shadow-none border-default-200 hover:border-default-300 focus-within:!border-primary rounded-xl px-3"
                                 }}
-                                placeholder="Contoh: 08123456789" 
-                                value={formData.client_phone} 
-                                onChange={(e) => setFormData(p => ({ ...p, client_phone: e.target.value }))} 
+                                placeholder="Contoh: 08123456789"
+                                value={formData.client_phone}
+                                onChange={(e) => setFormData(p => ({ ...p, client_phone: e.target.value }))}
                               />
                             </div>
                             <div className="flex flex-col gap-2">
-                              <Label className="text-xs font-semibold text-default-700 block">Alamat Klien *</Label>
-                              <Input 
+                              <label className="text-xs font-semibold text-default-700 block">Alamat Klien *</label>
+                              <Input
                                 variant="bordered"
                                 classNames={{
                                   inputWrapper: "bg-default-50 shadow-none border-default-200 hover:border-default-300 focus-within:!border-primary rounded-xl px-3"
                                 }}
-                                placeholder="Alamat lengkap..." 
-                                value={formData.client_address} 
-                                onChange={(e) => setFormData(p => ({ ...p, client_address: e.target.value }))} 
+                                placeholder="Alamat lengkap..."
+                                value={formData.client_address}
+                                onChange={(e) => setFormData(p => ({ ...p, client_address: e.target.value }))}
                               />
                             </div>
                           </div>
@@ -175,32 +175,66 @@ const POSCheckoutModal = ({
 
                   <div>
                     <h4 className="text-xs font-bold text-default-400 uppercase tracking-wider mb-4">Pembayaran & Catatan</h4>
-                    <div className="flex flex-col gap-4 bg-white p-4 sm:p-5 rounded-xl border border-default-200 shadow-sm">
-                      <label className="flex items-center gap-3.5 cursor-pointer py-1">
-                        <input 
-                          type="checkbox" 
-                          checked={formData.dp_paid} 
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setFormData(p => ({ ...p, dp_paid: checked, payment_proof: checked ? p.payment_proof : '' }));
-                            if (!checked) {
-                              setProofFile(null);
-                            }
-                            setErrors(p => ({ ...p, payment_proof: null }));
-                          }} 
-                          className="w-5 h-5 rounded border-default-300 text-primary focus:ring-primary/20 accent-primary cursor-pointer" 
-                        />
-                        <div>
-                          <span className="text-sm font-bold text-default-800 block">DP Sudah Dibayar</span>
-                          <span className="text-xs text-default-500 block">Lengkapi form ini jika penyewa telah membayar uang muka</span>
-                        </div>
-                      </label>
+                    <div className="flex flex-col gap-4 bg-content1 p-4 sm:p-5 rounded-xl border border-default-200 shadow-sm">
+                      <RadioGroup
+                        label="Status Pembayaran Awal"
+                        aria-label="Status Pembayaran Awal"
+                        orientation="horizontal"
+                        value={formData.payment_status}
+                        onChange={(val) => {
+                          setFormData(p => ({ ...p, payment_status: val, payment_proof: val === 'none' ? '' : p.payment_proof }));
+                          if (val === 'none') setProofFile(null);
+                          setErrors(p => ({ ...p, payment_proof: null }));
+                        }}
+                        classNames={{
+                          label: "text-xs font-bold text-default-400 uppercase tracking-wider mb-2",
+                          wrapper: "gap-4"
+                        }}
+                        variant="secondary"
+                      >
+                        <Radio 
+                          value="none" 
+                          aria-label="Belum Bayar"
+                          className="hover:bg-default-100 p-2 rounded-xl transition-colors cursor-pointer m-0"
+                        >
+                          <Radio.Content className="flex items-center gap-2">
+                            <Radio.Control>
+                              <Radio.Indicator />
+                            </Radio.Control>
+                            <span className="text-sm font-semibold text-default-800">Belum Bayar</span>
+                          </Radio.Content>
+                        </Radio>
+                        <Radio 
+                          value="dp" 
+                          aria-label="DP (50%)"
+                          className="hover:bg-default-100 p-2 rounded-xl transition-colors cursor-pointer m-0"
+                        >
+                          <Radio.Content className="flex items-center gap-2">
+                            <Radio.Control>
+                              <Radio.Indicator />
+                            </Radio.Control>
+                            <span className="text-sm font-semibold text-default-800">DP (50%)</span>
+                          </Radio.Content>
+                        </Radio>
+                        <Radio 
+                          value="full" 
+                          aria-label="Lunas (100%)"
+                          className="hover:bg-default-100 p-2 rounded-xl transition-colors cursor-pointer m-0"
+                        >
+                          <Radio.Content className="flex items-center gap-2">
+                            <Radio.Control>
+                              <Radio.Indicator />
+                            </Radio.Control>
+                            <span className="text-sm font-semibold text-default-800">Lunas (100%)</span>
+                          </Radio.Content>
+                        </Radio>
+                      </RadioGroup>
 
-                      {formData.dp_paid && (
+                      {formData.payment_status !== 'none' && (
                         <div className="mt-2 flex flex-col gap-1 border-t border-default-100 pt-4 w-full">
                           <PaymentFormFields
-                            amount={reqDp}
-                            setAmount={() => {}}
+                            amount={formData.payment_status === 'dp' ? reqDp : totalFee}
+                            setAmount={() => { }}
                             method={formData.payment_method}
                             setMethod={(val) => setFormData(p => ({ ...p, payment_method: val }))}
                             proof={formData.payment_proof}
@@ -215,9 +249,9 @@ const POSCheckoutModal = ({
                           />
                         </div>
                       )}
-                      
+
                       <div className="w-full mt-2 pt-4 border-t border-default-100 flex flex-col">
-                        <Label className="text-xs font-semibold text-default-700 block mb-2">Catatan Peminjaman (Opsional)</Label>
+                        <label className="text-xs font-semibold text-default-700 block mb-2">Catatan Peminjaman (Opsional)</label>
                         <TextArea
                           fullWidth
                           placeholder="Tuliskan catatan tambahan (Opsional)..."
@@ -238,7 +272,7 @@ const POSCheckoutModal = ({
                 </Tabs.Panel>
               </div>
             </Tabs>
-            
+
             {/* Persistent Receipt Summary */}
             <div className="mt-auto px-4 sm:px-6 py-4 bg-[var(--surface)] border-t border-default-200 z-10 shrink-0">
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-6">
@@ -247,10 +281,16 @@ const POSCheckoutModal = ({
                     <span className="text-xs text-default-500 font-semibold block mb-0.5">Total Tagihan ({cart.reduce((sum, item) => sum + item.quantity, 0)} item)</span>
                     <span className="text-xl font-bold text-primary">Rp {totalFee.toLocaleString('id-ID')}</span>
                   </div>
-                  {formData.dp_paid && (
+                  {formData.payment_status === 'dp' && (
                     <div className="text-right border-l border-default-200 pl-4">
-                      <span className="text-xs text-default-500 font-semibold block mb-0.5">Minimal DP (50%)</span>
+                      <span className="text-xs text-default-500 font-semibold block mb-0.5">Dibayar (DP 50%)</span>
                       <span className="text-base font-bold text-warning-600">Rp {reqDp.toLocaleString('id-ID')}</span>
+                    </div>
+                  )}
+                  {formData.payment_status === 'full' && (
+                    <div className="text-right border-l border-default-200 pl-4">
+                      <span className="text-xs text-default-500 font-semibold block mb-0.5">Dibayar (Lunas)</span>
+                      <span className="text-base font-bold text-success-600">Rp {totalFee.toLocaleString('id-ID')}</span>
                     </div>
                   )}
                 </div>

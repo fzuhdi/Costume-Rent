@@ -1,7 +1,6 @@
 package services
 
 import (
-	"errors"
 	"os"
 	"time"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/busana/backend/dto"
 	"github.com/busana/backend/middleware"
 	"github.com/busana/backend/models"
+	"github.com/busana/backend/utils"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -134,11 +134,11 @@ func (s *AuthService) UpdateUser(id uint, req dto.UpdateUserRequest) (*models.Us
 func (s *AuthService) ChangePassword(userID uint, req dto.ChangePasswordRequest) error {
 	var user models.User
 	if err := config.DB.First(&user, userID).Error; err != nil {
-		return errors.New("User not found")
+		return utils.NewAppError("ERR_USER_NOT_FOUND")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.OldPassword)); err != nil {
-		return errors.New("Password lama tidak sesuai")
+		return utils.NewAppError("ERR_INVALID_OLD_PASSWORD")
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)

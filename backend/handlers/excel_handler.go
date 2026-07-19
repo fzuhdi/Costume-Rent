@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/busana/backend/services"
+	"github.com/busana/backend/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -36,7 +37,7 @@ func (h *ExcelHandler) ExportClients(c *gin.Context) {
 func (h *ExcelHandler) ImportClients(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_BAD_REQUEST"))
 		return
 	}
 
@@ -54,7 +55,7 @@ func (h *ExcelHandler) ImportClients(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Clients imported successfully"})
+	utils.RespondSuccess(c, gin.H{"message": "Clients imported successfully"})
 }
 
 func (h *ExcelHandler) DownloadClientTemplate(c *gin.Context) {
@@ -85,7 +86,7 @@ func (h *ExcelHandler) ExportCostumes(c *gin.Context) {
 func (h *ExcelHandler) ImportCostumes(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_BAD_REQUEST"))
 		return
 	}
 
@@ -103,7 +104,7 @@ func (h *ExcelHandler) ImportCostumes(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Catalogue imported successfully"})
+	utils.RespondSuccess(c, gin.H{"message": "Catalogue imported successfully"})
 }
 
 func (h *ExcelHandler) DownloadCostumeTemplate(c *gin.Context) {
@@ -134,7 +135,7 @@ func (h *ExcelHandler) ExportRents(c *gin.Context) {
 func (h *ExcelHandler) ImportRents(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_BAD_REQUEST"))
 		return
 	}
 
@@ -152,7 +153,7 @@ func (h *ExcelHandler) ImportRents(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Rent orders imported successfully"})
+	utils.RespondSuccess(c, gin.H{"message": "Rent orders imported successfully"})
 }
 
 func (h *ExcelHandler) DownloadRentTemplate(c *gin.Context) {

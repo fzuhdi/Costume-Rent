@@ -110,7 +110,7 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, 
   return (
     <Modal.Backdrop isOpen={isOpen} onOpenChange={handleClose}>
       <Modal.Container>
-        <Modal.Dialog>
+        <Modal.Dialog className="bg-[var(--surface)] border border-default-200">
           <Modal.Header>
             <Modal.Heading>Pickup (Serahkan Kostum)</Modal.Heading>
           </Modal.Header>
@@ -132,7 +132,7 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, 
                 onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'guaranteeType', value: e?.target?.value ?? e })}
               >
                 <Label className="text-xs font-semibold mb-1 text-default-600 block">Jaminan yang Ditahan <span className="text-danger">*</span></Label>
-                <Select.Trigger className="w-full flex items-center justify-between bg-content1 border border-default-200 rounded-lg px-3 py-2 text-sm text-left">
+                <Select.Trigger className="w-full flex items-center justify-between bg-[var(--input-bg)] border border-[var(--input-border)] hover:border-default-300 data-[focused]:border-primary rounded-lg px-3 py-2 text-sm text-left shadow-sm">
                   <Select.Value />
                   <Select.Indicator />
                 </Select.Trigger>
@@ -146,10 +146,10 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, 
                   </ListBox>
                 </Select.Popover>
               </Select>
-              <Checkbox className="mt-1" isSelected={confirmSecurityItem} onChange={(v) => dispatch({ type: 'SET_FIELD', field: 'confirmSecurityItem', value: v })}>
+              <Checkbox className="mt-1" isSelected={confirmSecurityItem} onChange={(v) => dispatch({ type: 'SET_FIELD', field: 'confirmSecurityItem', value: v })} variant="secondary">
                 <Checkbox.Content>
                   <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
-                  Saya telah menerima jaminan ini (Wajib)
+                  <span className="text-sm font-medium">Saya telah menerima jaminan ini (Wajib)</span>
                 </Checkbox.Content>
               </Checkbox>
             </div>

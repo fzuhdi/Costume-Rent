@@ -6,6 +6,7 @@ import {
   toast
 } from "@heroui/react";
 import { Download, UploadCloud, FileSpreadsheet, Trash2 } from "lucide-react";
+import { getErrorMessage } from '../utils/errorMap';
 
 const handleDragOver = (e) => {
   e.preventDefault();
@@ -113,7 +114,8 @@ const ExcelImportModal = ({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to import data');
+        const errMsg = getErrorMessage({ response: { data } });
+        throw new Error(errMsg || 'Failed to import data');
       }
 
       toast.success(data.message || 'Data imported successfully!');
@@ -138,7 +140,7 @@ const ExcelImportModal = ({
   return (
     <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => { if (!open) closeModal(); else onOpenChange(open); }}>
       <Modal.Container>
-        <Modal.Dialog className="sm:max-w-2xl">
+        <Modal.Dialog className="sm:max-w-2xl bg-[var(--surface)] border border-default-200">
           <Modal.Header>
             <Modal.Heading>{title}</Modal.Heading>
           </Modal.Header>

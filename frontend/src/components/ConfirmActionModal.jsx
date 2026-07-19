@@ -29,7 +29,7 @@ const ConfirmActionModal = ({
   return (
     <Modal.Backdrop isOpen={isOpen} onOpenChange={onClose}>
       <Modal.Container>
-        <Modal.Dialog>
+        <Modal.Dialog className="bg-[var(--surface)] border border-default-200">
           <Modal.Header>
             <Modal.Heading>{heading}</Modal.Heading>
           </Modal.Header>

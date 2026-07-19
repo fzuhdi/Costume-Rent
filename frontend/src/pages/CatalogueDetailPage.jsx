@@ -44,7 +44,7 @@ const CatalogueDetailPage = () => {
         setCostume(costumeRes.data);
         // Filter rents that contain this costume
         const relevantRents = (rentsRes.data?.data || []).filter(r => 
-          ['draft', 'booked', 'rented', 'overdue'].includes(r.status?.toLowerCase()) &&
+          ['pending', 'booked', 'rented', 'overdue'].includes(r.status?.toLowerCase()) &&
           r.items.some(item => String(item.costume_id) === String(id))
         );
         setRents(relevantRents);

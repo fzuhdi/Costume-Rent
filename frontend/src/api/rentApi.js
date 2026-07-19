@@ -12,8 +12,11 @@ export const createRent = (data) =>
 export const updateRent = (id, data) =>
   api.put(`/rents/${id}`, data);
 
-export const markReturned = (id, data = {}) =>
+export const markReturned = (id, data = {}) => 
   api.put(`/rents/${id}/return`, data);
+
+export const receiveOrder = (id) => 
+  api.post(`/rents/${id}/receive`);
 
 export const markRented = (id, data = {}) =>
   api.put(`/rents/${id}/rent`, data);

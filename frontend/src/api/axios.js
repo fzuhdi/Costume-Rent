@@ -1,3 +1,5 @@
+import { getErrorMessage } from '../utils/errorMap';
+
 const request = async (method, url, data, config = {}) => {
   const token = localStorage.getItem('token:v1');
   const headers = {
@@ -55,12 +57,18 @@ const request = async (method, url, data, config = {}) => {
       }
     }
     
-    const error = new Error(response.statusText);
+    const error = new Error();
     error.response = { status: response.status, data: responseData };
+    error.message = getErrorMessage(error) || response.statusText;
     throw error;
   }
 
-  return { data: responseData, status: response.status };
+  let unwrappedData = responseData;
+  if (responseData && responseData.success === true) {
+    unwrappedData = responseData.data !== undefined ? responseData.data : responseData;
+  }
+
+  return { data: unwrappedData, status: response.status };
 };
 
 const api = {

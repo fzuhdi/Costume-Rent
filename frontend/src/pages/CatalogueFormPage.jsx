@@ -17,6 +17,7 @@ const CatalogueFormPage = () => {
     category_id: '',
     size: '',
     rental_fee: '',
+    buy_price: '',
     total_quantity: 1,
     acquired_at: '',
   });
@@ -56,6 +57,7 @@ const CatalogueFormPage = () => {
             category_id: costumeData.category_id?.toString() || '',
             size: costumeData.size || '',
             rental_fee: costumeData.rental_fee?.toString() || '',
+            buy_price: costumeData.buy_price?.toString() || '',
             total_quantity: costumeData.total_quantity || 1,
             acquired_at: costumeData.acquired_at || '',
           });
@@ -101,6 +103,7 @@ const CatalogueFormPage = () => {
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
         size: formData.size,
         rental_fee: formData.rental_fee ? parseInt(formData.rental_fee) : 0,
+        buy_price: formData.buy_price ? parseInt(formData.buy_price) : 0,
         total_quantity: parseInt(formData.total_quantity),
         acquired_at: formData.acquired_at || null,
       };
@@ -238,6 +241,11 @@ const CatalogueFormPage = () => {
               <TextField isRequired>
                 <Label>Harga Sewa per Set (Rp)</Label>
                 <Input type="number" min="0" value={formData.rental_fee} onChange={(e) => setFormData((prev) => ({...prev, rental_fee: e.target.value}))} />
+                <FieldError />
+              </TextField>
+              <TextField isRequired>
+                <Label>Harga Beli Asli / Denda (Rp)</Label>
+                <Input type="number" min="0" value={formData.buy_price} onChange={(e) => setFormData((prev) => ({...prev, buy_price: e.target.value}))} />
                 <FieldError />
               </TextField>
               <TextField isRequired>

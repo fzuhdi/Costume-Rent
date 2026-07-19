@@ -7,6 +7,7 @@ type CreateCostumeRequest struct {
 	RegionID      *uint   `json:"region_id"`
 	CategoryID    *uint   `json:"category_id"`
 	RentalFee     int     `json:"rental_fee"`
+	BuyPrice      int     `json:"buy_price"`
 	TotalQuantity int     `json:"total_quantity" binding:"min=0"`
 	AcquiredAt    *string `json:"acquired_at"`
 }
@@ -18,6 +19,7 @@ type UpdateCostumeRequest struct {
 	RegionID      *uint   `json:"region_id"`
 	CategoryID    *uint   `json:"category_id"`
 	RentalFee     int     `json:"rental_fee"`
+	BuyPrice      int     `json:"buy_price"`
 	TotalQuantity int     `json:"total_quantity"`
 	AcquiredAt    *string `json:"acquired_at"`
 }
@@ -32,6 +34,7 @@ type CostumeListResponse struct {
 	Category          string  `json:"category"`
 	Size              string  `json:"size"`
 	RentalFee         int     `json:"rental_fee"`
+	BuyPrice          int     `json:"buy_price"`
 	TotalQuantity     int     `json:"total_quantity"`
 	AvailableQuantity int     `json:"available_quantity"`
 	CoverImage        string  `json:"cover_image"`
@@ -65,6 +68,7 @@ type CostumeDetailResponse struct {
 	Category          string                 `json:"category"`
 	Size              string                 `json:"size"`
 	RentalFee         int                    `json:"rental_fee"`
+	BuyPrice          int                    `json:"buy_price"`
 	TotalQuantity     int                    `json:"total_quantity"`
 	AvailableQuantity int                    `json:"available_quantity"`
 	CoverImage        string                 `json:"cover_image"`

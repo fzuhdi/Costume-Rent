@@ -2,7 +2,6 @@ package services
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/busana/backend/config"
 	"github.com/busana/backend/models"
+	"github.com/busana/backend/utils"
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 )
@@ -84,7 +84,7 @@ func (s *ExcelService) ImportClients(r io.Reader) error {
 	}
 
 	if len(rows) < 2 {
-		return errors.New("file is empty or missing headers")
+		return utils.NewAppError("ERR_EXCEL_EMPTY")
 	}
 
 	return config.DB.Transaction(func(tx *gorm.DB) error {
@@ -190,7 +190,7 @@ func (s *ExcelService) ImportCostumes(r io.Reader) error {
 	}
 
 	if len(rows) < 2 {
-		return errors.New("file is empty or missing headers")
+		return utils.NewAppError("ERR_EXCEL_EMPTY")
 	}
 
 	return config.DB.Transaction(func(tx *gorm.DB) error {
@@ -351,7 +351,7 @@ func (s *ExcelService) ImportRents(r io.Reader) error {
 	}
 
 	if len(rows) < 2 {
-		return errors.New("file is empty or missing headers")
+		return utils.NewAppError("ERR_EXCEL_EMPTY")
 	}
 
 	return config.DB.Transaction(func(tx *gorm.DB) error {

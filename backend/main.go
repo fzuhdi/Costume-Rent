@@ -80,6 +80,12 @@ func migrateDB() {
 		log.Printf("Migrated %d orders from 'active' to 'rented'", result.RowsAffected)
 	}
 
+	// Data migration: rename "draft" status to "pending" for e-commerce alignment
+	draftResult := db.Model(&models.RentOrder{}).Where("status = ?", "draft").Update("status", "pending")
+	if draftResult.RowsAffected > 0 {
+		log.Printf("Migrated %d orders from 'draft' to 'pending'", draftResult.RowsAffected)
+	}
+
 	// Data migration: ensure default admin has a username
 	db.Model(&models.User{}).Where("email = ? AND username = ?", "admin@busana.com", "").Update("username", "admin")
 
