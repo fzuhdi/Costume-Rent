@@ -29,8 +29,8 @@ const ImagePreviewModal = ({ isOpen, onClose, images = [], initialIndex = 0 }) =
   if (!images || images.length === 0) return null;
 
   return (
-    <Modal isOpen={isOpen} onOpenChange={(open) =>
-      <Button className="hidden">Hidden Trigger</Button> !open && onClose()}>
+    <Modal isOpen={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <Button className="hidden">Hidden Trigger</Button>
       <Modal.Backdrop>
       <Modal.Container>
         <Modal.Dialog aria-label="Pratinjau Gambar" className="max-w-4xl bg-transparent shadow-none w-full border-none">
