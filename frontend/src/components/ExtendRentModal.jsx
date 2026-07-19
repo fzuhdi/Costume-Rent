@@ -49,7 +49,8 @@ const ExtendRentModal = ({ isOpen, onClose, onSuccess, rentId, dailyFee = 0 }) =
   };
 
   return (
-    <Modal.Backdrop isOpen={isOpen} onOpenChange={handleClose}>
+    <Modal isOpen={isOpen} onOpenChange={handleClose}>
+      <Modal.Backdrop>
       <Modal.Container>
         <Modal.Dialog className="bg-[var(--surface)] border border-default-200">
           <Modal.Header>
@@ -118,6 +119,7 @@ const ExtendRentModal = ({ isOpen, onClose, onSuccess, rentId, dailyFee = 0 }) =
         </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>
+    </Modal>
   );
 };
 

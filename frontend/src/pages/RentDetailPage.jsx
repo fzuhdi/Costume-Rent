@@ -7,16 +7,18 @@ import RentDetailItems from '../components/RentDetail/RentDetailItems';
 import RentDetailModals from '../components/RentDetail/RentDetailModals';
 import RentPaymentSection from '../components/RentDetail/RentPaymentSection';
 import RentDetailActivityLog from '../components/RentDetail/RentDetailActivityLog';
-import RentDetailActions from '../components/RentDetail/RentDetailActions';
+import { XCircle, CheckCircle, Edit, Trash2, RotateCcw } from 'lucide-react';
+import { Chip } from '@heroui/react';
 
 const statusColors = {
   pending: { variant: 'soft', color: 'default' },
-  booked: { variant: 'soft', color: 'primary' },
-  rented: { variant: 'secondary' },
+  booked: { variant: 'soft', color: 'accent' },
+  rented: { variant: 'soft', color: 'accent' },
   returned: { variant: 'soft', color: 'success' },
+  inspected: { variant: 'soft', color: 'success' },
   completed: { variant: 'flat', color: 'success' },
-  overdue: { variant: 'soft', color: 'danger' },
-  cancelled: { variant: 'soft', color: 'default' },
+  overdue: { variant: 'soft', color: 'warning' },
+  cancelled: { variant: 'soft', color: 'danger' },
 };
 
 const statusLabels = {
@@ -24,6 +26,7 @@ const statusLabels = {
   booked: 'Dipesan',
   rented: 'Disewa',
   returned: 'Diterima',
+  inspected: 'Diinspeksi',
   completed: 'Selesai',
   overdue: 'Terlambat',
   cancelled: 'Dibatalkan',
@@ -65,6 +68,7 @@ const RentDetailPage = () => {
     openPreview, fetchRent, toggleEditMode,
     openRentModal, openReturnModal, openUpgradeModal,
     handleEditSave, handleCancel, handleRollback, handleReceive, handleDelete,
+    handleVoidTransaction,
     groupedLogs, renderLogContent
   } = useRentDetail(id, navigate, formatDate);
 
@@ -98,29 +102,89 @@ const RentDetailPage = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4 max-w-5xl mx-auto w-full pb-10">
+    <div className="flex flex-col gap-4 max-w-[1440px] mx-auto w-full pb-10">
       <Link to="/rents" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
         <ArrowLeft size={18} aria-hidden="true" />
         Kembali ke Riwayat
       </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-        {/* Left Column */}
-        <div className="lg:col-span-2 flex flex-col gap-4">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[var(--surface)] p-4 sm:p-6 rounded-xl border border-[var(--border)] shadow-sm">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold m-0">Order #{rent.id}</h1>
+            <Chip {...(statusColors[rent.status] ?? { variant: 'secondary' })}>
+              {statusLabels[rent.status] || rent.status}
+            </Chip>
+          </div>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Action Buttons based on RentDetailActions & RentDetailInfo */}
+          {isEditing ? (
+            <>
+              <Button variant="light" size="sm" onPress={toggleEditMode}><XCircle size={16} className="mr-1" /> Batal</Button>
+              <Button color="primary" size="sm" onPress={handleEditSave} isPending={processing}><CheckCircle size={16} className="mr-1" /> Simpan Perubahan</Button>
+            </>
+          ) : (
+            <>
+              {rent.status === 'pending' && (
+                <>
+                  <Button color="primary" onPress={openUpgradeModal}>Book</Button>
+                  <Button color="danger" variant="flat" onPress={() => setActiveModal('cancel')}>Cancel</Button>
+                </>
+              )}
+              {rent.status === 'booked' && (
+                <>
+                  <Button color="success" className="text-white font-bold" onPress={openRentModal}>Pickup</Button>
+                  <Button color="danger" variant="flat" onPress={() => setActiveModal('cancel')}>Cancel</Button>
+                </>
+              )}
+              {(rent.status === 'rented' || rent.status === 'overdue') && (
+                <>
+                  <Button color="primary" size="sm" onPress={() => setActiveModal('receive')}>Receive</Button>
+                  <Button color="secondary" variant="flat" onPress={() => setActiveModal('extend')}>Extend</Button>
+                  {rent.status === 'rented' && (
+                    <Button color="default" variant="flat" isIconOnly onPress={() => setActiveModal('rollback')} aria-label="Rollback"><RotateCcw size={18} /></Button>
+                  )}
+                </>
+              )}
+              {rent.status === 'returned' && (
+                <>
+                  <Button color="primary" size="sm" onPress={openReturnModal}>Inspect</Button>
+                  <Button color="default" variant="flat" isIconOnly onPress={() => setActiveModal('rollback')} aria-label="Rollback"><RotateCcw size={18} /></Button>
+                </>
+              )}
+              {rent.status === 'inspected' && (
+                <>
+                  <Button color="success" size="sm" className="text-white font-bold" onPress={() => setActiveModal('payment')}>Complete</Button>
+                  <Button color="default" variant="flat" isIconOnly onPress={() => setActiveModal('rollback')} aria-label="Rollback"><RotateCcw size={18} /></Button>
+                </>
+              )}
+              {rent.status === 'completed' && (
+                <>
+                  <Button color="default" variant="flat" isIconOnly onPress={() => setActiveModal('rollback')} aria-label="Rollback"><RotateCcw size={18} /></Button>
+                </>
+              )}
+              <div className="w-px h-6 bg-[var(--border)] mx-1 hidden sm:block"></div>
+              <Button variant="light" size="sm" isIconOnly aria-label="Edit" onPress={toggleEditMode}><Edit size={18} /></Button>
+              <Button variant="light" color="danger" size="sm" isIconOnly aria-label="Hapus" onPress={() => setActiveModal('delete')}><Trash2 size={18} className="text-danger" /></Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        {/* Left Column: Info & Items */}
+        <div className="lg:col-span-7 flex flex-col gap-4">
           <RentDetailInfo
             rent={rent}
             isEditing={isEditing}
-            processing={processing}
             editData={editData}
             setEditData={setEditData}
-            toggleEditMode={toggleEditMode}
-            handleEditSave={handleEditSave}
-            setIsDeleteOpen={() => setActiveModal('delete')}
-            statusColors={statusColors}
-            statusLabels={statusLabels}
             formatDate={formatDate}
+            formatCurrency={formatCurrency}
           />
-
           <RentDetailItems
             rent={rent}
             isEditing={isEditing}
@@ -128,26 +192,10 @@ const RentDetailPage = () => {
             setEditItems={setEditItems}
             formatCurrency={formatCurrency}
           />
-
-          <RentDetailActions 
-            rent={rent} 
-            totalDebits={totalDebits}
-            sisaTagihan={sisaTagihan}
-            openReturnModal={openReturnModal}
-            openRentModal={openRentModal}
-            openUpgradeModal={openUpgradeModal}
-            setIsCancelOpen={() => setActiveModal('cancel')}
-            setIsExtendOpen={() => setActiveModal('extend')}
-            setIsDeleteOpen={() => setActiveModal('delete')}
-            setIsRollbackOpen={() => setActiveModal('rollback')}
-            handleReceive={handleReceive}
-            toggleEditMode={toggleEditMode}
-            isEditing={isEditing}
-          />
         </div>
 
-        {/* Right Column */}
-        <div className="flex flex-col gap-4">
+        {/* Right Column: Payment & Activity */}
+        <div className="lg:col-span-5 flex flex-col gap-4">
           <RentPaymentSection
             rent={rent}
             isEditing={isEditing}
@@ -155,11 +203,11 @@ const RentDetailPage = () => {
             totalPaid={totalPaid}
             sisaTagihan={sisaTagihan}
             setIsPaymentModalOpen={() => setActiveModal('payment')}
+            handleVoidTransaction={handleVoidTransaction}
             openPreview={openPreview}
             formatCurrency={formatCurrency}
             formatDate={formatDate}
           />
-
           <RentDetailActivityLog
             rent={rent}
             groupedLogs={groupedLogs}
@@ -178,6 +226,7 @@ const RentDetailPage = () => {
         handleCancel={handleCancel}
         handleDelete={handleDelete}
         handleRollback={handleRollback}
+        handleReceive={handleReceive}
         isPreviewOpen={isPreviewOpen} setIsPreviewOpen={setIsPreviewOpen}
         previewImages={previewImages} previewIndex={previewIndex}
         processing={processing}

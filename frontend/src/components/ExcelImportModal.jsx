@@ -138,7 +138,8 @@ const ExcelImportModal = ({
   };
 
   return (
-    <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => { if (!open) closeModal(); else onOpenChange(open); }}>
+    <Modal isOpen={isOpen} onOpenChange={(open) => { if (!open) closeModal(); else onOpenChange(open); }}>
+      <Modal.Backdrop>
       <Modal.Container>
         <Modal.Dialog className="sm:max-w-2xl bg-[var(--surface)] border border-default-200">
           <Modal.Header>
@@ -254,7 +255,8 @@ const ExcelImportModal = ({
           </Modal.Footer>
         </Modal.Dialog>
       </Modal.Container>
-    </Modal.Backdrop>
+      </Modal.Backdrop>
+    </Modal>
   );
 };
 

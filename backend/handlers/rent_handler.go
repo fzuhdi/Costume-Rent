@@ -236,6 +236,35 @@ func (h *RentHandler) UploadPaymentProof(c *gin.Context) {
 	utils.RespondSuccess(c, gin.H{"payment_proof": "/uploads/" + filename})
 }
 
+func (h *RentHandler) UploadRentPhoto(c *gin.Context) {
+	file, err := c.FormFile("photo")
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_BAD_REQUEST"))
+		return
+	}
+
+	uploadDir := os.Getenv("UPLOAD_DIR")
+	if uploadDir == "" {
+		uploadDir = "./uploads"
+	}
+
+	if err := os.MkdirAll(uploadDir, 0750); err != nil {
+		utils.RespondFailed(c, http.StatusInternalServerError, utils.NewAppError("ERR_BAD_REQUEST"))
+		return
+	}
+
+	ext := filepath.Ext(file.Filename)
+	filename := fmt.Sprintf("rent_photo_%d_%s%s", time.Now().UnixNano(), uuid.New().String()[:8], ext)
+	filePath := filepath.Join(uploadDir, filename)
+
+	if err := c.SaveUploadedFile(file, filePath); err != nil {
+		utils.RespondFailed(c, http.StatusInternalServerError, utils.NewAppError("ERR_BAD_REQUEST"))
+		return
+	}
+
+	utils.RespondSuccess(c, gin.H{"url": "/uploads/" + filename})
+}
+
 func (h *RentHandler) ExtendRent(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -312,4 +341,33 @@ func (h *RentHandler) Delete(c *gin.Context) {
 	}
 
 	utils.RespondSuccess(c, gin.H{"message": "Rent order deleted successfully"})
+}
+
+func (h *RentHandler) VoidTransaction(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
+		return
+	}
+
+	trxId, err := strconv.ParseUint(c.Param("trxId"), 10, 32)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
+		return
+	}
+
+	role := middleware.GetUserRole(c)
+	if role != "admin" {
+		utils.RespondFailed(c, http.StatusForbidden, utils.NewAppError("Hanya admin yang dapat melakukan koreksi transaksi"))
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	order, err := h.rentService.VoidTransaction(uint(id), uint(trxId), userID)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, err)
+		return
+	}
+
+	utils.RespondSuccess(c, order)
 }

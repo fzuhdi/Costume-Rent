@@ -17,6 +17,8 @@ type RentOrder struct {
 	Status             string            `json:"status" gorm:"default:booked"`
 	OrderSource        string            `json:"order_source" gorm:"default:'offline'"`
 	ShippingAddress    string            `json:"shipping_address"`
+	PickupPhotos       string            `json:"pickup_photos"` // JSON array string
+	ReturnPhotos       string            `json:"return_photos"` // JSON array string
 	Notes              string            `json:"notes"`
 	CreatedBy          uint              `json:"created_by"`
 	Creator            User              `json:"creator,omitempty" gorm:"foreignKey:CreatedBy"`

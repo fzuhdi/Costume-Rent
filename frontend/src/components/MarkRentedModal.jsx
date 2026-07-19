@@ -1,7 +1,8 @@
 import { useEffect, useReducer } from 'react';
 import { Modal, Button, Checkbox, Select, ListBox, Label } from '@heroui/react';
 import PaymentFormFields from './PaymentFormFields';
-import { markRented, uploadPaymentProof } from '../api/rentApi';
+import { markRented, uploadPaymentProof, uploadRentPhoto } from '../api/rentApi';
+import MultipleImageUpload from './MultipleImageUpload';
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
 const formatCurrency = (value) => currencyFormatter.format(value);
@@ -50,6 +51,7 @@ const initialState = {
   uploading: false,
   loading: false,
   error: '',
+  pickupPhotos: [],
 };
 
 function reducer(state, action) {
@@ -69,7 +71,7 @@ function reducer(state, action) {
 
 const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, guaranteeType }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { confirmSecurityItem, amount, method, proof, proofFile, guaranteeType: formGuaranteeType, uploading, loading, error } = state;
+  const { confirmSecurityItem, amount, method, proof, proofFile, guaranteeType: formGuaranteeType, uploading, loading, error, pickupPhotos } = state;
 
   useEffect(() => {
     if (isOpen) {
@@ -84,13 +86,25 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, 
     dispatch({ type: 'SET_FIELD', field: 'loading', value: true });
     dispatch({ type: 'SET_FIELD', field: 'error', value: '' });
     try {
+      // 1. Upload photos if any
+      const uploadedPhotos = [];
+      for (const photo of pickupPhotos) {
+        try {
+          const res = await uploadRentPhoto(photo.file);
+          uploadedPhotos.push(res.data.url);
+        } catch (err) {
+          console.error("Failed to upload photo", err);
+        }
+      }
+
       const paymentPayload = hasBalance && parseInt(amount) > 0
         ? { amount: parseInt(amount), payment_method: method, payment_proof: proof, notes: 'Pelunasan Sewa' }
         : null;
 
       const payload = {
         guarantee_type: formGuaranteeType,
-        payment: paymentPayload
+        payment: paymentPayload,
+        pickup_photos: uploadedPhotos,
       };
 
       await markRented(rentId, payload);
@@ -108,7 +122,8 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, 
   };
 
   return (
-    <Modal.Backdrop isOpen={isOpen} onOpenChange={handleClose}>
+    <Modal isOpen={isOpen} onOpenChange={handleClose}>
+      <Modal.Backdrop>
       <Modal.Container>
         <Modal.Dialog className="bg-[var(--surface)] border border-default-200">
           <Modal.Header>
@@ -154,6 +169,14 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, 
               </Checkbox>
             </div>
 
+            <div className="flex flex-col gap-2">
+              <MultipleImageUpload 
+                label="Dokumentasi Pickup (Opsional)" 
+                files={pickupPhotos} 
+                onFilesChange={(newFiles) => dispatch({ type: 'SET_FIELD', field: 'pickupPhotos', value: newFiles })}
+              />
+            </div>
+
             {/* Payment form — only shown when there's a remaining balance */}
             {hasBalance && (
               <PaymentFormFields
@@ -191,6 +214,7 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, 
         </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>
+    </Modal>
   );
 };
 

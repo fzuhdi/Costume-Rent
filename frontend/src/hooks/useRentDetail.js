@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getRentById, cancelRent, deleteRent, updateRent, rollbackOrder, receiveOrder } from '../api/rentApi';
+import { getRentById, cancelRent, deleteRent, updateRent, rollbackOrder, receiveOrder, voidTransaction } from '../api/rentApi';
 import { updateClient } from '../api/clientApi';
 
 export function useRentDetail(id, navigate) {
@@ -146,16 +146,27 @@ export function useRentDetail(id, navigate) {
   };
 
   const handleReceive = async () => {
-    const confirmReceive = window.confirm('Apakah Anda yakin ingin menerima paket ini? Waktu denda akan dihentikan.');
-    if (!confirmReceive) return;
-    
     setProcessing(true);
     try {
       await receiveOrder(id);
       await fetchRent();
+      setActiveModal(null);
     } catch (error) {
       console.error('Failed to receive order:', error);
       alert(error.response?.data?.error || 'Gagal menerima kostum');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleVoidTransaction = async (trxId) => {
+    setProcessing(true);
+    try {
+      await voidTransaction(id, trxId);
+      await fetchRent();
+    } catch (error) {
+      console.error('Failed to void transaction:', error);
+      alert(error.response?.data?.error || 'Gagal membatalkan transaksi');
     } finally {
       setProcessing(false);
     }
@@ -199,12 +210,26 @@ export function useRentDetail(id, navigate) {
 
   const renderLogContent = useCallback((log) => {
     if (log.action_type === 'UPDATED' && (log.new_value === 'updated' || !log.old_value)) {
-      return 'Order details were updated';
+      return 'Rincian pesanan diperbarui';
     }
+    
+    if (log.action_type === 'STATUS_CHANGE') {
+      const statusMap = { pending: 'Pending', booked: 'Dipesan', rented: 'Disewa', returned: 'Dikembalikan', inspected: 'Diinspeksi', completed: 'Selesai', overdue: 'Terlambat', cancelled: 'Dibatalkan' };
+      return `Status berubah dari ${statusMap[log.old_value] || log.old_value} menjadi ${statusMap[log.new_value] || log.new_value}`;
+    }
+    
+    if (log.action_type === 'PAYMENT_ADDED') {
+      return `Pembayaran ditambahkan: ${log.new_value || log.old_value}`;
+    }
+
+    if (log.action_type === 'FEE_UPDATE') {
+      return `Biaya diperbarui: ${log.old_value} ➞ ${log.new_value}`;
+    }
+
     if (log.old_value && log.new_value) {
-      return `${log.old_value} ➞ ${log.new_value}`;
+      return `${log.action_type}: ${log.old_value} ➞ ${log.new_value}`;
     }
-    return log.new_value || log.old_value;
+    return `${log.action_type}: ${log.new_value || log.old_value}`;
   }, []);
 
   return {
@@ -217,7 +242,7 @@ export function useRentDetail(id, navigate) {
     isPreviewOpen, setIsPreviewOpen,
     openPreview, fetchRent, toggleEditMode,
     openRentModal, openReturnModal, openUpgradeModal,
-    handleEditSave, handleCancel, handleRollback, handleReceive, handleDelete,
+    handleEditSave, handleCancel, handleRollback, handleReceive, handleDelete, handleVoidTransaction,
     groupedLogs, renderLogContent
   };
 }

@@ -46,7 +46,8 @@ const POSCheckoutModal = ({
   };
 
   return (
-    <Modal.Backdrop isOpen={isOpen} onOpenChange={handleOpenChangeWrapper}>
+    <Modal isOpen={isOpen} onOpenChange={handleOpenChangeWrapper}>
+      <Modal.Backdrop>
       <Modal.Container>
         <Modal.Dialog className="max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] flex flex-col overflow-hidden rounded-2xl shadow-2xl border border-default-200 bg-[var(--surface)]">
           <Modal.Header className="px-4 sm:px-6 py-4 border-b border-default-200 block text-left flex-shrink-0 bg-[var(--surface)] z-10">
@@ -313,6 +314,7 @@ const POSCheckoutModal = ({
         </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>
+    </Modal>
   );
 };
 

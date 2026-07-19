@@ -104,7 +104,8 @@ const AddPaymentModal = ({ isOpen, onClose, onSuccess, rentId }) => {
   };
 
   return (
-    <Modal.Backdrop isOpen={isOpen} onOpenChange={handleClose}>
+    <Modal isOpen={isOpen} onOpenChange={handleClose}>
+      <Modal.Backdrop>
       <Modal.Container>
         <Modal.Dialog className="bg-[var(--surface)] border border-default-200">
           <Modal.Header>
@@ -164,6 +165,7 @@ const AddPaymentModal = ({ isOpen, onClose, onSuccess, rentId }) => {
         </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>
+    </Modal>
   );
 };
 

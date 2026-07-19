@@ -1,6 +1,8 @@
 package services
 
 import (
+	"encoding/json"
+	"fmt"
 	"math"
 	"strconv"
 	"time"
@@ -478,6 +480,13 @@ func (s *RentService) MarkReturned(id uint, req dto.MarkReturnedRequest, userID 
 		config.DB.Create(&tx)
 	}
 
+	if len(req.ReturnPhotos) > 0 {
+		photosJSON, err := json.Marshal(req.ReturnPhotos)
+		if err == nil {
+			order.ReturnPhotos = string(photosJSON)
+		}
+	}
+
 	if req.Payment != nil {
 		_, err := s.AddPayment(order.ID, *req.Payment, userID)
 		if err != nil {
@@ -500,14 +509,30 @@ func (s *RentService) MarkReturned(id uint, req dto.MarkReturnedRequest, userID 
 	}
 
 	oldStatus := order.Status
-	order.Status = "completed"
+
+	// Check if fully paid to determine if we go to inspected or completed
+	var orderWithTransactions models.RentOrder
+	config.DB.Preload("Transactions").First(&orderWithTransactions, id)
+	totalDebits := 0
+	for _, t := range orderWithTransactions.Transactions {
+		if t.Type == "DEBIT" {
+			totalDebits += t.Amount
+		}
+	}
+
+	if order.TotalPaid >= totalDebits {
+		order.Status = "completed"
+	} else {
+		order.Status = "inspected"
+	}
+
 	order.HasSecurityItem = false
 
 	if err := config.DB.Save(&order).Error; err != nil {
 		return nil, err
 	}
 
-	s.logActivity(order.ID, userID, "STATUS_CHANGE", oldStatus, "completed")
+	s.logActivity(order.ID, userID, "STATUS_CHANGE", oldStatus, order.Status)
 
 	return s.GetByID(order.ID)
 }
@@ -561,6 +586,13 @@ func (s *RentService) MarkRented(id uint, req dto.MarkRentedRequest, userID uint
 	order.HasSecurityItem = true
 	order.GuaranteeType = req.GuaranteeType
 
+	if len(req.PickupPhotos) > 0 {
+		photosJSON, err := json.Marshal(req.PickupPhotos)
+		if err == nil {
+			order.PickupPhotos = string(photosJSON)
+		}
+	}
+
 	if err := config.DB.Save(&order).Error; err != nil {
 		return nil, err
 	}
@@ -594,6 +626,18 @@ func (s *RentService) RollbackStatus(id uint, userID uint) (*models.RentOrder, e
 			return nil, err
 		}
 		s.logActivity(order.ID, userID, "ROLLBACK", oldStatus, "rented")
+	case "inspected":
+		order.Status = "returned"
+		if err := config.DB.Save(&order).Error; err != nil {
+			return nil, err
+		}
+		s.logActivity(order.ID, userID, "ROLLBACK", oldStatus, "returned")
+	case "completed":
+		order.Status = "inspected"
+		if err := config.DB.Save(&order).Error; err != nil {
+			return nil, err
+		}
+		s.logActivity(order.ID, userID, "ROLLBACK", oldStatus, "inspected")
 	default:
 		return nil, utils.NewAppError("ERR_INVALID_STATUS_ROLLBACK")
 	}
@@ -794,6 +838,16 @@ func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderR
 		})
 	}
 
+	var pickupPhotos []string
+	if order.PickupPhotos != "" {
+		_ = json.Unmarshal([]byte(order.PickupPhotos), &pickupPhotos)
+	}
+
+	var returnPhotos []string
+	if order.ReturnPhotos != "" {
+		_ = json.Unmarshal([]byte(order.ReturnPhotos), &returnPhotos)
+	}
+
 	return dto.RentOrderResponse{
 		ID:                 order.ID,
 		ClientID:           order.ClientID,
@@ -809,6 +863,8 @@ func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderR
 		PaymentStatus:      order.PaymentStatus,
 		HasSecurityItem:    order.HasSecurityItem,
 		Status:             order.Status,
+		PickupPhotos:       pickupPhotos,
+		ReturnPhotos:       returnPhotos,
 		Notes:              order.Notes,
 		Items:              items,
 		Transactions:       transactions,
@@ -858,6 +914,13 @@ func (s *RentService) AddPayment(orderID uint, req dto.AddPaymentRequest, userID
 	totalTagihan := totalFee + totalDebits
 	if order.TotalPaid >= totalTagihan {
 		order.PaymentStatus = "LUNAS"
+
+		// Auto-complete if currently inspected
+		if order.Status == "inspected" {
+			oldStatus := order.Status
+			order.Status = "completed"
+			s.logActivity(orderID, userID, "STATUS_CHANGE", oldStatus, "completed")
+		}
 	} else if order.TotalPaid > 0 {
 		order.PaymentStatus = "DP"
 	}
@@ -867,6 +930,89 @@ func (s *RentService) AddPayment(orderID uint, req dto.AddPaymentRequest, userID
 	}
 
 	s.logActivity(orderID, userID, "PAYMENT_ADDED", "Added payment of "+strconv.Itoa(req.Amount), order.Status)
+
+	return s.GetByID(orderID)
+}
+
+func (s *RentService) VoidTransaction(orderID uint, trxID uint, userID uint) (*models.RentOrder, error) {
+	var trx models.RentTransaction
+	if err := config.DB.First(&trx, trxID).Error; err != nil {
+		return nil, utils.NewAppError("ERR_INVALID_ID")
+	}
+
+	if trx.RentOrderID != orderID {
+		return nil, utils.NewAppError("ERR_BAD_REQUEST")
+	}
+
+	if trx.Category == "CORRECTION" || trx.Category == "BASE_FEE" {
+		return nil, utils.NewAppError("ERR_BAD_REQUEST") // Cannot void a correction or base fee
+	}
+
+	if trx.IsVoided {
+		return nil, utils.NewAppError("ERR_ALREADY_VOIDED")
+	}
+
+	// Create offsetting transaction
+	voidTx := models.RentTransaction{
+		RentOrderID: orderID,
+		Type:        trx.Type,
+		Category:    "CORRECTION",
+		Amount:      -trx.Amount,
+		Notes:       "Koreksi/Pembatalan",
+		CreatedBy:   userID,
+	}
+
+	if err := config.DB.Create(&voidTx).Error; err != nil {
+		return nil, err
+	}
+
+	// Mark original as voided
+	trx.IsVoided = true
+	if err := config.DB.Save(&trx).Error; err != nil {
+		return nil, err
+	}
+
+	// Recalculate totals
+	var order models.RentOrder
+	if err := config.DB.Preload("Items").Preload("Transactions").First(&order, orderID).Error; err != nil {
+		return nil, err
+	}
+
+	totalPaid := 0
+	totalDebits := 0
+	totalFee := 0
+
+	for _, item := range order.Items {
+		totalFee += item.RentalFee * item.Quantity
+	}
+
+	for _, t := range order.Transactions {
+		if t.Type == "DEBIT" {
+			totalDebits += t.Amount
+		} else if t.Type == "CREDIT" || t.Type == "" {
+			totalPaid += t.Amount
+		}
+	}
+
+	order.TotalPaid = totalPaid
+	totalTagihan := totalFee + totalDebits
+
+	if order.TotalPaid >= totalTagihan && totalTagihan > 0 {
+		order.PaymentStatus = "LUNAS"
+	} else if order.TotalPaid > 0 {
+		order.PaymentStatus = "DP"
+	} else {
+		order.PaymentStatus = "BELUM_BAYAR"
+	}
+
+	// We do NOT auto-change the order status on void (e.g. from completed back to inspected)
+	// because they can use the Rollback button for status if they want.
+
+	if err := config.DB.Save(&order).Error; err != nil {
+		return nil, err
+	}
+
+	s.logActivity(orderID, userID, "TRX_VOIDED", fmt.Sprintf("Voided transaction #%d", trxID), order.Status)
 
 	return s.GetByID(orderID)
 }

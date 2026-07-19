@@ -10,6 +10,7 @@ type RentTransaction struct {
 	PaymentMethod  string `json:"payment_method"`
 	PaymentProof   string `json:"payment_proof"`
 	Notes          string `json:"notes"`
+	IsVoided       bool   `json:"is_voided" gorm:"default:false"`
 	CreatedBy      uint   `json:"created_by"`
 	Creator        User   `json:"creator,omitempty" gorm:"foreignKey:CreatedBy"`
 }

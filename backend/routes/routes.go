@@ -104,9 +104,11 @@ func SetupRouter() *gin.Engine {
 			auth.PUT("/rents/:id/rollback", rentHandler.RollbackOrder)
 			auth.PUT("/rents/:id/cancel", rentHandler.CancelOrder)
 			auth.POST("/rents/upload-proof", rentHandler.UploadPaymentProof)
+			auth.POST("/rents/upload-photo", rentHandler.UploadRentPhoto)
 			auth.PUT("/rents/:id/book", rentHandler.MarkBooked)
 			auth.POST("/rents/:id/extend", rentHandler.ExtendRent)
 			auth.POST("/rents/:id/payments", rentHandler.AddPayment)
+			auth.POST("/rents/:id/transactions/:trxId/void", rentHandler.VoidTransaction)
 			auth.DELETE("/rents/:id", rentHandler.Delete)
 
 			auth.GET("/rents-excel/export", excelHandler.ExportRents)

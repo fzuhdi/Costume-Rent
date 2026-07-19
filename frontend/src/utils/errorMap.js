@@ -13,7 +13,7 @@ export const errorMessages = {
   ERR_INVALID_STATUS_RENT: 'Hanya pesanan berstatus booked yang bisa diubah menjadi disewakan',
   ERR_FULL_PAYMENT_PROOF_REQUIRED: 'Bukti pelunasan pembayaran wajib diunggah untuk mengambil kostum',
   ERR_FULL_PAYMENT_REQUIRED: 'Pelunasan pembayaran diperlukan untuk mengambil kostum',
-  ERR_INVALID_STATUS_ROLLBACK: 'Hanya pesanan berstatus disewakan atau kembali yang dapat dibatalkan statusnya',
+  ERR_INVALID_STATUS_ROLLBACK: 'Hanya pesanan berstatus disewakan, kembali, diinspeksi, atau selesai yang dapat dibatalkan statusnya',
   ERR_INVALID_STATUS_UPGRADE: 'Hanya pesanan berstatus pending yang dapat diubah ke booked',
   ERR_PAYMENT_REQUIRED_UPGRADE: 'Pembayaran diperlukan untuk mengubah status menjadi booked',
   ERR_DP_PROOF_REQUIRED: 'Bukti pembayaran DP wajib diunggah',

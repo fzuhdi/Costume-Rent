@@ -52,6 +52,8 @@ type RentOrderResponse struct {
 	PaymentStatus      string                    `json:"payment_status"`
 	HasSecurityItem    bool                      `json:"has_security_item"`
 	Status             string                    `json:"status"`
+	PickupPhotos       []string                  `json:"pickup_photos"`
+	ReturnPhotos       []string                  `json:"return_photos"`
 	Notes              string                    `json:"notes"`
 	Items              []RentOrderItemResponse   `json:"items"`
 	Transactions       []RentTransactionResponse `json:"transactions"`
@@ -85,6 +87,7 @@ type MarkReturnedRequest struct {
 	LateFee         int                `json:"late_fee"` // Some forms might need this
 	DamagedItems    []DamagedItem      `json:"damaged_items"`
 	Payment         *AddPaymentRequest `json:"payment"`
+	ReturnPhotos    []string           `json:"return_photos"`
 }
 
 type DamagedItem struct {
@@ -95,6 +98,7 @@ type DamagedItem struct {
 type MarkRentedRequest struct {
 	GuaranteeType string             `json:"guarantee_type" binding:"required"`
 	Payment       *AddPaymentRequest `json:"payment"`
+	PickupPhotos  []string           `json:"pickup_photos"`
 }
 
 type UpgradeToBookedRequest struct {
