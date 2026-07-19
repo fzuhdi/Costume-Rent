@@ -138,7 +138,8 @@ const ExcelImportModal = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onOpenChange={(open) => { if (!open) closeModal(); else onOpenChange(open); }}>
+    <Modal isOpen={isOpen} onOpenChange={(open) =>
+      <Button className="hidden">Hidden Trigger</Button> { if (!open) closeModal(); else onOpenChange(open); }}>
       <Modal.Backdrop>
       <Modal.Container>
         <Modal.Dialog className="sm:max-w-2xl bg-[var(--surface)] border border-default-200">

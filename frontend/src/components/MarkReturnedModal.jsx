@@ -121,6 +121,7 @@ const MarkReturnedModal = ({
 
   return (
     <Modal isOpen={isOpen} onOpenChange={onClose}>
+      <Button className="hidden">Hidden Trigger</Button>
       <Modal.Backdrop>
       <Modal.Container>
         <Modal.Dialog className="bg-[var(--surface)] border border-default-200">

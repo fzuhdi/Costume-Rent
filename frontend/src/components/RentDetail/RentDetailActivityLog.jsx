@@ -50,6 +50,7 @@ export default function RentDetailActivityLog({
       </Card>
 
       <Modal isOpen={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+      <Button className="hidden">Hidden Trigger</Button>
       <Modal.Backdrop>
         <Modal.Container>
           <Modal.Dialog className="max-w-lg max-h-[80vh] overflow-y-auto bg-[var(--surface)] border border-default-200">

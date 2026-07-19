@@ -47,6 +47,7 @@ const POSCheckoutModal = ({
 
   return (
     <Modal isOpen={isOpen} onOpenChange={handleOpenChangeWrapper}>
+      <Button className="hidden">Hidden Trigger</Button>
       <Modal.Backdrop>
       <Modal.Container>
         <Modal.Dialog className="max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] flex flex-col overflow-hidden rounded-2xl shadow-2xl border border-default-200 bg-[var(--surface)]">
