@@ -21,7 +21,7 @@ func NewAuthService() *AuthService {
 
 func (s *AuthService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 	var user models.User
-	if err := config.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
+	if err := config.DB.Where("username = ? OR email = ?", req.Username, req.Username).First(&user).Error; err != nil {
 		return nil, err
 	}
 

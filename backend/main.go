@@ -96,6 +96,7 @@ func runSeedCommand(args []string) {
 	log.Println("Running seed command...")
 	seedReferenceData()
 	adminID := seedAdminUser()
+	seedStaffUser()
 
 	if len(args) > 0 && args[0] == "demo" {
 		seedSampleCostumes()
@@ -113,12 +114,11 @@ func seedReferenceData() {
 	if regionCount == 0 {
 		log.Println("Seeding regions...")
 		regions := []models.Region{
-			{Name: "Bali"},
-			{Name: "Jawa"},
-			{Name: "Sumatera"},
-			{Name: "Kalimantan"},
-			{Name: "Sulawesi"},
-			{Name: "Nusa Tenggara"},
+			{Name: "Region 1"},
+			{Name: "Region 2"},
+			{Name: "Region 3"},
+			{Name: "Region 4"},
+			{Name: "Region 5"},
 		}
 		for _, r := range regions {
 			db.Create(&r)
@@ -130,12 +130,11 @@ func seedReferenceData() {
 	if categoryCount == 0 {
 		log.Println("Seeding categories...")
 		categories := []models.Category{
-			{Name: "Baju Adat"},
-			{Name: "Baju Pernikahan"},
-			{Name: "Baju Upacara"},
-			{Name: "Topeng"},
-			{Name: "Aksesoris"},
-			{Name: "Selendang"},
+			{Name: "Category 1"},
+			{Name: "Category 2"},
+			{Name: "Category 3"},
+			{Name: "Category 4"},
+			{Name: "Category 5"},
 		}
 		for _, c := range categories {
 			db.Create(&c)
@@ -190,6 +189,37 @@ func seedAdminUser() uint {
 
 	log.Println("Default admin user created: admin / admin123")
 	return admin.ID
+}
+
+func seedStaffUser() {
+	db := config.GetDB()
+
+	var existingStaff models.User
+	if err := db.Where("username = ?", "staff").First(&existingStaff).Error; err == nil {
+		log.Println("Default staff user already exists")
+		return
+	}
+
+	log.Println("Seeding default staff user...")
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("staff123"), bcrypt.DefaultCost)
+	if err != nil {
+		log.Fatalf("Failed to hash password: %v", err)
+	}
+
+	staff := models.User{
+		Name:     "Staff Dummy",
+		Username: "staff",
+		Email:    "staff@busana.com",
+		Password: string(hashedPassword),
+		Role:     "staff",
+	}
+
+	if err := db.Create(&staff).Error; err != nil {
+		log.Fatalf("Failed to create staff user: %v", err)
+	}
+
+	log.Println("Default staff user created: staff / staff123")
 }
 
 func seedSampleCostumes() {

@@ -62,9 +62,9 @@ const LoginPage = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-            <TextField name="username" type="text" isRequired aria-label="Username">
-              <Label>Username</Label>
-              <Input type="text" placeholder="admin" value={username} onChange={(e) => setUsername(e.target.value)} />
+            <TextField name="username" type="text" isRequired aria-label="Username or Email">
+              <Label>Username or Email</Label>
+              <Input type="text" placeholder="admin or admin@busana.com" value={username} onChange={(e) => setUsername(e.target.value)} />
             </TextField>
 
             <TextField name="password" type="password" isRequired aria-label="Password">
