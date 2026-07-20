@@ -21,6 +21,7 @@ import ClientListPage from './pages/ClientListPage';
 import ClientDetailPage from './pages/ClientDetailPage';
 import ClientFormPage from './pages/ClientFormPage';
 import SettingsPage from './pages/SettingsPage';
+import MasterDataPage from './pages/MasterDataPage';
 import ProfilePage from './pages/ProfilePage';
 import NotFoundPage from './pages/NotFoundPage';
 import { useSettings } from './context/SettingsContext';
@@ -87,7 +88,9 @@ const AppRoutes = () => {
         <Route path="/clients" element={<ClientListPage />} />
         <Route path="/clients/new" element={<ClientFormPage />} />
         <Route path="/clients/:id" element={<ClientDetailPage />} />
+        <Route path="/clients/:id/edit" element={<ClientFormPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/master-data" element={<MasterDataPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
 

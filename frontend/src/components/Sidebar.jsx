@@ -14,6 +14,7 @@ const navItems = [
 ];
 
 const bottomItems = [
+  { path: '/master-data', icon: Layers, label: 'Master Data' },
   { path: '/settings', icon: Settings, label: 'Pengaturan' },
 ];
 
