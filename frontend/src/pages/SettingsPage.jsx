@@ -64,12 +64,14 @@ const SettingsPage = () => {
 
       <div className="flex gap-4 border-b border-[var(--border)] pb-2 mb-4">
         <button 
+          type="button"
           className={`pb-2 px-1 font-semibold ${activeTab === 'umum' ? 'border-b-2 border-primary text-primary' : 'text-default-500 hover:text-default-700'}`}
           onClick={() => setActiveTab('umum')}
         >
           Umum
         </button>
         <button 
+          type="button"
           className={`pb-2 px-1 font-semibold ${activeTab === 'master' ? 'border-b-2 border-primary text-primary' : 'text-default-500 hover:text-default-700'}`}
           onClick={() => setActiveTab('master')}
         >
