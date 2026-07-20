@@ -55,8 +55,13 @@ func SetupRouter() *gin.Engine {
 
 		api.GET("/regions", costumeHandler.GetRegions)
 		api.POST("/regions", middleware.AuthMiddleware(), costumeHandler.CreateRegion)
+		api.PUT("/regions/:id", middleware.AuthMiddleware(), costumeHandler.UpdateRegion)
+		api.DELETE("/regions/:id", middleware.AuthMiddleware(), costumeHandler.DeleteRegion)
+
 		api.GET("/categories", costumeHandler.GetCategories)
 		api.POST("/categories", middleware.AuthMiddleware(), costumeHandler.CreateCategory)
+		api.PUT("/categories/:id", middleware.AuthMiddleware(), costumeHandler.UpdateCategory)
+		api.DELETE("/categories/:id", middleware.AuthMiddleware(), costumeHandler.DeleteCategory)
 
 		api.GET("/costumes", costumeHandler.List)
 		api.GET("/costumes/search", costumeHandler.Search)

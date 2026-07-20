@@ -478,3 +478,56 @@ func (s *CostumeService) CreateCategory(name string) (*dto.CategoryResponse, err
 		UpdatedAt: category.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}, nil
 }
+
+func (s *CostumeService) UpdateRegion(id uint, req dto.CreateRegionRequest) (*dto.RegionResponse, error) {
+	var region models.Region
+	if err := config.DB.First(&region, id).Error; err != nil {
+		return nil, err
+	}
+	region.Name = req.Name
+	if err := config.DB.Save(&region).Error; err != nil {
+		return nil, err
+	}
+	return &dto.RegionResponse{
+		ID:        region.ID,
+		Name:      region.Name,
+		CreatedAt: region.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt: region.UpdatedAt.Format("2006-01-02 15:04:05"),
+	}, nil
+}
+
+func (s *CostumeService) DeleteRegion(id uint) error {
+	var count int64
+	config.DB.Model(&models.Costume{}).Where("region_id = ?", id).Count(&count)
+	if count > 0 {
+		return errors.New("cannot delete region: it is currently used by " + strconv.FormatInt(count, 10) + " costume(s)")
+	}
+	return config.DB.Delete(&models.Region{}, id).Error
+}
+
+func (s *CostumeService) UpdateCategory(id uint, req dto.CreateCategoryRequest) (*dto.CategoryResponse, error) {
+	var category models.Category
+	if err := config.DB.First(&category, id).Error; err != nil {
+		return nil, err
+	}
+	category.Name = req.Name
+	if err := config.DB.Save(&category).Error; err != nil {
+		return nil, err
+	}
+	return &dto.CategoryResponse{
+		ID:        category.ID,
+		Name:      category.Name,
+		CreatedAt: category.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt: category.UpdatedAt.Format("2006-01-02 15:04:05"),
+	}, nil
+}
+
+func (s *CostumeService) DeleteCategory(id uint) error {
+	var count int64
+	config.DB.Model(&models.Costume{}).Where("category_id = ?", id).Count(&count)
+	if count > 0 {
+		return errors.New("cannot delete category: it is currently used by " + strconv.FormatInt(count, 10) + " costume(s)")
+	}
+	return config.DB.Delete(&models.Category{}, id).Error
+}
+

@@ -4,6 +4,8 @@ import { Save, Image } from 'lucide-react';
 import { TextField, Input, Button, Card, Chip, FieldError, Label } from '@heroui/react';
 import FileUploadZone from '../components/FileUploadZone';
 
+import MasterDataTab from '../components/MasterDataTab';
+
 const SettingsPage = () => {
   const { settings, updateSettings, uploadLogo } = useSettings();
   const [formData, setFormData] = useState({
@@ -17,6 +19,7 @@ const SettingsPage = () => {
   const [preview, setPreview] = useState(settings.app_logo || '');
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [activeTab, setActiveTab] = useState('umum');
 
 
   const handleLogoChange = (e) => {
@@ -59,7 +62,24 @@ const SettingsPage = () => {
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-bold">Pengaturan Aplikasi</h1>
 
-      <Card>
+      <div className="flex gap-4 border-b border-[var(--border)] pb-2 mb-4">
+        <button 
+          className={`pb-2 px-1 font-semibold ${activeTab === 'umum' ? 'border-b-2 border-primary text-primary' : 'text-default-500 hover:text-default-700'}`}
+          onClick={() => setActiveTab('umum')}
+        >
+          Umum
+        </button>
+        <button 
+          className={`pb-2 px-1 font-semibold ${activeTab === 'master' ? 'border-b-2 border-primary text-primary' : 'text-default-500 hover:text-default-700'}`}
+          onClick={() => setActiveTab('master')}
+        >
+          Master Data
+        </button>
+      </div>
+
+      {activeTab === 'umum' && (
+        <>
+          <Card>
         <Card.Content>
           <div className="mb-4">
             <h2 className="text-xl font-semibold">Branding</h2>
@@ -137,6 +157,12 @@ const SettingsPage = () => {
           </div>
         </Card.Content>
       </Card>
+      </>
+      )}
+
+      {activeTab === 'master' && (
+        <MasterDataTab />
+      )}
     </div>
   );
 };

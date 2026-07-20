@@ -248,3 +248,67 @@ func (h *CostumeHandler) Search(c *gin.Context) {
 
 	utils.RespondSuccess(c, costumes)
 }
+
+func (h *CostumeHandler) UpdateRegion(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
+		return
+	}
+	var req dto.CreateRegionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, err)
+		return
+	}
+	res, err := h.costumeService.UpdateRegion(uint(id), req)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
+		return
+	}
+	utils.RespondSuccess(c, res)
+}
+
+func (h *CostumeHandler) DeleteRegion(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
+		return
+	}
+	if err := h.costumeService.DeleteRegion(uint(id)); err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, err) // using 400 because it might be a foreign key constraint
+		return
+	}
+	utils.RespondSuccess(c, gin.H{"message": "Region deleted"})
+}
+
+func (h *CostumeHandler) UpdateCategory(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
+		return
+	}
+	var req dto.CreateCategoryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, err)
+		return
+	}
+	res, err := h.costumeService.UpdateCategory(uint(id), req)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
+		return
+	}
+	utils.RespondSuccess(c, res)
+}
+
+func (h *CostumeHandler) DeleteCategory(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
+		return
+	}
+	if err := h.costumeService.DeleteCategory(uint(id)); err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, err) // using 400 because it might be a foreign key constraint
+		return
+	}
+	utils.RespondSuccess(c, gin.H{"message": "Category deleted"})
+}
