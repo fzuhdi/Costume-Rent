@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, useDisclosure, Spinner } from '@heroui/react';
+import { Button, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, useOverlayState, Spinner } from '@heroui/react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { getRegions, createRegion, updateRegion, deleteRegion, getCategories, createCategory, updateCategory, deleteCategory } from '../api/costumeApi';
 import MasterDataModal from './MasterDataModal';
@@ -12,7 +12,7 @@ const MasterDataTab = () => {
   const [error, setError] = useState(null);
   
   // Modal State
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const modalState = useOverlayState();
   const [modalType, setModalType] = useState('Region'); // 'Region' or 'Category'
   const [selectedItem, setSelectedItem] = useState(null);
 
@@ -50,13 +50,13 @@ const MasterDataTab = () => {
   const handleAdd = (type) => {
     setModalType(type);
     setSelectedItem(null);
-    onOpen();
+    modalState.open();
   };
 
   const handleEdit = (type, item) => {
     setModalType(type);
     setSelectedItem(item);
-    onOpen();
+    modalState.open();
   };
 
   const handleDelete = async (type, id) => {
@@ -177,8 +177,9 @@ const MasterDataTab = () => {
       </div>
 
       <MasterDataModal
-        isOpen={isOpen}
-        onClose={onClose}
+        isOpen={modalState.isOpen}
+        onOpenChange={modalState.setOpen}
+        onClose={modalState.close}
         onSave={handleSave}
         item={selectedItem}
         type={modalType}
