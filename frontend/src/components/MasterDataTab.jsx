@@ -20,7 +20,7 @@ const MasterDataTab = () => {
     try {
       setLoadingRegions(true);
       const res = await getRegions();
-      setRegions(res.data.data || []);
+      setRegions(Array.isArray(res.data) ? res.data : res.data?.data || []);
     } catch (err) {
       console.error(err);
       setError("Gagal memuat regions");
@@ -33,7 +33,7 @@ const MasterDataTab = () => {
     try {
       setLoadingCategories(true);
       const res = await getCategories();
-      setCategories(res.data.data || []);
+      setCategories(Array.isArray(res.data) ? res.data : res.data?.data || []);
     } catch (err) {
       console.error(err);
       setError("Gagal memuat categories");

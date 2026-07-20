@@ -70,8 +70,8 @@ const CataloguePage = () => {
           getRegions(),
           getCategories()
         ]);
-        setRegions(regionsRes.data?.data || []);
-        setCategories(categoriesRes.data?.data || []);
+        setRegions(Array.isArray(regionsRes.data) ? regionsRes.data : regionsRes.data?.data || []);
+        setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : categoriesRes.data?.data || []);
       } catch (error) {
         console.error('Failed to fetch filters:', error);
       }
