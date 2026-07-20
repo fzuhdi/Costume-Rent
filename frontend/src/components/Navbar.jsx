@@ -33,7 +33,10 @@ const NavbarComponent = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('heroui-theme') || decodeURIComponent(getCookie('heroui-theme'));
+    let savedTheme = localStorage.getItem('heroui-theme') || decodeURIComponent(getCookie('heroui-theme'));
+    if (!savedTheme) {
+      savedTheme = 'light';
+    }
     if (savedTheme === 'dark' || savedTheme === 'light') {
       persistTheme(savedTheme);
       setTheme(savedTheme);

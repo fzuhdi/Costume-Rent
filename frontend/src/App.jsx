@@ -33,7 +33,12 @@ const AppRoutes = () => {
   const { settings, loading: settingsLoading } = useSettings();
 
   useEffect(() => {
-    const theme = localStorage.getItem('heroui-theme') || (document.cookie.match(/(?:^|;)\s*heroui-theme=([^;]*)/)?.[1] || '');
+    let theme = localStorage.getItem('heroui-theme') || (document.cookie.match(/(?:^|;)\s*heroui-theme=([^;]*)/)?.[1] || '');
+    if (!theme) {
+      theme = 'light';
+      localStorage.setItem('heroui-theme', 'light');
+      document.cookie = `heroui-theme=light; path=/; SameSite=Lax`;
+    }
     if (theme === 'dark' || theme === 'light') {
       document.documentElement.classList.toggle('dark', theme === 'dark');
       document.documentElement.classList.toggle('light', theme !== 'dark');
