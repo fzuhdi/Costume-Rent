@@ -113,23 +113,18 @@ const MasterDataTab = () => {
         
         <Table aria-label="Regions Table" shadow="sm">
           <Table.ScrollContainer>
-            <Table.Content>
+            <Table.Content aria-label="Regions Table Content">
               <Table.Header>
                 <Table.Column isRowHeader>ID</Table.Column>
                 <Table.Column>NAME</Table.Column>
                 <Table.Column align="center">ACTIONS</Table.Column>
               </Table.Header>
-              <Table.Body>
-                {regions.length === 0 ? (
-                  <Table.Row>
-                    <Table.Cell colSpan={3} className="text-center py-4">
-                      {loadingRegions ? <Spinner /> : "No regions found."}
-                    </Table.Cell>
-                    <Table.Cell className="hidden"></Table.Cell>
-                    <Table.Cell className="hidden"></Table.Cell>
-                  </Table.Row>
-                ) : (
-                  regions.map((item) => (
+              <Table.Body renderEmptyState={() => (
+                <div className="flex w-full items-center justify-center p-4">
+                  {loadingRegions ? <Spinner /> : "No regions found."}
+                </div>
+              )}>
+                {regions.map((item) => (
                     <Table.Row key={item.id}>
                       <Table.Cell>{item.id}</Table.Cell>
                       <Table.Cell>{item.name}</Table.Cell>
@@ -143,7 +138,7 @@ const MasterDataTab = () => {
                       </Table.Cell>
                     </Table.Row>
                   ))
-                )}
+                }
               </Table.Body>
             </Table.Content>
           </Table.ScrollContainer>
@@ -161,23 +156,18 @@ const MasterDataTab = () => {
         
         <Table aria-label="Categories Table" shadow="sm">
           <Table.ScrollContainer>
-            <Table.Content>
+            <Table.Content aria-label="Categories Table Content">
               <Table.Header>
                 <Table.Column isRowHeader>ID</Table.Column>
                 <Table.Column>NAME</Table.Column>
                 <Table.Column align="center">ACTIONS</Table.Column>
               </Table.Header>
-              <Table.Body>
-                {categories.length === 0 ? (
-                  <Table.Row>
-                    <Table.Cell colSpan={3} className="text-center py-4">
-                      {loadingCategories ? <Spinner /> : "No categories found."}
-                    </Table.Cell>
-                    <Table.Cell className="hidden"></Table.Cell>
-                    <Table.Cell className="hidden"></Table.Cell>
-                  </Table.Row>
-                ) : (
-                  categories.map((item) => (
+              <Table.Body renderEmptyState={() => (
+                <div className="flex w-full items-center justify-center p-4">
+                  {loadingCategories ? <Spinner /> : "No categories found."}
+                </div>
+              )}>
+                {categories.map((item) => (
                     <Table.Row key={item.id}>
                       <Table.Cell>{item.id}</Table.Cell>
                       <Table.Cell>{item.name}</Table.Cell>
@@ -191,7 +181,7 @@ const MasterDataTab = () => {
                       </Table.Cell>
                     </Table.Row>
                   ))
-                )}
+                  }
               </Table.Body>
             </Table.Content>
           </Table.ScrollContainer>

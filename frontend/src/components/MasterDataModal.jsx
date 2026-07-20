@@ -34,7 +34,6 @@ const MasterDataModal = ({ isOpen, onOpenChange, onClose, onSave, item, type }) 
       <Modal.Backdrop isOpen={isOpen} onOpenChange={onOpenChange}>
         <Modal.Container placement="center">
           <Modal.Dialog>
-            <Modal.CloseTrigger />
             <Modal.Header className="flex flex-col gap-1">
               <Modal.Heading>{title}</Modal.Heading>
             </Modal.Header>
