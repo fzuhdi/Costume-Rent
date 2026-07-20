@@ -124,19 +124,19 @@ const SettingsPage = () => {
             <h2 className="text-xl font-semibold">Preview</h2>
           </div>
           <div className="h-12 bg-[var(--surface)] rounded flex items-center gap-3 px-3 mb-4">
-            <img 
-              src={preview || '/kbr-logo.svg'} 
-              alt="Logo" 
-              className="w-7 h-7 object-contain flex-shrink-0" 
+            <img
+              src={preview || '/kbr-logo.svg'}
+              alt="Logo"
+              className="w-7 h-7 object-contain flex-shrink-0"
             />
-            <span className="text-lg font-bold text-[var(--foreground)] truncate">
-              {formData.app_name || 'Costume Rental'}
-            </span>
-          </div>
-
-          <div>
-            <h3 className="font-bold">{formData.app_name || 'Costume Rental'}</h3>
-            <p className="text-sm text-[var(--muted)]">{formData.tagline || 'Inventory & Rental Management'}</p>
+            <div className="flex flex-col truncate">
+              <span className="text-lg font-bold text-[var(--foreground)] truncate">
+                {formData.app_name || 'Costume Rental'}
+              </span>
+              <span className="text-xs text-[var(--muted)] truncate">
+                {formData.tagline || 'Inventory & Rental Management'}
+              </span>
+            </div>
           </div>
         </Card.Content>
       </Card>

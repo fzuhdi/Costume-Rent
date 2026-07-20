@@ -69,9 +69,14 @@ const SidebarDesktop = () => {
             className={`${isCollapsed ? 'w-8 h-8' : 'w-7 h-7'} object-contain flex-shrink-0`}
           />
           {!isCollapsed && (
-            <span className="text-lg font-bold text-[var(--foreground)] tracking-tight truncate">
-              {settings?.app_name || 'Costume Rent'}
-            </span>
+            <div className="flex flex-col truncate">
+              <span className="text-lg font-bold text-[var(--foreground)] tracking-tight truncate">
+                {settings?.app_name || 'Costume Rent'}
+              </span>
+              <span className="text-[10px] sm:text-xs text-[var(--muted)] tracking-tight truncate">
+                {settings?.tagline || 'Inventory & Rental Management'}
+              </span>
+            </div>
           )}
         </div>
       </div>
@@ -131,9 +136,14 @@ const SidebarMobile = () => {
             alt="Logo"
             className="w-7 h-7 object-contain flex-shrink-0"
           />
-          <span className="text-lg font-bold text-[var(--foreground)] truncate">
-            {settings?.app_name || 'Costume Rent'}
-          </span>
+          <div className="flex flex-col truncate">
+            <span className="text-lg font-bold text-[var(--foreground)] truncate">
+              {settings?.app_name || 'Costume Rent'}
+            </span>
+            <span className="text-xs text-[var(--muted)] truncate">
+              {settings?.tagline || 'Inventory & Rental Management'}
+            </span>
+          </div>
         </div>
 
         <nav className="flex-1 flex flex-col justify-between p-3">
