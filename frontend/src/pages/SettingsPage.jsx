@@ -123,12 +123,15 @@ const SettingsPage = () => {
           <div className="mb-4">
             <h2 className="text-xl font-semibold">Preview</h2>
           </div>
-          <div className="h-12 bg-[var(--surface)] rounded flex items-center px-3 mb-4">
-            {preview ? (
-              <img src={preview} alt="Logo" className="h-8" />
-            ) : (
-              <span className="font-bold">{formData.app_name || 'Costume Rental'}</span>
-            )}
+          <div className="h-12 bg-[var(--surface)] rounded flex items-center gap-3 px-3 mb-4">
+            <img 
+              src={preview || '/vite.svg'} 
+              alt="Logo" 
+              className="w-7 h-7 object-contain flex-shrink-0" 
+            />
+            <span className="text-lg font-bold text-[var(--foreground)] truncate">
+              {formData.app_name || 'Costume Rental'}
+            </span>
           </div>
 
           <div>

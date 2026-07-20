@@ -65,13 +65,11 @@ const SidebarDesktop = () => {
       {/* Sidebar Header - Center aligned for collapsed state */}
       <div className={`sidebar-header ${isCollapsed ? 'justify-center' : 'px-6'}`}>
         <div className="flex items-center gap-3 overflow-hidden">
-          {settings?.app_logo ? (
-            <img src={settings.app_logo} alt="Logo" className={`${isCollapsed ? 'w-8 h-8' : 'w-7 h-7'} object-contain flex-shrink-0`} />
-          ) : (
-            <div className="bg-[var(--primary)] p-1.5 rounded-lg flex-shrink-0 shadow-sm shadow-[var(--primary)]/20">
-              <Layers size={isCollapsed ? 24 : 20} className="text-white" />
-            </div>
-          )}
+          <img 
+            src={settings?.app_logo || '/vite.svg'} 
+            alt="Logo" 
+            className={`${isCollapsed ? 'w-8 h-8' : 'w-7 h-7'} object-contain flex-shrink-0`} 
+          />
           {!isCollapsed && (
             <span className="text-lg font-bold text-[var(--foreground)] tracking-tight truncate">
               {settings?.app_name || 'Costume Rent'}
@@ -130,13 +128,11 @@ const SidebarMobile = () => {
       />
       <div className={`mobile-sidebar bg-[var(--surface)] border-r border-[var(--border)] ${isMobileOpen ? 'open' : ''}`}>
         <div className="flex items-center gap-3 px-5 py-5 border-b border-[var(--border)]">
-          {settings?.app_logo ? (
-            <img src={settings.app_logo} alt="Logo" className="w-7 h-7 object-contain flex-shrink-0" />
-          ) : (
-            <div className="bg-[var(--primary)] p-1.5 rounded-lg flex-shrink-0">
-              <Layers size={20} className="text-white" />
-            </div>
-          )}
+          <img 
+            src={settings?.app_logo || '/vite.svg'} 
+            alt="Logo" 
+            className="w-7 h-7 object-contain flex-shrink-0" 
+          />
           <span className="text-lg font-bold text-[var(--foreground)] truncate">
             {settings?.app_name || 'Costume Rent'}
           </span>
