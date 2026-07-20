@@ -96,3 +96,11 @@ type CategoryResponse struct {
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
 }
+
+type CreateRegionRequest struct {
+	Name string `json:"name" binding:"required"`
+}
+
+type CreateCategoryRequest struct {
+	Name string `json:"name" binding:"required"`
+}
