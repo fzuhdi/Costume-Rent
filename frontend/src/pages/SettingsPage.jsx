@@ -87,27 +87,27 @@ const SettingsPage = () => {
 
             <TextField isRequired>
               <Label>Nama Aplikasi</Label>
-              <Input value={formData.app_name} onChange={(e) => setFormData((prev) => ({...prev, app_name: e.target.value}))} placeholder="Costume Rental" />
+              <Input value={formData.app_name} onChange={(e) => setFormData((prev) => ({ ...prev, app_name: e.target.value }))} placeholder="Costume Rental" />
               <FieldError />
             </TextField>
             <TextField>
               <Label>Tagline</Label>
-              <Input value={formData.tagline} onChange={(e) => setFormData((prev) => ({...prev, tagline: e.target.value}))} placeholder="Inventory & Rental Management" />
+              <Input value={formData.tagline} onChange={(e) => setFormData((prev) => ({ ...prev, tagline: e.target.value }))} placeholder="Inventory & Rental Management" />
             </TextField>
             <TextField isRequired>
               <Label>Hari Persiapan Ambil (Sebelum Hari-H)</Label>
-              <Input type="number" min="0" value={formData.pickup_days_before} onChange={(e) => setFormData((prev) => ({...prev, pickup_days_before: e.target.value}))} placeholder="2" />
+              <Input type="number" min="0" value={formData.pickup_days_before} onChange={(e) => setFormData((prev) => ({ ...prev, pickup_days_before: e.target.value }))} placeholder="2" />
             </TextField>
             <TextField isRequired>
               <Label>Hari Batas Kembali (Setelah Hari-H)</Label>
-              <Input type="number" min="0" value={formData.return_days_after} onChange={(e) => setFormData((prev) => ({...prev, return_days_after: e.target.value}))} placeholder="1" />
+              <Input type="number" min="0" value={formData.return_days_after} onChange={(e) => setFormData((prev) => ({ ...prev, return_days_after: e.target.value }))} placeholder="1" />
             </TextField>
 
             {successMsg && <Chip variant="secondary">{successMsg}</Chip>}
-             {errorMsg && <Chip variant="soft" color="danger">{errorMsg}</Chip>}
+            {errorMsg && <Chip variant="soft" color="danger">{errorMsg}</Chip>}
 
-             <Button type="submit" variant="primary" isPending={saving} aria-label="Simpan Perubahan">
-              {({isPending}) => (
+            <Button type="submit" variant="primary" isPending={saving} aria-label="Simpan Perubahan">
+              {({ isPending }) => (
                 <>
                   {!isPending && <Save size={18} />}
                   {isPending ? 'Menyimpan...' : 'Simpan Perubahan'}
@@ -125,7 +125,7 @@ const SettingsPage = () => {
           </div>
           <div className="h-12 bg-[var(--surface)] rounded flex items-center gap-3 px-3 mb-4">
             <img 
-              src={preview || '/vite.svg'} 
+              src={preview || '/kbr-logo.svg'} 
               alt="Logo" 
               className="w-7 h-7 object-contain flex-shrink-0" 
             />

@@ -27,14 +27,12 @@ const NavLinkItem = ({ item, isCollapsed }) => {
       to={path}
       onClick={closeMobile}
       className={({ isActive }) =>
-        `flex items-center transition-all duration-200 rounded-lg group ${
-          isCollapsed 
-            ? 'justify-center h-12 w-12 mx-auto' 
-            : 'gap-3 px-4 py-3 mx-2'
-        } ${
-          isActive
-            ? 'bg-[var(--primary)]/15 text-[var(--primary)] font-semibold shadow-sm'
-            : 'text-[var(--muted)] hover:bg-[var(--border)]/50 hover:text-[var(--foreground)]'
+        `flex items-center transition-all duration-200 rounded-lg group ${isCollapsed
+          ? 'justify-center h-12 w-12 mx-auto'
+          : 'gap-3 px-4 py-3 mx-2'
+        } ${isActive
+          ? 'bg-[var(--primary)]/15 text-[var(--primary)] font-semibold shadow-sm'
+          : 'text-[var(--muted)] hover:bg-[var(--border)]/50 hover:text-[var(--foreground)]'
         }`
       }
     >
@@ -65,10 +63,10 @@ const SidebarDesktop = () => {
       {/* Sidebar Header - Center aligned for collapsed state */}
       <div className={`sidebar-header ${isCollapsed ? 'justify-center' : 'px-6'}`}>
         <div className="flex items-center gap-3 overflow-hidden">
-          <img 
-            src={settings?.app_logo || '/vite.svg'} 
-            alt="Logo" 
-            className={`${isCollapsed ? 'w-8 h-8' : 'w-7 h-7'} object-contain flex-shrink-0`} 
+          <img
+            src={settings?.app_logo || '/kbr-logo.svg'}
+            alt="Logo"
+            className={`${isCollapsed ? 'w-8 h-8' : 'w-7 h-7'} object-contain flex-shrink-0`}
           />
           {!isCollapsed && (
             <span className="text-lg font-bold text-[var(--foreground)] tracking-tight truncate">
@@ -103,7 +101,7 @@ const SidebarDesktop = () => {
             <NavLinkItem key={item.path} item={item} isCollapsed={isCollapsed} />
           ))}
         </div>
-        
+
         <div className="flex flex-col gap-1.5 border-t border-[var(--border)] pt-4">
           {bottomItems.map((item) => (
             <NavLinkItem key={item.path} item={item} isCollapsed={isCollapsed} />
@@ -120,18 +118,18 @@ const SidebarMobile = () => {
 
   return (
     <>
-      <button 
+      <button
         type="button"
         aria-label="Tutup sidebar"
-        className={`mobile-overlay ${isMobileOpen ? 'open' : ''}`} 
-        onClick={closeMobile} 
+        className={`mobile-overlay ${isMobileOpen ? 'open' : ''}`}
+        onClick={closeMobile}
       />
       <div className={`mobile-sidebar bg-[var(--surface)] border-r border-[var(--border)] ${isMobileOpen ? 'open' : ''}`}>
         <div className="flex items-center gap-3 px-5 py-5 border-b border-[var(--border)]">
-          <img 
-            src={settings?.app_logo || '/vite.svg'} 
-            alt="Logo" 
-            className="w-7 h-7 object-contain flex-shrink-0" 
+          <img
+            src={settings?.app_logo || '/kbr-logo.svg'}
+            alt="Logo"
+            className="w-7 h-7 object-contain flex-shrink-0"
           />
           <span className="text-lg font-bold text-[var(--foreground)] truncate">
             {settings?.app_name || 'Costume Rent'}
