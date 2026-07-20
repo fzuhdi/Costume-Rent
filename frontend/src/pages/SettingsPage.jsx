@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
-import { Save, Image } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { TextField, Input, Button, Card, Chip, FieldError, Label } from '@heroui/react';
 import FileUploadZone from '../components/FileUploadZone';
 
@@ -68,11 +68,7 @@ const SettingsPage = () => {
             <div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="w-20 h-20 bg-[var(--border)] rounded-lg flex items-center justify-center flex-shrink-0">
-                  {preview ? (
-                    <img src={preview} alt="Logo" className="w-full h-full object-contain" />
-                  ) : (
-                    <Image size={32} className="opacity-50" />
-                  )}
+                  <img src={preview || '/kbr-logo.svg'} alt="Logo" className="w-full h-full object-contain p-2" />
                 </div>
                 <div className="flex-grow max-w-sm">
                   <FileUploadZone
