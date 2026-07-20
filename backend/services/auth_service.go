@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -151,6 +152,19 @@ func (s *AuthService) ChangePassword(userID uint, req dto.ChangePasswordRequest)
 }
 
 func (s *AuthService) DeleteUser(id uint) error {
+	var user models.User
+	if err := config.DB.First(&user, id).Error; err != nil {
+		return err
+	}
+
+	timestamp := fmt.Sprintf("_deleted_%d", time.Now().Unix())
+	user.Username = user.Username + timestamp
+	user.Email = user.Email + timestamp
+
+	if err := config.DB.Save(&user).Error; err != nil {
+		return err
+	}
+
 	return config.DB.Delete(&models.User{}, id).Error
 }
 

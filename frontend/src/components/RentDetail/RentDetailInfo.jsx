@@ -49,9 +49,9 @@ export default function RentDetailInfo({
   const discount = totalNormal - totalRented;
   const discountPercent = totalNormal > 0 ? Math.round((discount / totalNormal) * 100) : 0;
 
-  rent.return_photos = parsePhotos(rent.return_photos);
-  rent.pickup_photos = parsePhotos(rent.pickup_photos);
-  rent.damage_photos = parsePhotos(rent.damage_photos);
+  const parsedReturnPhotos = parsePhotos(rent.return_photos);
+  const parsedPickupPhotos = parsePhotos(rent.pickup_photos);
+  const parsedDamagePhotos = parsePhotos(rent.damage_photos);
 
   function parsePhotos(photos) {
     if (Array.isArray(photos)) return photos;
@@ -267,11 +267,11 @@ export default function RentDetailInfo({
               <div className="flex flex-col gap-4">
                 <div>
                   <span className="text-xs font-semibold text-[var(--muted)] block mb-2">Foto Pickup</span>
-                  {rent.pickup_photos?.length > 0 ? (
+                  {parsedPickupPhotos?.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                      {rent.pickup_photos.map((photo, i) => (
+                      {parsedPickupPhotos.map((photo, i) => (
                         <div key={`pickup-${i}`} className="w-20 h-20 relative">
-                          <img src={photo} onClick={() => openPreview(rent.pickup_photos, i)} alt="Pickup" className="w-full h-full object-cover rounded-md border border-default-200 hover:opacity-80 transition-opacity" />
+                          <img src={photo} onClick={() => openPreview(parsedPickupPhotos, i)} alt="Pickup" className="w-full h-full object-cover rounded-md border border-default-200 hover:opacity-80 transition-opacity" />
                         </div>
                       ))}
                     </div>
@@ -282,11 +282,11 @@ export default function RentDetailInfo({
 
                 <div>
                   <span className="text-xs font-semibold text-[var(--muted)] block mb-2">Foto Return</span>
-                  {rent.return_photos?.length > 0 ? (
+                  {parsedReturnPhotos?.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                      {rent.return_photos.map((photo, i) => (
+                      {parsedReturnPhotos.map((photo, i) => (
                         <div key={`return-${i}`} className="w-20 h-20 relative">
-                          <img src={photo} onClick={() => openPreview(rent.return_photos, i)} alt="Return" className="w-full h-full object-cover rounded-md border border-default-200 hover:opacity-80 transition-opacity" />
+                          <img src={photo} onClick={() => openPreview(parsedReturnPhotos, i)} alt="Return" className="w-full h-full object-cover rounded-md border border-default-200 hover:opacity-80 transition-opacity" />
                         </div>
                       ))}
                     </div>
@@ -297,9 +297,9 @@ export default function RentDetailInfo({
 
                 <div>
                   <span className="text-xs font-semibold text-[var(--muted)] block mb-2">Foto Kerusakan</span>
-                  {rent.damage_photos?.length > 0 ? (
+                  {parsedDamagePhotos?.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                      {rent.damage_photos.map((photo, i) => (
+                      {parsedDamagePhotos.map((photo, i) => (
                         <div key={`damage-${i}`} className="w-20 h-20 relative">
                           <a href={photo} target="_blank" rel="noopener noreferrer">
                             <img src={photo} alt="Damage" className="w-full h-full object-cover rounded-md border border-default-200 hover:opacity-80 transition-opacity" />

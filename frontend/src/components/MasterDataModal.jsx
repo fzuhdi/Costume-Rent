@@ -8,7 +8,9 @@ const MasterDataModal = ({ isOpen, onOpenChange, onClose, onSave, item, type }) 
 
   useEffect(() => {
     if (isOpen) {
-      setName(item ? item.name : '');
+      Promise.resolve().then(() => {
+        setName(item ? item.name : '');
+      });
     }
   }, [isOpen, item]);
 

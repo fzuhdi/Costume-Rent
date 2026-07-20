@@ -16,9 +16,9 @@ const MasterDataTab = () => {
   const [modalType, setModalType] = useState('Region'); // 'Region' or 'Category'
   const [selectedItem, setSelectedItem] = useState(null);
 
-  const fetchRegions = async () => {
+  const fetchRegions = async (showLoading = true) => {
     try {
-      setLoadingRegions(true);
+      if (showLoading) setLoadingRegions(true);
       const res = await getRegions();
       setRegions(Array.isArray(res.data) ? res.data : res.data?.data || []);
     } catch (err) {
@@ -29,9 +29,9 @@ const MasterDataTab = () => {
     }
   };
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (showLoading = true) => {
     try {
-      setLoadingCategories(true);
+      if (showLoading) setLoadingCategories(true);
       const res = await getCategories();
       setCategories(Array.isArray(res.data) ? res.data : res.data?.data || []);
     } catch (err) {
@@ -43,8 +43,10 @@ const MasterDataTab = () => {
   };
 
   useEffect(() => {
-    fetchRegions();
-    fetchCategories();
+    Promise.resolve().then(() => {
+      fetchRegions(false);
+      fetchCategories(false);
+    });
   }, []);
 
   const handleAdd = (type) => {
