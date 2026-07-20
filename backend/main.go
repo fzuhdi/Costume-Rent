@@ -114,11 +114,14 @@ func seedReferenceData() {
 	if regionCount == 0 {
 		log.Println("Seeding regions...")
 		regions := []models.Region{
-			{Name: "Region 1"},
-			{Name: "Region 2"},
-			{Name: "Region 3"},
-			{Name: "Region 4"},
-			{Name: "Region 5"},
+			{Name: "Jawa"},
+			{Name: "Bali"},
+			{Name: "Sumatera"},
+			{Name: "Kalimantan"},
+			{Name: "Sulawesi"},
+			{Name: "Nusa Tenggara"},
+			{Name: "Papua"},
+			{Name: "Luar Negeri"},
 		}
 		for _, r := range regions {
 			db.Create(&r)
@@ -130,11 +133,12 @@ func seedReferenceData() {
 	if categoryCount == 0 {
 		log.Println("Seeding categories...")
 		categories := []models.Category{
-			{Name: "Category 1"},
-			{Name: "Category 2"},
-			{Name: "Category 3"},
-			{Name: "Category 4"},
-			{Name: "Category 5"},
+			{Name: "Pakaian Adat"},
+			{Name: "Pakaian Tari"},
+			{Name: "Modern"},
+			{Name: "Aksesoris"},
+			{Name: "Properti"},
+			{Name: "Pakaian Anak"},
 		}
 		for _, c := range categories {
 			db.Create(&c)
