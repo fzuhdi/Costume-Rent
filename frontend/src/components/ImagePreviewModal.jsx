@@ -29,7 +29,9 @@ const ImagePreviewModal = ({ isOpen, onClose, images = [], initialIndex = 0 }) =
   if (!images || images.length === 0) return null;
 
   return (
-    <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Modal isOpen={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <Button className="hidden">Hidden Trigger</Button>
+      <Modal.Backdrop>
       <Modal.Container>
         <Modal.Dialog aria-label="Pratinjau Gambar" className="max-w-4xl bg-transparent shadow-none w-full border-none">
           <div className="relative flex flex-col items-center justify-center w-full min-h-[50vh] sm:min-h-[80vh] outline-none">
@@ -110,7 +112,8 @@ const ImagePreviewModal = ({ isOpen, onClose, images = [], initialIndex = 0 }) =
           </div>
         </Modal.Dialog>
       </Modal.Container>
-    </Modal.Backdrop>
+      </Modal.Backdrop>
+    </Modal>
   );
 };
 

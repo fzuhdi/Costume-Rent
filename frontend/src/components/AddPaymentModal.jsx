@@ -104,9 +104,11 @@ const AddPaymentModal = ({ isOpen, onClose, onSuccess, rentId }) => {
   };
 
   return (
-    <Modal.Backdrop isOpen={isOpen} onOpenChange={handleClose}>
+    <Modal isOpen={isOpen} onOpenChange={handleClose}>
+      <Button className="hidden">Hidden Trigger</Button>
+      <Modal.Backdrop>
       <Modal.Container>
-        <Modal.Dialog>
+        <Modal.Dialog className="bg-[var(--surface)] border border-default-200">
           <Modal.Header>
             <Modal.Heading>Tambah Pembayaran</Modal.Heading>
           </Modal.Header>
@@ -133,7 +135,7 @@ const AddPaymentModal = ({ isOpen, onClose, onSuccess, rentId }) => {
                 Catatan (Opsional)
               </Label>
               <Input
-                className="w-full bg-content1 border border-default-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Contoh: Pelunasan Denda Keterlambatan"
                 value={notes}
                 onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'notes', value: e.target.value })}
@@ -164,6 +166,7 @@ const AddPaymentModal = ({ isOpen, onClose, onSuccess, rentId }) => {
         </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>
+    </Modal>
   );
 };
 

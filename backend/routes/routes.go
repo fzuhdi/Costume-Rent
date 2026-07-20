@@ -46,6 +46,7 @@ func SetupRouter() *gin.Engine {
 	userHandler := handlers.NewUserHandler()
 	settingsHandler := handlers.NewSettingsHandler()
 	statsHandler := handlers.NewStatsHandler()
+	excelHandler := handlers.NewExcelHandler()
 
 	api := r.Group("/api")
 	{
@@ -54,8 +55,13 @@ func SetupRouter() *gin.Engine {
 
 		api.GET("/regions", costumeHandler.GetRegions)
 		api.POST("/regions", middleware.AuthMiddleware(), costumeHandler.CreateRegion)
+		api.PUT("/regions/:id", middleware.AuthMiddleware(), costumeHandler.UpdateRegion)
+		api.DELETE("/regions/:id", middleware.AuthMiddleware(), costumeHandler.DeleteRegion)
+
 		api.GET("/categories", costumeHandler.GetCategories)
 		api.POST("/categories", middleware.AuthMiddleware(), costumeHandler.CreateCategory)
+		api.PUT("/categories/:id", middleware.AuthMiddleware(), costumeHandler.UpdateCategory)
+		api.DELETE("/categories/:id", middleware.AuthMiddleware(), costumeHandler.DeleteCategory)
 
 		api.GET("/costumes", costumeHandler.List)
 		api.GET("/costumes/search", costumeHandler.Search)
@@ -65,6 +71,10 @@ func SetupRouter() *gin.Engine {
 		api.DELETE("/costumes/:id", middleware.AuthMiddleware(), costumeHandler.Delete)
 		api.POST("/costumes/:id/images", middleware.AuthMiddleware(), costumeHandler.UploadImage)
 		api.DELETE("/costumes/:id/images/:imgId", middleware.AuthMiddleware(), costumeHandler.RemoveImage)
+
+		api.GET("/costumes/excel/export", excelHandler.ExportCostumes)
+		api.GET("/costumes/excel/template", excelHandler.DownloadCostumeTemplate)
+		api.POST("/costumes/excel/import", middleware.AuthMiddleware(), excelHandler.ImportCostumes)
 
 		api.POST("/auth/login", middleware.LoginRateLimiter(), authHandler.Login)
 		api.POST("/auth/logout", middleware.AuthMiddleware(), authHandler.Logout)
@@ -85,19 +95,30 @@ func SetupRouter() *gin.Engine {
 			auth.DELETE("/clients/:id", clientHandler.Delete)
 			auth.GET("/clients/:id/rents", clientHandler.GetRentHistory)
 
+			auth.GET("/clients-excel/export", excelHandler.ExportClients)
+			auth.GET("/clients-excel/template", excelHandler.DownloadClientTemplate)
+			auth.POST("/clients-excel/import", excelHandler.ImportClients)
+
 			auth.GET("/rents", rentHandler.List)
 			auth.GET("/rents/:id", rentHandler.GetByID)
 			auth.POST("/rents", rentHandler.Create)
 			auth.PUT("/rents/:id", rentHandler.Update)
 			auth.PUT("/rents/:id/return", rentHandler.MarkReturned)
+			auth.POST("/rents/:id/receive", rentHandler.ReceiveOrder)
 			auth.PUT("/rents/:id/rent", rentHandler.MarkRented)
 			auth.PUT("/rents/:id/rollback", rentHandler.RollbackOrder)
 			auth.PUT("/rents/:id/cancel", rentHandler.CancelOrder)
 			auth.POST("/rents/upload-proof", rentHandler.UploadPaymentProof)
+			auth.POST("/rents/upload-photo", rentHandler.UploadRentPhoto)
 			auth.PUT("/rents/:id/book", rentHandler.MarkBooked)
 			auth.POST("/rents/:id/extend", rentHandler.ExtendRent)
 			auth.POST("/rents/:id/payments", rentHandler.AddPayment)
+			auth.POST("/rents/:id/transactions/:trxId/void", rentHandler.VoidTransaction)
 			auth.DELETE("/rents/:id", rentHandler.Delete)
+
+			auth.GET("/rents-excel/export", excelHandler.ExportRents)
+			auth.GET("/rents-excel/template", excelHandler.DownloadRentTemplate)
+			auth.POST("/rents-excel/import", excelHandler.ImportRents)
 
 			auth.GET("/notifications", notificationHandler.GetNotifications)
 

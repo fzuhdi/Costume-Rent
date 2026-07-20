@@ -1,5 +1,5 @@
 import { Search, Calendar } from 'lucide-react';
-import { Select, ListBox, InputGroup, Spinner } from '@heroui/react';
+import { Select, ListBox, InputGroup, Spinner, Checkbox } from '@heroui/react';
 import CostumeCard from '../CostumeCard';
 
 export default function POSCostumeCatalog({
@@ -104,10 +104,19 @@ export default function POSCostumeCatalog({
           </div>
 
           <div className="flex justify-between items-center px-1">
-            <label className="flex items-center gap-2 cursor-pointer py-1">
-              <input type="checkbox" checked={showOnlyAvailable} onChange={(e) => setShowOnlyAvailable(e.target.checked)} className="w-4 h-4 rounded border-default-300 text-primary focus:ring-primary/20 accent-primary cursor-pointer" />
-              <span className="text-xs text-default-600 font-medium">Hanya Tampilkan Stok Tersedia</span>
-            </label>
+            <Checkbox 
+              isSelected={showOnlyAvailable} 
+              onChange={setShowOnlyAvailable} 
+              aria-label="Hanya Tampilkan Stok Tersedia"
+              className="cursor-pointer"
+            >
+              <Checkbox.Content className="flex items-center gap-2">
+                <Checkbox.Control>
+                  <Checkbox.Indicator />
+                </Checkbox.Control>
+                <span className="text-xs text-default-600 font-medium">Hanya Tampilkan Stok Tersedia</span>
+              </Checkbox.Content>
+            </Checkbox>
 
             <span className="text-xs text-default-500 font-medium">
               Menampilkan {filteredCostumes.length} dari {costumes.length} kostum

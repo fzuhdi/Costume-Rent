@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Spinner } from '@heroui/react';
 import { UploadCloud, CheckCircle } from 'lucide-react';
 
@@ -12,7 +12,6 @@ const FileUploadZone = ({
   multiple = false
 }) => {
   const [isDragActive, setIsDragActive] = useState(false);
-  const inputRef = useRef(null);
 
   const handleDrag = (e) => {
     e.preventDefault();

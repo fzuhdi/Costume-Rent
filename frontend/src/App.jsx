@@ -21,10 +21,12 @@ import ClientListPage from './pages/ClientListPage';
 import ClientDetailPage from './pages/ClientDetailPage';
 import ClientFormPage from './pages/ClientFormPage';
 import SettingsPage from './pages/SettingsPage';
+import MasterDataPage from './pages/MasterDataPage';
 import ProfilePage from './pages/ProfilePage';
 import NotFoundPage from './pages/NotFoundPage';
 import { useSettings } from './context/SettingsContext';
 import FullScreenSpinner from './components/FullScreenSpinner';
+import { Toast } from '@heroui/react';
 
 
 const AppRoutes = () => {
@@ -32,7 +34,12 @@ const AppRoutes = () => {
   const { settings, loading: settingsLoading } = useSettings();
 
   useEffect(() => {
-    const theme = localStorage.getItem('heroui-theme') || (document.cookie.match(/(?:^|;)\s*heroui-theme=([^;]*)/)?.[1] || '');
+    let theme = localStorage.getItem('heroui-theme') || (document.cookie.match(/(?:^|;)\s*heroui-theme=([^;]*)/)?.[1] || '');
+    if (!theme) {
+      theme = 'light';
+      localStorage.setItem('heroui-theme', 'light');
+      document.cookie = `heroui-theme=light; path=/; SameSite=Lax`;
+    }
     if (theme === 'dark' || theme === 'light') {
       document.documentElement.classList.toggle('dark', theme === 'dark');
       document.documentElement.classList.toggle('light', theme !== 'dark');
@@ -81,7 +88,9 @@ const AppRoutes = () => {
         <Route path="/clients" element={<ClientListPage />} />
         <Route path="/clients/new" element={<ClientFormPage />} />
         <Route path="/clients/:id" element={<ClientDetailPage />} />
+        <Route path="/clients/:id/edit" element={<ClientFormPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/master-data" element={<MasterDataPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
 
@@ -114,6 +123,7 @@ const App = () => {
         <SettingsProvider>
           <NotificationProvider>
             <SidebarProvider>
+              <Toast.Provider placement="top-center" />
               <AppRoutes />
             </SidebarProvider>
           </NotificationProvider>

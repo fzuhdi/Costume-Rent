@@ -1,7 +1,7 @@
 package services
 
 import (
-	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -9,6 +9,7 @@ import (
 	"github.com/busana/backend/dto"
 	"github.com/busana/backend/middleware"
 	"github.com/busana/backend/models"
+	"github.com/busana/backend/utils"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -21,7 +22,7 @@ func NewAuthService() *AuthService {
 
 func (s *AuthService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 	var user models.User
-	if err := config.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
+	if err := config.DB.Where("username = ? OR email = ?", req.Username, req.Username).First(&user).Error; err != nil {
 		return nil, err
 	}
 
@@ -134,11 +135,11 @@ func (s *AuthService) UpdateUser(id uint, req dto.UpdateUserRequest) (*models.Us
 func (s *AuthService) ChangePassword(userID uint, req dto.ChangePasswordRequest) error {
 	var user models.User
 	if err := config.DB.First(&user, userID).Error; err != nil {
-		return errors.New("User not found")
+		return utils.NewAppError("ERR_USER_NOT_FOUND")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.OldPassword)); err != nil {
-		return errors.New("Password lama tidak sesuai")
+		return utils.NewAppError("ERR_INVALID_OLD_PASSWORD")
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
@@ -151,6 +152,19 @@ func (s *AuthService) ChangePassword(userID uint, req dto.ChangePasswordRequest)
 }
 
 func (s *AuthService) DeleteUser(id uint) error {
+	var user models.User
+	if err := config.DB.First(&user, id).Error; err != nil {
+		return err
+	}
+
+	timestamp := fmt.Sprintf("_deleted_%d", time.Now().Unix())
+	user.Username = user.Username + timestamp
+	user.Email = user.Email + timestamp
+
+	if err := config.DB.Save(&user).Error; err != nil {
+		return err
+	}
+
 	return config.DB.Delete(&models.User{}, id).Error
 }
 

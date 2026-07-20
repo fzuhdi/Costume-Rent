@@ -10,6 +10,7 @@ import (
 
 	"github.com/busana/backend/dto"
 	"github.com/busana/backend/services"
+	"github.com/busana/backend/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -27,50 +28,50 @@ func NewCostumeHandler() *CostumeHandler {
 func (h *CostumeHandler) List(c *gin.Context) {
 	var filter dto.CostumeFilter
 	if err := c.ShouldBindQuery(&filter); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
 	response, err := h.costumeService.List(filter)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	utils.RespondSuccess(c, response)
 }
 
 func (h *CostumeHandler) GetByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
 		return
 	}
 
 	costume, err := h.costumeService.GetByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Costume not found"})
+		utils.RespondFailed(c, http.StatusNotFound, utils.NewAppError("ERR_COSTUME_NOT_FOUND"))
 		return
 	}
 
-	c.JSON(http.StatusOK, costume)
+	utils.RespondSuccess(c, costume)
 }
 
 func (h *CostumeHandler) Create(c *gin.Context) {
 	var req dto.CreateCostumeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
 	if req.Name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_BAD_REQUEST"))
 		return
 	}
 
 	costume, err := h.costumeService.Create(req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -80,50 +81,50 @@ func (h *CostumeHandler) Create(c *gin.Context) {
 func (h *CostumeHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
 		return
 	}
 
 	var req dto.UpdateCostumeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
 	costume, err := h.costumeService.Update(uint(id), req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, costume)
+	utils.RespondSuccess(c, costume)
 }
 
 func (h *CostumeHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
 		return
 	}
 
 	if err := h.costumeService.Delete(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Costume deleted successfully"})
+	utils.RespondSuccess(c, gin.H{"message": "Costume deleted successfully"})
 }
 
 func (h *CostumeHandler) UploadImage(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
 		return
 	}
 
 	file, err := c.FormFile("image")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_BAD_REQUEST"))
 		return
 	}
 
@@ -133,7 +134,7 @@ func (h *CostumeHandler) UploadImage(c *gin.Context) {
 	}
 
 	if err := os.MkdirAll(uploadDir, 0750); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
+		utils.RespondFailed(c, http.StatusInternalServerError, utils.NewAppError("ERR_BAD_REQUEST"))
 		return
 	}
 
@@ -142,13 +143,13 @@ func (h *CostumeHandler) UploadImage(c *gin.Context) {
 	filepath := filepath.Join(uploadDir, filename)
 
 	if err := c.SaveUploadedFile(file, filepath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+		utils.RespondFailed(c, http.StatusInternalServerError, utils.NewAppError("ERR_BAD_REQUEST"))
 		return
 	}
 
 	image, err := h.costumeService.AddImage(uint(id), "/uploads/"+filename)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -158,31 +159,31 @@ func (h *CostumeHandler) UploadImage(c *gin.Context) {
 func (h *CostumeHandler) RemoveImage(c *gin.Context) {
 	costumeID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid costume ID"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_BAD_REQUEST"))
 		return
 	}
 
 	imageID, err := strconv.ParseUint(c.Param("imgId"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid image ID"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_BAD_REQUEST"))
 		return
 	}
 
 	if err := h.costumeService.RemoveImage(uint(costumeID), uint(imageID)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Image deleted successfully"})
+	utils.RespondSuccess(c, gin.H{"message": "Image deleted successfully"})
 }
 
 func (h *CostumeHandler) GetRegions(c *gin.Context) {
 	regions, err := h.costumeService.GetRegions()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
-	c.JSON(http.StatusOK, regions)
+	utils.RespondSuccess(c, regions)
 }
 
 func (h *CostumeHandler) CreateRegion(c *gin.Context) {
@@ -190,13 +191,13 @@ func (h *CostumeHandler) CreateRegion(c *gin.Context) {
 		Name string `json:"name" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
 	region, err := h.costumeService.CreateRegion(req.Name)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
@@ -206,10 +207,10 @@ func (h *CostumeHandler) CreateRegion(c *gin.Context) {
 func (h *CostumeHandler) GetCategories(c *gin.Context) {
 	categories, err := h.costumeService.GetCategories()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
-	c.JSON(http.StatusOK, categories)
+	utils.RespondSuccess(c, categories)
 }
 
 func (h *CostumeHandler) CreateCategory(c *gin.Context) {
@@ -217,13 +218,13 @@ func (h *CostumeHandler) CreateCategory(c *gin.Context) {
 		Name string `json:"name" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
 	category, err := h.costumeService.CreateCategory(req.Name)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
@@ -241,9 +242,73 @@ func (h *CostumeHandler) Search(c *gin.Context) {
 
 	costumes, err := h.costumeService.Search(query, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, costumes)
+	utils.RespondSuccess(c, costumes)
+}
+
+func (h *CostumeHandler) UpdateRegion(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
+		return
+	}
+	var req dto.CreateRegionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, err)
+		return
+	}
+	res, err := h.costumeService.UpdateRegion(uint(id), req)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
+		return
+	}
+	utils.RespondSuccess(c, res)
+}
+
+func (h *CostumeHandler) DeleteRegion(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
+		return
+	}
+	if err := h.costumeService.DeleteRegion(uint(id)); err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, err) // using 400 because it might be a foreign key constraint
+		return
+	}
+	utils.RespondSuccess(c, gin.H{"message": "Region deleted"})
+}
+
+func (h *CostumeHandler) UpdateCategory(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
+		return
+	}
+	var req dto.CreateCategoryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, err)
+		return
+	}
+	res, err := h.costumeService.UpdateCategory(uint(id), req)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
+		return
+	}
+	utils.RespondSuccess(c, res)
+}
+
+func (h *CostumeHandler) DeleteCategory(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
+		return
+	}
+	if err := h.costumeService.DeleteCategory(uint(id)); err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, err) // using 400 because it might be a foreign key constraint
+		return
+	}
+	utils.RespondSuccess(c, gin.H{"message": "Category deleted"})
 }

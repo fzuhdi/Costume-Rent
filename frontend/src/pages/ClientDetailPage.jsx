@@ -7,19 +7,21 @@ import {
 } from '@heroui/react';
 
 const statusColors = {
-  draft: { variant: 'soft', color: 'warning' },
+  pending: { variant: 'soft', color: 'default' },
   booked: { variant: 'soft', color: 'primary' },
   rented: { variant: 'secondary' },
   returned: { variant: 'soft', color: 'success' },
+  completed: { variant: 'flat', color: 'success' },
   overdue: { variant: 'soft', color: 'danger' },
   cancelled: { variant: 'soft', color: 'default' },
 };
 
 const statusLabels = {
-  draft: 'Draft',
+  pending: 'Pending',
   booked: 'Dipesan',
   rented: 'Disewa',
-  returned: 'Dikembalikan',
+  returned: 'Diterima',
+  completed: 'Selesai',
   overdue: 'Terlambat',
   cancelled: 'Dibatalkan',
 };
@@ -95,7 +97,7 @@ const ClientDetailPage = () => {
     );
   }
 
-  const activeRents = client.rent_orders?.filter((r) => r.status === 'active') || [];
+  const activeRents = client.rent_orders?.filter((r) => ['pending', 'booked', 'rented'].includes(r.status)) || [];
   const overdueRents = client.rent_orders?.filter((r) => r.status === 'overdue') || [];
 
   return (

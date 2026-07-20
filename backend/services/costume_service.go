@@ -10,6 +10,7 @@ import (
 	"github.com/busana/backend/config"
 	"github.com/busana/backend/dto"
 	"github.com/busana/backend/models"
+	"github.com/busana/backend/utils"
 	"gorm.io/gorm"
 )
 
@@ -62,6 +63,7 @@ func (s *CostumeService) List(filter dto.CostumeFilter) (*dto.PaginatedResponse,
 			CategoryID:    c.CategoryID,
 			Size:          c.Size,
 			RentalFee:     c.RentalFee,
+			BuyPrice:      c.BuyPrice,
 			TotalQuantity: c.TotalQuantity,
 			CoverImage:    c.CoverImage,
 		}
@@ -149,6 +151,7 @@ func (s *CostumeService) GetByID(id uint) (*dto.CostumeDetailResponse, error) {
 		CategoryID:        costume.CategoryID,
 		Size:              costume.Size,
 		RentalFee:         costume.RentalFee,
+		BuyPrice:          costume.BuyPrice,
 		TotalQuantity:     costume.TotalQuantity,
 		AvailableQuantity: availableQty,
 		CoverImage:        costume.CoverImage,
@@ -187,6 +190,7 @@ func (s *CostumeService) Create(req dto.CreateCostumeRequest) (*dto.CostumeDetai
 		CategoryID:    req.CategoryID,
 		Size:          req.Size,
 		RentalFee:     req.RentalFee,
+		BuyPrice:      req.BuyPrice,
 		TotalQuantity: req.TotalQuantity,
 	}
 
@@ -230,6 +234,9 @@ func (s *CostumeService) Update(id uint, req dto.UpdateCostumeRequest) (*dto.Cos
 	}
 	if req.RentalFee > 0 {
 		costume.RentalFee = req.RentalFee
+	}
+	if req.BuyPrice > 0 {
+		costume.BuyPrice = req.BuyPrice
 	}
 	if req.TotalQuantity > 0 {
 		costume.TotalQuantity = req.TotalQuantity
@@ -419,7 +426,7 @@ func (s *CostumeService) CreateRegion(name string) (*dto.RegionResponse, error) 
 	region := models.Region{Name: name}
 	if err := config.DB.Create(&region).Error; err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "unique") {
-			return nil, errors.New("duplicate region: already exists")
+			return nil, utils.NewAppError("ERR_DUPLICATE_REGION")
 		}
 		return nil, err
 	}
@@ -459,7 +466,7 @@ func (s *CostumeService) CreateCategory(name string) (*dto.CategoryResponse, err
 	category := models.Category{Name: name}
 	if err := config.DB.Create(&category).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return nil, errors.New("category already exists")
+			return nil, utils.NewAppError("ERR_DUPLICATE_CATEGORY")
 		}
 		return nil, err
 	}
@@ -471,3 +478,56 @@ func (s *CostumeService) CreateCategory(name string) (*dto.CategoryResponse, err
 		UpdatedAt: category.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}, nil
 }
+
+func (s *CostumeService) UpdateRegion(id uint, req dto.CreateRegionRequest) (*dto.RegionResponse, error) {
+	var region models.Region
+	if err := config.DB.First(&region, id).Error; err != nil {
+		return nil, err
+	}
+	region.Name = req.Name
+	if err := config.DB.Save(&region).Error; err != nil {
+		return nil, err
+	}
+	return &dto.RegionResponse{
+		ID:        region.ID,
+		Name:      region.Name,
+		CreatedAt: region.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt: region.UpdatedAt.Format("2006-01-02 15:04:05"),
+	}, nil
+}
+
+func (s *CostumeService) DeleteRegion(id uint) error {
+	var count int64
+	config.DB.Model(&models.Costume{}).Where("region_id = ?", id).Count(&count)
+	if count > 0 {
+		return errors.New("cannot delete region: it is currently used by " + strconv.FormatInt(count, 10) + " costume(s)")
+	}
+	return config.DB.Delete(&models.Region{}, id).Error
+}
+
+func (s *CostumeService) UpdateCategory(id uint, req dto.CreateCategoryRequest) (*dto.CategoryResponse, error) {
+	var category models.Category
+	if err := config.DB.First(&category, id).Error; err != nil {
+		return nil, err
+	}
+	category.Name = req.Name
+	if err := config.DB.Save(&category).Error; err != nil {
+		return nil, err
+	}
+	return &dto.CategoryResponse{
+		ID:        category.ID,
+		Name:      category.Name,
+		CreatedAt: category.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt: category.UpdatedAt.Format("2006-01-02 15:04:05"),
+	}, nil
+}
+
+func (s *CostumeService) DeleteCategory(id uint) error {
+	var count int64
+	config.DB.Model(&models.Costume{}).Where("category_id = ?", id).Count(&count)
+	if count > 0 {
+		return errors.New("cannot delete category: it is currently used by " + strconv.FormatInt(count, 10) + " costume(s)")
+	}
+	return config.DB.Delete(&models.Category{}, id).Error
+}
+

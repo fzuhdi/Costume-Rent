@@ -27,31 +27,34 @@ const ConfirmActionModal = ({
   loading = false,
 }) => {
   return (
-    <Modal.Backdrop isOpen={isOpen} onOpenChange={onClose}>
-      <Modal.Container>
-        <Modal.Dialog>
-          <Modal.Header>
-            <Modal.Heading>{heading}</Modal.Heading>
-          </Modal.Header>
+    <Modal isOpen={isOpen} onOpenChange={onClose}>
+      <Button className="hidden">Hidden Trigger</Button>
+      <Modal.Backdrop>
+        <Modal.Container>
+          <Modal.Dialog className="bg-[var(--surface)] border border-default-200">
+            <Modal.Header>
+              <Modal.Heading>{heading}</Modal.Heading>
+            </Modal.Header>
 
-          <Modal.Body>{body}</Modal.Body>
+            <Modal.Body>{body}</Modal.Body>
 
-          <Modal.Footer>
-            <Button variant="bordered" onPress={onClose} aria-label="Kembali">
-              Kembali
-            </Button>
-            <Button
-              color={confirmColor}
-              onPress={onConfirm}
-              isPending={loading}
-              aria-label={confirmLabel}
-            >
-              {confirmLabel}
-            </Button>
-          </Modal.Footer>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+            <Modal.Footer>
+              <Button variant="bordered" onPress={onClose} aria-label="Kembali">
+                Kembali
+              </Button>
+              <Button
+                color={confirmColor}
+                onPress={onConfirm}
+                isPending={loading}
+                aria-label={confirmLabel}
+              >
+                {confirmLabel}
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </Modal>
   );
 };
 

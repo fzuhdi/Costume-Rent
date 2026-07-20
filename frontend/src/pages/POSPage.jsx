@@ -30,7 +30,7 @@ const POSPage = () => {
     event_date: initialDate,
     guarantee_type: 'KTP',
     has_security_item: false,
-    dp_paid: false,
+    payment_status: 'none', // 'none', 'dp', 'full'
     payment_method: 'CASH',
     payment_proof: '',
     notes: '',
@@ -153,8 +153,8 @@ const POSPage = () => {
     if (!formData.client) newErrors.client = 'Pilih atau buat klien';
     if (!formData.event_date) newErrors.event_date = 'Tanggal Acara wajib diisi';
     if (cart.length === 0) newErrors.cart = 'Keranjang kosong';
-    if (formData.dp_paid && formData.payment_method !== 'CASH' && !formData.payment_proof) {
-      newErrors.payment_proof = 'Bukti pembayaran downpayment wajib diunggah';
+    if (formData.payment_status !== 'none' && formData.payment_method !== 'CASH' && !formData.payment_proof) {
+      newErrors.payment_proof = 'Bukti pembayaran wajib diunggah';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -164,11 +164,25 @@ const POSPage = () => {
     if (!validate()) return;
     setSaving(true);
     try {
+      let status = 'pending';
+      let paymentAmount = 0;
+      let paymentNotes = '';
+
+      if (formData.payment_status === 'dp') {
+        status = 'booked';
+        paymentAmount = reqDp;
+        paymentNotes = 'Downpayment POS';
+      } else if (formData.payment_status === 'full') {
+        status = 'booked';
+        paymentAmount = totalFee;
+        paymentNotes = 'Full Payment POS';
+      }
+
       const payload = {
         guarantee_type: '',
         event_date: formData.event_date,
         has_security_item: false,
-        status: formData.dp_paid ? 'booked' : 'draft',
+        status: status,
         notes: formData.notes,
         items: cart.map(item => ({
           costume_id: item.id,
@@ -177,12 +191,12 @@ const POSPage = () => {
         })),
       };
 
-      if (formData.dp_paid) {
+      if (formData.payment_status !== 'none') {
         payload.payment = {
-          amount: reqDp,
+          amount: paymentAmount,
           payment_method: formData.payment_method,
           payment_proof: formData.payment_proof,
-          notes: 'Downpayment POS',
+          notes: paymentNotes,
         };
       }
 
@@ -206,7 +220,7 @@ const POSPage = () => {
         event_date: '',
         guarantee_type: 'KTP',
         has_security_item: false,
-        dp_paid: false,
+        payment_status: 'none',
         payment_method: 'CASH',
         payment_proof: '',
         notes: '',
@@ -216,7 +230,7 @@ const POSPage = () => {
       navigate(`/rents/${res.data.id}`);
     } catch (error) {
       console.error('Failed to checkout:', error);
-      setErrors(p => ({ ...p, submit: error.response?.data?.error || error.message }));
+      setErrors(p => ({ ...p, submit: error.message }));
     } finally {
       setSaving(false);
     }

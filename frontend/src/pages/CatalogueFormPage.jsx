@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getCostumeById, createCostume, updateCostume, getRegions, getCategories, uploadCostumeImage, deleteCostumeImage } from '../api/costumeApi';
 import { ArrowLeft, Save } from 'lucide-react';
 import { TextField, Input, TextArea, Label, Select, ListBox, Button, Card, Spinner, FieldError, Alert } from '@heroui/react';
-import CostumeImageManager from '../components/CostumeImageManager';
+import MultipleImageUpload from '../components/MultipleImageUpload';
 const CatalogueFormPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -17,6 +17,7 @@ const CatalogueFormPage = () => {
     category_id: '',
     size: '',
     rental_fee: '',
+    buy_price: '',
     total_quantity: 1,
     acquired_at: '',
   });
@@ -56,6 +57,7 @@ const CatalogueFormPage = () => {
             category_id: costumeData.category_id?.toString() || '',
             size: costumeData.size || '',
             rental_fee: costumeData.rental_fee?.toString() || '',
+            buy_price: costumeData.buy_price?.toString() || '',
             total_quantity: costumeData.total_quantity || 1,
             acquired_at: costumeData.acquired_at || '',
           });
@@ -101,6 +103,7 @@ const CatalogueFormPage = () => {
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
         size: formData.size,
         rental_fee: formData.rental_fee ? parseInt(formData.rental_fee) : 0,
+        buy_price: formData.buy_price ? parseInt(formData.buy_price) : 0,
         total_quantity: parseInt(formData.total_quantity),
         acquired_at: formData.acquired_at || null,
       };
@@ -241,6 +244,11 @@ const CatalogueFormPage = () => {
                 <FieldError />
               </TextField>
               <TextField isRequired>
+                <Label>Harga Beli Asli / Denda (Rp)</Label>
+                <Input type="number" min="0" value={formData.buy_price} onChange={(e) => setFormData((prev) => ({...prev, buy_price: e.target.value}))} />
+                <FieldError />
+              </TextField>
+              <TextField isRequired>
                  <Label>Total Stok *</Label>
                  <Input type="number" min="1" value={formData.total_quantity} onChange={(e) => setFormData((prev) => ({...prev, total_quantity: parseInt(e.target.value, 10) || 0}))} />
                  {isEdit && costume && costume.available_quantity !== undefined && (
@@ -256,14 +264,15 @@ const CatalogueFormPage = () => {
               minrows={4}
               aria-label="Deskripsi kostum"
             />
-            <CostumeImageManager 
-              images={images} 
-              stagedFiles={stagedFiles} 
-              onFileSelect={handleFileSelect} 
-              onRemoveExisting={removeExistingImage} 
-              onRemoveStaged={removeStaged} 
-            />
-            {formError && (
+            <div className="md:col-span-2">
+                <MultipleImageUpload
+                  label="Gambar Kostum (Opsional)"
+                  files={stagedFiles}
+                  onFilesChange={setStagedFiles}
+                  existingFiles={images}
+                  onRemoveExisting={removeExistingImage}
+                />
+              </div>{formError && (
               <Alert status="danger" className="my-2">
                 <Alert.Indicator />
                 <Alert.Content>

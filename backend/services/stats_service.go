@@ -39,7 +39,7 @@ func (s *StatsService) GetDashboardStats() (*DashboardStats, error) {
 	stats := &DashboardStats{}
 
 	// 1. Total Active Rents (Draft, Booked, Rented, Overdue)
-	db.Model(&models.RentOrder{}).Where("status IN ?", []string{"draft", "booked", "rented", "overdue"}).Count(&stats.TotalActiveRents)
+	db.Model(&models.RentOrder{}).Where("status IN ?", []string{"pending", "booked", "rented", "overdue"}).Count(&stats.TotalActiveRents)
 
 	// 2. Total Clients
 	db.Model(&models.Client{}).Count(&stats.TotalClients)

@@ -1,5 +1,8 @@
 import { Card, Button } from '@heroui/react';
-import { Plus } from 'lucide-react';
+import { Plus, XCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { useState } from 'react';
+import ConfirmActionModal from '../ConfirmActionModal';
 
 export default function RentPaymentSection({
   rent,
@@ -8,10 +11,13 @@ export default function RentPaymentSection({
   totalPaid,
   sisaTagihan,
   setIsPaymentModalOpen,
+  handleVoidTransaction,
   openPreview,
   formatCurrency,
   formatDate
 }) {
+  const { user } = useAuth();
+  const [voidTrxId, setVoidTrxId] = useState(null);
   return (
     <Card>
       <Card.Content>
@@ -30,9 +36,15 @@ export default function RentPaymentSection({
               let borderClass = 'border-default-200';
 
               if (isDebit) {
-                sign = '+';
-                colorClass = 'text-danger';
-                borderClass = 'border-danger/40';
+                if (amount < 0) {
+                  sign = '-'; // Reversal of debit (e.g. voided damage fee)
+                  colorClass = 'text-success'; 
+                  borderClass = 'border-success/40';
+                } else {
+                  sign = '+';
+                  colorClass = 'text-danger';
+                  borderClass = 'border-danger/40';
+                }
               } else if (isCredit) {
                 if (amount < 0) {
                   sign = '+'; // Negative payment is a refund (increases what they owe)
@@ -71,9 +83,23 @@ export default function RentPaymentSection({
                       )}
                     </span>
                   </div>
-                  <span className={`${colorClass} font-semibold whitespace-nowrap ml-4`}>
-                    {sign} {formatCurrency(Math.abs(amount))}
-                  </span>
+                  <div className="flex items-center">
+                    <span className={`${colorClass} font-semibold whitespace-nowrap ml-4`}>
+                      {sign} {formatCurrency(Math.abs(amount))}
+                    </span>
+                    {['admin', 'staff'].includes(user?.role) && !isEditing && !['CORRECTION', 'BASE_FEE'].includes(trx.category) && !(trx.notes && trx.notes.toLowerCase().includes('biaya sewa')) && !trx.is_voided && amount > 0 && rent.status !== 'cancelled' && (
+                      <Button
+                        variant="flat"
+                        color="danger"
+                        size="sm"
+                        className="h-7 px-2 ml-2 text-xs flex-shrink-0 font-medium"
+                        onPress={() => setVoidTrxId(trx.id)}
+                        aria-label="Void Transaksi"
+                      >
+                        <XCircle size={14} className="mr-1" /> Void
+                      </Button>
+                    )}
+                  </div>
                 </div>
               );
             })
@@ -111,15 +137,27 @@ export default function RentPaymentSection({
                 variant="flat"
                 color="primary"
                 className="w-full font-semibold"
-                startContent={<Plus size={16} />}
                 onPress={() => setIsPaymentModalOpen(true)}
               >
-                Tambah Pembayaran
+                <Plus size={16} className="mr-1" /> Tambah Pembayaran
               </Button>
             </div>
           )}
         </div>
       </Card.Content>
+
+      <ConfirmActionModal
+        isOpen={!!voidTrxId}
+        onClose={() => setVoidTrxId(null)}
+        onConfirm={async () => {
+          await handleVoidTransaction(voidTrxId);
+          setVoidTrxId(null);
+        }}
+        heading="Batalkan Transaksi"
+        body="Apakah Anda yakin ingin membatalkan transaksi ini? Transaksi koreksi (pembatalan) akan otomatis dibuat dan tidak dapat dihapus."
+        confirmLabel="Ya, Batalkan"
+        confirmColor="danger"
+      />
     </Card>
   );
 }

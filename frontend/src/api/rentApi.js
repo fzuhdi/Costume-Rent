@@ -12,8 +12,11 @@ export const createRent = (data) =>
 export const updateRent = (id, data) =>
   api.put(`/rents/${id}`, data);
 
-export const markReturned = (id, data = {}) =>
+export const markReturned = (id, data = {}) => 
   api.put(`/rents/${id}/return`, data);
+
+export const receiveOrder = (id) => 
+  api.post(`/rents/${id}/receive`);
 
 export const markRented = (id, data = {}) =>
   api.put(`/rents/${id}/rent`, data);
@@ -34,6 +37,16 @@ export const uploadPaymentProof = (file) => {
   });
 };
 
+export const uploadRentPhoto = (file) => {
+  const formData = new FormData();
+  formData.append('photo', file);
+  return api.post('/rents/upload-photo', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
 export const cancelRent = (id) =>
   api.put(`/rents/${id}/cancel`);
 
@@ -43,5 +56,6 @@ export const deleteRent = (id) =>
 export const extendRent = (id, data) =>
   api.post(`/rents/${id}/extend`, data);
 
-export const addPayment = (id, data) =>
-  api.post(`/rents/${id}/payments`, data);
+export const addPayment = (id, data) => api.post(`/rents/${id}/payments`, data);
+
+export const voidTransaction = (id, trxId) => api.post(`/rents/${id}/transactions/${trxId}/void`);

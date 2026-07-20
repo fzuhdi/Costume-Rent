@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getClients, deleteClient } from '../api/clientApi';
-import { Search, Trash2, Plus } from 'lucide-react';
+import { Search, Trash2, Plus, Download, UploadCloud } from 'lucide-react';
 import {
   Button, Chip,
-  Table, Spinner, Modal, Card, InputGroup
+  Table, Spinner, Modal, Card, InputGroup,
+  Tooltip,
 } from '@heroui/react';
 import CustomPagination from '../components/CustomPagination';
+import ExcelImportModal from '../components/ExcelImportModal';
 
 const ClientListPage = () => {
   const navigate = useNavigate();
@@ -20,6 +22,29 @@ const ClientListPage = () => {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const selectedClientId = useRef(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
+  const handleExport = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/clients-excel/export`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) throw new Error('Export failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `clients_export.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export error:', error);
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -62,9 +87,21 @@ const ClientListPage = () => {
       <Card.Header className="flex flex-col gap-4 px-6 pt-6 pb-4 border-b border-[var(--border)]">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h1 className="page-title">Daftar Klien</h1>
-          <Button onPress={() => navigate('/clients/new')} variant="primary" size="sm" startContent={<Plus size={16} />}>
-            <span className="whitespace-nowrap">Tambah Klien</span>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Tooltip content="Eksport Excel">
+              <Button isIconOnly onPress={handleExport} variant="outline" aria-label="Eksport">
+                <Download size={18} />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Import Excel">
+              <Button isIconOnly onPress={() => setIsImportOpen(true)} variant="outline" aria-label="Import">
+                <UploadCloud size={18} />
+              </Button>
+            </Tooltip>
+            <Button onPress={() => navigate('/clients/new')} variant="primary" startContent={<Plus size={16} />}>
+              <span className="whitespace-nowrap">Tambah Klien</span>
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full">
@@ -166,6 +203,15 @@ const ClientListPage = () => {
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
+
+      <ExcelImportModal
+        isOpen={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        title="Import Klien"
+        templateUrl={`/api/clients-excel/template`}
+        uploadUrl={`/api/clients-excel/import`}
+        onSuccess={fetchClients}
+      />
     </Card>
   );
 };

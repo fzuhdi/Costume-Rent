@@ -14,6 +14,7 @@ export default function RentDetailModals({
   handleCancel,
   handleDelete,
   handleRollback,
+  handleReceive,
   isPreviewOpen, setIsPreviewOpen,
   previewImages, previewIndex,
   processing,
@@ -29,6 +30,7 @@ export default function RentDetailModals({
         onSuccess={fetchRent}
         rentId={parseInt(id)}
         sisaTagihan={sisaTagihan}
+        rent={rent}
       />
 
       <MarkRentedModal
@@ -86,6 +88,17 @@ export default function RentDetailModals({
         body="Status order akan dikembalikan ke langkah sebelumnya. Apakah Anda yakin?"
         confirmLabel="Ya, Rollback"
         confirmColor="warning"
+        loading={processing}
+      />
+
+      <ConfirmActionModal
+        isOpen={activeModal === 'receive'}
+        onClose={onClose}
+        onConfirm={handleReceive}
+        heading="Terima Kostum?"
+        body="Apakah Anda yakin ingin menerima paket ini? Waktu denda akan dihentikan."
+        confirmLabel="Ya, Terima"
+        confirmColor="primary"
         loading={processing}
       />
 

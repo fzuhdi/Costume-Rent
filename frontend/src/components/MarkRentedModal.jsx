@@ -1,7 +1,8 @@
 import { useEffect, useReducer } from 'react';
 import { Modal, Button, Checkbox, Select, ListBox, Label } from '@heroui/react';
 import PaymentFormFields from './PaymentFormFields';
-import { markRented, uploadPaymentProof } from '../api/rentApi';
+import { markRented, uploadPaymentProof, uploadRentPhoto } from '../api/rentApi';
+import MultipleImageUpload from './MultipleImageUpload';
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
 const formatCurrency = (value) => currencyFormatter.format(value);
@@ -50,6 +51,7 @@ const initialState = {
   uploading: false,
   loading: false,
   error: '',
+  pickupPhotos: [],
 };
 
 function reducer(state, action) {
@@ -69,7 +71,7 @@ function reducer(state, action) {
 
 const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, guaranteeType }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { confirmSecurityItem, amount, method, proof, proofFile, guaranteeType: formGuaranteeType, uploading, loading, error } = state;
+  const { confirmSecurityItem, amount, method, proof, proofFile, guaranteeType: formGuaranteeType, uploading, loading, error, pickupPhotos } = state;
 
   useEffect(() => {
     if (isOpen) {
@@ -84,13 +86,25 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, 
     dispatch({ type: 'SET_FIELD', field: 'loading', value: true });
     dispatch({ type: 'SET_FIELD', field: 'error', value: '' });
     try {
+      // 1. Upload photos if any
+      const uploadedPhotos = [];
+      for (const photo of pickupPhotos) {
+        try {
+          const res = await uploadRentPhoto(photo.file);
+          uploadedPhotos.push(res.data.url);
+        } catch (err) {
+          console.error("Failed to upload photo", err);
+        }
+      }
+
       const paymentPayload = hasBalance && parseInt(amount) > 0
         ? { amount: parseInt(amount), payment_method: method, payment_proof: proof, notes: 'Pelunasan Sewa' }
         : null;
 
       const payload = {
         guarantee_type: formGuaranteeType,
-        payment: paymentPayload
+        payment: paymentPayload,
+        pickup_photos: uploadedPhotos,
       };
 
       await markRented(rentId, payload);
@@ -108,9 +122,11 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, 
   };
 
   return (
-    <Modal.Backdrop isOpen={isOpen} onOpenChange={handleClose}>
+    <Modal isOpen={isOpen} onOpenChange={handleClose}>
+      <Button className="hidden">Hidden Trigger</Button>
+      <Modal.Backdrop>
       <Modal.Container>
-        <Modal.Dialog>
+        <Modal.Dialog className="bg-[var(--surface)] border border-default-200">
           <Modal.Header>
             <Modal.Heading>Pickup (Serahkan Kostum)</Modal.Heading>
           </Modal.Header>
@@ -132,7 +148,7 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, 
                 onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'guaranteeType', value: e?.target?.value ?? e })}
               >
                 <Label className="text-xs font-semibold mb-1 text-default-600 block">Jaminan yang Ditahan <span className="text-danger">*</span></Label>
-                <Select.Trigger className="w-full flex items-center justify-between bg-content1 border border-default-200 rounded-lg px-3 py-2 text-sm text-left">
+                <Select.Trigger className="w-full flex items-center justify-between bg-[var(--input-bg)] border border-[var(--input-border)] hover:border-default-300 data-[focused]:border-primary rounded-lg px-3 py-2 text-sm text-left shadow-sm">
                   <Select.Value />
                   <Select.Indicator />
                 </Select.Trigger>
@@ -146,12 +162,20 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, 
                   </ListBox>
                 </Select.Popover>
               </Select>
-              <Checkbox className="mt-1" isSelected={confirmSecurityItem} onChange={(v) => dispatch({ type: 'SET_FIELD', field: 'confirmSecurityItem', value: v })}>
+              <Checkbox className="mt-1" isSelected={confirmSecurityItem} onChange={(v) => dispatch({ type: 'SET_FIELD', field: 'confirmSecurityItem', value: v })} variant="secondary">
                 <Checkbox.Content>
                   <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
-                  Saya telah menerima jaminan ini (Wajib)
+                  <span className="text-sm font-medium">Saya telah menerima jaminan ini (Wajib)</span>
                 </Checkbox.Content>
               </Checkbox>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <MultipleImageUpload 
+                label="Dokumentasi Pickup (Opsional)" 
+                files={pickupPhotos} 
+                onFilesChange={(newFiles) => dispatch({ type: 'SET_FIELD', field: 'pickupPhotos', value: newFiles })}
+              />
             </div>
 
             {/* Payment form — only shown when there's a remaining balance */}
@@ -191,6 +215,7 @@ const MarkRentedModal = ({ isOpen, onClose, onSuccess, rentId, sisaTagihan = 0, 
         </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>
+    </Modal>
   );
 };
 

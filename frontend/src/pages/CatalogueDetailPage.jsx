@@ -44,7 +44,7 @@ const CatalogueDetailPage = () => {
         setCostume(costumeRes.data);
         // Filter rents that contain this costume
         const relevantRents = (rentsRes.data?.data || []).filter(r => 
-          ['draft', 'booked', 'rented', 'overdue'].includes(r.status?.toLowerCase()) &&
+          ['pending', 'booked', 'rented', 'overdue'].includes(r.status?.toLowerCase()) &&
           r.items.some(item => String(item.costume_id) === String(id))
         );
         setRents(relevantRents);
@@ -180,11 +180,11 @@ const CatalogueDetailPage = () => {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="info-label block mb-1">Wilayah</span>
-                  <p className="font-medium">{costume.region?.name || '-'}</p>
+                  <p className="font-medium">{costume.region || '-'}</p>
                 </div>
                 <div>
                   <span className="info-label block mb-1">Kategori</span>
-                  <p className="font-medium">{costume.category?.name || '-'}</p>
+                  <p className="font-medium">{costume.category || '-'}</p>
                 </div>
                 <div>
                   <span className="info-label block mb-1">Ukuran</span>

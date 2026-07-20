@@ -23,13 +23,12 @@ export default function RentDetailActivityLog({
                 </div>
                 <div className="flex-1 pb-1">
                   <p className="font-semibold text-slate-700">
-                    {group.logs.length > 1 ? 'Order Updated' : (group.logs[0].action_type === 'UPDATED' && (group.logs[0].new_value === 'updated' || !group.logs[0].old_value) ? 'Order Updated' : group.logs[0].action_type)}
+                    {group.logs.length > 1 ? 'Order Diperbarui' : (group.logs[0].action_type === 'UPDATED' && (group.logs[0].new_value === 'updated' || !group.logs[0].old_value) ? 'Order Diperbarui' : group.logs[0].action_type)}
                   </p>
                   {group.logs.length > 1 ? (
                     <ul className="list-disc list-inside text-slate-500 mt-1 space-y-0.5">
                       {group.logs.map(log => (
                         <li key={log.id}>
-                          {log.action_type !== 'UPDATED' && log.action_type !== 'FEE_UPDATE' && log.action_type !== 'PRICE_OVERRIDE' && <span className="font-semibold">{log.action_type}: </span>}
                           {renderLogContent(log)}
                         </li>
                       ))}
@@ -50,9 +49,11 @@ export default function RentDetailActivityLog({
         </Card.Content>
       </Card>
 
-      <Modal.Backdrop isOpen={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+      <Modal isOpen={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+      <Button className="hidden">Hidden Trigger</Button>
+      <Modal.Backdrop>
         <Modal.Container>
-          <Modal.Dialog className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <Modal.Dialog className="max-w-lg max-h-[80vh] overflow-y-auto bg-[var(--surface)] border border-default-200">
             <Modal.Header><Modal.Heading>Activity Log History</Modal.Heading></Modal.Header>
             <Modal.Body>
               <div className="flex flex-col gap-3 relative before:absolute before:inset-y-2 before:left-[11px] before:w-px before:bg-slate-200 ml-1">
@@ -63,13 +64,12 @@ export default function RentDetailActivityLog({
                     </div>
                     <div className="flex-1 pb-1">
                       <p className="font-semibold text-slate-700">
-                        {group.logs.length > 1 ? 'Order Updated' : (group.logs[0].action_type === 'UPDATED' && (group.logs[0].new_value === 'updated' || !group.logs[0].old_value) ? 'Order Updated' : group.logs[0].action_type)}
+                        {group.logs.length > 1 ? 'Order Diperbarui' : (group.logs[0].action_type === 'UPDATED' && (group.logs[0].new_value === 'updated' || !group.logs[0].old_value) ? 'Order Diperbarui' : group.logs[0].action_type)}
                       </p>
                       {group.logs.length > 1 ? (
                         <ul className="list-disc list-inside text-slate-500 mt-1 space-y-0.5">
                           {group.logs.map(log => (
                             <li key={log.id}>
-                              {log.action_type !== 'UPDATED' && log.action_type !== 'FEE_UPDATE' && log.action_type !== 'PRICE_OVERRIDE' && <span className="font-semibold">{log.action_type}: </span>}
                               {renderLogContent(log)}
                             </li>
                           ))}
@@ -89,6 +89,7 @@ export default function RentDetailActivityLog({
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
+    </Modal>
     </>
   );
 }

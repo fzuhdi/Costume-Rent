@@ -24,16 +24,17 @@ const PaymentFormFields = ({
   setUploadingProof,
   hideAmount = false,
   errors = {},
-  handleUploadGeneric
+  handleUploadGeneric,
+  amountLabel = "Nominal *"
 }) => {
   return (
     <div className="flex flex-col gap-4 w-full">
       {!hideAmount && (
         <TextField>
-          <Label className="text-xs font-semibold mb-1 text-default-600 block">Nominal *</Label>
+          <Label className="text-xs font-semibold mb-1 text-default-600 block">{amountLabel}</Label>
           <Input
             type="number"
-            className="w-full bg-content1 border border-default-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             placeholder="0"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
@@ -47,7 +48,7 @@ const PaymentFormFields = ({
         onChange={setMethod}
       >
         <Label className="text-xs font-semibold mb-1 text-default-600 block">Metode Pembayaran *</Label>
-        <Select.Trigger className="w-full flex items-center justify-between bg-content1 border border-default-200 rounded-lg px-3 py-2 text-sm text-left">
+        <Select.Trigger className="w-full flex items-center justify-between bg-[var(--input-bg)] border border-[var(--input-border)] hover:border-default-300 data-[focused]:border-primary rounded-lg px-3 py-2 text-sm text-left shadow-sm">
           <Select.Value />
           <Select.Indicator />
         </Select.Trigger>

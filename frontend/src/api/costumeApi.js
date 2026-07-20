@@ -29,7 +29,24 @@ export const deleteCostumeImage = (costumeId, imageId) =>
 export const getRegions = () =>
   api.get('/regions');
 
+export const createRegion = (data) =>
+  api.post('/regions', data);
+
+export const updateRegion = (id, data) =>
+  api.put(`/regions/${id}`, data);
+
+export const deleteRegion = (id) =>
+  api.delete(`/regions/${id}`);
 
 export const getCategories = () =>
   api.get('/categories');
+
+export const createCategory = (data) =>
+  api.post('/categories', data);
+
+export const updateCategory = (id, data) =>
+  api.put(`/categories/${id}`, data);
+
+export const deleteCategory = (id) =>
+  api.delete(`/categories/${id}`);
 

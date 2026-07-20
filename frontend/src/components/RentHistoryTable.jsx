@@ -1,30 +1,33 @@
 import { Table, Chip, Card, Button, Tooltip } from '@heroui/react';
-import { CheckCircle, Package, XCircle, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const statusProps = {
-  draft: { color: 'default', variant: 'soft' },
+  pending: { color: 'default', variant: 'soft' },
   booked: { color: 'accent', variant: 'primary' },
   rented: { color: 'warning', variant: 'primary' },
   returned: { color: 'success', variant: 'primary' },
+  completed: { color: 'success', variant: 'flat' },
   overdue: { color: 'danger', variant: 'primary' },
   cancelled: { color: 'default', variant: 'secondary' },
 };
 
 const statusLabels = {
-  draft: 'Draft',
+  pending: 'Pending',
   booked: 'Dipesan',
   rented: 'Disewa',
-  returned: 'Dikembalikan',
+  returned: 'Diterima',
+  completed: 'Selesai',
   overdue: 'Terlambat',
   cancelled: 'Dibatalkan',
 };
 
 const statusA11yLabels = {
-  draft: 'status draft',
+  pending: 'status pending',
   booked: 'status booked',
   rented: 'status rented',
   returned: 'status returned',
+  completed: 'status completed',
   overdue: 'status overdue',
   cancelled: 'status cancelled',
 };
@@ -38,53 +41,12 @@ const formatShortDate = (dateString) => {
   return shortDateFormatter.format(date);
 };
 
-const RentHistoryTable = ({ rents, openReturnModal, openRentModal, openCancelModal }) => {
+const RentHistoryTable = ({ rents }) => {
   const navigate = useNavigate();
 
 
 
-  const renderActions = (rent) => {
-    switch (rent.status) {
-      case 'booked':
-        return (
-          <>
-            <Button
-              variant="primary"
-              size="sm"
-              onPress={() => openRentModal(rent.id)}
-              aria-label="Sewakan peminjaman"
-            >
-              <Package size={14} aria-hidden="true" />
-              Disewakan
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onPress={() => openCancelModal(rent.id)}
-              aria-label="Batalkan peminjaman"
-            >
-              <XCircle size={14} aria-hidden="true" />
-              Batalkan
-            </Button>
-          </>
-        );
-      case 'rented':
-      case 'overdue':
-        return (
-          <Button
-            variant="secondary"
-            size="sm"
-            onPress={() => openReturnModal(rent.id)}
-            aria-label="Kembalikan peminjaman"
-          >
-            <CheckCircle size={14} aria-hidden="true" />
-            Kembalikan
-          </Button>
-        );
-      default:
-        return null;
-    }
-  };
+  // Removed inline action buttons to rely on RentDetailPage
 
   return (
     <>
@@ -126,7 +88,6 @@ const RentHistoryTable = ({ rents, openReturnModal, openRentModal, openCancelMod
                     <Eye size={16} aria-hidden="true" />
                   </Button>
                 </Tooltip>
-                {renderActions(rent)}
               </div>
             </Card.Content>
           </Card>
@@ -171,7 +132,6 @@ const RentHistoryTable = ({ rents, openReturnModal, openRentModal, openCancelMod
                             <Eye size={16} />
                           </Button>
                         </Tooltip>
-                        {renderActions(rent)}
                       </div>
                     </Table.Cell>
                   </Table.Row>

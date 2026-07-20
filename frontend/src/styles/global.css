@@ -49,7 +49,7 @@
     --foreground: #f9fafb;
     --muted: #9ca3af;
     --border: #374151;
-    --input-bg: #1f2937;
+    --input-bg: #111827;
     --input-border: #4b5563;
   }
 }
@@ -189,5 +189,19 @@ body {
   /* ─── Auth Screen ──────────────────────────────────────── */
   .auth-screen {
     @apply min-h-screen flex items-center justify-center bg-[var(--background)];
+  }
+
+  /* ─── HeroUI Form Controls Contrast Fix for Dark Mode ─── */
+  .dark .bg-content1 {
+    background-color: var(--surface) !important;
+  }
+  
+  .dark .radio:not([data-selected="true"]) .radio__control,
+  .dark .checkbox:not([data-selected="true"]) .checkbox__control,
+  .dark [data-selected="false"] .radio__control,
+  .dark [data-selected="false"] .checkbox__control {
+    border-color: var(--input-border) !important;
+    background-color: var(--input-bg) !important;
+    border-width: 2px !important;
   }
 }

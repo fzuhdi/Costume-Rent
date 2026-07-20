@@ -6,6 +6,7 @@ import security from 'eslint-plugin-security';
 import noUnsanitized from 'eslint-plugin-no-unsanitized';
 import unusedImports from 'eslint-plugin-unused-imports';
 export default [
+  { ignores: ['dist', 'node_modules'] },
   js.configs.recommended,
   {
     files: ['**/*.{js,jsx}'],

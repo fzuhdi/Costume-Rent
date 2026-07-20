@@ -37,7 +37,7 @@ After first run, use this account:
 
 | Field | Value |
 |-------|-------|
-| Email | admin@busana.com |
+| Username | admin |
 | Password | admin123 |
 
 ---

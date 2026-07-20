@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/busana/backend/services"
+	"github.com/busana/backend/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,33 +25,33 @@ func NewSettingsHandler() *SettingsHandler {
 func (h *SettingsHandler) GetAll(c *gin.Context) {
 	settings, err := h.settingsService.GetAll()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, settings)
+	utils.RespondSuccess(c, settings)
 }
 
 func (h *SettingsHandler) Update(c *gin.Context) {
 	var settings map[string]string
 	if err := c.ShouldBindJSON(&settings); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
 	if err := h.settingsService.BulkUpdate(settings); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
 	updated, _ := h.settingsService.GetAll()
-	c.JSON(http.StatusOK, updated)
+	utils.RespondSuccess(c, updated)
 }
 
 func (h *SettingsHandler) UploadLogo(c *gin.Context) {
 	file, err := c.FormFile("logo")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_BAD_REQUEST"))
 		return
 	}
 
@@ -60,7 +61,7 @@ func (h *SettingsHandler) UploadLogo(c *gin.Context) {
 	}
 
 	if err := os.MkdirAll(uploadDir, 0750); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
+		utils.RespondFailed(c, http.StatusInternalServerError, utils.NewAppError("ERR_BAD_REQUEST"))
 		return
 	}
 
@@ -69,15 +70,15 @@ func (h *SettingsHandler) UploadLogo(c *gin.Context) {
 	filepath := filepath.Join(uploadDir, filename)
 
 	if err := c.SaveUploadedFile(file, filepath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+		utils.RespondFailed(c, http.StatusInternalServerError, utils.NewAppError("ERR_BAD_REQUEST"))
 		return
 	}
 
 	logoPath := "/uploads/" + filename
 	if err := h.settingsService.SetLogo(logoPath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"path": logoPath})
+	utils.RespondSuccess(c, gin.H{"path": logoPath})
 }

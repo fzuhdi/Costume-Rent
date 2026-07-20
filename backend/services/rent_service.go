@@ -1,7 +1,8 @@
 package services
 
 import (
-	"errors"
+	"encoding/json"
+	"fmt"
 	"math"
 	"strconv"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/busana/backend/config"
 	"github.com/busana/backend/dto"
 	"github.com/busana/backend/models"
+	"github.com/busana/backend/utils"
 	"gorm.io/gorm"
 )
 
@@ -33,7 +35,7 @@ func (s *RentService) logActivity(orderID uint, userID uint, actionType string, 
 func (s *RentService) lazyExpireDrafts() {
 	expiryTime := time.Now().Add(-1 * time.Hour)
 	config.DB.Model(&models.RentOrder{}).
-		Where("status = ? AND created_at < ?", "draft", expiryTime).
+		Where("status = ? AND created_at < ?", "pending", expiryTime).
 		Update("status", "cancelled")
 }
 
@@ -134,7 +136,7 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 
 	eventDate, err := time.Parse("2006-01-02", req.EventDate)
 	if err != nil {
-		return nil, errors.New("invalid event_date format")
+		return nil, utils.NewAppError("ERR_INVALID_DATE")
 	}
 
 	costumeSvc := NewCostumeService()
@@ -150,38 +152,40 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 	}
 
 	totalBasePrice := 0
+	totalOriginalBasePrice := 0
 
 	for _, item := range req.Items {
 		costumeResp, err := costumeSvc.GetByID(item.CostumeID)
 		if err != nil {
-			return nil, errors.New("costume not found: " + strconv.FormatUint(uint64(item.CostumeID), 10))
+			return nil, utils.NewAppError("ERR_COSTUME_NOT_FOUND", map[string]interface{}{"costume_id": item.CostumeID})
 		}
 		itemFee := costumeResp.RentalFee
 		if item.CustomRentalFee != nil {
 			itemFee = *item.CustomRentalFee
 		}
 		totalBasePrice += itemFee * item.Quantity
+		totalOriginalBasePrice += costumeResp.RentalFee * item.Quantity
 	}
 
 	if status == "booked" {
 		if req.Payment == nil {
-			return nil, errors.New("payment required for booked status")
+			return nil, utils.NewAppError("ERR_PAYMENT_REQUIRED")
 		}
 		if req.Payment.PaymentMethod != "CASH" && req.Payment.PaymentProof == "" {
-			return nil, errors.New("bukti pembayaran (payment proof) wajib diunggah untuk pemesanan (booked)")
+			return nil, utils.NewAppError("ERR_PAYMENT_PROOF_REQUIRED")
 		}
 
 		if req.Payment.Amount < totalBasePrice/2 {
-			return nil, errors.New("downpayment must be at least 50% of total base price")
+			return nil, utils.NewAppError("ERR_MIN_DOWNPAYMENT")
 		}
 
 		for _, item := range req.Items {
 			available, err := costumeSvc.GetAvailableQuantityOnDate(item.CostumeID, eventDate)
 			if err != nil {
-				return nil, errors.New("costume not found: " + strconv.FormatUint(uint64(item.CostumeID), 10))
+				return nil, utils.NewAppError("ERR_COSTUME_NOT_FOUND", map[string]interface{}{"costume_id": item.CostumeID})
 			}
 			if item.Quantity > available {
-				return nil, errors.New("insufficient quantity for costume " + strconv.FormatUint(uint64(item.CostumeID), 10) + ": requested " + strconv.Itoa(item.Quantity) + ", available " + strconv.Itoa(available))
+				return nil, utils.NewAppError("ERR_INSUFFICIENT_STOCK", map[string]interface{}{"costume_id": item.CostumeID, "requested": item.Quantity, "available": available})
 			}
 		}
 	}
@@ -204,7 +208,6 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 		return nil, err
 	}
 
-	totalBaseFee := 0
 	for _, item := range req.Items {
 		costumeResp, _ := costumeSvc.GetByID(item.CostumeID)
 
@@ -212,7 +215,6 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 		if item.CustomRentalFee != nil {
 			itemFee = *item.CustomRentalFee
 		}
-		totalBaseFee += (itemFee * item.Quantity)
 
 		orderItem := models.RentOrderItem{
 			RentOrderID: order.ID,
@@ -228,12 +230,13 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 
 	// Insert the Base Fee into the Ledger
 	baseFeeTx := models.RentTransaction{
-		RentOrderID: order.ID,
-		Type:        "DEBIT",
-		Category:    "BASE_FEE",
-		Amount:      totalBaseFee,
-		Notes:       "Biaya Sewa",
-		CreatedBy:   userID,
+		RentOrderID:    order.ID,
+		Type:           "DEBIT",
+		Category:       "BASE_FEE",
+		Amount:         totalBasePrice,
+		OriginalAmount: totalOriginalBasePrice,
+		Notes:          "Biaya Sewa",
+		CreatedBy:      userID,
 	}
 	config.DB.Create(&baseFeeTx)
 
@@ -266,13 +269,13 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest, userID uin
 		if t, err := time.Parse("2006-01-02", req.EventDate); err == nil {
 			costumeSvc := NewCostumeService()
 
-			// Verify availability if not draft
+			// Verify availability if not pending
 			if order.Status == "booked" || order.Status == "rented" {
 				config.DB.Preload("Items").First(&order, id)
 				for _, item := range order.Items {
 					available, err := costumeSvc.GetAvailableQuantityOnDate(item.CostumeID, t)
 					if err != nil || int(item.Quantity) > available {
-						return nil, errors.New("cannot change date: costume " + strconv.FormatUint(uint64(item.CostumeID), 10) + " not available on new date")
+						return nil, utils.NewAppError("ERR_UNAVAILABLE_DATE", map[string]interface{}{"costume_id": item.CostumeID})
 					}
 				}
 			}
@@ -374,23 +377,28 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest, userID uin
 		var updatedItems []models.RentOrderItem
 		config.DB.Where("rent_order_id = ?", id).Find(&updatedItems)
 		totalBaseFee := 0
+		totalOriginalBaseFee := 0
 		for _, item := range updatedItems {
 			totalBaseFee += (item.RentalFee * item.Quantity)
+			costumeResp, _ := costumeSvc.GetByID(item.CostumeID)
+			totalOriginalBaseFee += (costumeResp.RentalFee * item.Quantity)
 		}
 
 		var baseFeeTx models.RentTransaction
 		if err := config.DB.Where("rent_order_id = ? AND category = ?", id, "BASE_FEE").First(&baseFeeTx).Error; err == nil {
 			baseFeeTx.Amount = totalBaseFee
+			baseFeeTx.OriginalAmount = totalOriginalBaseFee
 			config.DB.Save(&baseFeeTx)
 		} else {
 			// Create it if it didn't exist for some reason
 			baseFeeTx = models.RentTransaction{
-				RentOrderID: id,
-				Type:        "DEBIT",
-				Category:    "BASE_FEE",
-				Amount:      totalBaseFee,
-				Notes:       "Biaya Sewa",
-				CreatedBy:   userID,
+				RentOrderID:    id,
+				Type:           "DEBIT",
+				Category:       "BASE_FEE",
+				Amount:         totalBaseFee,
+				OriginalAmount: totalOriginalBaseFee,
+				Notes:          "Biaya Sewa",
+				CreatedBy:      userID,
 			}
 			config.DB.Create(&baseFeeTx)
 		}
@@ -401,37 +409,89 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest, userID uin
 	return s.GetByID(order.ID)
 }
 
-func (s *RentService) MarkReturned(id uint, req dto.MarkReturnedRequest, userID uint) (*models.RentOrder, error) {
+func (s *RentService) ReceiveOrder(id uint, userID uint) (*models.RentOrder, error) {
 	var order models.RentOrder
 	if err := config.DB.First(&order, id).Error; err != nil {
 		return nil, err
 	}
 
 	if order.Status != "rented" && order.Status != "overdue" {
-		return nil, errors.New("only rented or overdue orders can be returned")
+		return nil, utils.NewAppError("ERR_INVALID_STATUS_RECEIVE")
 	}
 
-	if req.DamageFee > 0 {
+	now := time.Now()
+	order.Status = "returned"
+	order.ActualReturnDate = &now
+
+	if err := config.DB.Save(&order).Error; err != nil {
+		return nil, err
+	}
+
+	s.logActivity(order.ID, userID, "STATUS_CHANGE", "rented/overdue", "returned")
+
+	return s.GetByID(order.ID)
+}
+
+func (s *RentService) MarkReturned(id uint, req dto.MarkReturnedRequest, userID uint) (*models.RentOrder, error) {
+	var order models.RentOrder
+	if err := config.DB.First(&order, id).Error; err != nil {
+		return nil, err
+	}
+
+	if order.Status != "rented" && order.Status != "overdue" && order.Status != "returned" {
+		return nil, utils.NewAppError("ERR_INVALID_STATUS_COMPLETE")
+	}
+
+	if req.DamageFee > 0 || len(req.DamagedItems) > 0 {
+		originalDamageFee := 0
+		costumeSvc := NewCostumeService()
+		for _, item := range req.DamagedItems {
+			c, err := costumeSvc.GetByID(item.CostumeID)
+			if err == nil {
+				originalDamageFee += c.BuyPrice * item.Quantity
+			}
+		}
+
 		tx := models.RentTransaction{
-			RentOrderID: order.ID,
-			Type:        "DEBIT",
-			Category:    "DAMAGE_FEE",
-			Amount:      req.DamageFee,
-			Notes:       "Denda Kerusakan",
-			CreatedBy:   userID,
+			RentOrderID:    order.ID,
+			Type:           "DEBIT",
+			Category:       "DAMAGE_FEE",
+			Amount:         req.DamageFee,
+			OriginalAmount: originalDamageFee,
+			Notes:          "Denda Kerusakan",
+			CreatedBy:      userID,
 		}
 		config.DB.Create(&tx)
 	}
 	if req.LateFee > 0 {
+		originalLateFee := req.LateFee
+		if req.OriginalLateFee != nil {
+			originalLateFee = *req.OriginalLateFee
+		}
 		tx := models.RentTransaction{
-			RentOrderID: order.ID,
-			Type:        "DEBIT",
-			Category:    "LATE_FEE",
-			Amount:      req.LateFee,
-			Notes:       "Denda Keterlambatan",
-			CreatedBy:   userID,
+			RentOrderID:    order.ID,
+			Type:           "DEBIT",
+			Category:       "LATE_FEE",
+			Amount:         req.LateFee,
+			OriginalAmount: originalLateFee,
+			Notes:          "Denda Keterlambatan",
+			CreatedBy:      userID,
 		}
 		config.DB.Create(&tx)
+	}
+
+	if len(req.ReturnPhotos) > 0 {
+		photosJSON, err := json.Marshal(req.ReturnPhotos)
+		if err == nil {
+			order.ReturnPhotos = string(photosJSON)
+		}
+	}
+
+	if len(req.DamagePhotos) > 0 {
+		photosJSON, err := json.Marshal(req.DamagePhotos)
+		if err == nil {
+			order.DamagePhotos = string(photosJSON)
+		}
 	}
 
 	if req.Payment != nil {
@@ -445,21 +505,41 @@ func (s *RentService) MarkReturned(id uint, req dto.MarkReturnedRequest, userID 
 		}
 	}
 
-	now := time.Now()
-	if req.ReturnedAt != "" {
-		if t, err := time.Parse("2006-01-02", req.ReturnedAt); err == nil {
-			now = t
+	if order.ActualReturnDate == nil {
+		now := time.Now()
+		if req.ReturnedAt != "" {
+			if t, err := time.Parse("2006-01-02", req.ReturnedAt); err == nil {
+				now = t
+			}
+		}
+		order.ActualReturnDate = &now
+	}
+
+	oldStatus := order.Status
+
+	// Check if fully paid to determine if we go to inspected or completed
+	var orderWithTransactions models.RentOrder
+	config.DB.Preload("Transactions").First(&orderWithTransactions, id)
+	totalDebits := 0
+	for _, t := range orderWithTransactions.Transactions {
+		if t.Type == "DEBIT" {
+			totalDebits += t.Amount
 		}
 	}
-	order.Status = "returned"
-	order.ActualReturnDate = &now
+
+	if order.TotalPaid >= totalDebits {
+		order.Status = "completed"
+	} else {
+		order.Status = "inspected"
+	}
+
 	order.HasSecurityItem = false
 
 	if err := config.DB.Save(&order).Error; err != nil {
 		return nil, err
 	}
 
-	s.logActivity(order.ID, userID, "STATUS_CHANGE", "rented/overdue", "returned")
+	s.logActivity(order.ID, userID, "STATUS_CHANGE", oldStatus, order.Status)
 
 	return s.GetByID(order.ID)
 }
@@ -471,7 +551,7 @@ func (s *RentService) MarkRented(id uint, req dto.MarkRentedRequest, userID uint
 	}
 
 	if order.Status != "booked" {
-		return nil, errors.New("hanya pesanan berstatus 'booked' yang dapat disewakan")
+		return nil, utils.NewAppError("ERR_INVALID_STATUS_RENT")
 	}
 
 	totalFee := 0
@@ -493,7 +573,7 @@ func (s *RentService) MarkRented(id uint, req dto.MarkRentedRequest, userID uint
 
 	if req.Payment != nil {
 		if order.TotalPaid+req.Payment.Amount < totalBill && req.Payment.PaymentProof == "" && req.Payment.PaymentMethod != "CASH" {
-			return nil, errors.New("bukti pelunasan pembayaran wajib diunggah untuk mengambil kostum (disewakan)")
+			return nil, utils.NewAppError("ERR_FULL_PAYMENT_PROOF_REQUIRED")
 		}
 		_, err := s.AddPayment(order.ID, *req.Payment, userID)
 		if err != nil {
@@ -505,13 +585,20 @@ func (s *RentService) MarkRented(id uint, req dto.MarkRentedRequest, userID uint
 		}
 	} else {
 		if order.TotalPaid < totalBill {
-			return nil, errors.New("pelunasan pembayaran diperlukan untuk mengambil kostum (disewakan)")
+			return nil, utils.NewAppError("ERR_FULL_PAYMENT_REQUIRED")
 		}
 	}
 
 	order.Status = "rented"
 	order.HasSecurityItem = true
 	order.GuaranteeType = req.GuaranteeType
+
+	if len(req.PickupPhotos) > 0 {
+		photosJSON, err := json.Marshal(req.PickupPhotos)
+		if err == nil {
+			order.PickupPhotos = string(photosJSON)
+		}
+	}
 
 	if err := config.DB.Save(&order).Error; err != nil {
 		return nil, err
@@ -530,14 +617,15 @@ func (s *RentService) RollbackStatus(id uint, userID uint) (*models.RentOrder, e
 
 	oldStatus := order.Status
 
-	if order.Status == "rented" {
+	switch order.Status {
+	case "rented":
 		order.Status = "booked"
 		order.HasSecurityItem = false
 		if err := config.DB.Save(&order).Error; err != nil {
 			return nil, err
 		}
 		s.logActivity(order.ID, userID, "ROLLBACK", oldStatus, "booked")
-	} else if order.Status == "returned" {
+	case "returned":
 		order.Status = "rented"
 		order.ActualReturnDate = nil
 		order.HasSecurityItem = true
@@ -545,8 +633,20 @@ func (s *RentService) RollbackStatus(id uint, userID uint) (*models.RentOrder, e
 			return nil, err
 		}
 		s.logActivity(order.ID, userID, "ROLLBACK", oldStatus, "rented")
-	} else {
-		return nil, errors.New("hanya pesanan berstatus 'rented' atau 'returned' yang dapat dibatalkan statusnya")
+	case "inspected":
+		order.Status = "returned"
+		if err := config.DB.Save(&order).Error; err != nil {
+			return nil, err
+		}
+		s.logActivity(order.ID, userID, "ROLLBACK", oldStatus, "returned")
+	case "completed":
+		order.Status = "inspected"
+		if err := config.DB.Save(&order).Error; err != nil {
+			return nil, err
+		}
+		s.logActivity(order.ID, userID, "ROLLBACK", oldStatus, "inspected")
+	default:
+		return nil, utils.NewAppError("ERR_INVALID_STATUS_ROLLBACK")
 	}
 
 	return s.GetByID(order.ID)
@@ -558,16 +658,16 @@ func (s *RentService) MarkBooked(id uint, req dto.UpgradeToBookedRequest, userID
 		return nil, err
 	}
 
-	if order.Status != "draft" {
-		return nil, errors.New("hanya pesanan berstatus 'draft' yang dapat diubah ke 'booked'")
+	if order.Status != "pending" {
+		return nil, utils.NewAppError("ERR_INVALID_STATUS_UPGRADE")
 	}
 
 	if req.Payment == nil {
-		return nil, errors.New("payment required to upgrade to booked")
+		return nil, utils.NewAppError("ERR_PAYMENT_REQUIRED_UPGRADE")
 	}
 
 	if req.Payment.PaymentMethod != "CASH" && req.Payment.PaymentProof == "" {
-		return nil, errors.New("bukti pembayaran downpayment wajib diunggah")
+		return nil, utils.NewAppError("ERR_DP_PROOF_REQUIRED")
 	}
 
 	totalBasePrice := 0
@@ -578,15 +678,15 @@ func (s *RentService) MarkBooked(id uint, req dto.UpgradeToBookedRequest, userID
 
 		available, err := costumeSvc.GetAvailableQuantityOnDate(item.CostumeID, order.EventDate)
 		if err != nil {
-			return nil, errors.New("costume not found: " + strconv.FormatUint(uint64(item.CostumeID), 10))
+			return nil, utils.NewAppError("ERR_COSTUME_NOT_FOUND", map[string]interface{}{"costume_id": item.CostumeID})
 		}
 		if item.Quantity > available {
-			return nil, errors.New("insufficient quantity for costume " + strconv.FormatUint(uint64(item.CostumeID), 10) + ": requested " + strconv.Itoa(item.Quantity) + ", available " + strconv.Itoa(available))
+			return nil, utils.NewAppError("ERR_INSUFFICIENT_STOCK", map[string]interface{}{"costume_id": item.CostumeID, "requested": item.Quantity, "available": available})
 		}
 	}
 
 	if req.Payment.Amount < totalBasePrice/2 {
-		return nil, errors.New("downpayment must be at least 50% of total base price")
+		return nil, utils.NewAppError("ERR_MIN_DOWNPAYMENT")
 	}
 
 	order.Status = "booked"
@@ -600,7 +700,7 @@ func (s *RentService) MarkBooked(id uint, req dto.UpgradeToBookedRequest, userID
 		return nil, err
 	}
 
-	s.logActivity(order.ID, userID, "STATUS_CHANGE", "draft", "booked")
+	s.logActivity(order.ID, userID, "STATUS_CHANGE", "pending", "booked")
 
 	return s.GetByID(order.ID)
 }
@@ -612,7 +712,7 @@ func (s *RentService) CancelOrder(id uint, userID uint) (*models.RentOrder, erro
 	}
 
 	if order.Status != "booked" {
-		return nil, errors.New("only booked orders can be cancelled")
+		return nil, utils.NewAppError("ERR_INVALID_STATUS_CANCEL")
 	}
 
 	now := time.Now()
@@ -655,7 +755,7 @@ func (s *RentService) ExtendRent(id uint, req dto.ExtendRentRequest, userID uint
 	}
 
 	if order.Status != "rented" {
-		return nil, errors.New("hanya pesanan berstatus 'rented' yang dapat diperpanjang")
+		return nil, utils.NewAppError("ERR_INVALID_STATUS_EXTEND")
 	}
 
 	costumeSvc := NewCostumeService()
@@ -664,25 +764,36 @@ func (s *RentService) ExtendRent(id uint, req dto.ExtendRentRequest, userID uint
 		for _, item := range order.Items {
 			available, err := costumeSvc.GetAvailableQuantityOnDate(item.CostumeID, checkDate)
 			if err != nil || item.Quantity > available {
-				return nil, errors.New("costume not available for extension: " + strconv.FormatUint(uint64(item.CostumeID), 10))
+				return nil, utils.NewAppError("ERR_UNAVAILABLE_EXTENSION", map[string]interface{}{"costume_id": item.CostumeID})
 			}
 		}
 	}
 
+	totalExtensionFee := 0
+	totalOriginalExtensionFee := 0
+
 	for _, item := range order.Items {
-		// Create DEBIT transaction for extension
-		extensionFee := item.RentalFee * item.Quantity * req.ExtraDays
-		if extensionFee > 0 {
-			tx := models.RentTransaction{
-				RentOrderID: order.ID,
-				Type:        "DEBIT",
-				Category:    "EXTENSION_FEE",
-				Amount:      extensionFee,
-				Notes:       "Biaya Perpanjangan (" + strconv.Itoa(req.ExtraDays) + " hari)",
-				CreatedBy:   userID,
-			}
-			config.DB.Create(&tx)
+		c, _ := costumeSvc.GetByID(item.CostumeID)
+		totalOriginalExtensionFee += c.RentalFee * item.Quantity * req.ExtraDays
+		totalExtensionFee += item.RentalFee * item.Quantity * req.ExtraDays
+	}
+
+	actualExtensionFee := totalExtensionFee
+	if req.CustomExtensionFee != nil {
+		actualExtensionFee = *req.CustomExtensionFee
+	}
+
+	if actualExtensionFee > 0 || totalOriginalExtensionFee > 0 {
+		tx := models.RentTransaction{
+			RentOrderID:    order.ID,
+			Type:           "DEBIT",
+			Category:       "EXTENSION_FEE",
+			Amount:         actualExtensionFee,
+			OriginalAmount: totalOriginalExtensionFee,
+			Notes:          "Biaya Perpanjangan (" + strconv.Itoa(req.ExtraDays) + " hari)",
+			CreatedBy:      userID,
 		}
+		config.DB.Create(&tx)
 	}
 
 	order.ExpectedReturnDate = order.ExpectedReturnDate.AddDate(0, 0, req.ExtraDays)
@@ -721,14 +832,32 @@ func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderR
 	var transactions []dto.RentTransactionResponse
 	for _, t := range order.Transactions {
 		transactions = append(transactions, dto.RentTransactionResponse{
-			ID:            t.ID,
-			RentOrderID:   t.RentOrderID,
-			Amount:        t.Amount,
-			PaymentMethod: t.PaymentMethod,
-			PaymentProof:  t.PaymentProof,
-			Notes:         t.Notes,
-			CreatedAt:     t.CreatedAt.Format("2006-01-02 15:04:05"),
+			ID:             t.ID,
+			RentOrderID:    t.RentOrderID,
+			Type:           t.Type,
+			Category:       t.Category,
+			Amount:         t.Amount,
+			OriginalAmount: t.OriginalAmount,
+			PaymentMethod:  t.PaymentMethod,
+			PaymentProof:   t.PaymentProof,
+			Notes:          t.Notes,
+			CreatedAt:      t.CreatedAt.Format("2006-01-02 15:04:05"),
 		})
+	}
+
+	var pickupPhotos []string
+	if order.PickupPhotos != "" {
+		_ = json.Unmarshal([]byte(order.PickupPhotos), &pickupPhotos)
+	}
+
+	var returnPhotos []string
+	if order.ReturnPhotos != "" {
+		_ = json.Unmarshal([]byte(order.ReturnPhotos), &returnPhotos)
+	}
+
+	var damagePhotos []string
+	if order.DamagePhotos != "" {
+		_ = json.Unmarshal([]byte(order.DamagePhotos), &damagePhotos)
 	}
 
 	return dto.RentOrderResponse{
@@ -746,6 +875,9 @@ func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderR
 		PaymentStatus:      order.PaymentStatus,
 		HasSecurityItem:    order.HasSecurityItem,
 		Status:             order.Status,
+		PickupPhotos:       pickupPhotos,
+		ReturnPhotos:       returnPhotos,
+		DamagePhotos:       damagePhotos,
 		Notes:              order.Notes,
 		Items:              items,
 		Transactions:       transactions,
@@ -757,7 +889,7 @@ func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderR
 func (s *RentService) AddPayment(orderID uint, req dto.AddPaymentRequest, userID uint) (*models.RentOrder, error) {
 	var order models.RentOrder
 	if err := config.DB.First(&order, orderID).Error; err != nil {
-		return nil, errors.New("rent order not found")
+		return nil, utils.NewAppError("ERR_RENT_NOT_FOUND")
 	}
 
 	tx := models.RentTransaction{
@@ -795,6 +927,13 @@ func (s *RentService) AddPayment(orderID uint, req dto.AddPaymentRequest, userID
 	totalTagihan := totalFee + totalDebits
 	if order.TotalPaid >= totalTagihan {
 		order.PaymentStatus = "LUNAS"
+
+		// Auto-complete if currently inspected
+		if order.Status == "inspected" {
+			oldStatus := order.Status
+			order.Status = "completed"
+			s.logActivity(orderID, userID, "STATUS_CHANGE", oldStatus, "completed")
+		}
 	} else if order.TotalPaid > 0 {
 		order.PaymentStatus = "DP"
 	}
@@ -804,6 +943,89 @@ func (s *RentService) AddPayment(orderID uint, req dto.AddPaymentRequest, userID
 	}
 
 	s.logActivity(orderID, userID, "PAYMENT_ADDED", "Added payment of "+strconv.Itoa(req.Amount), order.Status)
+
+	return s.GetByID(orderID)
+}
+
+func (s *RentService) VoidTransaction(orderID uint, trxID uint, userID uint) (*models.RentOrder, error) {
+	var trx models.RentTransaction
+	if err := config.DB.First(&trx, trxID).Error; err != nil {
+		return nil, utils.NewAppError("ERR_INVALID_ID")
+	}
+
+	if trx.RentOrderID != orderID {
+		return nil, utils.NewAppError("ERR_BAD_REQUEST")
+	}
+
+	if trx.Category == "CORRECTION" || trx.Category == "BASE_FEE" {
+		return nil, utils.NewAppError("ERR_BAD_REQUEST") // Cannot void a correction or base fee
+	}
+
+	if trx.IsVoided {
+		return nil, utils.NewAppError("ERR_ALREADY_VOIDED")
+	}
+
+	// Create offsetting transaction
+	voidTx := models.RentTransaction{
+		RentOrderID: orderID,
+		Type:        trx.Type,
+		Category:    "CORRECTION",
+		Amount:      -trx.Amount,
+		Notes:       "Koreksi/Pembatalan",
+		CreatedBy:   userID,
+	}
+
+	if err := config.DB.Create(&voidTx).Error; err != nil {
+		return nil, err
+	}
+
+	// Mark original as voided
+	trx.IsVoided = true
+	if err := config.DB.Save(&trx).Error; err != nil {
+		return nil, err
+	}
+
+	// Recalculate totals
+	var order models.RentOrder
+	if err := config.DB.Preload("Items").Preload("Transactions").First(&order, orderID).Error; err != nil {
+		return nil, err
+	}
+
+	totalPaid := 0
+	totalDebits := 0
+	totalFee := 0
+
+	for _, item := range order.Items {
+		totalFee += item.RentalFee * item.Quantity
+	}
+
+	for _, t := range order.Transactions {
+		if t.Type == "DEBIT" {
+			totalDebits += t.Amount
+		} else if t.Type == "CREDIT" || t.Type == "" {
+			totalPaid += t.Amount
+		}
+	}
+
+	order.TotalPaid = totalPaid
+	totalTagihan := totalFee + totalDebits
+
+	if order.TotalPaid >= totalTagihan && totalTagihan > 0 {
+		order.PaymentStatus = "LUNAS"
+	} else if order.TotalPaid > 0 {
+		order.PaymentStatus = "DP"
+	} else {
+		order.PaymentStatus = "BELUM_BAYAR"
+	}
+
+	// We do NOT auto-change the order status on void (e.g. from completed back to inspected)
+	// because they can use the Rollback button for status if they want.
+
+	if err := config.DB.Save(&order).Error; err != nil {
+		return nil, err
+	}
+
+	s.logActivity(orderID, userID, "TRX_VOIDED", fmt.Sprintf("Voided transaction #%d", trxID), order.Status)
 
 	return s.GetByID(orderID)
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/busana/backend/dto"
 	"github.com/busana/backend/services"
+	"github.com/busana/backend/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,29 +23,29 @@ func NewClientHandler() *ClientHandler {
 func (h *ClientHandler) List(c *gin.Context) {
 	var filter dto.ClientFilter
 	if err := c.ShouldBindQuery(&filter); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
 	response, err := h.clientService.List(filter)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	utils.RespondSuccess(c, response)
 }
 
 func (h *ClientHandler) GetByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
 		return
 	}
 
 	client, err := h.clientService.GetByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Client not found"})
+		utils.RespondFailed(c, http.StatusNotFound, utils.NewAppError("ERR_CLIENT_NOT_FOUND"))
 		return
 	}
 
@@ -88,7 +89,7 @@ func (h *ClientHandler) GetByID(c *gin.Context) {
 		CreatedAt:  client.CreatedAt.Format("2006-01-02"),
 		RentOrders: rentHistory,
 	}
-	c.JSON(http.StatusOK, response)
+	utils.RespondSuccess(c, response)
 }
 
 func (h *ClientHandler) Search(c *gin.Context) {
@@ -102,23 +103,23 @@ func (h *ClientHandler) Search(c *gin.Context) {
 
 	clients, err := h.clientService.Search(query, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, clients)
+	utils.RespondSuccess(c, clients)
 }
 
 func (h *ClientHandler) Create(c *gin.Context) {
 	var req dto.CreateClientRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
 	client, err := h.clientService.Create(req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -135,52 +136,52 @@ func (h *ClientHandler) Create(c *gin.Context) {
 func (h *ClientHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
 		return
 	}
 
 	var req dto.UpdateClientRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
 	client, err := h.clientService.Update(uint(id), req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, client)
+	utils.RespondSuccess(c, client)
 }
 
 func (h *ClientHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
 		return
 	}
 
 	if err := h.clientService.Delete(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Client deleted successfully"})
+	utils.RespondSuccess(c, gin.H{"message": "Client deleted successfully"})
 }
 
 func (h *ClientHandler) GetRentHistory(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
 		return
 	}
 
 	orders, err := h.clientService.GetRentHistory(uint(id))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		utils.RespondFailed(c, http.StatusInternalServerError, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, orders)
+	utils.RespondSuccess(c, orders)
 }

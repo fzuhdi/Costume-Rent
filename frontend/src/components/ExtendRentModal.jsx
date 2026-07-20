@@ -17,14 +17,21 @@ const formatCurrency = (value) => idrFormatter.format(value);
  */
 const ExtendRentModal = ({ isOpen, onClose, onSuccess, rentId, dailyFee = 0 }) => {
   const [extraDays, setExtraDays] = useState('1');
+  const [customExtensionFee, setCustomExtensionFee] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
     setLoading(true);
     setError('');
+    const defaultFee = dailyFee * parseInt(extraDays);
+    const customFee = parseInt(customExtensionFee);
     try {
-      await extendRent(rentId, { extra_days: parseInt(extraDays) });
+      const payload = { extra_days: parseInt(extraDays) };
+      if (!isNaN(customFee) && customFee !== defaultFee) {
+        payload.custom_extension_fee = customFee;
+      }
+      await extendRent(rentId, payload);
       handleClose();
       onSuccess();
     } catch (err) {
@@ -36,14 +43,17 @@ const ExtendRentModal = ({ isOpen, onClose, onSuccess, rentId, dailyFee = 0 }) =
 
   const handleClose = () => {
     setExtraDays('1');
+    setCustomExtensionFee('');
     setError('');
     onClose();
   };
 
   return (
-    <Modal.Backdrop isOpen={isOpen} onOpenChange={handleClose}>
+    <Modal isOpen={isOpen} onOpenChange={handleClose}>
+      <Button className="hidden">Hidden Trigger</Button>
+      <Modal.Backdrop>
       <Modal.Container>
-        <Modal.Dialog>
+        <Modal.Dialog className="bg-[var(--surface)] border border-default-200">
           <Modal.Header>
             <Modal.Heading>Perpanjang Sewa</Modal.Heading>
           </Modal.Header>
@@ -56,7 +66,7 @@ const ExtendRentModal = ({ isOpen, onClose, onSuccess, rentId, dailyFee = 0 }) =
               <Input
                 aria-label="Tambah Hari"
                 type="number"
-                className="w-full bg-content1 border border-default-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
+                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
                 placeholder="1"
                 min="1"
                 value={extraDays}
@@ -64,10 +74,24 @@ const ExtendRentModal = ({ isOpen, onClose, onSuccess, rentId, dailyFee = 0 }) =
               />
             </TextField>
 
+            <TextField>
+              <Label className="text-xs font-semibold mb-1 text-default-600 block">
+                Biaya Tambahan (Modifikasi)
+              </Label>
+              <Input
+                aria-label="Biaya Tambahan"
+                type="number"
+                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
+                placeholder={dailyFee * parseInt(extraDays || 0)}
+                value={customExtensionFee}
+                onChange={(e) => setCustomExtensionFee(e.target.value)}
+              />
+            </TextField>
+
             {parseInt(extraDays) > 0 && (
               <div className="mt-2 p-3 bg-primary/10 border border-primary/20 rounded-lg flex justify-between items-center font-semibold">
-                <span className="text-sm text-primary">Biaya Tambahan Preview:</span>
-                <span className="text-primary">+ {formatCurrency(dailyFee * parseInt(extraDays))}</span>
+                <span className="text-sm text-primary">Biaya Asli (Full Order):</span>
+                <span className="text-primary">{formatCurrency(dailyFee * parseInt(extraDays))}</span>
               </div>
             )}
 
@@ -96,6 +120,7 @@ const ExtendRentModal = ({ isOpen, onClose, onSuccess, rentId, dailyFee = 0 }) =
         </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>
+    </Modal>
   );
 };
 

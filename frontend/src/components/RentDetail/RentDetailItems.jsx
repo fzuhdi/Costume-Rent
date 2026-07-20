@@ -1,4 +1,4 @@
-import { Card, Table, Input } from '@heroui/react';
+import { Card, Table, Input, TextField } from '@heroui/react';
 import { Link } from 'react-router-dom';
 
 export default function RentDetailItems({
@@ -34,13 +34,10 @@ export default function RentDetailItems({
                       </Table.Cell>
                       <Table.Cell className="font-semibold">
                         {isEditing ? (
-                          <Input
-                            type="number"
+                          <TextField
                             aria-label={`Harga ${item.costume?.name}`}
-                            size="sm"
-                            value={editItem?.custom_rental_fee ?? item.rental_fee}
-                            onChange={e => {
-                              const val = e.target.value;
+                            value={String(editItem?.custom_rental_fee ?? item.rental_fee)}
+                            onChange={val => {
                               if (val === '') {
                                 setEditItems(prev => prev.map(i => i.costume_id === item.costume_id ? { ...i, custom_rental_fee: '' } : i));
                                 return;
@@ -49,7 +46,12 @@ export default function RentDetailItems({
                               if (isNaN(parsed) || parsed < 0) return;
                               setEditItems(prev => prev.map(i => i.costume_id === item.costume_id ? { ...i, custom_rental_fee: parsed } : i));
                             }}
-                          />
+                          >
+                            <Input
+                              type="number"
+                              size="sm"
+                            />
+                          </TextField>
                         ) : (
                           formatCurrency(item.rental_fee * item.quantity)
                         )}
