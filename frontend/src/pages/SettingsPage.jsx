@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
-import { Save } from 'lucide-react';
+import { Save, Eye } from 'lucide-react';
 import { TextField, Input, Button, Card, Chip, FieldError, Label } from '@heroui/react';
 import FileUploadZone from '../components/FileUploadZone';
+import ImagePreviewModal from '../components/ImagePreviewModal';
 
 const SettingsPage = () => {
   const { settings, updateSettings, uploadLogo } = useSettings();
@@ -17,6 +18,9 @@ const SettingsPage = () => {
   const [preview, setPreview] = useState(settings.app_logo || '');
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const onPreviewOpen = () => setIsPreviewOpen(true);
+  const onPreviewClose = () => setIsPreviewOpen(false);
 
 
   const handleLogoChange = (e) => {
@@ -67,8 +71,15 @@ const SettingsPage = () => {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="w-20 h-20 bg-[var(--border)] rounded-lg flex items-center justify-center flex-shrink-0">
-                  <img src={preview || '/kbr-logo.svg'} alt="Logo" className="w-full h-full object-contain p-2" />
+                <div 
+                  className="w-20 h-20 bg-[var(--border)] rounded-lg flex items-center justify-center flex-shrink-0 cursor-pointer group relative overflow-hidden"
+                  onClick={onPreviewOpen}
+                  aria-label="Preview Logo"
+                >
+                  <img src={preview || '/kbr-logo.svg'} alt="Logo" className="w-full h-full object-contain p-2 group-hover:opacity-50 transition-opacity" />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Eye className="text-[var(--foreground)] opacity-75" size={24} />
+                  </div>
                 </div>
                 <div className="flex-grow max-w-sm">
                   <FileUploadZone
@@ -136,6 +147,11 @@ const SettingsPage = () => {
           </div>
         </Card.Content>
       </Card>
+      <ImagePreviewModal
+        isOpen={isPreviewOpen}
+        onClose={onPreviewClose}
+        images={[preview || '/kbr-logo.svg']}
+      />
     </div>
   );
 };
