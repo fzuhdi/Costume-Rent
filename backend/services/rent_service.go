@@ -487,6 +487,13 @@ func (s *RentService) MarkReturned(id uint, req dto.MarkReturnedRequest, userID 
 		}
 	}
 
+	if len(req.DamagePhotos) > 0 {
+		photosJSON, err := json.Marshal(req.DamagePhotos)
+		if err == nil {
+			order.DamagePhotos = string(photosJSON)
+		}
+	}
+
 	if req.Payment != nil {
 		_, err := s.AddPayment(order.ID, *req.Payment, userID)
 		if err != nil {
@@ -848,6 +855,11 @@ func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderR
 		_ = json.Unmarshal([]byte(order.ReturnPhotos), &returnPhotos)
 	}
 
+	var damagePhotos []string
+	if order.DamagePhotos != "" {
+		_ = json.Unmarshal([]byte(order.DamagePhotos), &damagePhotos)
+	}
+
 	return dto.RentOrderResponse{
 		ID:                 order.ID,
 		ClientID:           order.ClientID,
@@ -865,6 +877,7 @@ func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderR
 		Status:             order.Status,
 		PickupPhotos:       pickupPhotos,
 		ReturnPhotos:       returnPhotos,
+		DamagePhotos:       damagePhotos,
 		Notes:              order.Notes,
 		Items:              items,
 		Transactions:       transactions,

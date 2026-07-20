@@ -73,14 +73,14 @@ const RentDetailPage = () => {
   } = useRentDetail(id, navigate, formatDate);
 
   const totalBaseFee = rent?.items?.reduce((sum, item) => sum + ((item.rental_fee || 0) * item.quantity), 0) || 0;
-  
+
   // Ledger-based calculations
   // If a transaction has no type (unmigrated), default to CREDIT (payment)
   const totalDebits = rent?.transactions?.filter(t => t.type === 'DEBIT').reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
   const totalCredits = rent?.transactions?.filter(t => t.type === 'CREDIT' || !t.type).reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
 
   const totalTagihan = totalDebits;
-  
+
   const totalPaid = totalCredits;
   const isCancelled = rent?.status === 'cancelled';
   const sisaTagihan = isCancelled ? 0 : (totalTagihan - totalPaid);
@@ -118,7 +118,7 @@ const RentDetailPage = () => {
             </Chip>
           </div>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-2">
           {/* Action Buttons based on RentDetailActions & RentDetailInfo */}
           {isEditing ? (
@@ -184,6 +184,7 @@ const RentDetailPage = () => {
             setEditData={setEditData}
             formatDate={formatDate}
             formatCurrency={formatCurrency}
+            openPreview={openPreview}
           />
           <RentDetailItems
             rent={rent}

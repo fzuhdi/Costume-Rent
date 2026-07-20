@@ -54,6 +54,7 @@ type RentOrderResponse struct {
 	Status             string                    `json:"status"`
 	PickupPhotos       []string                  `json:"pickup_photos"`
 	ReturnPhotos       []string                  `json:"return_photos"`
+	DamagePhotos       []string                  `json:"damage_photos"`
 	Notes              string                    `json:"notes"`
 	Items              []RentOrderItemResponse   `json:"items"`
 	Transactions       []RentTransactionResponse `json:"transactions"`
@@ -88,6 +89,7 @@ type MarkReturnedRequest struct {
 	DamagedItems    []DamagedItem      `json:"damaged_items"`
 	Payment         *AddPaymentRequest `json:"payment"`
 	ReturnPhotos    []string           `json:"return_photos"`
+	DamagePhotos    []string           `json:"damage_photos"`
 }
 
 type DamagedItem struct {

@@ -14,6 +14,7 @@ const initialState = {
   loading: false,
   error: '',
   returnPhotos: [],
+  damagePhotos: [],
 };
 
 function reducer(state, action) {
@@ -51,7 +52,7 @@ const MarkReturnedModal = ({
   rent,
 }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { idReturned, isGoodCondition, damagedItems, damageFee, loading, error, returnPhotos } = state;
+  const { idReturned, isGoodCondition, damagedItems, damageFee, loading, error, returnPhotos, damagePhotos } = state;
 
   useEffect(() => {
     if (isOpen) {
@@ -103,12 +104,23 @@ const MarkReturnedModal = ({
           console.error("Failed to upload photo", err);
         }
       }
+      
+      const uploadedDamagePhotos = [];
+      for (const photo of damagePhotos) {
+        try {
+          const res = await uploadRentPhoto(photo.file);
+          uploadedDamagePhotos.push(res.data.url);
+        } catch (err) {
+          console.error("Failed to upload damage photo", err);
+        }
+      }
 
       await markReturned(rentId, {
         damage_fee: derivedDamageFee,
         damaged_items: payloadDamagedItems,
         payment: null, // explicitly no payment
         return_photos: uploadedPhotos,
+        damage_photos: uploadedDamagePhotos,
       });
       onClose();
       onSuccess();
@@ -227,6 +239,14 @@ const MarkReturnedModal = ({
                       onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'damageFee', value: e.target.value })}
                       placeholder="Masukkan nominal denda"
                       description={derivedDamageFee > 0 ? `Akan ditambahkan ke tagihan: ${formatCurrency(derivedDamageFee)}` : ''}
+                    />
+                  </div>
+                  
+                  <div className="mt-3 pb-2">
+                    <MultipleImageUpload 
+                      label="Bukti Kerusakan (Opsional)" 
+                      files={damagePhotos} 
+                      onFilesChange={(newFiles) => dispatch({ type: 'SET_FIELD', field: 'damagePhotos', value: newFiles })}
                     />
                   </div>
                 </div>
