@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, useOverlayState, Spinner } from '@heroui/react';
+import { Button, Table, useOverlayState, Spinner } from '@heroui/react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { getRegions, createRegion, updateRegion, deleteRegion, getCategories, createCategory, updateCategory, deleteCategory } from '../api/costumeApi';
 import MasterDataModal from './MasterDataModal';
@@ -112,30 +112,41 @@ const MasterDataTab = () => {
         </div>
         
         <Table aria-label="Regions Table" shadow="sm">
-          <TableHeader>
-            <TableColumn>ID</TableColumn>
-            <TableColumn>NAME</TableColumn>
-            <TableColumn align="center">ACTIONS</TableColumn>
-          </TableHeader>
-          <TableBody 
-            items={regions} 
-            emptyContent={loadingRegions ? <Spinner /> : "No regions found."}
-          >
-            {(item) => (
-              <TableRow key={item.id}>
-                <TableCell>{item.id}</TableCell>
-                <TableCell>{item.name}</TableCell>
-                <TableCell className="flex justify-end gap-2">
-                  <Button isIconOnly size="sm" variant="light" onPress={() => handleEdit('Region', item)}>
-                    <Edit2 size={16} />
-                  </Button>
-                  <Button isIconOnly size="sm" color="danger" variant="light" onPress={() => handleDelete('Region', item.id)}>
-                    <Trash2 size={16} />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
+          <Table.ScrollContainer>
+            <Table.Content>
+              <Table.Header>
+                <Table.Column isRowHeader>ID</Table.Column>
+                <Table.Column>NAME</Table.Column>
+                <Table.Column align="center">ACTIONS</Table.Column>
+              </Table.Header>
+              <Table.Body>
+                {regions.length === 0 ? (
+                  <Table.Row>
+                    <Table.Cell colSpan={3} className="text-center py-4">
+                      {loadingRegions ? <Spinner /> : "No regions found."}
+                    </Table.Cell>
+                    <Table.Cell className="hidden"></Table.Cell>
+                    <Table.Cell className="hidden"></Table.Cell>
+                  </Table.Row>
+                ) : (
+                  regions.map((item) => (
+                    <Table.Row key={item.id}>
+                      <Table.Cell>{item.id}</Table.Cell>
+                      <Table.Cell>{item.name}</Table.Cell>
+                      <Table.Cell className="flex justify-end gap-2">
+                        <Button isIconOnly size="sm" variant="light" onPress={() => handleEdit('Region', item)}>
+                          <Edit2 size={16} />
+                        </Button>
+                        <Button isIconOnly size="sm" color="danger" variant="light" onPress={() => handleDelete('Region', item.id)}>
+                          <Trash2 size={16} />
+                        </Button>
+                      </Table.Cell>
+                    </Table.Row>
+                  ))
+                )}
+              </Table.Body>
+            </Table.Content>
+          </Table.ScrollContainer>
         </Table>
       </div>
 
@@ -149,30 +160,41 @@ const MasterDataTab = () => {
         </div>
         
         <Table aria-label="Categories Table" shadow="sm">
-          <TableHeader>
-            <TableColumn>ID</TableColumn>
-            <TableColumn>NAME</TableColumn>
-            <TableColumn align="center">ACTIONS</TableColumn>
-          </TableHeader>
-          <TableBody 
-            items={categories} 
-            emptyContent={loadingCategories ? <Spinner /> : "No categories found."}
-          >
-            {(item) => (
-              <TableRow key={item.id}>
-                <TableCell>{item.id}</TableCell>
-                <TableCell>{item.name}</TableCell>
-                <TableCell className="flex justify-end gap-2">
-                  <Button isIconOnly size="sm" variant="light" onPress={() => handleEdit('Category', item)}>
-                    <Edit2 size={16} />
-                  </Button>
-                  <Button isIconOnly size="sm" color="danger" variant="light" onPress={() => handleDelete('Category', item.id)}>
-                    <Trash2 size={16} />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
+          <Table.ScrollContainer>
+            <Table.Content>
+              <Table.Header>
+                <Table.Column isRowHeader>ID</Table.Column>
+                <Table.Column>NAME</Table.Column>
+                <Table.Column align="center">ACTIONS</Table.Column>
+              </Table.Header>
+              <Table.Body>
+                {categories.length === 0 ? (
+                  <Table.Row>
+                    <Table.Cell colSpan={3} className="text-center py-4">
+                      {loadingCategories ? <Spinner /> : "No categories found."}
+                    </Table.Cell>
+                    <Table.Cell className="hidden"></Table.Cell>
+                    <Table.Cell className="hidden"></Table.Cell>
+                  </Table.Row>
+                ) : (
+                  categories.map((item) => (
+                    <Table.Row key={item.id}>
+                      <Table.Cell>{item.id}</Table.Cell>
+                      <Table.Cell>{item.name}</Table.Cell>
+                      <Table.Cell className="flex justify-end gap-2">
+                        <Button isIconOnly size="sm" variant="light" onPress={() => handleEdit('Category', item)}>
+                          <Edit2 size={16} />
+                        </Button>
+                        <Button isIconOnly size="sm" color="danger" variant="light" onPress={() => handleDelete('Category', item.id)}>
+                          <Trash2 size={16} />
+                        </Button>
+                      </Table.Cell>
+                    </Table.Row>
+                  ))
+                )}
+              </Table.Body>
+            </Table.Content>
+          </Table.ScrollContainer>
         </Table>
       </div>
 
