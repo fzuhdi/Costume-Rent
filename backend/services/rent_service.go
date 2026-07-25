@@ -32,6 +32,38 @@ func (s *RentService) logActivity(orderID uint, userID uint, actionType string, 
 	config.DB.Create(&log)
 }
 
+var validTransitions = map[string]map[string]bool{
+	"pending":   {"booked": true, "cancelled": true},
+	"booked":    {"rented": true, "cancelled": true, "pending": true}, // pending is for rollback
+	"rented":    {"returned": true, "overdue": true, "booked": true},
+	"overdue":   {"returned": true},
+	"returned":  {"inspected": true, "completed": true, "rented": true},
+	"inspected": {"completed": true, "returned": true},
+	"completed": {"inspected": true},
+	"cancelled": {},
+}
+
+func (s *RentService) transitionOrderStatus(order *models.RentOrder, newStatus string, userID uint) error {
+	if order.Status == newStatus {
+		return nil
+	}
+
+	allowedTransitions, exists := validTransitions[order.Status]
+	if !exists || !allowedTransitions[newStatus] {
+		return utils.NewAppError("ERR_INVALID_STATUS_TRANSITION", map[string]interface{}{"from": order.Status, "to": newStatus})
+	}
+
+	oldStatus := order.Status
+	order.Status = newStatus
+
+	if err := config.DB.Save(order).Error; err != nil {
+		return err
+	}
+
+	s.logActivity(order.ID, userID, "STATUS_CHANGE", oldStatus, newStatus)
+	return nil
+}
+
 func (s *RentService) lazyExpireDrafts() {
 	expiryTime := time.Now().Add(-1 * time.Hour)
 	config.DB.Model(&models.RentOrder{}).
@@ -85,7 +117,7 @@ func (s *RentService) List(filter dto.RentOrderFilter) (*dto.PaginatedResponse, 
 
 	response := []dto.RentOrderResponse{}
 	for _, o := range orders {
-		item := s.toRentOrderResponse(o)
+		item := s.ToRentOrderResponse(o)
 		response = append(response, item)
 	}
 
@@ -196,8 +228,6 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 		EventDate:          eventDate,
 		PickupDate:         pickupDate,
 		ExpectedReturnDate: expectedReturnDate,
-		TotalPaid:          0, // Will be updated by AddPayment
-		PaymentStatus:      "",
 		HasSecurityItem:    false, // Security item held at pickup only
 		Status:             status,
 		Notes:              req.Notes,
@@ -217,10 +247,11 @@ func (s *RentService) Create(req dto.CreateRentOrderRequest, userID uint) (*mode
 		}
 
 		orderItem := models.RentOrderItem{
-			RentOrderID: order.ID,
-			CostumeID:   item.CostumeID,
-			Quantity:    item.Quantity,
-			RentalFee:   itemFee,
+			RentOrderID:   order.ID,
+			CostumeID:     item.CostumeID,
+			Quantity:      item.Quantity,
+			RentalFee:     itemFee,
+			OriginalPrice: costumeResp.RentalFee,
 		}
 		if err := config.DB.Create(&orderItem).Error; err != nil {
 			config.DB.Delete(&order)
@@ -294,26 +325,14 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest, userID uin
 		}
 	}
 
-	if req.TotalPaid != nil {
-		order.TotalPaid = *req.TotalPaid
-	}
-
 	if req.HasSecurityItem != nil {
 		order.HasSecurityItem = *req.HasSecurityItem
 	}
 
-	if req.PaymentStatus != "" {
-		if order.PaymentStatus != req.PaymentStatus {
-			s.logActivity(order.ID, userID, "UPDATED", "Status Pembayaran: "+order.PaymentStatus, req.PaymentStatus)
+	if req.Status != "" && req.Status != order.Status {
+		if err := s.transitionOrderStatus(&order, req.Status, userID); err != nil {
+			return nil, err
 		}
-		order.PaymentStatus = req.PaymentStatus
-	}
-
-	if req.Status != "" {
-		if order.Status != req.Status {
-			s.logActivity(order.ID, userID, "UPDATED", "Status: "+order.Status, req.Status)
-		}
-		order.Status = req.Status
 	}
 	if req.Notes != "" {
 		if order.Notes != req.Notes {
@@ -420,7 +439,6 @@ func (s *RentService) ReceiveOrder(id uint, req dto.ReceiveOrderRequest, userID 
 	}
 
 	now := time.Now()
-	order.Status = "returned"
 	order.ActualReturnDate = &now
 
 	if len(req.ReturnPhotos) > 0 {
@@ -434,7 +452,9 @@ func (s *RentService) ReceiveOrder(id uint, req dto.ReceiveOrderRequest, userID 
 		return nil, err
 	}
 
-	s.logActivity(order.ID, userID, "STATUS_CHANGE", "rented/overdue", "returned")
+	if err := s.transitionOrderStatus(&order, "returned", userID); err != nil {
+		return nil, err
+	}
 
 	return s.GetByID(order.ID)
 }
@@ -522,22 +542,15 @@ func (s *RentService) MarkReturned(id uint, req dto.MarkReturnedRequest, userID 
 		order.ActualReturnDate = &now
 	}
 
-	oldStatus := order.Status
-
-	// Check if fully paid to determine if we go to inspected or completed
 	var orderWithTransactions models.RentOrder
 	config.DB.Preload("Transactions").First(&orderWithTransactions, id)
-	totalDebits := 0
-	for _, t := range orderWithTransactions.Transactions {
-		if t.Type == "DEBIT" && !t.IsVoided {
-			totalDebits += t.Amount
-		}
-	}
+	ledger := NewPaymentLedger(orderWithTransactions.Transactions)
 
-	if order.TotalPaid >= totalDebits {
-		order.Status = "completed"
+	var nextStatus string
+	if ledger.Balance() <= 0 {
+		nextStatus = "completed"
 	} else {
-		order.Status = "inspected"
+		nextStatus = "inspected"
 	}
 
 	order.HasSecurityItem = false
@@ -546,7 +559,9 @@ func (s *RentService) MarkReturned(id uint, req dto.MarkReturnedRequest, userID 
 		return nil, err
 	}
 
-	s.logActivity(order.ID, userID, "STATUS_CHANGE", oldStatus, order.Status)
+	if err := s.transitionOrderStatus(&order, nextStatus, userID); err != nil {
+		return nil, err
+	}
 
 	return s.GetByID(order.ID)
 }
@@ -561,42 +576,29 @@ func (s *RentService) MarkRented(id uint, req dto.MarkRentedRequest, userID uint
 		return nil, utils.NewAppError("ERR_INVALID_STATUS_RENT")
 	}
 
-	totalFee := 0
-	for _, item := range order.Items {
-		totalFee += item.RentalFee * item.Quantity
-	}
-
 	// Early takeaway fee is provided by frontend if applicable, so we don't override it unconditionally.
 
-	// Compute debit sums
-	var debits []models.RentTransaction
-	config.DB.Where("rent_order_id = ? AND type = 'DEBIT'", id).Find(&debits)
-	totalDebits := 0
-	for _, d := range debits {
-		totalDebits += d.Amount
+	// Check total credits vs total debits using the ledger
+	var orderWithTransactions models.RentOrder
+	if err := config.DB.Preload("Transactions").First(&orderWithTransactions, id).Error; err != nil {
+		return nil, err
 	}
-
-	totalBill := totalDebits
+	ledger := NewPaymentLedger(orderWithTransactions.Transactions)
 
 	if req.Payment != nil {
-		if order.TotalPaid+req.Payment.Amount < totalBill && req.Payment.PaymentProof == "" && req.Payment.PaymentMethod != "CASH" {
+		if ledger.Balance() > req.Payment.Amount && req.Payment.PaymentProof == "" && req.Payment.PaymentMethod != "CASH" {
 			return nil, utils.NewAppError("ERR_FULL_PAYMENT_PROOF_REQUIRED")
 		}
 		_, err := s.AddPayment(order.ID, *req.Payment, userID)
 		if err != nil {
 			return nil, err
 		}
-		// Re-read order so TotalPaid/PaymentStatus updated by AddPayment aren't clobbered
-		if err := config.DB.First(&order, id).Error; err != nil {
-			return nil, err
-		}
 	} else {
-		if order.TotalPaid < totalBill {
+		if ledger.Balance() > 0 {
 			return nil, utils.NewAppError("ERR_FULL_PAYMENT_REQUIRED")
 		}
 	}
 
-	order.Status = "rented"
 	order.HasSecurityItem = true
 	order.GuaranteeType = req.GuaranteeType
 
@@ -611,7 +613,9 @@ func (s *RentService) MarkRented(id uint, req dto.MarkRentedRequest, userID uint
 		return nil, err
 	}
 
-	s.logActivity(order.ID, userID, "STATUS_CHANGE", "booked", "rented")
+	if err := s.transitionOrderStatus(&order, "rented", userID); err != nil {
+		return nil, err
+	}
 
 	return s.GetByID(order.ID)
 }
@@ -626,42 +630,14 @@ func (s *RentService) MarkCompleted(id uint, userID uint) (*models.RentOrder, er
 		return nil, utils.NewAppError("ERR_INVALID_STATUS_COMPLETE")
 	}
 
-	totalDebits := 0
-	totalCredits := 0
-	for _, t := range order.Transactions {
-		if !t.IsVoided {
-			if t.Type == "DEBIT" {
-				totalDebits += t.Amount
-			} else if t.Type == "CREDIT" {
-				totalCredits += t.Amount
-			}
-		}
-	}
-
-	// Self-heal TotalPaid if it was out of sync
-	if order.TotalPaid != totalCredits {
-		order.TotalPaid = totalCredits
-		if order.TotalPaid >= totalDebits {
-			order.PaymentStatus = "LUNAS"
-		} else if order.TotalPaid > 0 {
-			order.PaymentStatus = "DP"
-		} else {
-			order.PaymentStatus = "BELUM_BAYAR"
-		}
-	}
-
-	if totalCredits < totalDebits {
+	ledger := NewPaymentLedger(order.Transactions)
+	if !ledger.IsFullyPaid() {
 		return nil, utils.NewAppError("ERR_FULL_PAYMENT_REQUIRED")
 	}
 
-	oldStatus := order.Status
-	order.Status = "completed"
-
-	if err := config.DB.Save(&order).Error; err != nil {
+	if err := s.transitionOrderStatus(&order, "completed", userID); err != nil {
 		return nil, err
 	}
-
-	s.logActivity(order.ID, userID, "STATUS_CHANGE", oldStatus, "completed")
 
 	return s.GetByID(order.ID)
 }
@@ -672,36 +648,34 @@ func (s *RentService) RollbackStatus(id uint, userID uint) (*models.RentOrder, e
 		return nil, err
 	}
 
-	oldStatus := order.Status
+	// oldStatus is no longer needed since transitionOrderStatus handles it
 
 	switch order.Status {
 	case "rented":
-		order.Status = "booked"
 		order.HasSecurityItem = false
 		if err := config.DB.Save(&order).Error; err != nil {
 			return nil, err
 		}
-		s.logActivity(order.ID, userID, "ROLLBACK", oldStatus, "booked")
+		if err := s.transitionOrderStatus(&order, "booked", userID); err != nil {
+			return nil, err
+		}
 	case "returned":
-		order.Status = "rented"
 		order.ActualReturnDate = nil
 		order.HasSecurityItem = true
 		if err := config.DB.Save(&order).Error; err != nil {
 			return nil, err
 		}
-		s.logActivity(order.ID, userID, "ROLLBACK", oldStatus, "rented")
+		if err := s.transitionOrderStatus(&order, "rented", userID); err != nil {
+			return nil, err
+		}
 	case "inspected":
-		order.Status = "returned"
-		if err := config.DB.Save(&order).Error; err != nil {
+		if err := s.transitionOrderStatus(&order, "returned", userID); err != nil {
 			return nil, err
 		}
-		s.logActivity(order.ID, userID, "ROLLBACK", oldStatus, "returned")
 	case "completed":
-		order.Status = "inspected"
-		if err := config.DB.Save(&order).Error; err != nil {
+		if err := s.transitionOrderStatus(&order, "inspected", userID); err != nil {
 			return nil, err
 		}
-		s.logActivity(order.ID, userID, "ROLLBACK", oldStatus, "inspected")
 	default:
 		return nil, utils.NewAppError("ERR_INVALID_STATUS_ROLLBACK")
 	}
@@ -746,18 +720,14 @@ func (s *RentService) MarkBooked(id uint, req dto.UpgradeToBookedRequest, userID
 		return nil, utils.NewAppError("ERR_MIN_DOWNPAYMENT")
 	}
 
-	order.Status = "booked"
-
 	_, err := s.AddPayment(order.ID, *req.Payment, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := config.DB.Save(&order).Error; err != nil {
+	if err := s.transitionOrderStatus(&order, "booked", userID); err != nil {
 		return nil, err
 	}
-
-	s.logActivity(order.ID, userID, "STATUS_CHANGE", "pending", "booked")
 
 	return s.GetByID(order.ID)
 }
@@ -778,29 +748,30 @@ func (s *RentService) CancelOrder(id uint, userID uint) (*models.RentOrder, erro
 	eventDate := time.Date(order.EventDate.Year(), order.EventDate.Month(), order.EventDate.Day(), 0, 0, 0, 0, time.Local)
 	outsideD2 := eventDate.Sub(now).Hours() > 48
 
-	if within24h && outsideD2 && order.TotalPaid > 0 {
+	var orderWithTransactions models.RentOrder
+	config.DB.Preload("Transactions").First(&orderWithTransactions, id)
+	ledger := NewPaymentLedger(orderWithTransactions.Transactions)
+
+	if within24h && outsideD2 && ledger.TotalCredits() > 0 {
 		// 100% refund - issue a credit to offset the payment
 		tx := models.RentTransaction{
 			RentOrderID: order.ID,
 			Type:        "CREDIT",
 			Category:    "REFUND",
-			Amount:      -order.TotalPaid, // Negative amount to reduce total paid
+			Amount:      -ledger.TotalCredits(), // Negative amount to reduce total paid
 			Notes:       "Pengembalian Dana (100%)",
 			CreatedBy:   userID,
 		}
 		config.DB.Create(&tx)
-	} else if order.TotalPaid > 0 {
+	} else if ledger.TotalCredits() > 0 {
 		// Forfeit - they don't get a refund, we keep the money.
 		// No transaction needed, or we could log it as forfeited.
 		s.logActivity(order.ID, userID, "FORFEIT", "DP/Pembayaran hangus", "")
 	}
 
-	order.Status = "cancelled"
-	if err := config.DB.Save(&order).Error; err != nil {
+	if err := s.transitionOrderStatus(&order, "cancelled", userID); err != nil {
 		return nil, err
 	}
-
-	s.logActivity(order.ID, userID, "STATUS_CHANGE", "booked", "cancelled")
 
 	return s.GetByID(order.ID)
 }
@@ -865,18 +836,33 @@ func (s *RentService) Delete(id uint) error {
 	return config.DB.Delete(&models.RentOrder{}, id).Error
 }
 
-func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderResponse {
+func (s *RentService) ToRentOrderResponse(order models.RentOrder) dto.RentOrderResponse {
 	items := make([]dto.RentOrderItemResponse, len(order.Items))
 	for i, item := range order.Items {
-		items[i] = dto.RentOrderItemResponse{
-			ID:        item.ID,
-			CostumeID: item.CostumeID,
-			Quantity:  item.Quantity,
-			RentalFee: item.RentalFee,
+		originalPrice := item.OriginalPrice
+		if originalPrice == 0 && item.Costume.Name != "" {
+			originalPrice = item.Costume.RentalFee
 		}
+
+		items[i] = dto.RentOrderItemResponse{
+			ID:            item.ID,
+			CostumeID:     item.CostumeID,
+			Quantity:      item.Quantity,
+			RentalFee:     item.RentalFee,
+			OriginalPrice: originalPrice,
+		}
+
 		if item.Costume.Name != "" {
-			items[i].CostumeName = item.Costume.Name
-			items[i].CoverImage = item.Costume.CoverImage
+			// Reuse the CostumeService's ToCostumeResponse method if possible,
+			// or map it manually. Since we are inside RentService, we'll map manually.
+			items[i].Costume = dto.CostumeMinResponse{
+				ID:          item.Costume.ID,
+				Name:        item.Costume.Name,
+				Size:        item.Costume.Size,
+				RentalFee:   item.Costume.RentalFee,
+				Description: item.Costume.Description,
+				CoverImage:  item.Costume.CoverImage,
+			}
 		}
 	}
 
@@ -898,7 +884,19 @@ func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderR
 			PaymentMethod:  t.PaymentMethod,
 			PaymentProof:   t.PaymentProof,
 			Notes:          t.Notes,
-			CreatedAt:      t.CreatedAt.Format("2006-01-02 15:04:05"),
+			IsVoided:       t.IsVoided,
+			CreatedAt:      t.CreatedAt.Format(time.RFC3339),
+		})
+	}
+
+	var activityLogs []dto.ActivityLogResponse
+	for _, l := range order.ActivityLogs {
+		activityLogs = append(activityLogs, dto.ActivityLogResponse{
+			ID:         l.ID,
+			ActionType: l.ActionType,
+			OldValue:   l.OldValue,
+			NewValue:   l.NewValue,
+			CreatedAt:  l.Timestamp.Format(time.RFC3339),
 		})
 	}
 
@@ -917,6 +915,8 @@ func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderR
 		_ = json.Unmarshal([]byte(order.DamagePhotos), &damagePhotos)
 	}
 
+	ledger := NewPaymentLedger(order.Transactions)
+
 	return dto.RentOrderResponse{
 		ID:                 order.ID,
 		ClientID:           order.ClientID,
@@ -928,18 +928,23 @@ func (s *RentService) toRentOrderResponse(order models.RentOrder) dto.RentOrderR
 		PickupDate:         order.PickupDate.Format("2006-01-02"),
 		ExpectedReturnDate: order.ExpectedReturnDate.Format("2006-01-02"),
 		ActualReturnDate:   actualReturn,
-		TotalPaid:          order.TotalPaid,
-		PaymentStatus:      order.PaymentStatus,
-		HasSecurityItem:    order.HasSecurityItem,
-		Status:             order.Status,
-		PickupPhotos:       pickupPhotos,
-		ReturnPhotos:       returnPhotos,
-		DamagePhotos:       damagePhotos,
-		Notes:              order.Notes,
-		Items:              items,
-		Transactions:       transactions,
-		CreatedAt:          order.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:          order.UpdatedAt.Format("2006-01-02 15:04:05"),
+		PaymentSummary: dto.PaymentSummary{
+			TotalDebits:  ledger.TotalDebits(),
+			TotalCredits: ledger.TotalCredits(),
+			Balance:      ledger.Balance(),
+			Status:       ledger.PaymentStatus(),
+		},
+		HasSecurityItem: order.HasSecurityItem,
+		Status:          order.Status,
+		PickupPhotos:    pickupPhotos,
+		ReturnPhotos:    returnPhotos,
+		DamagePhotos:    damagePhotos,
+		Notes:           order.Notes,
+		Items:           items,
+		Transactions:    transactions,
+		ActivityLogs:    activityLogs,
+		CreatedAt:       order.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:       order.UpdatedAt.Format(time.RFC3339),
 	}
 }
 
@@ -961,41 +966,6 @@ func (s *RentService) AddPayment(orderID uint, req dto.AddPaymentRequest, userID
 	}
 
 	if err := config.DB.Create(&tx).Error; err != nil {
-		return nil, err
-	}
-
-	order.TotalPaid += req.Amount
-
-	// Check if fully paid
-	totalFee := 0
-	var orderWithItems models.RentOrder
-	config.DB.Preload("Items").Preload("Transactions").First(&orderWithItems, orderID)
-	for _, item := range orderWithItems.Items {
-		totalFee += item.RentalFee * item.Quantity
-	}
-
-	totalDebits := 0
-	for _, t := range orderWithItems.Transactions {
-		if t.Type == "DEBIT" {
-			totalDebits += t.Amount
-		}
-	}
-
-	totalTagihan := totalDebits
-	if order.TotalPaid >= totalTagihan {
-		order.PaymentStatus = "LUNAS"
-
-		// Auto-complete if currently inspected
-		if order.Status == "inspected" {
-			oldStatus := order.Status
-			order.Status = "completed"
-			s.logActivity(orderID, userID, "STATUS_CHANGE", oldStatus, "completed")
-		}
-	} else if order.TotalPaid > 0 {
-		order.PaymentStatus = "DP"
-	}
-
-	if err := config.DB.Save(&order).Error; err != nil {
 		return nil, err
 	}
 
@@ -1022,13 +992,19 @@ func (s *RentService) VoidTransaction(orderID uint, trxID uint, userID uint) (*m
 		return nil, utils.NewAppError("ERR_ALREADY_VOIDED")
 	}
 
+	notes := "Koreksi/Pembatalan"
+	if trx.Notes != "" {
+		notes = fmt.Sprintf("Pembatalan: %s", trx.Notes)
+	}
+
 	// Create offsetting transaction
 	voidTx := models.RentTransaction{
 		RentOrderID: orderID,
 		Type:        trx.Type,
 		Category:    "CORRECTION",
 		Amount:      -trx.Amount,
-		Notes:       "Koreksi/Pembatalan",
+		Notes:       notes,
+		IsVoided:    true,
 		CreatedBy:   userID,
 	}
 
@@ -1042,45 +1018,8 @@ func (s *RentService) VoidTransaction(orderID uint, trxID uint, userID uint) (*m
 		return nil, err
 	}
 
-	// Recalculate totals
 	var order models.RentOrder
-	if err := config.DB.Preload("Items").Preload("Transactions").First(&order, orderID).Error; err != nil {
-		return nil, err
-	}
-
-	totalPaid := 0
-	totalDebits := 0
-	totalFee := 0
-
-	for _, item := range order.Items {
-		totalFee += item.RentalFee * item.Quantity
-	}
-
-	for _, t := range order.Transactions {
-		if t.Type == "DEBIT" {
-			totalDebits += t.Amount
-		} else if t.Type == "CREDIT" || t.Type == "" {
-			totalPaid += t.Amount
-		}
-	}
-
-	order.TotalPaid = totalPaid
-	totalTagihan := totalDebits
-
-	if order.TotalPaid >= totalTagihan && totalTagihan > 0 {
-		order.PaymentStatus = "LUNAS"
-	} else if order.TotalPaid > 0 {
-		order.PaymentStatus = "DP"
-	} else {
-		order.PaymentStatus = "BELUM_BAYAR"
-	}
-
-	// We do NOT auto-change the order status on void (e.g. from completed back to inspected)
-	// because they can use the Rollback button for status if they want.
-
-	if err := config.DB.Save(&order).Error; err != nil {
-		return nil, err
-	}
+	config.DB.First(&order, orderID)
 
 	s.logActivity(orderID, userID, "TRX_VOIDED", fmt.Sprintf("Voided transaction #%d", trxID), order.Status)
 

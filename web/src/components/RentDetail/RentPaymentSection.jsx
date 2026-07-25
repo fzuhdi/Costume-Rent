@@ -57,14 +57,19 @@ export default function RentPaymentSection({
                 }
               }
 
+              const isVoided = trx.is_voided === true;
+              const opacityClass = isVoided ? 'opacity-50 grayscale' : '';
+              const strikeClass = isVoided ? 'line-through' : '';
+
               return (
                 <div
                   key={trx.id || trx.created_at || 'trx-' + String(trx.amount)}
-                  className={`flex justify-between items-start pl-3 border-l-2 ${borderClass}`}
+                  className={`flex justify-between items-start pl-3 border-l-2 ${borderClass} ${opacityClass}`}
                 >
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-medium text-default-700">
-                      {trx.notes || (isDebit ? 'Biaya Tambahan' : 'Pembayaran')}
+                    <span className="font-medium text-default-700 flex items-center gap-2">
+                      <span className={strikeClass}>{trx.notes || (isDebit ? 'Biaya Tambahan' : 'Pembayaran')}</span>
+                      {isVoided && <span className="text-[10px] bg-danger/10 text-danger-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Void</span>}
                     </span>
                     <span className="text-xs text-default-400 flex items-center flex-wrap gap-1">
                       {formatDate(trx.created_at)} {trx.payment_method ? `· ${trx.payment_method}` : ''}
@@ -84,10 +89,10 @@ export default function RentPaymentSection({
                     </span>
                   </div>
                   <div className="flex items-center">
-                    <span className={`${colorClass} font-semibold whitespace-nowrap ml-4`}>
+                    <span className={`${colorClass} font-semibold whitespace-nowrap ml-4 ${strikeClass}`}>
                       {sign} {formatCurrency(Math.abs(amount))}
                     </span>
-                    {['admin', 'staff'].includes(user?.role) && !isEditing && !['CORRECTION', 'BASE_FEE'].includes(trx.category) && !(trx.notes && trx.notes.toLowerCase().includes('biaya sewa')) && !trx.is_voided && amount > 0 && rent.status !== 'cancelled' && (
+                    {['admin', 'staff'].includes(user?.role) && !isEditing && !['CORRECTION', 'BASE_FEE'].includes(trx.category) && !(trx.notes && trx.notes.toLowerCase().includes('biaya sewa')) && !isVoided && amount > 0 && rent.status !== 'cancelled' && (
                       <Button
                         isIconOnly
                         variant="ghost"
