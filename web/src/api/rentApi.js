@@ -1,0 +1,64 @@
+import api from '@/api/axios';
+
+export const getRents = (params) =>
+  api.get('/rents', { params });
+
+export const getRentById = (id) =>
+  api.get(`/rents/${id}`);
+
+export const createRent = (data) =>
+  api.post('/rents', data);
+
+export const updateRent = (id, data) =>
+  api.put(`/rents/${id}`, data);
+
+export const markReturned = (id, data = {}) => 
+  api.put(`/rents/${id}/return`, data);
+
+export const receiveOrder = (id, data = {}) => 
+  api.post(`/rents/${id}/receive`, data);
+
+export const markRented = (id, data = {}) =>
+  api.put(`/rents/${id}/rent`, data);
+
+export const markBooked = (id, data = {}) =>
+  api.put(`/rents/${id}/book`, data);
+
+export const completeOrder = (id) =>
+  api.post(`/rents/${id}/complete`);
+
+export const rollbackOrder = (id) =>
+  api.put(`/rents/${id}/rollback`);
+
+export const uploadPaymentProof = (file) => {
+  const formData = new FormData();
+  formData.append('payment_proof', file);
+  return api.post('/rents/upload-proof', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+export const uploadRentPhoto = (file) => {
+  const formData = new FormData();
+  formData.append('photo', file);
+  return api.post('/rents/upload-photo', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+export const cancelRent = (id) =>
+  api.put(`/rents/${id}/cancel`);
+
+export const deleteRent = (id) =>
+  api.delete(`/rents/${id}`);
+
+export const extendRent = (id, data) =>
+  api.post(`/rents/${id}/extend`, data);
+
+export const addPayment = (id, data) => api.post(`/rents/${id}/payments`, data);
+
+export const voidTransaction = (id, trxId) => api.post(`/rents/${id}/transactions/${trxId}/void`);
