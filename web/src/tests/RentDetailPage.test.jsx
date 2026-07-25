@@ -33,7 +33,7 @@ describe('RentDetailPage - Add Payment', () => {
     status: 'booked',
     client: { name: 'Test Client', phone: '123' },
     items: [{ id: 1, quantity: 1, rental_fee: 50000, costume: { name: 'Costume A' } }],
-    total_paid: 25000,
+    payment_summary: { total_debits: 50000, total_credits: 25000, balance: 25000, status: 'DP' },
     transactions: [
       { id: 1, amount: 25000, payment_method: 'CASH', created_at: '2026-07-15T10:00:00Z', notes: 'DP' }
     ],
@@ -93,10 +93,10 @@ describe('RentDetailPage - Add Payment', () => {
 describe('RentDetailPage - Upgrade to Booked', () => {
   const mockRentDraft = {
     id: 2,
-    status: 'draft',
+    status: 'pending',
     client: { name: 'Test Client', phone: '123' },
     items: [{ id: 1, quantity: 1, rental_fee: 100000, costume: { name: 'Costume A' } }],
-    total_paid: 0,
+    payment_summary: { total_debits: 100000, total_credits: 0, balance: 100000, status: 'BELUM BAYAR' },
     transactions: [],
     pickup_date: '2026-07-20',
     return_date: '2026-07-22'
@@ -118,12 +118,12 @@ describe('RentDetailPage - Upgrade to Booked', () => {
       </MemoryRouter>
     );
 
-    // Click "Ubah Status ke Booked" button
-    const upgradeButton = await screen.findByRole('button', { name: /Ubah Status ke Booked/i });
+    // Click "Book" button
+    const upgradeButton = await screen.findByRole('button', { name: 'Book' });
     await user.click(upgradeButton);
 
     // Verify modal is open
-    expect(screen.getByRole('heading', { name: /Ubah Status ke Booked/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Book/i })).toBeInTheDocument();
 
     // The default amount is calculated as 50% of total base fee = 50000
     // Click submit

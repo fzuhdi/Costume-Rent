@@ -13,6 +13,7 @@ import (
 	"github.com/busana/backend/config"
 	"github.com/busana/backend/dto"
 	"github.com/busana/backend/models"
+	"github.com/busana/backend/services"
 	"github.com/gin-gonic/gin"
 )
 
@@ -49,15 +50,31 @@ func TestAddPayment(t *testing.T) {
 	costume := models.Costume{Name: "Baju Adat", RentalFee: 100000}
 	config.DB.Create(&costume)
 
-	// Seed Rent Order (TotalTagihan = 200000, TotalPaid = 50000)
+	// Seed Rent Order
 	order := models.RentOrder{
-		ClientID:      client.ID,
-		EventDate:     time.Now(),
-		TotalPaid:     50000,
-		PaymentStatus: "DP",
-		CreatedBy:     user.ID,
+		ClientID:  client.ID,
+		EventDate: time.Now(),
+		CreatedBy: user.ID,
 	}
 	config.DB.Create(&order)
+
+	// Seed Transactions
+	baseFee := models.RentTransaction{
+		RentOrderID: order.ID,
+		Type:        "DEBIT",
+		Category:    "BASE_FEE",
+		Amount:      200000,
+	}
+	config.DB.Create(&baseFee)
+
+	payment := models.RentTransaction{
+		RentOrderID:   order.ID,
+		Type:          "CREDIT",
+		Category:      "PAYMENT",
+		Amount:        50000,
+		PaymentMethod: "CASH",
+	}
+	config.DB.Create(&payment)
 
 	orderItem := models.RentOrderItem{
 		RentOrderID: order.ID,
@@ -102,19 +119,21 @@ func TestAddPayment(t *testing.T) {
 	var updatedOrder models.RentOrder
 	config.DB.Preload("Transactions").First(&updatedOrder, order.ID)
 
-	if updatedOrder.TotalPaid != 100000 {
-		t.Errorf("Expected TotalPaid to be 100000, got %d", updatedOrder.TotalPaid)
+	ledger := services.NewPaymentLedger(updatedOrder.Transactions)
+
+	if ledger.TotalCredits() != 100000 {
+		t.Errorf("Expected TotalPaid to be 100000, got %d", ledger.TotalCredits())
 	}
 
-	if updatedOrder.PaymentStatus != "DP" {
-		t.Errorf("Expected PaymentStatus to be DP, got %s", updatedOrder.PaymentStatus)
+	if ledger.PaymentStatus() != "DP" {
+		t.Errorf("Expected PaymentStatus to be DP, got %s", ledger.PaymentStatus())
 	}
 
-	if len(updatedOrder.Transactions) != 1 {
-		t.Fatalf("Expected 1 transaction, got %d", len(updatedOrder.Transactions))
+	if len(updatedOrder.Transactions) != 3 {
+		t.Fatalf("Expected 3 transactions, got %d", len(updatedOrder.Transactions))
 	}
 
-	tx := updatedOrder.Transactions[0]
+	tx := updatedOrder.Transactions[2]
 	if tx.Amount != 50000 || tx.PaymentMethod != "TRANSFER" || tx.Notes != "Cicilan" {
 		t.Errorf("Transaction data mismatch: %+v", tx)
 	}
@@ -140,12 +159,14 @@ func TestAddPayment(t *testing.T) {
 	// Verify Database Updates for full settlement
 	config.DB.Preload("Transactions").First(&updatedOrder, order.ID)
 
-	if updatedOrder.TotalPaid != 200000 {
-		t.Errorf("Expected TotalPaid to be 200000, got %d", updatedOrder.TotalPaid)
+	ledger2 := services.NewPaymentLedger(updatedOrder.Transactions)
+
+	if ledger2.TotalCredits() != 200000 {
+		t.Errorf("Expected TotalPaid to be 200000, got %d", ledger2.TotalCredits())
 	}
 
-	if updatedOrder.PaymentStatus != "LUNAS" {
-		t.Errorf("Expected PaymentStatus to be LUNAS, got %s", updatedOrder.PaymentStatus)
+	if ledger2.PaymentStatus() != "LUNAS" {
+		t.Errorf("Expected PaymentStatus to be LUNAS, got %s", ledger2.PaymentStatus())
 	}
 }
 
@@ -165,7 +186,7 @@ func TestMarkBooked(t *testing.T) {
 	order := models.RentOrder{
 		ClientID:  client.ID,
 		EventDate: time.Now().AddDate(0, 0, 3),
-		Status:    "draft",
+		Status:    "pending",
 		CreatedBy: user.ID,
 	}
 	config.DB.Create(&order)
@@ -215,8 +236,9 @@ func TestMarkBooked(t *testing.T) {
 		t.Errorf("Expected Status to be booked, got %s", updatedOrder.Status)
 	}
 
-	if updatedOrder.TotalPaid != 50000 {
-		t.Errorf("Expected TotalPaid to be 50000, got %d", updatedOrder.TotalPaid)
+	ledger3 := services.NewPaymentLedger(updatedOrder.Transactions)
+	if ledger3.TotalCredits() != 50000 {
+		t.Errorf("Expected TotalPaid to be 50000, got %d", ledger3.TotalCredits())
 	}
 
 	if len(updatedOrder.Transactions) != 1 {

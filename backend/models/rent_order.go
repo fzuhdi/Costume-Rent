@@ -11,8 +11,6 @@ type RentOrder struct {
 	PickupDate         time.Time         `json:"pickup_date" gorm:"not null" validate:"required"`
 	ExpectedReturnDate time.Time         `json:"expected_return_date" gorm:"not null" validate:"required"`
 	ActualReturnDate   *time.Time        `json:"actual_return_date"`
-	TotalPaid          int               `json:"total_paid" gorm:"default:0"`
-	PaymentStatus      string            `json:"payment_status"`
 	HasSecurityItem    bool              `json:"has_security_item" gorm:"default:false"`
 	Status             string            `json:"status" gorm:"default:booked"`
 	OrderSource        string            `json:"order_source" gorm:"default:'offline'"`
@@ -30,9 +28,10 @@ type RentOrder struct {
 
 type RentOrderItem struct {
 	BaseModel
-	RentOrderID uint    `json:"rent_order_id" gorm:"not null;index" validate:"required"`
-	CostumeID   uint    `json:"costume_id" gorm:"not null" validate:"required"`
-	Costume     Costume `json:"costume,omitempty" gorm:"foreignKey:CostumeID"`
-	Quantity    int     `json:"quantity" gorm:"not null;default:1" validate:"required,min=1"`
-	RentalFee   int     `json:"rental_fee" gorm:"not null"`
+	RentOrderID   uint    `json:"rent_order_id" gorm:"not null;index" validate:"required"`
+	CostumeID     uint    `json:"costume_id" gorm:"not null" validate:"required"`
+	Costume       Costume `json:"costume,omitempty" gorm:"foreignKey:CostumeID"`
+	Quantity      int     `json:"quantity" gorm:"not null;default:1" validate:"required,min=1"`
+	RentalFee     int     `json:"rental_fee" gorm:"not null"`
+	OriginalPrice int     `json:"original_price" gorm:"not null;default:0"`
 }

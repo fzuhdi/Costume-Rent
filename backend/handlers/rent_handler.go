@@ -55,7 +55,7 @@ func (h *RentHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) Create(c *gin.Context) {
@@ -101,7 +101,7 @@ func (h *RentHandler) Update(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) MarkReturned(c *gin.Context) {
@@ -124,7 +124,7 @@ func (h *RentHandler) MarkReturned(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) ReceiveOrder(c *gin.Context) {
@@ -145,7 +145,7 @@ func (h *RentHandler) ReceiveOrder(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) MarkRented(c *gin.Context) {
@@ -168,7 +168,7 @@ func (h *RentHandler) MarkRented(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) RollbackOrder(c *gin.Context) {
@@ -185,7 +185,7 @@ func (h *RentHandler) RollbackOrder(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) MarkBooked(c *gin.Context) {
@@ -208,7 +208,7 @@ func (h *RentHandler) MarkBooked(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) MarkCompleted(c *gin.Context) {
@@ -225,7 +225,7 @@ func (h *RentHandler) MarkCompleted(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) UploadPaymentProof(c *gin.Context) {
@@ -306,7 +306,7 @@ func (h *RentHandler) ExtendRent(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) AddPayment(c *gin.Context) {
@@ -329,7 +329,7 @@ func (h *RentHandler) AddPayment(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) CancelOrder(c *gin.Context) {
@@ -346,7 +346,7 @@ func (h *RentHandler) CancelOrder(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) Delete(c *gin.Context) {
@@ -390,5 +390,5 @@ func (h *RentHandler) VoidTransaction(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }

@@ -530,4 +530,3 @@ func (s *CostumeService) DeleteCategory(id uint) error {
 	}
 	return config.DB.Delete(&models.Category{}, id).Error
 }
-

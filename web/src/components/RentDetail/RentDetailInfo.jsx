@@ -43,7 +43,7 @@ export default function RentDetailInfo({
   let totalNormal = 0;
   let totalRented = 0;
   rent.items?.forEach(item => {
-    totalNormal += (item.costume?.rental_fee || 0) * item.quantity;
+    totalNormal += (item.original_price || item.costume?.rental_fee || 0) * item.quantity;
     totalRented += (item.rental_fee || 0) * item.quantity;
   });
   const discount = totalNormal - totalRented;

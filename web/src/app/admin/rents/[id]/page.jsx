@@ -74,16 +74,13 @@ const RentDetailPage = () => {
 
   const totalBaseFee = rent?.items?.reduce((sum, item) => sum + ((item.rental_fee || 0) * item.quantity), 0) || 0;
 
-  // Ledger-based calculations
-  // If a transaction has no type (unmigrated), default to CREDIT (payment)
-  const totalDebits = rent?.transactions?.filter(t => t.type === 'DEBIT').reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
-  const totalCredits = rent?.transactions?.filter(t => t.type === 'CREDIT' || !t.type).reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
-
-  const totalTagihan = totalDebits;
-
-  const totalPaid = totalCredits;
-  const isCancelled = rent?.status === 'cancelled';
-  const sisaTagihan = isCancelled ? 0 : (totalTagihan - totalPaid);
+	// Ledger-based calculations provided by backend PaymentSummary
+	const totalDebits = rent?.payment_summary?.total_debits || 0;
+	const totalCredits = rent?.payment_summary?.total_credits || 0;
+	const totalTagihan = totalDebits;
+	const totalPaid = totalCredits;
+	const isCancelled = rent?.status === 'cancelled';
+	const sisaTagihan = isCancelled ? 0 : (rent?.payment_summary?.balance || 0);
 
   if (loading) {
     return <div className="flex justify-center items-center h-48"><Spinner /></div>;
