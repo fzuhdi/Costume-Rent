@@ -134,8 +134,12 @@ func (h *RentHandler) ReceiveOrder(c *gin.Context) {
 		return
 	}
 
+	var req dto.ReceiveOrderRequest
+	// Body is optional — ignore bind errors (empty body is fine)
+	_ = c.ShouldBindJSON(&req)
+
 	userID := middleware.GetUserID(c)
-	order, err := h.rentService.ReceiveOrder(uint(id), userID)
+	order, err := h.rentService.ReceiveOrder(uint(id), req, userID)
 	if err != nil {
 		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
@@ -199,6 +203,23 @@ func (h *RentHandler) MarkBooked(c *gin.Context) {
 
 	userID := middleware.GetUserID(c)
 	order, err := h.rentService.MarkBooked(uint(id), req, userID)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, err)
+		return
+	}
+
+	utils.RespondSuccess(c, order)
+}
+
+func (h *RentHandler) MarkCompleted(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	order, err := h.rentService.MarkCompleted(uint(id), userID)
 	if err != nil {
 		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return

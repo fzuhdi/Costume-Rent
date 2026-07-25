@@ -23,12 +23,12 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./web
       dockerfile: Dockerfile
     container_name: busana_frontend
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - "3000:3000"
     depends_on:
       - backend
     networks:
@@ -36,10 +36,10 @@ services:
     develop:
       watch:
         - action: sync             # push changed files into container instantly
-          path: ./frontend/src
-          target: /usr/share/nginx/html/src
+          path: ./web/src
+          target: /app/src
         - action: rebuild          # full rebuild when deps change
-          path: ./frontend/package.json
+          path: ./web/package.json
 
 volumes:
   busana_db:

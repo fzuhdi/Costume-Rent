@@ -81,6 +81,11 @@ type RentOrderFilter struct {
 	Limit    int    `form:"limit"`
 }
 
+type ReceiveOrderRequest struct {
+	GuaranteeReturned bool     `json:"guarantee_returned"`
+	ReturnPhotos      []string `json:"return_photos"`
+}
+
 type MarkReturnedRequest struct {
 	ReturnedAt      string             `json:"returned_at"`
 	DamageFee       int                `json:"damage_fee"`

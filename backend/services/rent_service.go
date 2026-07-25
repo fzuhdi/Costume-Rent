@@ -409,7 +409,7 @@ func (s *RentService) Update(id uint, req dto.UpdateRentOrderRequest, userID uin
 	return s.GetByID(order.ID)
 }
 
-func (s *RentService) ReceiveOrder(id uint, userID uint) (*models.RentOrder, error) {
+func (s *RentService) ReceiveOrder(id uint, req dto.ReceiveOrderRequest, userID uint) (*models.RentOrder, error) {
 	var order models.RentOrder
 	if err := config.DB.First(&order, id).Error; err != nil {
 		return nil, err
@@ -422,6 +422,13 @@ func (s *RentService) ReceiveOrder(id uint, userID uint) (*models.RentOrder, err
 	now := time.Now()
 	order.Status = "returned"
 	order.ActualReturnDate = &now
+
+	if len(req.ReturnPhotos) > 0 {
+		photosJSON, err := json.Marshal(req.ReturnPhotos)
+		if err == nil {
+			order.ReturnPhotos = string(photosJSON)
+		}
+	}
 
 	if err := config.DB.Save(&order).Error; err != nil {
 		return nil, err
@@ -522,7 +529,7 @@ func (s *RentService) MarkReturned(id uint, req dto.MarkReturnedRequest, userID 
 	config.DB.Preload("Transactions").First(&orderWithTransactions, id)
 	totalDebits := 0
 	for _, t := range orderWithTransactions.Transactions {
-		if t.Type == "DEBIT" {
+		if t.Type == "DEBIT" && !t.IsVoided {
 			totalDebits += t.Amount
 		}
 	}
@@ -605,6 +612,56 @@ func (s *RentService) MarkRented(id uint, req dto.MarkRentedRequest, userID uint
 	}
 
 	s.logActivity(order.ID, userID, "STATUS_CHANGE", "booked", "rented")
+
+	return s.GetByID(order.ID)
+}
+
+func (s *RentService) MarkCompleted(id uint, userID uint) (*models.RentOrder, error) {
+	var order models.RentOrder
+	if err := config.DB.Preload("Transactions").First(&order, id).Error; err != nil {
+		return nil, err
+	}
+
+	if order.Status != "inspected" && order.Status != "rented" && order.Status != "returned" {
+		return nil, utils.NewAppError("ERR_INVALID_STATUS_COMPLETE")
+	}
+
+	totalDebits := 0
+	totalCredits := 0
+	for _, t := range order.Transactions {
+		if !t.IsVoided {
+			if t.Type == "DEBIT" {
+				totalDebits += t.Amount
+			} else if t.Type == "CREDIT" {
+				totalCredits += t.Amount
+			}
+		}
+	}
+
+	// Self-heal TotalPaid if it was out of sync
+	if order.TotalPaid != totalCredits {
+		order.TotalPaid = totalCredits
+		if order.TotalPaid >= totalDebits {
+			order.PaymentStatus = "LUNAS"
+		} else if order.TotalPaid > 0 {
+			order.PaymentStatus = "DP"
+		} else {
+			order.PaymentStatus = "BELUM_BAYAR"
+		}
+	}
+
+	if totalCredits < totalDebits {
+		return nil, utils.NewAppError("ERR_FULL_PAYMENT_REQUIRED")
+	}
+
+	oldStatus := order.Status
+	order.Status = "completed"
+
+	if err := config.DB.Save(&order).Error; err != nil {
+		return nil, err
+	}
+
+	s.logActivity(order.ID, userID, "STATUS_CHANGE", oldStatus, "completed")
 
 	return s.GetByID(order.ID)
 }
@@ -924,7 +981,7 @@ func (s *RentService) AddPayment(orderID uint, req dto.AddPaymentRequest, userID
 		}
 	}
 
-	totalTagihan := totalFee + totalDebits
+	totalTagihan := totalDebits
 	if order.TotalPaid >= totalTagihan {
 		order.PaymentStatus = "LUNAS"
 
@@ -1008,7 +1065,7 @@ func (s *RentService) VoidTransaction(orderID uint, trxID uint, userID uint) (*m
 	}
 
 	order.TotalPaid = totalPaid
-	totalTagihan := totalFee + totalDebits
+	totalTagihan := totalDebits
 
 	if order.TotalPaid >= totalTagihan && totalTagihan > 0 {
 		order.PaymentStatus = "LUNAS"
