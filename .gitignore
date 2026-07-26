@@ -28,6 +28,8 @@ web/package-lock.json
 web/migrate-router.cjs
 web/fix-unused.cjs
 web/fix-unused-v2.cjs
+web/playwright-report/
+web/dist/
 
 # Opencode
 .opencode/state

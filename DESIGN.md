@@ -1,10 +1,12 @@
 # KBR Costume Design System
 
-Status: Marketplace direction approved for implementation planning
+Status: Marketplace modern-heritage direction approved for implementation
 
-Preview: Open [`design-system.html`](./design-system.html) in a browser
+Preview: Open [`design-system-alternate2.html`](./design-system-alternate2.html) in a browser
 
-Last updated: 2026-07-25
+Brand contract: [`docs/BRAND_CONTRACT.md`](./docs/BRAND_CONTRACT.md)
+
+Last updated: 2026-07-26
 
 ## 1. Design Intent
 
@@ -15,13 +17,13 @@ KBR Costume has two related product surfaces with different jobs:
 | Marketplace | Rental customers | Inspire confidence, make costume discovery visual, and keep booking decisions simple | shadcn/ui, scoped to customer route layouts |
 | Admin | Store staff | Make operational status, dense records, and frequent actions easy to scan | HeroUI v3, scoped to `/admin` |
 
-The systems share the KBR logo, core indigo, status colors, accessibility rules, and interaction behavior. They do not share component imports or route-level providers.
+The systems share brand identity, status meanings, accessibility rules, and interaction behavior. Marketplace color tokens and component imports remain separate from the admin system.
 
 The visual direction is:
 
 - Photography first, with restrained interface chrome.
 - Familiar marketplace structure without imitating another brand.
-- Cool mineral neutrals and one indigo brand accent.
+- Warm ivory and brown neutrals, a burgundy primary, and one restrained gold accent.
 - Rounded enough to feel approachable, but not soft or playful.
 - Clear rental policy and availability before a customer commits.
 - Compact, information-dense admin screens with stronger borders.
@@ -46,7 +48,7 @@ Dates, quantity, pickup, return, and hold expiry must be visible near the action
 
 ### 2.3 Use one obvious action
 
-Each view has one primary indigo action. Secondary actions are neutral. Destructive actions are red only when the action is actually destructive.
+Each view has one primary burgundy action. Secondary actions are neutral. Destructive actions are red only when the action is actually destructive.
 
 ### 2.4 Earn trust with explicit states
 
@@ -81,6 +83,16 @@ Shared code may contain:
 - Semantic token names and accessibility behavior.
 - Non-visual data and validation logic.
 
+Marketplace brand assets have separate roles:
+
+- `/brand/bu-risna-seal.webp` is the optimized real marketplace seal used in the header at 48px and in the footer at 96px.
+- `/brand/bu-risna-seal.png` supplies the favicon, shortcut icon, Apple touch icon, and print-quality source.
+- `/brand/kbr-marketplace-mark-mono.svg` is the single-color and forced-color fallback.
+- `/kbr-logo.svg` remains the current admin/settings asset and must not be overwritten by marketplace work.
+- The approved customer-facing relationship uses `KBR Costume` as the primary public name and `Kostum Tari Bu Risna` as its descriptor.
+- The existing social reference and pickup-location name remain `@kbrcostume` and `KBR Costume`.
+- This marketplace decision does not replace admin assets or rename `KBR-...` order references.
+
 Shared code must not contain:
 
 - A shadcn component that imports HeroUI.
@@ -95,21 +107,24 @@ Color contrast must meet WCAG 2.2 AA for the final text size and weight. Status 
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--mk-canvas` | `#F5F6F8` | Page background and quiet sections |
+| `--mk-canvas` | `#F8F4EC` | Page background and quiet sections |
 | `--mk-surface` | `#FFFFFF` | Navigation, forms, booking rail, dialogs |
 | `--mk-surface-raised` | `#FFFFFF` | Menus and floating surfaces |
-| `--mk-ink` | `#17181C` | Primary text |
-| `--mk-muted` | `#666A73` | Secondary copy |
-| `--mk-subtle` | `#6D717B` | Icons, placeholders, and nonessential decoration |
-| `--mk-line` | `#DEE1E7` | Dividers and card boundaries |
-| `--mk-line-strong` | `#C8CCD5` | Input borders and strong separation |
-| `--mk-primary` | `#4F46E5` | Primary actions, links, selected controls |
-| `--mk-primary-hover` | `#4338CA` | Hovered primary actions |
-| `--mk-primary-active` | `#3730A3` | Pressed primary actions |
-| `--mk-primary-soft` | `#EEF0FF` | Selected or informative brand surface |
-| `--mk-on-primary` | `#FFFFFF` | Content on indigo |
+| `--mk-ink` | `#241815` | Primary text |
+| `--mk-muted` | `#6F625D` | Secondary copy |
+| `--mk-subtle` | `#7B6C66` | Icons, placeholders, and nonessential decoration |
+| `--mk-line` | `#DED3C5` | Dividers and card boundaries |
+| `--mk-line-strong` | `#A08C82` | Input borders and strong separation |
+| `--mk-primary` | `#8F1028` | Primary actions, links, selected controls |
+| `--mk-primary-hover` | `#74101F` | Hovered primary actions |
+| `--mk-primary-active` | `#5F0C18` | Pressed primary actions |
+| `--mk-primary-soft` | `#F8E7EB` | Selected or informative brand surface |
+| `--mk-on-primary` | `#FFFFFF` | Content on burgundy |
 | `--mk-on-danger` | `#FFFFFF` | Content on filled danger actions |
-| `--mk-focus` | `#818CF8` | Focus ring |
+| `--mk-focus` | `#8F1028` | Focus ring |
+| `--mk-gold` | `#D9A441` | Decorative brand accent only |
+| `--mk-on-gold` | `#3A2115` | Content on an approved filled gold surface |
+| `--mk-media-placeholder` | `#EAE0D4` | Image loading and failure background |
 
 ### 4.2 Marketplace dark palette
 
@@ -118,21 +133,24 @@ Light is the application default regardless of the operating system preference. 
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--mk-canvas` | `#101116` | Page background |
-| `--mk-surface` | `#181A21` | Primary surface |
-| `--mk-surface-raised` | `#20232C` | Menus and floating surfaces |
-| `--mk-ink` | `#F7F7F9` | Primary text |
-| `--mk-muted` | `#B1B4BD` | Secondary copy |
-| `--mk-subtle` | `#8B8F99` | Metadata and placeholders |
-| `--mk-line` | `#30333D` | Dividers |
-| `--mk-line-strong` | `#454955` | Input borders |
-| `--mk-primary` | `#8B92FF` | Primary actions and selected controls |
-| `--mk-primary-hover` | `#A5AAFF` | Hovered primary actions |
-| `--mk-primary-active` | `#737AEB` | Pressed primary actions |
-| `--mk-primary-soft` | `#25294B` | Selected or informative brand surface |
-| `--mk-on-primary` | `#111222` | Content on light indigo |
+| `--mk-canvas` | `#17100F` | Page background |
+| `--mk-surface` | `#211716` | Primary surface |
+| `--mk-surface-raised` | `#2B1D1C` | Menus and floating surfaces |
+| `--mk-ink` | `#FAF4EA` | Primary text |
+| `--mk-muted` | `#C9BAB1` | Secondary copy |
+| `--mk-subtle` | `#A8968C` | Metadata and placeholders |
+| `--mk-line` | `#4A3935` | Dividers |
+| `--mk-line-strong` | `#79635C` | Input borders |
+| `--mk-primary` | `#E06A78` | Primary actions and selected controls |
+| `--mk-primary-hover` | `#EA7E8B` | Hovered primary actions |
+| `--mk-primary-active` | `#CB5C69` | Pressed primary actions |
+| `--mk-primary-soft` | `#3A1D23` | Selected or informative brand surface |
+| `--mk-on-primary` | `#241013` | Content on light burgundy |
 | `--mk-on-danger` | `#21100E` | Content on filled danger actions |
-| `--mk-focus` | `#A5AAFF` | Focus ring |
+| `--mk-focus` | `#E06A78` | Focus ring |
+| `--mk-gold` | `#E0B15A` | Decorative brand accent only |
+| `--mk-on-gold` | `#3A2115` | Content on an approved filled gold surface |
+| `--mk-media-placeholder` | `#352723` | Image loading and failure background |
 
 ### 4.3 Shared semantic colors
 
@@ -143,7 +161,7 @@ Light is the application default regardless of the operating system preference. 
 | Danger / overdue / failed | `#B42318` | `#FFF0EE` | `#FF9B93` | `#411D1B` |
 | Info / delivery requested | `#075E8C` | `#EDF8FF` | `#78CDF5` | `#142F3D` |
 
-Use indigo for brand and selection, not for generic information states. Do not introduce decorative accent colors. Costume photography supplies variety.
+Use burgundy for marketplace action and selection. Gold is a restricted, non-semantic accent: do not map it to shadcn accent, warning, pending, payment, rental, or delivery states. Costume photography supplies variety.
 
 ### 4.4 Admin palette
 
@@ -241,12 +259,12 @@ Nested radii must remain concentric. Child radius should approximately equal par
 Default to borders and tonal separation. Use shadows only for floating or sticky surfaces.
 
 ```css
---shadow-float:
-  0 1px 2px rgb(16 24 40 / 0.06),
-  0 8px 24px rgb(16 24 40 / 0.08);
+--mk-shadow-float:
+  0 1px 2px rgb(36 24 21 / 0.06),
+  0 8px 24px rgb(36 24 21 / 0.08);
 --shadow-dialog:
-  0 2px 6px rgb(16 24 40 / 0.08),
-  0 24px 64px rgb(16 24 40 / 0.18);
+  0 2px 6px rgb(36 24 21 / 0.08),
+  0 24px 64px rgb(36 24 21 / 0.18);
 ```
 
 Images need a subtle outline to stay legible against similar backgrounds:
@@ -316,9 +334,9 @@ Costume images use a consistent `4:5` ratio. Do not use masonry for the catalogu
 
 Variants:
 
-- Primary: indigo fill, high-contrast label.
+- Primary: burgundy fill through the semantic primary token, with a high-contrast label.
 - Secondary: surface fill, strong border, ink label.
-- Quiet: transparent, ink or indigo label.
+- Quiet: transparent, ink or semantic-primary label.
 - Destructive: danger fill only for irreversible or forfeiture-confirmed actions.
 
 Rules:
@@ -350,7 +368,7 @@ Do not use placeholder text as the only label. Error copy must state what the cu
 ### 9.4 Filter chips
 
 - Default is a neutral outlined chip.
-- Selected uses the primary-soft surface, indigo text, and a visible selected indicator.
+- Selected uses the primary-soft surface, semantic-primary text, and a visible selected indicator.
 - Each chip remains at least 44px high.
 - On mobile, show the most important chips and move the complete filter set into a sheet.
 
@@ -517,14 +535,14 @@ Do:
 
 - Lead with real costume imagery.
 - Show price, Event Date, pickup, return, and downpayment near the decision.
-- Use indigo for the primary action and selection.
+- Use burgundy through semantic primary tokens for marketplace actions and selection.
 - Use restrained borders before shadows.
 - Keep customer and staff component providers isolated.
 - Write plain Indonesian customer-facing status copy.
 
 Do not:
 
-- Add beige, terracotta, or another decorative brand accent.
+- Add unapproved accent colors or use gold as a semantic workflow color.
 - Put gradients on text or large background areas.
 - Wrap every section in a floating card.
 - use pill shapes for standard buttons, inputs, or containers.
