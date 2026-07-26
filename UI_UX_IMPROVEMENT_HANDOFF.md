@@ -1,5 +1,14 @@
 # Marketplace UI/UX Improvement Handoff
 
+> **Brand-direction supersession (2026-07-26):** The functional UX findings,
+> accessibility requirements, component boundaries, workflow invariants, and
+> route acceptance criteria in this document remain useful. Its indigo brand
+> recommendation, optional-logo package, no-accent constraints, and brand
+> non-goals are superseded by
+> [`MARKETPLACE_BRAND_THEME_HANDOFF.md`](./MARKETPLACE_BRAND_THEME_HANDOFF.md).
+> The current code already contains substantial portions of WP0-WP5, so an
+> implementation pass must verify the baseline before creating duplicate work.
+
 | Field | Value |
 | --- | --- |
 | Status | Ready for implementation |
