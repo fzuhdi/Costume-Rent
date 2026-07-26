@@ -1,13 +1,17 @@
+"use client";
+
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { ChevronLeft, Check } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { BookingRail } from '@/marketplace/components/BookingRail';
 import { CostumeCard } from '@/marketplace/components/CostumeCard';
 import { StatusBadge } from '@/marketplace/components/StatusBadge';
-import { costumes, getCostume } from '@/marketplace/data';
 import { formatRupiah } from '@/marketplace/format';
+import { marketplaceApi } from '@/marketplace/api';
+import { useCart } from '@/marketplace/CartContext';
 
 function ProductSummary({ costume, className = '' }) {
   return (
@@ -27,21 +31,19 @@ function ProductSummary({ costume, className = '' }) {
   );
 }
 
-export async function generateMetadata({ params }) {
-  const { id } = await params;
-  const costume = getCostume(id);
-  if (!costume) return { title: 'Kostum tidak ditemukan' };
-  return {
-    title: costume.name,
-    description: costume.description,
-  };
-}
-
-export default async function CostumeDetailPage({ params }) {
-  const { id } = await params;
-  const costume = getCostume(id);
-  if (!costume) notFound();
-  const related = costumes.filter((item) => item.id !== costume.id).slice(0, 3);
+export default function CostumeDetailPage() {
+  const { id } = useParams();
+  const { eventDate } = useCart();
+  const [costume, setCostume] = useState(null);
+  const [related, setRelated] = useState([]);
+  useEffect(() => {
+    marketplaceApi.costume(id, eventDate).then((value) => {
+      setCostume(value);
+      return marketplaceApi.catalogue({ event_date: eventDate, limit: 4 });
+    }).then((response) => setRelated((response.data || []).filter((item) => item.id !== String(id)).slice(0, 3))).catch(() => setCostume(false));
+  }, [eventDate, id]);
+  if (costume === false) return <div className="marketplace-container py-20 text-center">Kostum tidak ditemukan.</div>;
+  if (!costume) return <div className="marketplace-container py-20 text-center text-[var(--mk-muted)]" role="status">Memuat kostum...</div>;
 
   return (
     <div className="marketplace-mobile-action-space">
@@ -54,13 +56,13 @@ export default async function CostumeDetailPage({ params }) {
 
         <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.85fr)] lg:items-start">
           <div className="grid gap-3 sm:grid-cols-[1.35fr_0.65fr]">
-            <div className="relative aspect-[4/5] overflow-hidden rounded-[20px] bg-[#e6e7eb] marketplace-image sm:row-span-2">
+            <div className="marketplace-image relative aspect-[4/5] overflow-hidden rounded-[20px] bg-[var(--mk-media-placeholder)] sm:row-span-2">
               <Image src={costume.image} alt={`${costume.name}, tampak penuh`} fill priority sizes="(max-width: 1023px) 100vw, 55vw" className="object-cover" />
             </div>
-            <div className="relative hidden min-h-0 overflow-hidden rounded-2xl bg-[#e6e7eb] marketplace-image sm:block">
+            <div className="marketplace-image relative hidden min-h-0 overflow-hidden rounded-2xl bg-[var(--mk-media-placeholder)] sm:block">
               <Image src={costume.image} alt={`${costume.name}, detail bagian atas`} fill sizes="20vw" className="scale-[1.65] object-cover object-top" />
             </div>
-            <div className="relative hidden min-h-0 overflow-hidden rounded-2xl bg-[#e6e7eb] marketplace-image sm:block">
+            <div className="marketplace-image relative hidden min-h-0 overflow-hidden rounded-2xl bg-[var(--mk-media-placeholder)] sm:block">
               <Image src={costume.image} alt={`${costume.name}, detail kain`} fill sizes="20vw" className="scale-[1.7] object-cover object-bottom" />
             </div>
           </div>
@@ -84,7 +86,7 @@ export default async function CostumeDetailPage({ params }) {
           <div>
             <h2 className="text-lg font-bold">Termasuk dalam set</h2>
             <ul className="mt-4 grid gap-3 text-sm">
-              {costume.includes.map((item) => (
+              {['Kostum utama', 'Aksesori sesuai ketersediaan', 'Pemeriksaan sebelum sewa'].map((item) => (
                 <li key={item} className="flex items-center gap-2"><Check className="size-4 text-[var(--mk-success)]" aria-hidden="true" /> {item}</li>
               ))}
             </ul>

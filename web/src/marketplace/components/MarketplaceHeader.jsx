@@ -6,6 +6,7 @@ import { Menu, Moon, ShoppingBag, Sun, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useCart } from '@/marketplace/CartContext';
+import { MARKETPLACE_ASSETS, MARKETPLACE_BRAND, marketplaceHomeLabel } from '@/marketplace/brand';
 
 const navigation = [
   { href: '/catalogue', label: 'Katalog' },
@@ -54,7 +55,11 @@ function CartLink({ compact = false }) {
 
   return (
     <Button asChild variant="outline" size={compact ? 'icon' : 'default'} className="relative h-11 min-w-11 border-[var(--mk-line-strong)] bg-[var(--mk-surface)]">
-      <Link href="/cart" aria-label={`Keranjang, ${hydrated ? itemCount : 0} item`}>
+      <Link
+        href="/cart"
+        aria-label={`Keranjang, ${hydrated ? itemCount : 0} item`}
+        data-cart-hydrated={hydrated ? 'true' : 'false'}
+      >
         <ShoppingBag aria-hidden="true" />
         {!compact && <span>Keranjang</span>}
         {hydrated && itemCount > 0 && (
@@ -71,11 +76,35 @@ export function MarketplaceHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--mk-line)] bg-[color-mix(in_srgb,var(--mk-canvas)_90%,transparent)] backdrop-blur-xl">
       <div className="marketplace-container flex h-[72px] items-center justify-between gap-4">
-        <Link href="/" className="flex min-h-11 items-center gap-3" aria-label="KBR Costume, beranda">
-          <Image src="/kbr-logo.svg" alt="" width={38} height={38} className="rounded-[10px]" priority />
+        <Link
+          href="/"
+          className="flex min-h-11 items-center gap-3"
+          aria-label={marketplaceHomeLabel}
+        >
+          <span className="relative size-12 shrink-0" aria-hidden="true">
+            <Image
+              src={MARKETPLACE_ASSETS.compactMark}
+              alt=""
+              width={48}
+              height={48}
+              className="marketplace-brand-mark-color size-12 rounded-full object-cover"
+              data-brand-mark="color"
+              priority
+            />
+            <Image
+              src={MARKETPLACE_ASSETS.monochromeMark}
+              alt=""
+              width={48}
+              height={48}
+              className="marketplace-brand-mark-monochrome absolute inset-0 size-12"
+              data-brand-mark="monochrome"
+            />
+          </span>
           <span className="leading-tight">
-            <strong className="block text-[15px] font-bold">KBR Costume</strong>
-            <span className="hidden text-[11px] font-medium text-[var(--mk-muted)] sm:block">Sewa kostum panggung</span>
+            <strong className="block text-[15px] font-bold">{MARKETPLACE_BRAND.name}</strong>
+            <span className="hidden text-[11px] font-medium text-[var(--mk-muted)] sm:block">
+              {MARKETPLACE_BRAND.descriptor}
+            </span>
           </span>
         </Link>
 
@@ -103,7 +132,7 @@ export function MarketplaceHeader() {
             </SheetTrigger>
             <SheetContent side="right" className="marketplace-theme w-[min(88vw,360px)] p-0">
               <SheetHeader className="border-b px-6 py-5 text-left">
-                <SheetTitle>Menu KBR Costume</SheetTitle>
+                <SheetTitle>Menu {MARKETPLACE_BRAND.name}</SheetTitle>
               </SheetHeader>
               <nav className="grid p-4" aria-label="Navigasi seluler">
                 {navigation.map((item) => (

@@ -15,6 +15,9 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useCart } from '@/marketplace/CartContext';
+import { useCustomerAuth } from '@/marketplace/CustomerAuthContext';
+import { marketplaceApi } from '@/marketplace/api';
+import { MARKETPLACE_BRAND } from '@/marketplace/brand';
 import { formatRupiah } from '@/marketplace/format';
 import { MobileActionBar } from '@/marketplace/components/MobileActionBar';
 import { RentalDates } from '@/marketplace/components/RentalDates';
@@ -25,7 +28,7 @@ function OrderSummary({ items, subtotal }) {
       <div className="grid gap-4">
         {items.map((item) => (
           <div key={item.id} className="grid grid-cols-[64px_1fr_auto] gap-3">
-            <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-[#e7e8ec]">
+            <div className="marketplace-image relative aspect-[4/5] overflow-hidden rounded-lg bg-[var(--mk-media-placeholder)]">
               <Image src={item.image} alt="" fill sizes="64px" className="object-cover" />
             </div>
             <div>
@@ -49,6 +52,7 @@ function OrderSummary({ items, subtotal }) {
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, eventDate, subtotal, hydrated } = useCart();
+  const { customer, loading: customerLoading } = useCustomerAuth();
   const [fulfillment, setFulfillment] = useState('pickup');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -57,7 +61,7 @@ export default function CheckoutPage() {
   const termsCheckboxRef = useRef(null);
   const payable = Math.ceil(subtotal / 2);
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
     if (!termsAccepted) {
       setError('Baca dan setujui ketentuan pembatalan sebelum melanjutkan.');
@@ -65,9 +69,37 @@ export default function CheckoutPage() {
       termsCheckboxRef.current?.focus({ preventScroll: true });
       return;
     }
+    if (!customer) {
+      router.push('/masuk?returnTo=/checkout');
+      return;
+    }
+    const formData = new FormData(event.currentTarget);
     setError('');
     setSubmitting(true);
-    router.push('/checkout/processing?order=KBR-240725-018');
+    try {
+      const checkout = await marketplaceApi.checkout({
+        event_date: eventDate,
+        name: formData.get('name'),
+        phone: formData.get('phone'),
+        fulfillment_type: fulfillment === 'delivery' ? 'delivery_request' : 'pickup',
+        shipping_address: fulfillment === 'delivery' ? formData.get('address') : '',
+        terms_version: '2026-07',
+        terms_accepted: true,
+        items: items.map((item) => ({ costume_id: Number(item.id), quantity: item.quantity, rental_fee: item.price })),
+      });
+      const redirectUrl = checkout.payment_attempt?.redirect_url;
+      if (redirectUrl) {
+        window.location.assign(redirectUrl);
+        return;
+      }
+      router.push(`/checkout/processing?order=${checkout.order?.id}`);
+    } catch (checkoutError) {
+      setError(checkoutError.code === 'ERR_TERMS_VERSION_INVALID'
+        ? 'Ketentuan checkout telah berubah. Muat ulang halaman lalu setujui kembali.'
+        : 'Checkout tidak dapat dibuat. Periksa data dan ketersediaan kostum, lalu coba lagi.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!hydrated) return <div className="marketplace-container min-h-[50dvh] py-16" />;
@@ -78,6 +110,18 @@ export default function CheckoutPage() {
         <h1 className="text-3xl font-bold">Belum ada item untuk checkout</h1>
         <p className="mt-3 text-[var(--mk-muted)]">Tambahkan kostum ke keranjang terlebih dahulu.</p>
         <Button asChild className="mt-6 h-12 rounded-xl"><Link href="/catalogue">Buka katalog</Link></Button>
+      </div>
+    );
+  }
+
+  if (customerLoading) return <div className="marketplace-container min-h-[50dvh] py-16" />;
+
+  if (!customer) {
+    return (
+      <div className="marketplace-container py-20 text-center">
+        <h1 className="text-3xl font-bold">Masuk untuk melanjutkan checkout</h1>
+        <p className="mt-3 text-[var(--mk-muted)]">Akun diperlukan untuk menyimpan pesanan dan mengamankan pembayaran.</p>
+        <Button asChild className="mt-6 h-12 rounded-xl"><Link href="/masuk?returnTo=/checkout">Masuk atau daftar</Link></Button>
       </div>
     );
   }
@@ -94,8 +138,8 @@ export default function CheckoutPage() {
         <div className="grid gap-5">
           <Alert className="rounded-2xl border-[var(--mk-info)]/25 bg-[var(--mk-info-soft)] text-[var(--mk-info)]">
             <LockKeyhole aria-hidden="true" />
-            <AlertTitle>Masuk sebagai Alya Putri</AlertTitle>
-            <AlertDescription className="text-[var(--mk-info)]/90">alya.putri@example.com / <Link href="/masuk" className="font-bold underline">Ganti akun</Link></AlertDescription>
+            <AlertTitle>Masuk sebagai {customer.name}</AlertTitle>
+            <AlertDescription className="text-[var(--mk-info)]/90">{customer.email} / <Link href="/masuk" className="font-bold underline">Ganti akun</Link></AlertDescription>
           </Alert>
 
           <Card className="rounded-[20px] border-[var(--mk-line)] bg-[var(--mk-surface)]">
@@ -104,11 +148,11 @@ export default function CheckoutPage() {
               <div className="mt-5 grid gap-5 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label htmlFor="customer-name">Nama lengkap</Label>
-                  <Input id="customer-name" name="name" defaultValue="Alya Putri" className="h-11 rounded-xl border-[var(--mk-line-strong)]" required />
+                  <Input id="customer-name" name="name" defaultValue={customer.name} className="h-11 rounded-xl border-[var(--mk-line-strong)]" required />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="customer-phone">Nomor WhatsApp</Label>
-                  <Input id="customer-phone" name="phone" type="tel" defaultValue="0812 3456 7890" className="h-11 rounded-xl border-[var(--mk-line-strong)]" required />
+                  <Input id="customer-phone" name="phone" type="tel" defaultValue={customer.phone || ''} className="h-11 rounded-xl border-[var(--mk-line-strong)]" required />
                 </div>
               </div>
             </CardContent>
@@ -132,7 +176,7 @@ export default function CheckoutPage() {
                   <TabsTrigger value="delivery" className="rounded-lg"><Truck aria-hidden="true" /> Minta antar</TabsTrigger>
                 </TabsList>
                 <TabsContent value="pickup" className="mt-4 rounded-xl border border-[var(--mk-line)] p-4 text-sm leading-6 text-[var(--mk-muted)]">
-                  Ambil di KBR Costume, Kramat Jati, Jakarta Timur. Detail jam pengambilan tersedia setelah pesanan dikonfirmasi.
+                  Ambil di {MARKETPLACE_BRAND.pickupLocationName}, Kramat Jati, Jakarta Timur. Detail jam pengambilan tersedia setelah pesanan dikonfirmasi.
                 </TabsContent>
                 <TabsContent value="delivery" className="mt-4 grid gap-4">
                   <Alert className="border-[var(--mk-warning)]/25 bg-[var(--mk-warning-soft)] text-[var(--mk-warning)]">
@@ -189,7 +233,7 @@ export default function CheckoutPage() {
               </AccordionItem>
             </Accordion>
           </div>
-          <Card className="hidden rounded-[20px] border-[var(--mk-line)] bg-[var(--mk-surface)] shadow-[0_8px_24px_rgb(16_24_40_/_0.08)] lg:block">
+          <Card className="hidden rounded-[20px] border-[var(--mk-line)] bg-[var(--mk-surface)] shadow-[var(--mk-shadow-float)] lg:block">
             <CardContent className="p-6">
               <h2 className="mb-5 text-xl font-bold">Ringkasan pesanan</h2>
               <OrderSummary items={items} subtotal={subtotal} />

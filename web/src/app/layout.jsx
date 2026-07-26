@@ -1,6 +1,7 @@
 import '../styles/global.css';
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { MARKETPLACE_ASSETS, MARKETPLACE_BRAND } from '@/marketplace/brand';
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -35,10 +36,15 @@ const themeInitializationScript = `
 
 export const metadata = {
   title: {
-    default: 'KBR Costume',
-    template: '%s | KBR Costume',
+    default: MARKETPLACE_BRAND.name,
+    template: `%s | ${MARKETPLACE_BRAND.name}`,
   },
-  description: 'Sewa kostum tari Indonesia dengan tanggal dan harga yang jelas.',
+  description: `${MARKETPLACE_BRAND.descriptor}: sewa kostum tari Indonesia dengan tanggal dan harga yang jelas.`,
+  icons: {
+    icon: MARKETPLACE_ASSETS.fullSealPrint,
+    shortcut: MARKETPLACE_ASSETS.fullSealPrint,
+    apple: MARKETPLACE_ASSETS.fullSealPrint,
+  },
 };
 
 export default function RootLayout({ children }) {

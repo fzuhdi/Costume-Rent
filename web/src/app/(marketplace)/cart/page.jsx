@@ -80,7 +80,7 @@ export default function CartPage() {
           <div className="overflow-hidden rounded-[20px] border border-[var(--mk-line)] bg-[var(--mk-surface)]">
             {items.map((item, index) => (
               <article key={item.id} className={`grid grid-cols-[92px_1fr] gap-4 p-4 sm:grid-cols-[120px_1fr_auto] sm:p-5 ${index > 0 ? 'border-t' : ''}`}>
-                <Link href={`/costumes/${item.id}`} className="relative aspect-[4/5] overflow-hidden rounded-xl bg-[#e7e8ec] marketplace-image">
+                <Link href={`/costumes/${item.id}`} className="marketplace-image relative aspect-[4/5] overflow-hidden rounded-xl bg-[var(--mk-media-placeholder)]">
                   <Image src={item.image} alt={item.name} fill sizes="120px" className="object-cover" />
                 </Link>
                 <div className="min-w-0">
@@ -119,7 +119,7 @@ export default function CartPage() {
         </div>
 
         <aside className="lg:sticky lg:top-24">
-          <Card className="rounded-[20px] border-[var(--mk-line)] bg-[var(--mk-surface)] shadow-[0_8px_24px_rgb(16_24_40_/_0.08)]">
+          <Card className="rounded-[20px] border-[var(--mk-line)] bg-[var(--mk-surface)] shadow-[var(--mk-shadow-float)]">
             <CardContent className="p-5 sm:p-6">
               <h2 className="text-xl font-bold">Ringkasan biaya</h2>
               <dl className="mt-6 grid gap-4 text-sm">

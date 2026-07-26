@@ -23,7 +23,7 @@ export function HeroSearch() {
   };
 
   return (
-    <form onSubmit={submit} className="grid gap-3 rounded-2xl border border-[var(--mk-line)] bg-[var(--mk-surface)] p-3 shadow-[0_8px_24px_rgb(16_24_40_/_0.08)] sm:grid-cols-[1.2fr_1fr_auto] sm:items-end">
+    <form onSubmit={submit} className="grid gap-3 rounded-2xl border border-[var(--mk-line)] bg-[var(--mk-surface)] p-3 shadow-[var(--mk-shadow-float)] sm:grid-cols-[1.2fr_1fr_auto] sm:items-end">
       <div className="grid gap-2">
         <Label htmlFor="hero-search" className="px-1 text-xs font-bold">Cari kostum</Label>
         <div className="relative">

@@ -13,7 +13,7 @@ export function CostumeCard({ costume, priority = false }) {
 
   return (
     <article className="group min-w-0">
-      <Link href={`/costumes/${costume.id}`} className="relative block aspect-[4/5] overflow-hidden rounded-2xl bg-[#e7e8ec] marketplace-image">
+      <Link href={`/costumes/${costume.id}`} className="marketplace-image relative block aspect-[4/5] overflow-hidden rounded-2xl bg-[var(--mk-media-placeholder)]">
         <Image
           src={costume.image}
           alt={`${costume.name}, kostum dari ${costume.region}`}

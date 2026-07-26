@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, Mail, ShieldCheck } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -9,6 +10,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { MARKETPLACE_BRAND } from '@/marketplace/brand';
+import { marketplaceApi } from '@/marketplace/api';
+import { useCustomerAuth } from '@/marketplace/CustomerAuthContext';
 
 const content = new Map([
   ['login', {
@@ -18,7 +22,7 @@ const content = new Map([
     footer: <>Belum punya akun? <Link href="/daftar" className="inline-flex min-h-11 items-center font-bold text-[var(--mk-primary)]">Daftar</Link></>,
   }],
   ['register', {
-    title: 'Buat akun KBR',
+    title: `Buat akun ${MARKETPLACE_BRAND.name}`,
     description: 'Simpan data penyewa dan kelola pesanan dari satu tempat.',
     submit: 'Buat akun',
     footer: <>Sudah punya akun? <Link href="/masuk" className="inline-flex min-h-11 items-center font-bold text-[var(--mk-primary)]">Masuk</Link></>,
@@ -32,18 +36,46 @@ const content = new Map([
 ]);
 
 export function CustomerAuthCard({ mode }) {
+  const router = useRouter();
+  const { login } = useCustomerAuth();
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const copy = content.get(mode) ?? content.get('login');
   const isRegister = mode === 'register';
   const isForgot = mode === 'forgot';
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
-    setSubmitted(true);
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get('email') || '');
+    setError('');
+    setSubmitting(true);
+    try {
+      if (isForgot) {
+        await marketplaceApi.forgotPassword({ email });
+        setSubmitted(true);
+      } else if (isRegister) {
+        await marketplaceApi.register({
+          name: String(form.get('name') || ''),
+          phone: String(form.get('phone') || ''),
+          email,
+          password: String(form.get('password') || ''),
+        });
+        setSubmitted(true);
+      } else {
+        await login({ email, password: String(form.get('password') || '') });
+        router.push('/checkout');
+      }
+    } catch (caught) {
+      setError(caught.code === 'ERR_EMAIL_NOT_VERIFIED' ? 'Verifikasi alamat emailmu sebelum masuk.' : 'Permintaan tidak dapat diproses. Periksa data lalu coba lagi.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <Card className="w-full max-w-md rounded-[20px] border-[var(--mk-line)] bg-[var(--mk-surface)] shadow-[0_8px_24px_rgb(16_24_40_/_0.08)]">
+    <Card className="w-full max-w-md rounded-[20px] border-[var(--mk-line)] bg-[var(--mk-surface)] shadow-[var(--mk-shadow-float)]">
       <CardContent className="p-6 sm:p-8">
         <span className="grid size-11 place-items-center rounded-xl bg-[var(--mk-primary-soft)] text-[var(--mk-primary)]">
           <ShieldCheck aria-hidden="true" />
@@ -55,14 +87,14 @@ export function CustomerAuthCard({ mode }) {
           <div className="mt-7">
             <Alert announcement="status" className="border-[var(--mk-success)]/25 bg-[var(--mk-success-soft)] text-[var(--mk-success)]">
               <Mail aria-hidden="true" />
-              <AlertTitle>{isForgot ? 'Email reset sudah disiapkan' : 'Demo frontend berhasil'}</AlertTitle>
+              <AlertTitle>{isForgot ? 'Email reset sudah dikirim' : 'Periksa email untuk verifikasi akun'}</AlertTitle>
               <AlertDescription className="text-[var(--mk-success)]/90">
-                {isForgot ? 'Periksa kotak masuk dan folder spam untuk melanjutkan.' : 'Autentikasi backend belum dihubungkan pada tahap frontend ini.'}
+                {isForgot ? 'Periksa kotak masuk dan folder spam untuk melanjutkan.' : 'Buka tautan verifikasi sebelum masuk dan melanjutkan ke checkout.'}
               </AlertDescription>
             </Alert>
             {!isForgot && (
               <Button asChild className="mt-5 h-12 w-full rounded-xl bg-[var(--mk-primary)] text-[var(--mk-on-primary)]">
-                <Link href="/checkout">Lanjut ke checkout <ArrowRight aria-hidden="true" /></Link>
+                <Link href="/masuk">Masuk setelah verifikasi <ArrowRight aria-hidden="true" /></Link>
               </Button>
             )}
           </div>
@@ -70,7 +102,7 @@ export function CustomerAuthCard({ mode }) {
           <>
             {!isForgot && (
               <>
-                <Button type="button" variant="outline" className="mt-7 h-12 w-full rounded-xl border-[var(--mk-line-strong)] bg-[var(--mk-surface)]">
+                <Button type="button" variant="outline" onClick={() => { window.location.assign('/api/marketplace/auth/google'); }} className="mt-7 h-12 w-full rounded-xl border-[var(--mk-line-strong)] bg-[var(--mk-surface)]">
                   <span className="text-lg font-bold text-[#4285f4]" aria-hidden="true">G</span>
                   Lanjut dengan Google
                 </Button>
@@ -89,6 +121,12 @@ export function CustomerAuthCard({ mode }) {
                   <Input id="auth-name" name="name" autoComplete="name" placeholder="Nama sesuai identitas" className="h-11 rounded-xl border-[var(--mk-line-strong)]" required />
                 </div>
               )}
+              {isRegister && (
+                <div className="grid gap-2">
+                  <Label htmlFor="auth-phone">Nomor WhatsApp</Label>
+                  <Input id="auth-phone" name="phone" type="tel" autoComplete="tel" placeholder="0812 3456 7890" className="h-11 rounded-xl border-[var(--mk-line-strong)]" required />
+                </div>
+              )}
               <div className="grid gap-2">
                 <Label htmlFor="auth-email">Email</Label>
                 <Input id="auth-email" name="email" type="email" autoComplete="email" placeholder="nama@email.com" className="h-11 rounded-xl border-[var(--mk-line-strong)]" required />
@@ -103,8 +141,9 @@ export function CustomerAuthCard({ mode }) {
                   {isRegister && <p className="text-xs text-[var(--mk-muted)]">Minimal 8 karakter.</p>}
                 </div>
               )}
-              <Button type="submit" className="h-12 rounded-xl bg-[var(--mk-primary)] text-[var(--mk-on-primary)] hover:bg-[var(--mk-primary-hover)]">
-                {copy.submit}
+              {error && <p className="text-sm font-semibold text-[var(--mk-danger)]" role="alert">{error}</p>}
+              <Button type="submit" disabled={submitting} className="h-12 rounded-xl bg-[var(--mk-primary)] text-[var(--mk-on-primary)] hover:bg-[var(--mk-primary-hover)]">
+                {submitting ? 'Memproses...' : copy.submit}
               </Button>
             </form>
           </>

@@ -52,7 +52,7 @@ export function BookingRail({ costume }) {
 
   return (
     <>
-      <Card className="rounded-[20px] border-[var(--mk-line)] bg-[var(--mk-surface)] shadow-[0_8px_24px_rgb(16_24_40_/_0.08)]">
+      <Card className="rounded-[20px] border-[var(--mk-line)] bg-[var(--mk-surface)] shadow-[var(--mk-shadow-float)]">
         <CardContent className="p-5 sm:p-6">
           <div className="grid gap-2">
             <Label htmlFor="booking-event-date">Tanggal acara</Label>

@@ -93,7 +93,7 @@ const ExcelImportModal = ({
       });
   };
 
-  const handleUpload = async (onClose) => {
+  const handleUpload = async () => {
     if (!file) return;
 
     setIsUploading(true);
@@ -121,7 +121,7 @@ const ExcelImportModal = ({
       toast.success(data.message || 'Data imported successfully!');
       if (onSuccess) onSuccess();
       setFile(null);
-      onClose();
+      onOpenChange(false);
     } catch (error) {
       console.error('Import error:', error);
       toast.error(error.message);
@@ -250,7 +250,7 @@ const ExcelImportModal = ({
             <Button color="danger" variant="light" onPress={closeModal} isDisabled={isUploading}>
               Cancel
             </Button>
-            <Button color="primary" onPress={() => handleUpload(closeModal)} isDisabled={!file || isUploading} isLoading={isUploading}>
+            <Button color="primary" onPress={handleUpload} isDisabled={!file || isUploading} isLoading={isUploading}>
               Import Data
             </Button>
           </Modal.Footer>

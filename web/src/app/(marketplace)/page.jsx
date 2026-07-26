@@ -28,7 +28,7 @@ export default function MarketplaceHomePage() {
           </div>
         </div>
         <div className="relative mx-auto w-full max-w-[350px]">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-[20px] bg-[#e5e6ea] marketplace-image">
+          <div className="marketplace-image relative aspect-[4/5] overflow-hidden rounded-[20px] bg-[var(--mk-media-placeholder)]">
             <Image
               src="/marketplace/tari-pendet.webp"
               alt="Kostum Tari Pendet Bali berwarna magenta, hijau, dan emas"
@@ -38,7 +38,7 @@ export default function MarketplaceHomePage() {
               className="object-cover"
             />
           </div>
-          <div className="absolute -bottom-4 left-4 right-4 rounded-2xl border border-[var(--mk-line)] bg-[color-mix(in_srgb,var(--mk-surface)_94%,transparent)] p-4 shadow-[0_8px_24px_rgb(16_24_40_/_0.08)] backdrop-blur-md sm:left-auto sm:right-[-16px] sm:w-64">
+          <div className="absolute -bottom-4 left-4 right-4 rounded-2xl border border-[var(--mk-line)] bg-[color-mix(in_srgb,var(--mk-surface)_94%,transparent)] p-4 shadow-[var(--mk-shadow-float)] backdrop-blur-md sm:left-auto sm:right-[-16px] sm:w-64">
             <p className="text-xs font-bold text-[var(--mk-muted)]">Periode sewa standar</p>
             <p className="mt-1 text-sm font-bold">Ambil D-2, kembali D+1</p>
             <p className="mt-1 text-xs leading-5 text-[var(--mk-muted)]">Satu harga sewa untuk seluruh periode.</p>

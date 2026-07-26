@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CalendarDays, Filter, Search, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,22 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { CostumeCard } from '@/marketplace/components/CostumeCard';
 import { useCart } from '@/marketplace/CartContext';
-import { costumes } from '@/marketplace/data';
 import { formatBusinessDate } from '@/marketplace/format';
+import { marketplaceApi } from '@/marketplace/api';
 
 const ALL = 'all';
 const EMPTY_FILTERS = { region: ALL, category: ALL, size: ALL };
 
-function getFilteredCostumes({ filters, query, sort }) {
-  const normalized = query.trim().toLocaleLowerCase('id-ID');
+function sortCostumes(costumes, sort) {
   return costumes
-    .filter((costume) => {
-      const matchesQuery = !normalized || `${costume.name} ${costume.region} ${costume.category}`.toLocaleLowerCase('id-ID').includes(normalized);
-      return matchesQuery
-        && (filters.region === ALL || costume.region === filters.region)
-        && (filters.category === ALL || costume.category === filters.category)
-        && (filters.size === ALL || costume.size === filters.size);
-    })
     .toSorted((a, b) => {
       if (sort === 'price-low') return a.price - b.price;
       if (sort === 'price-high') return b.price - a.price;
@@ -33,7 +25,7 @@ function getFilteredCostumes({ filters, query, sort }) {
     });
 }
 
-function FilterFields({ filters, idPrefix, onChange }) {
+function FilterFields({ filters, idPrefix, onChange, costumes }) {
   const update = (key) => (value) => onChange({ ...filters, [key]: value });
 
   return (
@@ -95,17 +87,36 @@ export function CatalogueClient() {
   const [draftFilters, setDraftFilters] = useState(appliedFilters);
   const [filterOpen, setFilterOpen] = useState(false);
   const [sort, setSort] = useState('featured');
+  const [costumes, setCostumes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [resultAnnouncement, setResultAnnouncement] = useState('');
   const [minimumDate] = useState(() => new Date().toISOString().slice(0, 10));
 
-  const filtered = useMemo(
-    () => getFilteredCostumes({ filters: appliedFilters, query, sort }),
-    [appliedFilters, query, sort],
-  );
-  const draftCount = useMemo(
-    () => getFilteredCostumes({ filters: draftFilters, query, sort }).length,
-    [draftFilters, query, sort],
-  );
+  useEffect(() => {
+    let active = true;
+    marketplaceApi.catalogue({ search: query, event_date: eventDate, limit: 100 }).then((response) => {
+      if (!active) return;
+      setCostumes(response.data || []);
+      setLoadError('');
+    }).catch(() => {
+      if (active) setLoadError('Katalog tidak dapat dimuat. Coba lagi.');
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, [eventDate, query]);
+
+  const filtered = useMemo(() => sortCostumes(costumes.filter((costume) =>
+    (appliedFilters.region === ALL || costume.region === appliedFilters.region)
+    && (appliedFilters.category === ALL || costume.category === appliedFilters.category)
+    && (appliedFilters.size === ALL || costume.size === appliedFilters.size)
+  ), sort), [appliedFilters, costumes, sort]);
+  const draftCount = useMemo(() => costumes.filter((costume) =>
+    (draftFilters.region === ALL || costume.region === draftFilters.region)
+    && (draftFilters.category === ALL || costume.category === draftFilters.category)
+    && (draftFilters.size === ALL || costume.size === draftFilters.size)
+  ).length, [costumes, draftFilters]);
 
   const clearFilters = () => {
     setQuery('');
@@ -169,7 +180,7 @@ export function CatalogueClient() {
               <SheetTitle>Filter katalog</SheetTitle>
             </SheetHeader>
             <div className="overflow-y-auto px-5 py-4">
-              <FilterFields filters={draftFilters} idPrefix="seluler" onChange={setDraftFilters} />
+              <FilterFields filters={draftFilters} idPrefix="seluler" onChange={setDraftFilters} costumes={costumes} />
             </div>
             <SheetFooter className="sticky bottom-0 grid grid-cols-[auto_1fr] border-t border-[var(--mk-line)] bg-[var(--mk-surface)] p-4">
               <Button type="button" variant="outline" className="h-12 rounded-xl border-[var(--mk-line-strong)]" onClick={() => setDraftFilters(EMPTY_FILTERS)}>
@@ -192,7 +203,7 @@ export function CatalogueClient() {
               <h2 className="flex items-center gap-2 font-bold"><Filter size={17} aria-hidden="true" /> Filter</h2>
               <Button type="button" variant="ghost" className="h-10 px-2 text-xs text-[var(--mk-primary)]" onClick={clearFilters}>Reset</Button>
             </div>
-            <FilterFields filters={appliedFilters} idPrefix="desktop" onChange={setAppliedFilters} />
+            <FilterFields filters={appliedFilters} idPrefix="desktop" onChange={setAppliedFilters} costumes={costumes} />
           </div>
         </aside>
 
@@ -207,14 +218,23 @@ export function CatalogueClient() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="marketplace-theme">
-                <SelectItem value="featured">Pilihan KBR</SelectItem>
+                <SelectItem value="featured">Rekomendasi</SelectItem>
                 <SelectItem value="price-low">Harga terendah</SelectItem>
                 <SelectItem value="price-high">Harga tertinggi</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {filtered.length > 0 ? (
+          {loading ? (
+            <div className="mt-8 rounded-2xl border border-[var(--mk-line)] bg-[var(--mk-surface)] px-6 py-16 text-center text-sm text-[var(--mk-muted)]" role="status">
+              Memuat ketersediaan kostum...
+            </div>
+          ) : loadError ? (
+            <div className="mt-8 rounded-2xl border border-[var(--mk-danger)]/30 bg-[var(--mk-danger-soft)] px-6 py-10 text-center">
+              <h3 className="text-lg font-bold text-[var(--mk-danger)]">Katalog belum tersedia</h3>
+              <p className="mt-2 text-sm text-[var(--mk-muted)]">{loadError}</p>
+            </div>
+          ) : filtered.length > 0 ? (
             <div className="mt-7 grid grid-cols-2 gap-x-3 gap-y-10 sm:gap-x-5 lg:grid-cols-3 lg:gap-x-4 xl:grid-cols-4 xl:gap-x-5">
               {filtered.map((costume, index) => (
                 <CostumeCard key={costume.id} costume={costume} priority={index === 0} />
