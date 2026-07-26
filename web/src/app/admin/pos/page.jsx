@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useNavigate } from '@/lib/router-shim';
 import { createRent, uploadPaymentProof } from '@/api/rentApi';
 import { getCostumes } from '@/api/costumeApi';
@@ -11,7 +12,7 @@ import POSCheckoutModal from '@/components/POS/POSCheckoutModal';
 import POSCostumeCatalog from '@/components/POS/POSCostumeCatalog';
 import POSEventDateSelector from '@/components/POS/POSEventDateSelector';
 
-const POSPage = () => {
+const POSPageContent = () => {
   const navigate = useNavigate();
   const { settings } = useSettings();
   const [costumes, setCostumes] = useState([]);
@@ -22,7 +23,7 @@ const POSPage = () => {
   const [loadingCostumes, setLoadingCostumes] = useState(false);
 
   const [cart, setCart] = useState([]);
-  const searchParams = new URLSearchParams(window.location.search);
+  const searchParams = useSearchParams();
   const initialDate = searchParams.get('date') || '';
 
   const [formData, setFormData] = useState({
@@ -309,5 +310,11 @@ const POSPage = () => {
     </div>
   );
 };
+
+const POSPage = () => (
+  <Suspense fallback={<div className="p-6 text-sm text-default-500">Memuat kasir...</div>}>
+    <POSPageContent />
+  </Suspense>
+);
 
 export default POSPage;
