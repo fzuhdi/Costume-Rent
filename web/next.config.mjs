@@ -18,8 +18,6 @@ const nextConfig = {
     return [
       { source: '/dashboard', destination: '/admin/dashboard', permanent: false },
       { source: '/pos', destination: '/admin/pos', permanent: false },
-      { source: '/catalogue', destination: '/admin/catalogue', permanent: false },
-      { source: '/catalogue/:path*', destination: '/admin/catalogue/:path*', permanent: false },
       { source: '/rents', destination: '/admin/rents', permanent: false },
       { source: '/rents/:path*', destination: '/admin/rents/:path*', permanent: false },
       { source: '/clients', destination: '/admin/clients', permanent: false },

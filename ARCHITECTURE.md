@@ -6,8 +6,8 @@ This document outlines the technical design, database schema, API contracts, and
 
 ```mermaid
 sequenceDiagram
-    participant S as Staff (Browser)
-    participant F as React Frontend
+    participant S as Staff or Customer (Browser)
+    participant F as Next.js Frontend
     participant B as Gin Backend (Go)
     participant D as SQLite DB
 
@@ -149,7 +149,9 @@ erDiagram
 
 ## 4. Design & Technical Constraints
 *   **High-Level Technology:** 
-    *   **Frontend:** React, Vite, Tailwind CSS, HeroUI v3.
+    *   **Frontend:** Next.js 16 App Router, React 19, and Tailwind CSS 4.
+    *   **Customer component boundary:** shadcn/ui components and marketplace tokens are scoped to customer route layouts (`/`, `/catalogue`, `/costumes/*`, `/cart`, `/checkout`, `/orders/*`, and `/account/*`).
+    *   **Admin component boundary:** HeroUI v3 providers and components remain scoped to `/admin` and the staff login. Marketplace components must not import HeroUI, and admin components must not import marketplace shadcn components.
     *   **Backend:** Go (1.25), Gin Web Framework, GORM, SQLite.
     *   **Why:** This stack provides extreme speed, compile-time safety, and minimal operational overhead on the backend via Go and SQLite. The frontend leverages modern component libraries (HeroUI) for rapid, beautiful UI development without re-inventing basic accessible components.
 *   **Typography Rules:** 

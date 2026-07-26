@@ -9,8 +9,9 @@ import { useSettings } from '@/context/SettingsContext';
 import FullScreenSpinner from '@/components/FullScreenSpinner';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Providers } from '@/app/providers';
 
-export default function AdminLayout({ children }) {
+function AdminShell({ children }) {
   const { isCollapsed } = useSidebar();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { loading: settingsLoading } = useSettings();
@@ -41,5 +42,13 @@ export default function AdminLayout({ children }) {
       </div>
       <BottomTabs />
     </div>
+  );
+}
+
+export default function AdminLayout({ children }) {
+  return (
+    <Providers>
+      <AdminShell>{children}</AdminShell>
+    </Providers>
   );
 }
