@@ -29,8 +29,6 @@ type UpdateRentOrderRequest struct {
 	PickupDate         string          `json:"pickup_date"`
 	ExpectedReturnDate string          `json:"expected_return_date"`
 	ActualReturnDate   *string         `json:"actual_return_date"`
-	TotalPaid          *int            `json:"total_paid"`
-	PaymentStatus      string          `json:"payment_status"`
 	HasSecurityItem    *bool           `json:"has_security_item"`
 	Status             string          `json:"status"`
 	Notes              string          `json:"notes"`
@@ -48,27 +46,51 @@ type RentOrderResponse struct {
 	PickupDate         string                    `json:"pickup_date"`
 	ExpectedReturnDate string                    `json:"expected_return_date"`
 	ActualReturnDate   *string                   `json:"actual_return_date"`
-	TotalPaid          int                       `json:"total_paid"`
-	PaymentStatus      string                    `json:"payment_status"`
+	PaymentSummary     PaymentSummary            `json:"payment_summary"`
 	HasSecurityItem    bool                      `json:"has_security_item"`
 	Status             string                    `json:"status"`
 	PickupPhotos       []string                  `json:"pickup_photos"`
 	ReturnPhotos       []string                  `json:"return_photos"`
 	DamagePhotos       []string                  `json:"damage_photos"`
 	Notes              string                    `json:"notes"`
+	CreatedBy          string                    `json:"created_by"`
 	Items              []RentOrderItemResponse   `json:"items"`
-	Transactions       []RentTransactionResponse `json:"transactions"`
+	ActivityLogs       []ActivityLogResponse     `json:"activity_logs,omitempty"`
+	Transactions       []RentTransactionResponse `json:"transactions,omitempty"`
 	CreatedAt          string                    `json:"created_at"`
 	UpdatedAt          string                    `json:"updated_at"`
 }
 
-type RentOrderItemResponse struct {
+type ActivityLogResponse struct {
+	ID         uint   `json:"id"`
+	ActionType string `json:"action_type"`
+	OldValue   string `json:"old_value"`
+	NewValue   string `json:"new_value"`
+	CreatedAt  string `json:"created_at"`
+}
+type PaymentSummary struct {
+	TotalDebits  int    `json:"total_debits"`
+	TotalCredits int    `json:"total_credits"`
+	Balance      int    `json:"balance"`
+	Status       string `json:"status"`
+}
+
+type CostumeMinResponse struct {
 	ID          uint   `json:"id"`
-	CostumeID   uint   `json:"costume_id"`
-	CostumeName string `json:"costume_name"`
-	CoverImage  string `json:"cover_image"`
-	Quantity    int    `json:"quantity"`
+	Name        string `json:"name"`
+	Size        string `json:"size"`
 	RentalFee   int    `json:"rental_fee"`
+	Description string `json:"description"`
+	CoverImage  string `json:"cover_image"`
+}
+
+type RentOrderItemResponse struct {
+	ID            uint               `json:"id"`
+	CostumeID     uint               `json:"costume_id"`
+	Quantity      int                `json:"quantity"`
+	RentalFee     int                `json:"rental_fee"`
+	OriginalPrice int                `json:"original_price"`
+	Costume       CostumeMinResponse `json:"costume"`
 }
 
 type RentOrderFilter struct {
@@ -79,6 +101,11 @@ type RentOrderFilter struct {
 	Search   string `form:"search"`
 	Page     int    `form:"page"`
 	Limit    int    `form:"limit"`
+}
+
+type ReceiveOrderRequest struct {
+	GuaranteeReturned bool     `json:"guarantee_returned"`
+	ReturnPhotos      []string `json:"return_photos"`
 }
 
 type MarkReturnedRequest struct {
@@ -137,6 +164,7 @@ type RentTransactionResponse struct {
 	PaymentMethod  string `json:"payment_method"`
 	PaymentProof   string `json:"payment_proof"`
 	Notes          string `json:"notes"`
+	IsVoided       bool   `json:"is_voided"`
 	CreatedAt      string `json:"created_at"`
 }
 

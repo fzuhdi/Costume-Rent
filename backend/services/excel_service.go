@@ -312,11 +312,15 @@ func (s *ExcelService) ExportRents() (*bytes.Buffer, error) {
 
 	rowIdx := 2
 	for _, rent := range rents {
+		ledger := NewPaymentLedger(rent.Transactions)
+		totalPaid := ledger.TotalCredits()
+		paymentStatus := ledger.PaymentStatus()
+
 		for _, item := range rent.Items {
 			err := setRow(f, sheet, rowIdx,
 				rent.ID, rent.Client.Name, rent.Client.Phone, rent.GuaranteeType,
 				rent.EventDate.Format("2006-01-02"), rent.PickupDate.Format("2006-01-02"), rent.ExpectedReturnDate.Format("2006-01-02"),
-				item.Costume.Name, item.Quantity, item.RentalFee, rent.TotalPaid, rent.PaymentStatus, rent.Status)
+				item.Costume.Name, item.Quantity, item.RentalFee, totalPaid, paymentStatus, rent.Status)
 			if err != nil {
 				return nil, err
 			}
@@ -372,7 +376,6 @@ func (s *ExcelService) ImportRents(r io.Reader) error {
 			PickupDate     time.Time
 			ExpectedReturn time.Time
 			TotalPaid      int
-			PaymentStatus  string
 			Status         string
 			Items          []tempItem
 		}
@@ -394,7 +397,6 @@ func (s *ExcelService) ImportRents(r io.Reader) error {
 				pickupDate, _ := time.Parse("2006-01-02", row[5])
 				expectedReturn, _ := time.Parse("2006-01-02", row[6])
 				totalPaid, _ := strconv.Atoi(row[10])
-
 				rentsMap[groupID] = &tempRent{
 					ClientName:     row[1],
 					ClientPhone:    row[2],
@@ -403,16 +405,12 @@ func (s *ExcelService) ImportRents(r io.Reader) error {
 					PickupDate:     pickupDate,
 					ExpectedReturn: expectedReturn,
 					TotalPaid:      totalPaid,
-					PaymentStatus:  row[11],
 					Status:         row[12],
 					Items:          []tempItem{},
 				}
 
 				if rentsMap[groupID].Status == "" {
 					rentsMap[groupID].Status = "booked"
-				}
-				if rentsMap[groupID].PaymentStatus == "" {
-					rentsMap[groupID].PaymentStatus = "unpaid"
 				}
 			}
 
@@ -458,8 +456,6 @@ func (s *ExcelService) ImportRents(r io.Reader) error {
 				EventDate:          tr.EventDate,
 				PickupDate:         tr.PickupDate,
 				ExpectedReturnDate: tr.ExpectedReturn,
-				TotalPaid:          tr.TotalPaid,
-				PaymentStatus:      tr.PaymentStatus,
 				Status:             tr.Status,
 			}
 
@@ -495,6 +491,35 @@ func (s *ExcelService) ImportRents(r io.Reader) error {
 
 				if err := tx.Create(&item).Error; err != nil {
 					return fmt.Errorf("failed to create rent order item for group %s: %v", groupID, err)
+				}
+
+				// Create DEBIT transaction
+				txDebit := models.RentTransaction{
+					RentOrderID:    rent.ID,
+					Type:           "DEBIT",
+					Category:       "BASE_FEE",
+					Amount:         ti.RentalFee * ti.Quantity,
+					OriginalAmount: ti.RentalFee * ti.Quantity,
+					Notes:          "Biaya sewa impor: " + ti.CostumeName,
+					CreatedBy:      1,
+				}
+				if err := tx.Create(&txDebit).Error; err != nil {
+					return err
+				}
+			}
+
+			if tr.TotalPaid > 0 {
+				txCredit := models.RentTransaction{
+					RentOrderID:   rent.ID,
+					Type:          "CREDIT",
+					Category:      "PAYMENT",
+					Amount:        tr.TotalPaid,
+					PaymentMethod: "CASH",
+					Notes:         "Impor dari Excel",
+					CreatedBy:     1,
+				}
+				if err := tx.Create(&txCredit).Error; err != nil {
+					return err
 				}
 			}
 		}

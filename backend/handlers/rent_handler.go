@@ -55,7 +55,7 @@ func (h *RentHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) Create(c *gin.Context) {
@@ -101,7 +101,7 @@ func (h *RentHandler) Update(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) MarkReturned(c *gin.Context) {
@@ -124,7 +124,7 @@ func (h *RentHandler) MarkReturned(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) ReceiveOrder(c *gin.Context) {
@@ -134,14 +134,18 @@ func (h *RentHandler) ReceiveOrder(c *gin.Context) {
 		return
 	}
 
+	var req dto.ReceiveOrderRequest
+	// Body is optional — ignore bind errors (empty body is fine)
+	_ = c.ShouldBindJSON(&req)
+
 	userID := middleware.GetUserID(c)
-	order, err := h.rentService.ReceiveOrder(uint(id), userID)
+	order, err := h.rentService.ReceiveOrder(uint(id), req, userID)
 	if err != nil {
 		utils.RespondFailed(c, http.StatusBadRequest, err)
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) MarkRented(c *gin.Context) {
@@ -164,7 +168,7 @@ func (h *RentHandler) MarkRented(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) RollbackOrder(c *gin.Context) {
@@ -181,7 +185,7 @@ func (h *RentHandler) RollbackOrder(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) MarkBooked(c *gin.Context) {
@@ -204,7 +208,24 @@ func (h *RentHandler) MarkBooked(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
+}
+
+func (h *RentHandler) MarkCompleted(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, utils.NewAppError("ERR_INVALID_ID"))
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	order, err := h.rentService.MarkCompleted(uint(id), userID)
+	if err != nil {
+		utils.RespondFailed(c, http.StatusBadRequest, err)
+		return
+	}
+
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) UploadPaymentProof(c *gin.Context) {
@@ -285,7 +306,7 @@ func (h *RentHandler) ExtendRent(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) AddPayment(c *gin.Context) {
@@ -308,7 +329,7 @@ func (h *RentHandler) AddPayment(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) CancelOrder(c *gin.Context) {
@@ -325,7 +346,7 @@ func (h *RentHandler) CancelOrder(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }
 
 func (h *RentHandler) Delete(c *gin.Context) {
@@ -369,5 +390,5 @@ func (h *RentHandler) VoidTransaction(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, order)
+	utils.RespondSuccess(c, h.rentService.ToRentOrderResponse(*order))
 }

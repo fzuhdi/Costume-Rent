@@ -19,12 +19,15 @@ test/playwright-report/
 .env
 .env.production
 
-# Frontend
-frontend/node_modules/
-frontend/dist/
-frontend/.env*
-frontend/.vite/
-frontend/package-lock.json
+# Web (Next.js)
+web/node_modules/
+web/.next/
+web/out/
+web/.env*
+web/package-lock.json
+web/migrate-router.cjs
+web/fix-unused.cjs
+web/fix-unused-v2.cjs
 
 # Opencode
 .opencode/state

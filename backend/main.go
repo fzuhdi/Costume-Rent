@@ -344,7 +344,6 @@ func seedSampleRentals(adminID uint) {
 		EventDate:          eventDate,
 		PickupDate:         pickupDate,
 		ExpectedReturnDate: expectedReturnDate,
-		TotalPaid:          costume.RentalFee / 2, // 50% dp
 		HasSecurityItem:    true,
 		Status:             "booked",
 		Notes:              "Penyewaan untuk acara adat",
