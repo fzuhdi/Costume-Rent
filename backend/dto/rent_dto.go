@@ -94,13 +94,14 @@ type RentOrderItemResponse struct {
 }
 
 type RentOrderFilter struct {
-	Status   string `form:"status"`
-	ClientID string `form:"client_id"`
-	From     string `form:"from"`
-	To       string `form:"to"`
-	Search   string `form:"search"`
-	Page     int    `form:"page"`
-	Limit    int    `form:"limit"`
+	Status      string `form:"status"`
+	OrderSource string `form:"order_source"`
+	ClientID    string `form:"client_id"`
+	From        string `form:"from"`
+	To          string `form:"to"`
+	Search      string `form:"search"`
+	Page        int    `form:"page"`
+	Limit       int    `form:"limit"`
 }
 
 type ReceiveOrderRequest struct {

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -35,15 +36,14 @@ func init() {
 	}()
 }
 
-func getVisitor(ip string) *rate.Limiter {
+func getVisitor(key string, requests rate.Limit, burst int) *rate.Limiter {
 	mu.Lock()
 	defer mu.Unlock()
 
-	v, exists := visitors[ip]
+	v, exists := visitors[key]
 	if !exists {
-		// 5 requests per second, burst of 10
-		limiter := rate.NewLimiter(5, 10)
-		visitors[ip] = &visitor{limiter, time.Now()}
+		limiter := rate.NewLimiter(requests, burst)
+		visitors[key] = &visitor{limiter, time.Now()}
 		return limiter
 	}
 
@@ -55,10 +55,50 @@ func getVisitor(ip string) *rate.Limiter {
 func LoginRateLimiter() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ip := c.ClientIP() // Uses CF-Connecting-IP if trusted proxies are set
-		limiter := getVisitor(ip)
+		limiter := getVisitor("staff-login:"+ip, rate.Limit(5), 10)
 
 		if !limiter.Allow() {
 			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Terlalu banyak percobaan. Silakan coba lagi nanti."})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func MarketplaceCheckoutRateLimiter() gin.HandlerFunc {
+	return namedRateLimiter("marketplace-checkout", rate.Every(10*time.Second), 3, true)
+}
+
+func MarketplaceCancellationRateLimiter() gin.HandlerFunc {
+	return namedRateLimiter("marketplace-cancel", rate.Every(5*time.Second), 3, true)
+}
+
+func PaymentWebhookRateLimiter() gin.HandlerFunc {
+	return namedRateLimiter("midtrans-webhook", rate.Limit(20), 40, false)
+}
+
+func CustomerAuthRateLimiter() gin.HandlerFunc {
+	return namedRateLimiter("customer-auth", rate.Every(5*time.Second), 5, false)
+}
+
+func CustomerRecoveryRateLimiter() gin.HandlerFunc {
+	return namedRateLimiter("customer-recovery", rate.Every(30*time.Second), 3, false)
+}
+
+func namedRateLimiter(name string, requests rate.Limit, burst int, includeCustomer bool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		key := name + ":" + c.ClientIP()
+		if includeCustomer {
+			if customerID := GetCustomerAccountID(c); customerID > 0 {
+				key += fmt.Sprintf(":%d", customerID)
+			}
+		}
+		if !getVisitor(key, requests, burst).Allow() {
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"success": false,
+				"data":    gin.H{"error_code": "ERR_RATE_LIMITED"},
+			})
 			c.Abort()
 			return
 		}

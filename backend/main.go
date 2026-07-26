@@ -10,6 +10,7 @@ import (
 	"github.com/busana/backend/middleware"
 	"github.com/busana/backend/models"
 	"github.com/busana/backend/routes"
+	"github.com/busana/backend/services"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -37,11 +38,32 @@ func main() {
 	}
 
 	r := routes.SetupRouter()
+	startMarketplaceWorkers()
 
 	log.Printf("Server starting on port %s", port)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+}
+
+func startMarketplaceWorkers() {
+	service := services.NewMarketplaceService()
+	emailService := services.NewEmailService()
+	go func() {
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := service.ExpireStaleHolds(); err != nil {
+				log.Printf("Failed to expire marketplace holds: %v", err)
+			}
+			if err := emailService.QueueReminders(); err != nil {
+				log.Printf("Failed to queue marketplace reminders: %v", err)
+			}
+			if err := emailService.DeliverPending(); err != nil {
+				log.Printf("Failed to deliver marketplace email: %v", err)
+			}
+		}
+	}()
 }
 
 func migrateDB() {
@@ -63,16 +85,32 @@ func migrateDB() {
 		&models.Costume{},
 		&models.CostumeImage{},
 		&models.Client{},
+		&models.CustomerAccount{},
+		&models.CustomerAuthToken{},
 		&models.RentOrder{},
 		&models.RentOrderItem{},
+		&models.PaymentAttempt{},
+		&models.PaymentEvent{},
+		&models.RefundOperation{},
 		&models.RentTransaction{},
 		&models.AppSetting{},
 		&models.ActivityLog{},
+		&models.MarketplaceAuditLog{},
+		&models.EmailDelivery{},
 	)
 
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
+	db.Model(&models.RentOrder{}).
+		Where("order_source IS NULL OR order_source = ?", "").
+		Update("order_source", "offline")
+	db.Model(&models.RentOrder{}).
+		Where("fulfillment_type IS NULL OR fulfillment_type = ?", "").
+		Update("fulfillment_type", "pickup")
+	db.Model(&models.RentOrder{}).
+		Where("delivery_request_status IS NULL OR delivery_request_status = ?", "").
+		Update("delivery_request_status", "not_requested")
 
 	// Data migration: rename legacy "active" status to "rented"
 	result := db.Model(&models.RentOrder{}).Where("status = ?", "active").Update("status", "rented")
@@ -151,6 +189,7 @@ func seedReferenceData() {
 		{Key: "app_logo", Value: ""},
 		{Key: "pickup_days_before", Value: "2"},
 		{Key: "return_days_after", Value: "1"},
+		{Key: "marketplace_terms_version", Value: "2026-07"},
 	}
 	for _, s := range defaultSettings {
 		var count int64

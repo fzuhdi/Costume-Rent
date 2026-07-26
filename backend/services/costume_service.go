@@ -101,7 +101,9 @@ func (s *CostumeService) List(filter dto.CostumeFilter) (*dto.PaginatedResponse,
 	dbQuery := config.DB.Model(&models.RentOrderItem{}).
 		Select("rent_order_items.costume_id as costume_id, COALESCE(SUM(rent_order_items.quantity), 0) as rented_qty").
 		Joins("JOIN rent_orders ON rent_orders.id = rent_order_items.rent_order_id").
-		Where("rent_order_items.costume_id IN ? AND rent_orders.status IN ? AND rent_orders.deleted_at IS NULL", costumeIDs, []string{"booked", "rented", "overdue"})
+		Where("rent_order_items.costume_id IN ? AND rent_orders.deleted_at IS NULL", costumeIDs).
+		Where("(rent_orders.status IN ?) OR (rent_orders.status = ? AND rent_orders.order_source = ? AND rent_orders.expires_at > ?)",
+			[]string{"booked", "rented", "overdue"}, "pending", "online", time.Now())
 
 	if eventDate != nil {
 		pickupDaysBefore := s.getSettingInt("pickup_days_before", 2)
@@ -332,7 +334,9 @@ func (s *CostumeService) GetAvailableQuantityOnDate(costumeID uint, eventDate ti
 	var rentedQty int64
 	err := config.DB.Model(&models.RentOrderItem{}).
 		Joins("JOIN rent_orders ON rent_orders.id = rent_order_items.rent_order_id").
-		Where("rent_order_items.costume_id = ? AND rent_orders.status IN ? AND rent_orders.deleted_at IS NULL", costumeID, []string{"booked", "rented", "overdue"}).
+		Where("rent_order_items.costume_id = ? AND rent_orders.deleted_at IS NULL", costumeID).
+		Where("(rent_orders.status IN ?) OR (rent_orders.status = ? AND rent_orders.order_source = ? AND rent_orders.expires_at > ?)",
+			[]string{"booked", "rented", "overdue"}, "pending", "online", time.Now()).
 		Where("rent_orders.pickup_date <= ? AND rent_orders.expected_return_date >= ?", expectedReturnDate, pickupDate).
 		Select("COALESCE(SUM(rent_order_items.quantity), 0)").
 		Scan(&rentedQty).Error
@@ -353,7 +357,9 @@ func (s *CostumeService) GetAvailableQuantity(costumeID uint) (int, error) {
 	var rentedQty int64
 	config.DB.Model(&models.RentOrderItem{}).
 		Joins("JOIN rent_orders ON rent_orders.id = rent_order_items.rent_order_id").
-		Where("rent_order_items.costume_id = ? AND rent_orders.status IN ? AND rent_orders.deleted_at IS NULL", costumeID, []string{"booked", "rented", "overdue"}).
+		Where("rent_order_items.costume_id = ? AND rent_orders.deleted_at IS NULL", costumeID).
+		Where("(rent_orders.status IN ?) OR (rent_orders.status = ? AND rent_orders.order_source = ? AND rent_orders.expires_at > ?)",
+			[]string{"booked", "rented", "overdue"}, "pending", "online", time.Now()).
 		Select("COALESCE(SUM(rent_order_items.quantity), 0)").
 		Scan(&rentedQty)
 

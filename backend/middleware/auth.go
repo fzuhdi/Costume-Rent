@@ -105,3 +105,18 @@ func GetUserRole(c *gin.Context) string {
 	}
 	return ""
 }
+
+func RequireRole(roles ...string) gin.HandlerFunc {
+	allowed := make(map[string]bool, len(roles))
+	for _, role := range roles {
+		allowed[role] = true
+	}
+	return func(c *gin.Context) {
+		if !allowed[GetUserRole(c)] {
+			c.JSON(http.StatusForbidden, gin.H{"success": false, "data": gin.H{"error_code": "ERR_FORBIDDEN"}})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}

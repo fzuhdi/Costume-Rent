@@ -67,7 +67,10 @@ func (s *RentService) transitionOrderStatus(order *models.RentOrder, newStatus s
 func (s *RentService) lazyExpireDrafts() {
 	expiryTime := time.Now().Add(-1 * time.Hour)
 	config.DB.Model(&models.RentOrder{}).
-		Where("status = ? AND created_at < ?", "pending", expiryTime).
+		Where("status = ? AND order_source != ? AND created_at < ?", "pending", "online", expiryTime).
+		Update("status", "cancelled")
+	config.DB.Model(&models.RentOrder{}).
+		Where("status = ? AND order_source = ? AND expires_at <= ?", "pending", "online", time.Now()).
 		Update("status", "cancelled")
 }
 
@@ -85,6 +88,9 @@ func (s *RentService) List(filter dto.RentOrderFilter) (*dto.PaginatedResponse, 
 
 	if filter.Status != "" {
 		query = query.Where("status = ?", filter.Status)
+	}
+	if filter.OrderSource != "" {
+		query = query.Where("order_source = ?", filter.OrderSource)
 	}
 	if filter.ClientID != "" {
 		if id, err := strconv.ParseUint(filter.ClientID, 10, 32); err == nil {

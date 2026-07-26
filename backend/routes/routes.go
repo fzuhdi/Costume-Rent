@@ -47,11 +47,13 @@ func SetupRouter() *gin.Engine {
 	settingsHandler := handlers.NewSettingsHandler()
 	statsHandler := handlers.NewStatsHandler()
 	excelHandler := handlers.NewExcelHandler()
+	marketplaceHandler := handlers.NewMarketplaceHandler()
+	customerAuthHandler := handlers.NewCustomerAuthHandler()
 
 	api := r.Group("/api")
 	{
 		api.GET("/settings", settingsHandler.GetAll)
-		api.POST("/settings/logo", settingsHandler.UploadLogo)
+		api.POST("/settings/logo", middleware.AuthMiddleware(), settingsHandler.UploadLogo)
 
 		api.GET("/regions", costumeHandler.GetRegions)
 		api.POST("/regions", middleware.AuthMiddleware(), costumeHandler.CreateRegion)
@@ -63,28 +65,48 @@ func SetupRouter() *gin.Engine {
 		api.PUT("/categories/:id", middleware.AuthMiddleware(), costumeHandler.UpdateCategory)
 		api.DELETE("/categories/:id", middleware.AuthMiddleware(), costumeHandler.DeleteCategory)
 
-		api.GET("/costumes", costumeHandler.List)
-		api.GET("/costumes/search", costumeHandler.Search)
-		api.GET("/costumes/:id", costumeHandler.GetByID)
+		api.GET("/costumes", middleware.AuthMiddleware(), costumeHandler.List)
+		api.GET("/costumes/search", middleware.AuthMiddleware(), costumeHandler.Search)
+		api.GET("/costumes/:id", middleware.AuthMiddleware(), costumeHandler.GetByID)
 		api.POST("/costumes", middleware.AuthMiddleware(), costumeHandler.Create)
 		api.PUT("/costumes/:id", middleware.AuthMiddleware(), costumeHandler.Update)
 		api.DELETE("/costumes/:id", middleware.AuthMiddleware(), costumeHandler.Delete)
 		api.POST("/costumes/:id/images", middleware.AuthMiddleware(), costumeHandler.UploadImage)
 		api.DELETE("/costumes/:id/images/:imgId", middleware.AuthMiddleware(), costumeHandler.RemoveImage)
 
-		api.GET("/costumes/excel/export", excelHandler.ExportCostumes)
-		api.GET("/costumes/excel/template", excelHandler.DownloadCostumeTemplate)
+		api.GET("/costumes/excel/export", middleware.AuthMiddleware(), excelHandler.ExportCostumes)
+		api.GET("/costumes/excel/template", middleware.AuthMiddleware(), excelHandler.DownloadCostumeTemplate)
 		api.POST("/costumes/excel/import", middleware.AuthMiddleware(), excelHandler.ImportCostumes)
 
 		api.POST("/auth/login", middleware.LoginRateLimiter(), authHandler.Login)
 		api.POST("/auth/logout", middleware.AuthMiddleware(), authHandler.Logout)
 		api.GET("/auth/me", middleware.AuthMiddleware(), authHandler.GetCurrentUser)
-		api.POST("/auth/register", authHandler.Register)
+		api.GET("/marketplace/costumes", marketplaceHandler.ListCostumes)
+		api.GET("/marketplace/costumes/:id", marketplaceHandler.GetCostume)
+		api.POST("/payments/midtrans/webhook", middleware.PaymentWebhookRateLimiter(), marketplaceHandler.MidtransWebhook)
+		api.POST("/marketplace/auth/register", middleware.CustomerAuthRateLimiter(), customerAuthHandler.Register)
+		api.POST("/marketplace/auth/login", middleware.CustomerAuthRateLimiter(), customerAuthHandler.Login)
+		api.POST("/marketplace/auth/verify-email", middleware.CustomerRecoveryRateLimiter(), customerAuthHandler.VerifyEmail)
+		api.POST("/marketplace/auth/forgot-password", middleware.CustomerRecoveryRateLimiter(), customerAuthHandler.ForgotPassword)
+		api.POST("/marketplace/auth/reset-password", middleware.CustomerRecoveryRateLimiter(), customerAuthHandler.ResetPassword)
+		api.POST("/marketplace/auth/resend-verification", middleware.CustomerRecoveryRateLimiter(), customerAuthHandler.ResendVerification)
+
+		customer := api.Group("/marketplace")
+		customer.Use(middleware.MarketplaceAuthMiddleware())
+		{
+			customer.POST("/checkouts", middleware.MarketplaceCheckoutEnabled(), middleware.MarketplaceCheckoutRateLimiter(), marketplaceHandler.CreateCheckout)
+			customer.GET("/checkouts/:id", marketplaceHandler.GetCheckout)
+			customer.DELETE("/checkouts/:id", marketplaceHandler.AbandonCheckout)
+			customer.GET("/orders", marketplaceHandler.ListOrders)
+			customer.GET("/orders/:id", marketplaceHandler.GetOrder)
+			customer.POST("/orders/:id/cancel", middleware.MarketplaceCancellationRateLimiter(), marketplaceHandler.CancelOrder)
+		}
 
 		auth := api.Group("")
 		auth.Use(middleware.AuthMiddleware())
 		{
 			auth.PUT("/auth/change-password", authHandler.ChangePassword)
+			auth.POST("/auth/register", middleware.RequireRole("admin"), authHandler.Register)
 
 			// Client routes
 			auth.GET("/clients", clientHandler.List)
@@ -109,6 +131,9 @@ func SetupRouter() *gin.Engine {
 			auth.PUT("/rents/:id/rent", rentHandler.MarkRented)
 			auth.PUT("/rents/:id/rollback", rentHandler.RollbackOrder)
 			auth.PUT("/rents/:id/cancel", rentHandler.CancelOrder)
+			auth.PUT("/rents/:id/delivery", marketplaceHandler.UpdateDelivery)
+			auth.POST("/rents/:id/refunds", marketplaceHandler.CreateRefund)
+			auth.POST("/payment-attempts/:id/reconcile", marketplaceHandler.ReconcilePayment)
 			auth.POST("/rents/upload-proof", rentHandler.UploadPaymentProof)
 			auth.POST("/rents/upload-photo", rentHandler.UploadRentPhoto)
 			auth.PUT("/rents/:id/book", rentHandler.MarkBooked)
