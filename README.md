@@ -79,6 +79,7 @@ After first run, use this account:
 - **Database:** SQLite
 - **Frontend:** React + Vite
 - **Deployment:** Docker
+- **Test:** Playwright
 
 ---
 
